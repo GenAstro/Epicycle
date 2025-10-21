@@ -72,19 +72,18 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-    
+      
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1.11'
-        
+          
       - name: Install dependencies
         working-directory: AstroBase
-        run: julia --project=docs -e 'using Pkg; Pkg.instantiate()'
+        run: |
+          julia --project=docs -e 'using Pkg; Pkg.develop(path=".."); Pkg.instantiate()'
           
       - name: Build and deploy docs
         working-directory: AstroBase
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: julia --project=docs docs/make.jl
-
-  
