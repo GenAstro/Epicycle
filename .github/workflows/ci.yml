@@ -25,8 +25,7 @@ jobs:
       - name: Setup dependencies
         shell: bash
         run: |
-          julia --project=. -e 'using Pkg; Pkg.rm([p.name for p in values(Pkg.dependencies()) if p.is_direct_dep])'
-          # AstroBase has no dependencies to develop
+          # AstroBase has no dependencies to develop or remove
           julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
       - name: Test with coverage
