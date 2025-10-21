@@ -11,7 +11,7 @@
 
 Epicycle is an application for space systems with a nod to the giants before us and to how far we've come.
 
-## Contributing to Epicycle
+## Contributing to Epicycle 
 
 Contributing is easy.
 
