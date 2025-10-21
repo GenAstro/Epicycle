@@ -63,4 +63,28 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
+  docs-astrobase:
+    name: docs-astrobase
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+    
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.11'
+        
+      - name: Install dependencies
+        working-directory: AstroBase
+        run: julia --project=docs -e 'using Pkg; Pkg.instantiate()'
+          
+      - name: Build and deploy docs
+        working-directory: AstroBase
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: julia --project=docs docs/make.jl
+
   

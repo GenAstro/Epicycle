@@ -9,6 +9,3 @@ Documentation for [AstroBase](https://github.com/GenAstro/AstroBase.jl).
 ```@index
 ```
 
-```@autodocs
-Modules = [AstroBase]
-```
