@@ -92,3 +92,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: julia --project=docs docs/make.jl
+
+  docs-astrostates:
+    name: docs-astrostates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.11'
+          
+      - name: Install dependencies
+        working-directory: AstroStates
+        run: |
+          julia --project=docs -e 'using Pkg; Pkg.instantiate()'
+          
+      - name: Build and deploy docs
+        working-directory: AstroStates
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: julia --project=docs docs/make.jl

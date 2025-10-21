@@ -11,6 +11,7 @@
 | Package | Tests | Coverage | Documentation |
 |---------|-------|----------|---------------|
 | AstroBase | [![AstroBase](https://github.com/GenAstro/Epicycle/workflows/CI/badge.svg?job=test-AstroBase-julia-1.11)](https://github.com/GenAstro/Epicycle/actions) | [![codecov](https://codecov.io/gh/GenAstro/Epicycle/component/AstroBase/branch/main/graph/badge.svg?token=FNHOVC5O5N)](https://codecov.io/gh/GenAstro/Epicycle) | [![docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://genastro.github.io/Epicycle/AstroBase/) |
+| AstroStates | [![AstroStates](https://github.com/GenAstro/Epicycle/workflows/CI/badge.svg?job=test-AstroStates-julia-1.11)](https://github.com/GenAstro/Epicycle/actions) | [![codecov](https://codecov.io/gh/GenAstro/Epicycle/component/AstroStates/branch/main/graph/badge.svg?token=FNHOVC5O5N)](https://codecov.io/gh/GenAstro/Epicycle) | [![docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://genastro.github.io/Epicycle/AstroStates/) |
 
 
 Epicycle is an application for space systems with a nod to the giants before us and to how far we've come.
@@ -21,7 +22,7 @@ Epicycle is an application for space systems with a nod to the giants before us 
 
 - **[Main Documentation](https://genastro.github.io/Epicycle/)** - Complete application guide *(coming soon)*
 - **[AstroBase Documentation](https://genastro.github.io/Epicycle/AstroBase/)** - Foundation types and abstractions
-
+- **[AstroStates Documentation](https://genastro.github.io/Epicycle/AstroStates/)** - State vector representations and conversions
 
 ## Contributing to Epicycle 
 
