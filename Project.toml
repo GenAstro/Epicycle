@@ -1,4 +1,5 @@
-
+name = "Epicycle"
 
 [deps]
 AstroBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
+AstroStates = "e8875680-ece1-4c6e-865d-f99ee1f9f9b4"
