@@ -72,9 +72,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: julia --project=docs docs/make.jl
 
-  docs-astrostates: 
+  docs-astrostates:
     name: docs-astrostates
     runs-on: ubuntu-latest
+    needs: docs-astrobase
     permissions:
       contents: write
       pages: write
