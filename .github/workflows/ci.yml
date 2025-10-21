@@ -80,7 +80,7 @@ jobs:
       - name: Install dependencies
         working-directory: AstroBase
         run: |
-          julia --project=docs -e 'using Pkg; Pkg.develop(path=".."); Pkg.instantiate()'
+          julia --project=docs -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
           
       - name: Build and deploy docs
         working-directory: AstroBase
