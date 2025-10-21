@@ -1,0 +1,66 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: test-${{ matrix.pkg }}-julia-1.11
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg: [AstroBase]
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/${{ matrix.pkg }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.11'
+          
+      - name: Setup dependencies
+        shell: bash
+        run: |
+          julia --project=. -e 'using Pkg; Pkg.rm([p.name for p in values(Pkg.dependencies()) if p.is_direct_dep])'
+          # AstroBase has no dependencies to develop
+          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+
+      - name: Test with coverage
+        run: julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
+
+      - name: LCOV artifact
+        run: julia --project=. -e 'using Coverage; LCOV.writefile(joinpath(ENV["GITHUB_WORKSPACE"], "lcov-${{ matrix.pkg }}.info"), process_folder("src"))'
+        
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.pkg }}
+          path: lcov-${{ matrix.pkg }}.info
+        
+  coverage:
+    name: aggregate-coverage
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: coverage-artifacts
+          
+      - name: Combine coverage files
+        run: |
+          find coverage-artifacts -name "*.info" -exec cat {} \; > lcov-combined.info
+          
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: lcov-combined.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+  
