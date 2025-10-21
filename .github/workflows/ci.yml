@@ -27,6 +27,7 @@ jobs:
         run: |
           # AstroBase has no dependencies to develop or remove
           julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. -e 'using Pkg; Pkg.add("Coverage")'
 
       - name: Test with coverage
         run: julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
