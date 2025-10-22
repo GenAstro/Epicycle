@@ -29,42 +29,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-julia-cache-
           
-      - name: Setup global monorepo environment
+      - name: Setup dependencies
         shell: bash
-        working-directory: ${{ github.workspace }}
         run: |
-          # Build all packages once in the root environment
-          julia --project=. -e '
-            using Pkg
-            # Develop all packages in dependency order
-            Pkg.develop(path="AstroBase")
-            Pkg.develop(path="AstroStates") 
-            Pkg.develop(path="AstroEpochs")
-            Pkg.develop(path="AstroUniverse")
-            # Instantiate the global environment
-            Pkg.instantiate()
-            # Add test extras needed by any package
-            Pkg.add(["Coverage", "ForwardDiff", "Zygote", "FiniteDiff"])
-            println("✅ Global monorepo environment ready")
-          '
+          if [ "${{ matrix.pkg }}" = "AstroBase" ]; then
+            cd AstroBase && julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          elif [ "${{ matrix.pkg }}" = "AstroStates" ]; then
+            cd AstroStates && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
+          elif [ "${{ matrix.pkg }}" = "AstroEpochs" ]; then
+            cd AstroEpochs && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
+          elif [ "${{ matrix.pkg }}" = "AstroUniverse" ]; then
+            cd AstroUniverse && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroEpochs"); Pkg.instantiate()'
+          fi
 
-      - name: Test individual package with coverage
-        shell: bash
-        run: |
-          cd ${{ matrix.pkg }}
-          # Test the specific package using the global environment
-          julia --project=.. --code-coverage=user -e "
-            using Pkg
-            # Activate the package-specific test environment
-            Pkg.activate(\".\")
-            # Test with coverage
-            Pkg.test(coverage=true)
-          "
+      - name: Test with coverage
+        run: cd ${{ matrix.pkg }} && julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
 
       - name: Generate coverage file
-        run: |
-          cd ${{ matrix.pkg }}
-          julia --project=.. -e 'using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
+        run: cd ${{ matrix.pkg }} && julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
