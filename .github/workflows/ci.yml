@@ -47,8 +47,10 @@ jobs:
             # Install extras for testing
             julia --project=. -e 'using Pkg; Pkg.add(["ForwardDiff", "Zygote", "FiniteDiff"])'
           elif [ "${{ matrix.pkg }}" = "AstroUniverse" ]; then
-            # AstroUniverse depends on AstroBase and AstroEpochs
-            julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroEpochs"); Pkg.instantiate()'
+            # AstroUniverse depends on AstroBase and AstroEpochs - develop step by step
+            julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
+            julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroEpochs")'  
+            julia --project=. -e 'using Pkg; Pkg.instantiate()'
           fi
           julia --project=. -e 'using Pkg; Pkg.add("Coverage")'
 
