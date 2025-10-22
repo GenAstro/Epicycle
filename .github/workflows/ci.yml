@@ -11,9 +11,6 @@ jobs:
       fail-fast: false
       matrix:
         pkg: [AstroBase, AstroStates, AstroEpochs, AstroUniverse]
-    defaults:
-      run:
-        working-directory: ${{ github.workspace }}/${{ matrix.pkg }}
     
     steps:
       - uses: actions/checkout@v4
@@ -32,33 +29,42 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-julia-cache-
           
-      - name: Setup dependencies
+      - name: Setup global monorepo environment
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          # Build all packages once in the root environment
+          julia --project=. -e '
+            using Pkg
+            # Develop all packages in dependency order
+            Pkg.develop(path="AstroBase")
+            Pkg.develop(path="AstroStates") 
+            Pkg.develop(path="AstroEpochs")
+            Pkg.develop(path="AstroUniverse")
+            # Instantiate the global environment
+            Pkg.instantiate()
+            # Add test extras needed by any package
+            Pkg.add(["Coverage", "ForwardDiff", "Zygote", "FiniteDiff"])
+            println("✅ Global monorepo environment ready")
+          '
+
+      - name: Test individual package with coverage
         shell: bash
         run: |
-          if [ "${{ matrix.pkg }}" = "AstroBase" ]; then
-            # AstroBase has no dependencies to develop
-            julia --project=. -e 'using Pkg; Pkg.instantiate()'
-           elif [ "${{ matrix.pkg }}" = "AstroStates" ]; then
-            # AstroStates depends on AstroBase
-            julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
-          elif [ "${{ matrix.pkg }}" = "AstroEpochs" ]; then
-            # AstroEpochs depends on AstroBase and has test extras
-            julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
-            # Install extras for testing
-            julia --project=. -e 'using Pkg; Pkg.add(["ForwardDiff", "Zygote", "FiniteDiff"])'
-          elif [ "${{ matrix.pkg }}" = "AstroUniverse" ]; then
-            # AstroUniverse depends on AstroBase and AstroEpochs - develop step by step
-            julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
-            julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroEpochs")'  
-            julia --project=. -e 'using Pkg; Pkg.instantiate()'
-          fi
-          julia --project=. -e 'using Pkg; Pkg.add("Coverage")'
-
-      - name: Test with coverage
-        run: julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
+          cd ${{ matrix.pkg }}
+          # Test the specific package using the global environment
+          julia --project=.. --code-coverage=user -e "
+            using Pkg
+            # Activate the package-specific test environment
+            Pkg.activate(\".\")
+            # Test with coverage
+            Pkg.test(coverage=true)
+          "
 
       - name: Generate coverage file
-        run: julia --project=. -e 'using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
+        run: |
+          cd ${{ matrix.pkg }}
+          julia --project=.. -e 'using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
