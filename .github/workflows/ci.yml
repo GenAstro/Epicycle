@@ -37,9 +37,13 @@ jobs:
       - name: Test with coverage
         run: julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
 
+      - name: Generate coverage file
+        run: julia --project=. -e 'using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
+          file: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: ${{ matrix.pkg }}
           name: ${{ matrix.pkg }}
