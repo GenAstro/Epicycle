@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pkg: [AstroBase, AstroStates, AstroEpochs]
+        pkg: [AstroBase, AstroStates, AstroEpochs, AstroUniverse]
     defaults:
       run:
         working-directory: ${{ github.workspace }}/${{ matrix.pkg }}
@@ -21,6 +21,16 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1.11'
+          
+      - name: Cache Julia artifacts and scratchspaces
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.julia/artifacts
+            ~/.julia/scratchspaces
+          key: ${{ runner.os }}-julia-cache-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-julia-cache-
           
       - name: Setup dependencies
         shell: bash
@@ -36,6 +46,9 @@ jobs:
             julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
             # Install extras for testing
             julia --project=. -e 'using Pkg; Pkg.add(["ForwardDiff", "Zygote", "FiniteDiff"])'
+          elif [ "${{ matrix.pkg }}" = "AstroUniverse" ]; then
+            # AstroUniverse depends on AstroBase and AstroEpochs
+            julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroEpochs"); Pkg.instantiate()'
           fi
           julia --project=. -e 'using Pkg; Pkg.add("Coverage")'
 
