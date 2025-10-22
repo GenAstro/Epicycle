@@ -32,8 +32,10 @@ jobs:
             # AstroStates depends on AstroBase
             julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
           elif [ "${{ matrix.pkg }}" = "AstroEpochs" ]; then
-            # AstroEpochs depends on AstroBase
+            # AstroEpochs depends on AstroBase and has test extras
             julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
+            # Install extras for testing
+            julia --project=. -e 'using Pkg; Pkg.add(["ForwardDiff", "Zygote", "FiniteDiff"])'
           fi
           julia --project=. -e 'using Pkg; Pkg.add("Coverage")'
 
