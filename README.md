@@ -12,6 +12,7 @@
 |---------|-------|----------|---------------|
 | AstroBase | [![AstroBase](https://github.com/GenAstro/Epicycle/workflows/CI/badge.svg?job=test-AstroBase-julia-1.11)](https://github.com/GenAstro/Epicycle/actions) | [![codecov](https://codecov.io/gh/GenAstro/Epicycle/component/AstroBase/branch/main/graph/badge.svg?token=FNHOVC5O5N)](https://codecov.io/gh/GenAstro/Epicycle) | [![docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://genastro.github.io/Epicycle/AstroBase/) |
 | AstroStates | [![AstroStates](https://github.com/GenAstro/Epicycle/workflows/CI/badge.svg?job=test-AstroStates-julia-1.11)](https://github.com/GenAstro/Epicycle/actions) | [![codecov](https://codecov.io/gh/GenAstro/Epicycle/component/AstroStates/branch/main/graph/badge.svg?token=FNHOVC5O5N)](https://codecov.io/gh/GenAstro/Epicycle) | [![docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://genastro.github.io/Epicycle/AstroStates/) |
+| AstroEpochs | [![AstroEpochs](https://github.com/GenAstro/Epicycle/workflows/CI/badge.svg?job=test-AstroEpochs-julia-1.11)](https://github.com/GenAstro/Epicycle/actions) | [![codecov](https://codecov.io/gh/GenAstro/Epicycle/component/AstroEpochs/branch/main/graph/badge.svg?token=FNHOVC5O5N)](https://codecov.io/gh/GenAstro/Epicycle) | *Coming Soon* |
 
 
 Epicycle is an application for space systems with a nod to the giants before us and to how far we've come.

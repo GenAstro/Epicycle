@@ -1,0 +1,26 @@
+name = "AstroEpochs"
+uuid = "241dcde3-d7a4-450d-948f-15f2ea2ba1fa"
+authors = ["Steve Hughes <steven.hughes@genastro.org>"]
+version = "1.0.0-DEV"
+
+[deps]
+AstroBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Tempo = "c33777b2-e695-4fae-9135-aeae8855dd81"
+
+[compat]
+FiniteDiff = "2.29.0"
+ForwardDiff = "0.10.39"
+Printf = "1.11.0"
+Tempo = "1.3.1"
+Zygote = "0.7.10"
+julia = "1.6.7"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
+
+[targets]
+test = ["Test"]

@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pkg: [AstroBase, AstroStates]
+        pkg: [AstroBase, AstroStates, AstroEpochs]
     defaults:
       run:
         working-directory: ${{ github.workspace }}/${{ matrix.pkg }}
@@ -30,6 +30,9 @@ jobs:
             julia --project=. -e 'using Pkg; Pkg.instantiate()'
            elif [ "${{ matrix.pkg }}" = "AstroStates" ]; then
             # AstroStates depends on AstroBase
+            julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
+          elif [ "${{ matrix.pkg }}" = "AstroEpochs" ]; then
+            # AstroEpochs depends on AstroBase
             julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
           fi
           julia --project=. -e 'using Pkg; Pkg.add("Coverage")'
