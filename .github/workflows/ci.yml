@@ -43,10 +43,11 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          file: lcov.info
+          file: ./${{ matrix.pkg }}/lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: ${{ matrix.pkg }}
           name: ${{ matrix.pkg }}
+          directory: ./${{ matrix.pkg }}/
           fail_ci_if_error: false
         
 

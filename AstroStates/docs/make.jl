@@ -14,7 +14,7 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "API Reference" => "api.md",
+        "Reference Guide" => "api.md",
     ],
     warnonly=true,         # Just warn, don't error
     checkdocs=:none        # Skip docstring completeness checks
