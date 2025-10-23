@@ -6,7 +6,7 @@ module AstroProp
 
 # TODO, trap error when user propagates a spacecraft in propagate() that is not in dynsys
 
-using DifferentialEquations, LinearAlgebra
+using OrdinaryDiffEq, LinearAlgebra
 
 using AstroBase
 using AstroStates

@@ -1,7 +1,7 @@
 
 using ForwardDiff
 using Test
-using DifferentialEquations
+using OrdinaryDiffEq
 using LinearAlgebra
 
 using AstroBase

@@ -28,3 +28,5 @@ LocalPreferences.toml
 JuliaLocalPreferences.toml
 
 temp/
+
+*.out

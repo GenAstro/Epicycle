@@ -1,7 +1,7 @@
 
 using Test
 using LinearAlgebra
-using DifferentialEquations
+using OrdinaryDiffEq
 
 using AstroCoords
 using AstroProp

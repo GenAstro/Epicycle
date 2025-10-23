@@ -9,7 +9,7 @@ using AstroUniverse
 using ForwardDiff
 using AstroCoords
 using Test
-using DifferentialEquations
+using OrdinaryDiffEq
 using LinearAlgebra
 using SciMLSensitivity
 using Zygote

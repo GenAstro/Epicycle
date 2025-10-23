@@ -1,6 +1,6 @@
 
 using SNOW
-using DifferentialEquations
+using OrdinaryDiffEq
 using LinearAlgebra
 
 using AstroBase

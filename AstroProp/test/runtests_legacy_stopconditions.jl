@@ -1,6 +1,6 @@
 using Test
 using LinearAlgebra
-using DifferentialEquations
+using OrdinaryDiffEq
 
 using AstroBase
 using AstroStates
