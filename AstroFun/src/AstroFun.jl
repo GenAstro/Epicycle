@@ -343,6 +343,20 @@ val = get_calc(oc)
     return _evaluate(c.var, st) 
 end
 
+"""
+    set_calc!(c::AbstractCalc, newval)
+
+Set calc after checking if it is settable.  (Generic dispatch to type-specific implementations.)
+"""
+function set_calc!(c::AbstractCalc, newval)
+    # Check if calc is settable
+    if !calc_is_settable(c.var)
+        error("Variable $(typeof(c.var)) is not settable.")
+    end
+    
+    # Dispatch to type-specific implementation
+    return _set_calc_type!(c, newval)
+end
 
 """
     set_calc!(c::OrbitCalc, newval::Vector{<:Real})
@@ -371,12 +385,7 @@ oc = OrbitCalc(sc, PositionVector())
 set_calc!(oc, [7000.0, 300.0, 0.0])
 ```
 """
-@inline function set_calc!(c::OrbitCalc, newval::Vector{<:Real})
-    # Check if the variable is settable first
-    if !calc_is_settable(c.var)
-        error("Variable $(typeof(c.var)) is not settable.")
-    end
-    
+@inline function _set_calc_type!(c::OrbitCalc, newval::Vector{<:Real})
     # Compute the state type required for the variable
     st = _state_for_calc(c)
     # Update the state with the new value
@@ -389,16 +398,17 @@ set_calc!(oc, [7000.0, 300.0, 0.0])
 end
 
 """ 
-    @inline function set_calc!(c::OrbitCalc, newval::Real)
+    _set_calc_type!(c::OrbitCalc, newval::Real)
 
-# Pass in real as a 1x1 vector to vector dispatch set_calc!
+Type-specific implementation for OrbitCalc scalar assignments.
+Pass in real as a 1x1 vector to vector dispatch.
 """
-@inline function set_calc!(c::OrbitCalc, newval::Real)
-    return set_calc!(c, [newval])
+@inline function _set_calc_type!(c::OrbitCalc, newval::Real)
+    return _set_calc_type!(c, [newval])
 end
 
 """
-    set_calc!(c::ManeuverCalc, vals::AbstractVector{<:Real})
+    _set_calc_type!(c::ManeuverCalc, vals::AbstractVector{<:Real})
 
 Assign new value(s) to a settable maneuver-derived variable.
 
@@ -408,7 +418,7 @@ Arguments
 
 # Notes:
 - Delegates to the variable-specific `_set!(c, vals)` implementation.
-- For non-settable variables, calling this may throw a MethodError if `_set!` is not defined.
+- Settability is checked by the generic `set_calc!` method.
 
 # Returns
 - Returns nothing. Performs inplace update of Maneuver.
@@ -425,15 +435,19 @@ set_calc!(mc, [0.01, 0.02, -0.03])
 # output
 ```
 """
-@inline set_calc!(c::ManeuverCalc, vals::AbstractVector{<:Real}) = _set!(c, vals)
+@inline _set_calc_type!(c::ManeuverCalc, vals::AbstractVector{<:Real}) = _set!(c, vals)
+
+
 
 """
-    function set_calc!(c::AbstractCalc, _)
+    _set_calc_type!(c::AbstractCalc, newval)
 
-Fallback set_calc! method for non-settable Calc types.
+Fallback implementation for calc types that don't have specific `_set_calc_type!` methods.
+This should only be reached if settability checking is bypassed.
 """
-function set_calc!(c::AbstractCalc, _)
-    error("Variable $(typeof(c.var)) is not assignable.")
+function _set_calc_type!(c::AbstractCalc, newval)
+    error("No _set_calc_type! implementation found for $(typeof(c)). " *
+          "This calc type may need a specific implementation.")
 end
 
 """

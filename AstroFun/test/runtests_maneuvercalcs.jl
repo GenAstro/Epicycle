@@ -5,16 +5,16 @@ using AstroStates
 using AstroEpochs
 
 # Helper to normalize get_calc return to scalar if it’s a length-1 vector
-scalarize(x) = x
-scalarize(x::AbstractVector) = (length(x) == 1 ? x[1] : error("expected length-1 vector"))
+#scalarize(x) = x
+#scalarize(x::AbstractVector) = (length(x) == 1 ? x[1] : error("expected length-1 vector"))
 
 # Fresh spacecraft for isolation
-function make_sc()
-    Spacecraft(
-        state = SphericalRADECState(CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 1.0])),
-        time  = Time("2020-09-21T12:23:12", TAI(), ISOT()),
-    )
-end
+#function make_sc()
+#    Spacecraft(
+#        state = SphericalRADECState(CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 1.0])),
+#        time  = Time("2020-09-21T12:23:12", TAI(), ISOT()),
+#    )
+#end
 
 @testset "DeltaVVector (ManeuverCalc)" begin
     sc = make_sc()
@@ -46,8 +46,8 @@ end
     @test length(vals) == 1
     @test isapprox(vals[1], sqrt(0.1^2 + 0.2^2 + 0.3^2); atol=1e-12)
 
-    # Not settable: set_calc! should throw (no setter defined for DeltaVMag)
-    @test_throws MethodError set_calc!(calc, [0.0])
+    # Not settable: set_calc! should throw with clear error message
+    @test_throws "Variable DeltaVMag is not settable" set_calc!(calc, [0.0])
 
     # Test trait methods
     @test calc_numvars(calc.var) == 1

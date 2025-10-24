@@ -120,8 +120,7 @@ end
         @test false
     catch e
         msg = sprint(showerror, e)
-        @test occursin("not assignable", msg)
-        @test occursin("DeltaVMag", msg)
+        @test msg == "Variable DeltaVMag is not settable."
     end
 end
 
