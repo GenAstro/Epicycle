@@ -246,7 +246,19 @@ end
         @test calc_is_settable(calc.var) == true
     end
 
-    
+    # PosDotVel
+    @testset "PosDotVel" begin
+        sc = make_sc()
+        calc = OrbitCalc(sc, PosDotVel())
+        # Test calc is set correctly (matches dot product of position and velocity)
+        sc_cart = get_state(sc, Cartesian())
+        expected_dot = dot(sc_cart.posvel[1:3], sc_cart.posvel[4:6])
+        @test isapprox(scalarize(get_calc(calc)), expected_dot; atol=1e-8)
+        # Test trait methods (PosDotVel should be read-only derived quantity)
+        @test calc_numvars(calc.var) == 1
+        @test calc_is_settable(calc.var) == false
+        @test calc_input_statetag(calc.var) == Cartesian()
+    end
 
 end
 nothing

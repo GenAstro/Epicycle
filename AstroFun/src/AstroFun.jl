@@ -31,7 +31,7 @@ export AbstractCalcVariable, AbstractOrbitVar, AbstractBodyVar, AbstractManeuver
 export AbstractCalc, OrbitCalc, BodyCalc, ManeuverCalc
 export get_calc, set_calc!, calc_numvars, calc_is_settable, calc_input_statetag
 export PositionVector, VelocityVector, PosMag, SMA, TA, RAAN, IncomingAsymptoteFull
-export OutGoingRLA, PosX, VelMag, Ecc
+export OutGoingRLA, PosX, VelMag, Ecc, PosDotVel
 
 # export Maneuver Variables
 export DeltaVMag, DeltaVVector
@@ -162,6 +162,7 @@ for f in (
     "orbitcalc_posx.jl",
     "orbitcalc_velmag.jl",
     "orbitcalc_ecc.jl",
+    "orbitcalc_pos_dot_vel.jl",
     "bodycalc_gravparam.jl",
     "maneuvercalc_deltavvector.jl",
     "maneuvercalc_deltavmag.jl",
@@ -371,6 +372,11 @@ set_calc!(oc, [7000.0, 300.0, 0.0])
 ```
 """
 @inline function set_calc!(c::OrbitCalc, newval::Vector{<:Real})
+    # Check if the variable is settable first
+    if !calc_is_settable(c.var)
+        error("Variable $(typeof(c.var)) is not settable.")
+    end
+    
     # Compute the state type required for the variable
     st = _state_for_calc(c)
     # Update the state with the new value
@@ -391,7 +397,6 @@ end
     return set_calc!(c, [newval])
 end
 
-# ...existing code...
 """
     set_calc!(c::ManeuverCalc, vals::AbstractVector{<:Real})
 
