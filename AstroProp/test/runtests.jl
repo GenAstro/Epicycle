@@ -241,6 +241,55 @@ end
     @test isapprox(jacobian[PosVel], J; rtol=1e-12)
 end
 
+@testset "History Storage and Type Safety" begin
+    # Create spacecraft with Float64 state
+    sat = Spacecraft(
+        state=CartesianState([7000.0, 300.0, 0.0, 0.0, 8.5, 0.03]), 
+        time=Time("2015-09-21T12:23:12", TAI(), ISOT())
+    )
+
+    # Initial history should be empty
+    @test isempty(sat.history)
+
+    # Create force models and propagate for a short time
+    gravity = PointMassGravity(earth,(moon,sun))
+    forces  = ForceModel(gravity)
+    integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
+    prop    = OrbitPropagator(forces, integ)
+
+    # Propagate to apoapsis
+    propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+
+    # Verify history was populated
+    @test !isempty(sat.history)
+    @test length(sat.history) == 1  # Should have one segment
+
+    # Check the first segment
+    segment = sat.history[1]
+    @test !isempty(segment)
+
+    # Verify all entries have correct types
+    for (time_entry, state_entry) in segment
+        @test time_entry isa AstroEpochs.Time{Float64}
+        @test state_entry isa Vector{Float64}
+        @test length(state_entry) == 6  # Position and velocity
+    end
+
+    # Verify chronological ordering
+    times = [entry[1].jd for entry in segment]
+    @test issorted(times)
+
+    # Test that we can access the history without type issues
+    first_time = segment[1][1]
+    last_time = segment[end][1]
+    @test last_time.jd > first_time.jd
+
+    # Verify the state values are reasonable (not NaN or Inf)
+    for (_, state) in segment
+        @test all(isfinite.(state))
+    end
+end
+
 include("runtests_dummyforce.jl")
 #include("runtests_DynamicSystem.jl")
 include("runtests_orbitcalcstop.jl")

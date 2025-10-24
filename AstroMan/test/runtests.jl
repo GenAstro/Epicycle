@@ -96,15 +96,15 @@ end
     vel1 = vel0 .+ R1 * dv1_vnb
     vel2 = vel1 .+ dv2_inertial
 
-    # First history entry
+    # First history entry - now stored as Float64
     t1, pv1 = sat1.history[1][1]
-    @test t1 === sat1.time
+    @test t1 isa Time{Float64}  # History always uses Float64
     @test pv1[1:3] == pos0
     @test isapprox(pv1[4:6], vel1; rtol=1e-10, atol=1e-12)
 
-    # Second history entry
+    # Second history entry - now stored as Float64
     t2, pv2 = sat1.history[2][1]
-    @test t2 === sat1.time
+    @test t2 isa Time{Float64}  # History always uses Float64
     @test pv2[1:3] == pos0
     @test isapprox(pv2[4:6], vel2; rtol=1e-10, atol=1e-12)
 end

@@ -27,6 +27,7 @@ using AstroCoords: ICRFAxes, CoordinateSystem
 using AstroUniverse: earth
 
 export Spacecraft, get_state, to_posvel, set_posvel!
+export push_history_segment!
 
 include("spacecraft.jl")
 

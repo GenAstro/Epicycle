@@ -150,7 +150,7 @@ end
 
     # History independence
     @test length(sc1.history) == 0
-    push!(sc0.history, [(t0, [1.0,2.0,3.0,4.0,5.0,6.0])])
+    push_history_segment!(sc0, [(t0, [1.0,2.0,3.0,4.0,5.0,6.0])])
     @test length(sc0.history) == 1
     @test length(sc1.history) == 0
 end
@@ -195,15 +195,16 @@ end
     # Time value preserved (do not assert on internal numeric type)
     @test sc.time == t
 
-    # History element type parameterized as Vector{Vector{Tuple{TT, Vector{T}}}}
-    @test eltype(sc.history) == Vector{Tuple{typeof(sc.time), Vector{typeof(sc.mass)}}}
+    # History element type always Float64 regardless of spacecraft promotion
+    @test eltype(sc.history) == Vector{Tuple{Time{Float64}, Vector{Float64}}}
 
-    # Can push a correctly-typed history sample (time, 6-vector of Dual)
-    sample = Vector{Tuple{typeof(sc.time), Vector{typeof(sc.mass)}}}([(sc.time, zeros(typeof(sc.mass), 6))])
-    push!(sc.history, sample)
+    # Can push a correctly-typed history segment using the new API
+    # Let push_history_segment! handle the type conversion automatically
+    sample_segment = [(sc.time, zeros(6))]
+    push_history_segment!(sc, sample_segment)
     @test length(sc.history) == 1
-    @test sc.history[1][1][1] === sc.time
-    @test eltype(sc.history[1][1][2]) === typeof(sc.mass)
+    @test sc.history[1][1][1] isa Time{Float64}
+    @test eltype(sc.history[1][1][2]) === Float64
     @test length(sc.history[1][1][2]) == 6
 end
 
@@ -217,7 +218,7 @@ end
     @test sc.mass isa ForwardDiff.Dual
     @test sc.time.jd1 isa ForwardDiff.Dual
     @test sc.time.jd2 isa ForwardDiff.Dual
-    @test eltype(sc.history) == Vector{Tuple{typeof(sc.time), Vector{typeof(sc.mass)}}}
+    @test eltype(sc.history) == Vector{Tuple{Time{Float64}, Vector{Float64}}}
 end
 
 @testset "Spacecraft with Dual time" begin
@@ -232,7 +233,7 @@ end
     @test sc.mass isa ForwardDiff.Dual
     @test sc.time.jd1 isa ForwardDiff.Dual
     @test sc.time.jd2 isa ForwardDiff.Dual
-    @test sc.history isa Vector{Vector{Tuple{typeof(sc.time), Vector{typeof(sc.mass)}}}}
+    @test sc.history isa Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}
 end
 
 @testset "Spacecraft with Dual state" begin
@@ -245,11 +246,10 @@ end
     @test sc.mass isa ForwardDiff.Dual
     @test sc.time.jd1 isa ForwardDiff.Dual
     @test sc.time.jd2 isa ForwardDiff.Dual
-    @test sc.history isa Vector{Vector{Tuple{typeof(sc.time), Vector{typeof(sc.mass)}}}}
+    @test sc.history isa Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}
 end
 
 @testset "gaps" begin
-
   # Prepare a baseline spacecraft in Cartesian
   state_cart = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.546, 0.0])
   t_tt       = Time("2015-09-21T12:23:12", TT(), ISOT())

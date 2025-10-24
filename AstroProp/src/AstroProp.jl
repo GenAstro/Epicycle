@@ -14,6 +14,7 @@ using AstroEpochs
 using AstroUniverse
 using AstroCoords
 using AstroModels: Spacecraft, to_posvel, set_posvel!
+import AstroModels: push_history_segment!
 using AstroFun: OrbitCalc, get_calc
 
 import AstroFun: AbstractFun, AbstractCalcVariable, AbstractOrbitVar
@@ -179,7 +180,7 @@ function update_structs!(forces::ForceModel, sol_u::Vector{<:Real}, odereg::Dict
                 (Time(initialtime+ t / 86400.0, TDB(), JD()), copy(u[idx_map[:posvel]]))
                 for (t, u) in zip(full_sol.t, full_sol.u)
             ]
-            push!(sc.history, new_segment)
+            push_history_segment!(sc, new_segment)
         end
 
         # Update current time (TAI)

@@ -8,7 +8,7 @@ Fields
 - time::TT — epoch as a Time struct
 - mass::T — total mass 
 - name::String — user label.
-- history::Vector{Vector{Tuple{TT, Vector{T}}}} — time-tagged history (e.g., [(time, posvel)]) grouped in segments.
+- history::Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}} — time-tagged history (e.g., [(time, posvel)]) grouped in segments.
 - coord_sys::CS — coordinate system (origin and axes) associated with the spacecraft.
 
 # Notes:
@@ -37,7 +37,7 @@ mutable struct Spacecraft{S<:OrbitState, TT<:Time, CS<:AbstractCoordinateSystem,
     time::TT
     mass::T
     name::String
-    history::Vector{Vector{Tuple{TT, Vector{T}}}}
+    history::Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}
     coord_sys::CS
 end
 
@@ -87,10 +87,10 @@ function Spacecraft(state::Union{AbstractState,OrbitState}, time::TT;
                getfield(time, :scale), getfield(time, :format))
     TTIME = typeof(t_T)
 
-    # History default with correct types
+    # History default with Float64 types (always, regardless of T)
     hist_T = history === nothing ?
-        Vector{Vector{Tuple{TTIME, Vector{Tnum}}}}() :
-        convert(Vector{Vector{Tuple{TTIME, Vector{Tnum}}}}, history)
+        Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}() :
+        convert(Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}, history)
 
     return Spacecraft{typeof(os_T), TTIME, CS, Tnum}(os_T, t_T, mass_T, String(name), hist_T, coord_sys)
 end
@@ -307,5 +307,46 @@ function set_posvel!(sc::Spacecraft, x::AbstractVector{<:Real})
     # TODO. Generalize this function, possibly replacing it.
     throw(ArgumentError("Conversion not implemented yet to convert state. TODO."))
 
+end
+
+"""
+    push_history_segment!(sc::Spacecraft, segment::Vector{<:Tuple})
+
+Append a new history segment to the spacecraft.
+Always stores data as Float64 regardless of input numeric types.
+
+# Arguments
+- sc::Spacecraft: The spacecraft to update
+- segment::Vector{Tuple{Time, Vector}}: Complete segment with time-state pairs
+
+# Returns
+- sc::Spacecraft: The same spacecraft instance (for chaining)
+
+# Notes
+- Converts all times and position/velocity vectors to Float64 for efficient storage
+- History is for ephemeris logging, not differentiation
+- Works for single-point segments (maneuvers) or multi-point segments (propagation)
+"""
+function push_history_segment!(sc::Spacecraft, segment::Vector{<:Tuple})
+    # Helper function to safely convert any Real to Float64 (handles Dual numbers)
+    function to_float64(x::Real)
+        # For regular numbers
+        if x isa AbstractFloat || x isa Integer
+            return Float64(x)
+        # For ForwardDiff.Dual and other AD types with .value field
+        elseif hasfield(typeof(x), :value)
+            return Float64(x.value)
+        else
+            # Fallback: try to convert directly
+            return Float64(x)
+        end
+    end
+    
+    # Convert entire segment to Float64 types for efficient storage
+    segment_f64 = [(Time(to_float64(t.jd1), to_float64(t.jd2), t.scale, t.format), 
+                    map(to_float64, pv)) 
+                   for (t, pv) in segment]
+    push!(sc.history, segment_f64)
+    return sc
 end
 
