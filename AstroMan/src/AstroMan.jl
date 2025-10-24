@@ -27,17 +27,17 @@ Allowed maneuver axes types for ImpulsiveManeuver.
 const MANEUVER_AXES = (VNB, Inertial)
 
 """
-    ImpulsiveManeuver{A<:AbstractAxes, F<:Real}
+    ImpulsiveManeuver{A<:AbstractAxes, T<:Real}
 
 Represents an impulsive delta-v command defined in a local maneuver frame.
 
 Fields
 - axes::A        local maneuver frame (e.g., VNB() or Inertial())
-- g0::Real       standard gravity in m/s^2 (internally converted to km/s^2 where needed)
-- Isp::Real      specific impulse in seconds
-- element1::F    delta-v component along axis 1 of `axes` (km/s)
-- element2::F    delta-v component along axis 2 of `axes` (km/s)
-- element3::F    delta-v component along axis 3 of `axes` (km/s)
+- g0::T          standard gravity in m/s^2 (internally converted to km/s^2 where needed)
+- Isp::T         specific impulse in seconds
+- element1::T    delta-v component along axis 1 of `axes` (km/s)
+- element2::T    delta-v component along axis 2 of `axes` (km/s)
+- element3::T    delta-v component along axis 3 of `axes` (km/s)
 
 # Notes:
 - Use keyword constructor for convenience to avoid setting all values. 
@@ -64,16 +64,16 @@ ImpulsiveManeuver(
   element3 = -0.002)
 ```
 """
-mutable struct ImpulsiveManeuver{A<:AbstractAxes, F<:Real}
+mutable struct ImpulsiveManeuver{A<:AbstractAxes, T<:Real}
     axes::A
-    g0::Real
-    Isp::Real
-    element1::F
-    element2::F
-    element3::F
-    function ImpulsiveManeuver(axes::A, g0::Real, Isp::Real, element1::F, element2::F, element3::F) where {A<:AbstractAxes, F<:Real}
+    g0::T
+    Isp::T
+    element1::T
+    element2::T
+    element3::T
+    function ImpulsiveManeuver(axes::A, g0::T, Isp::T, element1::T, element2::T, element3::T) where {A<:AbstractAxes, T<:Real}
         _validate_maneuver_inputs(axes, g0, Isp)
-        new{A,F}(axes, g0, Isp, element1, element2, element3)
+        new{A,T}(axes, g0, Isp, element1, element2, element3)
     end
 end
 
@@ -109,7 +109,9 @@ function ImpulsiveManeuver(;
     element2::Real = 0.0,
     element3::Real = 0.0,
 )
-    ImpulsiveManeuver(axes, g0, Isp, element1, element2, element3)
+    # Promote all numeric arguments to common type
+    T = promote_type(typeof(g0), typeof(Isp), typeof(element1), typeof(element2), typeof(element3))
+    ImpulsiveManeuver(axes, T(g0), T(Isp), T(element1), T(element2), T(element3))
 end
 
 """
@@ -297,6 +299,36 @@ function push_history_segment!(sc::Spacecraft, m::ImpulsiveManeuver)
     new_segment = [(sc.time, to_posvel(sc))]
     push!(sc.history, new_segment)
     return sc
+end
+
+"""
+    promote(m::ImpulsiveManeuver, ::Type{T}) where T<:Real -> ImpulsiveManeuver{A,T}
+
+Promote all Real fields of an ImpulsiveManeuver to type T for automatic differentiation.
+
+# Arguments
+- m::ImpulsiveManeuver: The maneuver to promote
+- ::Type{T}: Target numeric type (e.g., ForwardDiff.Dual, BigFloat)
+
+# Returns  
+- ImpulsiveManeuver{A,T}: New maneuver with all Real fields promoted to type T
+
+# Examples
+```julia
+using ForwardDiff
+m = ImpulsiveManeuver(axes=VNB(), g0=9.81, Isp=300.0, element1=0.01, element2=0.02, element3=0.03)
+m_dual = promote(m, ForwardDiff.Dual{Float64})
+```
+"""
+function Base.promote(m::ImpulsiveManeuver, ::Type{T}) where T<:Real
+    ImpulsiveManeuver(
+        m.axes,           
+        T(m.g0),          
+        T(m.Isp),           
+        T(m.element1),    
+        T(m.element2),    
+        T(m.element3),    
+    )
 end
 
 end

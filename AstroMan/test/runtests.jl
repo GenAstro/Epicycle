@@ -225,4 +225,103 @@ end
     @test isapprox(grad_zyg, grad_expected; rtol=1e-10, atol=1e-12)
 end
 
+@testset "ImpulsiveManeuver promote function" begin
+    # Create a baseline maneuver with mixed input types
+    m_base = ImpulsiveManeuver(
+        axes=VNB(), 
+        g0=9.81f0,        # Float32
+        Isp=300.0,        # Float64
+        element1=0.01,    # Float64
+        element2=0.02f0,  # Float32
+        element3=0.03     # Float64
+    )
+    
+    # Test 1: Original type promotion in constructor
+    @test typeof(m_base.g0) == Float64      # All promoted to Float64
+    @test typeof(m_base.Isp) == Float64
+    @test typeof(m_base.element1) == Float64
+    @test typeof(m_base.element2) == Float64
+    @test typeof(m_base.element3) == Float64
+    
+    # Test 2: Promote to ForwardDiff.Dual
+    m_dual = promote(m_base, ForwardDiff.Dual{Float64})
+    @test m_dual.axes === m_base.axes  # Axes unchanged
+    @test typeof(m_dual.g0) <: ForwardDiff.Dual
+    @test typeof(m_dual.Isp) <: ForwardDiff.Dual
+    @test typeof(m_dual.element1) <: ForwardDiff.Dual
+    @test typeof(m_dual.element2) <: ForwardDiff.Dual
+    @test typeof(m_dual.element3) <: ForwardDiff.Dual
+    
+    # Test 3: Values preserved during promotion
+    @test m_dual.g0.value == m_base.g0
+    @test m_dual.Isp.value == m_base.Isp
+    @test m_dual.element1.value == m_base.element1
+    @test m_dual.element2.value == m_base.element2
+    @test m_dual.element3.value == m_base.element3
+    
+    # Test 4: Promote to BigFloat
+    m_big = promote(m_base, BigFloat)
+    @test typeof(m_big.g0) == BigFloat
+    @test typeof(m_big.Isp) == BigFloat
+    @test typeof(m_big.element1) == BigFloat
+    @test typeof(m_big.element2) == BigFloat
+    @test typeof(m_big.element3) == BigFloat
+    @test m_big.g0 ≈ m_base.g0
+    @test m_big.Isp ≈ m_base.Isp
+    @test m_big.element1 ≈ m_base.element1
+    
+    # Test 5: Promote to Float32 (downcast)
+    m_f32 = promote(m_base, Float32)
+    @test typeof(m_f32.g0) == Float32
+    @test typeof(m_f32.Isp) == Float32
+    @test typeof(m_f32.element1) == Float32
+    @test m_f32.g0 ≈ Float32(m_base.g0)
+    @test m_f32.Isp ≈ Float32(m_base.Isp)
+    
+    # Test 6: Promote with Inertial axes (verify axes preservation)
+    m_inertial = ImpulsiveManeuver(axes=Inertial(), g0=9.81, Isp=220.0, 
+                                   element1=0.1, element2=0.2, element3=0.3)
+    m_inertial_dual = promote(m_inertial, ForwardDiff.Dual{Float64})
+    @test m_inertial_dual.axes isa Inertial
+    @test typeof(m_inertial_dual.g0) <: ForwardDiff.Dual
+    
+    # Test 7: Chain promotions (should work)
+    m_chain = promote(promote(m_base, BigFloat), Float64)
+    @test typeof(m_chain.g0) == Float64
+    @test m_chain.g0 ≈ m_base.g0
+end
+
+@testset "promote function with AD workflow" begin
+    # Test realistic AD workflow using promoted maneuver
+    m_orig = ImpulsiveManeuver(axes=VNB(), g0=9.81, Isp=300.0,
+                               element1=0.01, element2=0.02, element3=0.03)
+    
+    # Function that uses a promoted maneuver for AD
+    function test_ad_workflow(dv_scale::Real)
+        # Scale the delta-v and promote for AD
+        m_scaled = ImpulsiveManeuver(axes=VNB(), g0=9.81, Isp=300.0,
+                                     element1=dv_scale * 0.01, 
+                                     element2=dv_scale * 0.02, 
+                                     element3=dv_scale * 0.03)
+        m_dual = promote(m_scaled, typeof(dv_scale))
+        
+        # Return total delta-v magnitude
+        return sqrt(m_dual.element1^2 + m_dual.element2^2 + m_dual.element3^2)
+    end
+    
+    # Test gradient computation
+    scale_0 = 1.0
+    grad = ForwardDiff.derivative(test_ad_workflow, scale_0)
+    
+    # Expected: d/ds[sqrt((s*0.01)² + (s*0.02)² + (s*0.03)²)] at s=1
+    # = (0.01² + 0.02² + 0.03²) / sqrt(0.01² + 0.02² + 0.03²)
+    expected_grad = (0.01^2 + 0.02^2 + 0.03^2) / sqrt(0.01^2 + 0.02^2 + 0.03^2)
+    @test isapprox(grad, expected_grad; rtol=1e-12, atol=1e-14)
+    
+    # Test that regular (non-AD) evaluation gives same result
+    regular_result = test_ad_workflow(1.0)
+    expected_result = sqrt(0.01^2 + 0.02^2 + 0.03^2)
+    @test isapprox(regular_result, expected_result; rtol=1e-12, atol=1e-14)
+end
+
 nothing
