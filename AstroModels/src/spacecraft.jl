@@ -350,3 +350,52 @@ function push_history_segment!(sc::Spacecraft, segment::Vector{<:Tuple})
     return sc
 end
 
+"""
+    Base.promote(sc::Spacecraft{S,TT,CS,T}, ::Type{Tnew}) where {S,TT,CS,T,Tnew<:Real}
+
+Promotes a Spacecraft to a new numeric type `Tnew` for automatic differentiation support.
+The state, time, and mass are promoted to `Tnew`, while history remains as Float64 for efficiency.
+
+This enables AD workflows where computation types (e.g., ForwardDiff.Dual) are promoted
+while preserving Float64 ephemeris storage.
+
+# Arguments
+- `sc::Spacecraft`: The spacecraft to promote
+- `::Type{Tnew}`: Target numeric type (e.g., ForwardDiff.Dual{Nothing,Float64,3})
+
+# Returns
+- `Spacecraft{S_new, TT_new, CS, Tnew}`: Promoted spacecraft
+
+# Example
+```julia
+using ForwardDiff
+sc = Spacecraft(state=CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]))
+sc_dual = promote(sc, ForwardDiff.Dual{Nothing,Float64,3})
+```
+"""
+function Base.promote(sc::Spacecraft{S,TT,CS,T}, ::Type{Tnew}) where {S,TT,CS,T,Tnew<:Real}
+    # Promote the state to new type
+    state_promoted = OrbitState(Tnew.(copy(sc.state.state)), sc.state.statetype)
+    
+    # Promote the time to new type (preserve scale/format)
+    time_promoted = Time(Tnew(sc.time.jd1), Tnew(sc.time.jd2),
+                        getfield(sc.time, :scale), getfield(sc.time, :format))
+    
+    # Promote the mass to new type
+    mass_promoted = Tnew(sc.mass)
+    
+    # Keep history as Float64 (no promotion needed - already Float64)
+    # This is the key benefit: ephemeris storage remains efficient
+    history_preserved = deepcopy(sc.history)
+    
+    # Create new spacecraft with promoted types
+    return Spacecraft{typeof(state_promoted), typeof(time_promoted), CS, Tnew}(
+        state_promoted,
+        time_promoted, 
+        mass_promoted,
+        sc.name,
+        history_preserved,
+        sc.coord_sys
+    )
+end
+

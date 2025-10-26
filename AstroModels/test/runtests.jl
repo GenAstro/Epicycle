@@ -300,41 +300,55 @@ end
     @test occursin("Change to state types", msg)
 end
 
-nothing
-
-#=
-@testset "Spacecraft AD coupling: state/mass unified" begin
-    # Helpers
-    to_dual(x) = ForwardDiff.Dual{Nothing}(float(x), 0.0)
-    to_dual_vec(v) = map(to_dual, v)
-
-    # Base inputs
-    state_f64 = CartesianState([7000.0, 300.0, 0.0, 0.1, 7.5, 1.0])
-    mass_f64  = 1000.0
-    mass_dual = to_dual(1000.0)
-    state_dual = CartesianState(to_dual_vec([7000.0, 300.0, 0.0, 0.1, 7.5, 1.0]))
-
-    # 1) Mixed inputs (Float state, Dual mass) → both stored as Dual
-    sc1 = Spacecraft(state=state_f64, mass=mass_dual)
-    @test eltype(to_posvel(sc1)) <: ForwardDiff.Dual
-    @test sc1.mass isa ForwardDiff.Dual
-
-    # 2) Mixed inputs (Dual state, Float mass) → both stored as Dual
-    sc2 = Spacecraft(state=state_dual, mass=mass_f64)
-    @test eltype(to_posvel(sc2)) <: ForwardDiff.Dual
-    @test sc2.mass isa ForwardDiff.Dual
-
-    # 3) Matching inputs (both Float) → remain Float
-    sc3 = Spacecraft(state=state_f64, mass=mass_f64)
-    @test eltype(to_posvel(sc3)) === Float64
-    @test sc3.mass === mass_f64
-
-    # 4) Time is preserved (no coupling to state/mass numeric type)
-    @testset "time preserved" begin
-        t = AstroEpochs.Time("2015-09-21T12:23:12", AstroEpochs.TAI(), AstroEpochs.ISOT())
-        sc4 = Spacecraft(state=state_f64, mass=mass_dual, time=t)
-        @test typeof(sc4.time) === typeof(t)
-        @test sc4.time == t
-    end
+@testset "Spacecraft promotion for AD" begin
+    using ForwardDiff
+    
+    # Create a Float64 spacecraft with some history
+    sc = Spacecraft(
+        state=CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
+        time=Time("2015-09-21T12:23:12", TAI(), ISOT()),
+        mass=1000.0,
+        name="test_sat"
+    )
+    
+    # Add some history to verify it's preserved
+    test_segment = [
+        (Time("2015-09-21T12:23:12", TAI(), ISOT()), [7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
+        (Time("2015-09-21T12:24:12", TAI(), ISOT()), [7001.0, 301.0, 1.0, 0.1, 7.4, 0.04])
+    ]
+    push_history_segment!(sc, test_segment)
+    
+    # Promote to ForwardDiff.Dual type
+    DualType = ForwardDiff.Dual{Nothing,Float64,3}
+    sc_dual = promote(sc, DualType)
+    
+    # Verify state was promoted
+    @test eltype(sc_dual.state.state) === DualType
+    @test sc_dual.state.statetype == sc.state.statetype
+    
+    # Verify time was promoted
+    @test typeof(sc_dual.time.jd1) === DualType
+    @test typeof(sc_dual.time.jd2) === DualType
+    @test sc_dual.time.scale == sc.time.scale
+    @test sc_dual.time.format == sc.time.format
+    
+    # Verify mass was promoted  
+    @test typeof(sc_dual.mass) === DualType
+    @test ForwardDiff.value(sc_dual.mass) ≈ sc.mass
+    
+    # Verify history remains Float64 (efficient storage)
+    @test eltype(sc_dual.history) == Vector{Tuple{Time{Float64}, Vector{Float64}}}
+    @test length(sc_dual.history) == length(sc.history)
+    @test sc_dual.history[1][1][1] isa Time{Float64}
+    @test sc_dual.history[1][1][2] isa Vector{Float64}
+    
+    # Verify non-numeric fields preserved
+    @test sc_dual.name == sc.name
+    @test sc_dual.coord_sys == sc.coord_sys
+    
+    # Test that original spacecraft is unchanged
+    @test eltype(sc.state.state) === Float64
+    @test typeof(sc.mass) === Float64
 end
-=#
+
+nothing
