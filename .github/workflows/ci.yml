@@ -26,95 +26,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-julia-cache-
 
-      - name: Develop all packages in global environment
+      - name: Run combined CI test script
         run: |
-          julia -e 'using Pkg; Pkg.develop([
-            PackageSpec(path="AstroBase"),
-            PackageSpec(path="AstroStates"), 
-            PackageSpec(path="AstroEpochs"),
-            PackageSpec(path="AstroUniverse"),
-            PackageSpec(path="AstroCoords"),
-            PackageSpec(path="AstroModels"),
-            PackageSpec(path="AstroMan"),
-            PackageSpec(path="AstroFun"),
-            PackageSpec(path="AstroProp"),
-            PackageSpec(path="AstroSolve")
-          ])'
-
-      - name: Test AstroBase
-        run: |
-          cd AstroBase
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
-          julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
-          julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
-
-      - name: Test AstroStates
-        run: |
-          cd AstroStates  
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
-          julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
-          julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
-
-      - name: Test AstroEpochs
-        run: |
-          cd AstroEpochs
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
-          julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
-          julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
-
-      - name: Test AstroUniverse
-        run: |
-          cd AstroUniverse
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
-          julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
-          julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
-
-      - name: Test AstroCoords
-        run: |
-          cd AstroCoords
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
-          julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
-          julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
-
-      - name: Test AstroModels
-        run: |
-          cd AstroModels
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
-          julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
-          julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
-
-      - name: Test AstroMan
-        run: |
-          cd AstroMan
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
-          julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
-          julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
-
-      - name: Test AstroFun
-        run: |
-          cd AstroFun
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
-          julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
-          julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
-
-      - name: Test AstroProp
-        run: |
-          cd AstroProp
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
-          julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
-          julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
-
-      - name: Test AstroSolve
-        run: |
-          cd AstroSolve
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
-          julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
-          julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
+          julia --project=. --code-coverage=user Epicycle/test/run_all_tests.jl
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          directory: ./
+          directory: ./cov
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
