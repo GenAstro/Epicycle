@@ -1,18 +1,13 @@
 # CI test runner: develop local packages in this repo and run each package's tests
 using Pkg, Logging
 
-# Ensure Coverage is available when running with --code-coverage
-try
-    import Coverage
-catch
-    @info "Adding Coverage package"
-    Pkg.add("Coverage")
-    import Coverage
-end
-
 # Go back to repo root from Epicycle/test/
 cd(joinpath(@__DIR__, "..", ".."))
-Pkg.activate(".")
+
+# Use a temporary environment to avoid dependency resolution issues
+# with the root Project.toml that lists all local packages
+temp_env = mktempdir()
+Pkg.activate(temp_env)
 
 pkgs = [
     "AstroBase",
@@ -39,6 +34,15 @@ end
 
 @info "Instantiate environment"
 Pkg.instantiate()
+
+# Ensure Coverage is available when running with --code-coverage
+try
+    import Coverage
+catch
+    @info "Adding Coverage package"
+    Pkg.add("Coverage")
+    import Coverage
+end
 
 # Run tests for each package in the same process. This mirrors your local workflow
 succeeded = Dict{String,Bool}()
