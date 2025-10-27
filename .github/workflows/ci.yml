@@ -26,21 +26,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-julia-cache-
 
-      - name: Setup all local package dependencies
-        run: |
-          julia -e 'using Pkg; Pkg.develop([
-            PackageSpec(path="AstroBase"),
-            PackageSpec(path="AstroStates"), 
-            PackageSpec(path="AstroEpochs"),
-            PackageSpec(path="AstroUniverse"),
-            PackageSpec(path="AstroCoords"),
-            PackageSpec(path="AstroModels"),
-            PackageSpec(path="AstroMan"),
-            PackageSpec(path="AstroFun"),
-            PackageSpec(path="AstroProp"),
-            PackageSpec(path="AstroSolve")
-          ])'
-
       - name: Test AstroBase
         run: |
           cd AstroBase
@@ -51,63 +36,63 @@ jobs:
       - name: Test AstroStates
         run: |
           cd AstroStates  
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
           julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
           julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
 
       - name: Test AstroEpochs
         run: |
           cd AstroEpochs
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
           julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
           julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
 
       - name: Test AstroUniverse
         run: |
           cd AstroUniverse
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroEpochs"); Pkg.instantiate()'
           julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
           julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
 
       - name: Test AstroCoords
         run: |
           cd AstroCoords
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroUniverse"); Pkg.instantiate()'
           julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
           julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
 
       - name: Test AstroModels
         run: |
           cd AstroModels
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.instantiate()'
           julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
           julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
 
       - name: Test AstroMan
         run: |
           cd AstroMan
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.develop(path="../AstroModels"); Pkg.instantiate()'
           julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
           julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
 
       - name: Test AstroFun
         run: |
           cd AstroFun
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.develop(path="../AstroModels"); Pkg.develop(path="../AstroMan"); Pkg.instantiate()'
           julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
           julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
 
       - name: Test AstroProp
         run: |
           cd AstroProp
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.develop(path="../AstroModels"); Pkg.develop(path="../AstroMan"); Pkg.develop(path="../AstroFun"); Pkg.instantiate()'
           julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
           julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
 
       - name: Test AstroSolve
         run: |
           cd AstroSolve
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.develop(path="../AstroModels"); Pkg.develop(path="../AstroMan"); Pkg.develop(path="../AstroFun"); Pkg.develop(path="../AstroProp"); Pkg.instantiate()'
           julia --project=. --code-coverage=user -e 'using Pkg; Pkg.test(coverage=true)'
           julia --project=. -e 'using Pkg; Pkg.add("Coverage"); using Coverage; LCOV.writefile("lcov.info", process_folder("src"))'
 
