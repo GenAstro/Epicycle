@@ -98,6 +98,23 @@ end
         @test calc_is_settable(calc.var) == true
     end
 
+    # Inc
+    @testset "Inc" begin
+        sc = make_sc()
+        calc = OrbitCalc(sc, Inc())
+        # Test calc is set correctly (matches Keplerian inc)
+        sc_kep = get_state(sc, Keplerian())
+        @test isapprox(scalarize(get_calc(calc)), sc_kep.inc; atol=1e-8)
+        # Update via set_calc! and verify spacecraft state updated
+        set_calc!(calc, deg2rad(45.0))
+        sc_kep = get_state(sc, Keplerian())
+        @test isapprox(sc_kep.inc, deg2rad(45.0); atol=1e-8)
+        @test isapprox(scalarize(get_calc(calc)), deg2rad(45.0); atol=1e-8)
+        # Test trait methods
+        @test calc_numvars(calc.var) == 1
+        @test calc_is_settable(calc.var) == true
+    end
+
     @testset "Ecc" begin
         sc = make_sc()
         calc = OrbitCalc(sc, Ecc())
