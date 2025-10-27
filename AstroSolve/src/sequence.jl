@@ -235,13 +235,22 @@ function solver_fun!(F::AbstractVector, x::AbstractVector, sm::SequenceManager)
     # Set all variables to the values passed in from solver
     set_var_values(x, sm.ordered_vars)
 
-    # Execute all events in order
+    # Collect constraint values as we execute events (preserves timing)
+    collected_values = eltype(F)[]
+    
+    # Execute events and collect their constraints at the right time
     for event in sm.sorted_events
-        apply_event(event)
+        apply_event(event)  # Modify spacecraft state
+        
+        # Immediately evaluate constraints for this event at current state
+        for constraint in event.funcs
+            vals = func_eval(constraint)  # Evaluate at current spacecraft state
+            append!(collected_values, vals)
+        end
     end
 
-    # Collect all constraint/objective values
-    F[:] = get_fun_values(sm)
+    # Fill F with the correctly-timed constraint values
+    F[:] = collected_values
     return 0
 end
 
