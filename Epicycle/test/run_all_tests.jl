@@ -52,6 +52,11 @@ for p in pkgs
         @info "Running tests for" p
         pkg_test = joinpath(root, p, "test", "runtests.jl")
         if isfile(pkg_test)
+            # Activate the package's environment to get access to [extras] test dependencies
+            pkg_path = joinpath(root, p)
+            Pkg.activate(pkg_path)
+            Pkg.instantiate()  # Ensure test dependencies are available
+            
             # cd into package to keep relative paths the same as local runs
             cd(joinpath(root, p)) do
                 include(pkg_test)
@@ -66,6 +71,9 @@ for p in pkgs
         succeeded[p] = false
     end
 end
+
+# Switch back to temp environment for coverage generation
+Pkg.activate(temp_env)
 
 # Write per-package LCOV files into cov/
 mkpath("cov")
