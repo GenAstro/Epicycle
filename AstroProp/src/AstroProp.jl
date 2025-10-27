@@ -164,7 +164,7 @@ function build_state(model::ForceModel, spacecraft_list::Vector{<:Spacecraft}, o
     return state_vector
 end
 
-function update_structs!(forces::ForceModel, sol_u::Vector{<:Real}, odereg::Dict, sol_t::Float64 = 0.0, full_sol::Union{Nothing,ODESolution} = nothing)
+function update_structs!(forces::ForceModel, sol_u::Vector{<:Real}, odereg::Dict, sol_t::Real = 0.0, full_sol::Union{Nothing,ODESolution} = nothing)
     for (sc, idx_map) in odereg
         # Update dynamic state
         if :posvel in keys(idx_map)
