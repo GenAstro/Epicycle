@@ -42,7 +42,7 @@ jobs:
           elif [ "${{ matrix.pkg }}" = "AstroUniverse" ]; then
             cd AstroUniverse && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroEpochs"); Pkg.instantiate()'
           elif [ "${{ matrix.pkg }}" = "AstroCoords" ]; then
-            cd AstroCoords && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.instantiate()'
+            cd AstroCoords && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroUniverse"); Pkg.instantiate()'
           elif [ "${{ matrix.pkg }}" = "AstroModels" ]; then
             cd AstroModels && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.instantiate()'
           elif [ "${{ matrix.pkg }}" = "AstroMan" ]; then
@@ -50,7 +50,7 @@ jobs:
           elif [ "${{ matrix.pkg }}" = "AstroFun" ]; then
             cd AstroFun && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.develop(path="../AstroModels"); Pkg.develop(path="../AstroMan"); Pkg.instantiate()'
           elif [ "${{ matrix.pkg }}" = "AstroProp" ]; then
-            cd AstroProp && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.develop(path="../AstroModels"); Pkg.develop(path="../AstroMan"); Pkg.instantiate()'
+            cd AstroProp && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.develop(path="../AstroModels"); Pkg.develop(path="../AstroMan"); Pkg.develop(path="../AstroFun"); Pkg.instantiate()'
           elif [ "${{ matrix.pkg }}" = "AstroSolve" ]; then
             cd AstroSolve && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.develop(path="../AstroModels"); Pkg.develop(path="../AstroMan"); Pkg.develop(path="../AstroFun"); Pkg.develop(path="../AstroProp"); Pkg.instantiate()'
           fi
