@@ -31,7 +31,7 @@ export AbstractCalcVariable, AbstractOrbitVar, AbstractBodyVar, AbstractManeuver
 export AbstractCalc, OrbitCalc, BodyCalc, ManeuverCalc
 export get_calc, set_calc!, calc_numvars, calc_is_settable, calc_input_statetag
 export PositionVector, VelocityVector, PosMag, SMA, TA, RAAN, IncomingAsymptoteFull
-export OutGoingRLA, PosX, VelMag, Ecc, PosDotVel
+export OutGoingRLA, PosX, PosZ, VelMag, Ecc, PosDotVel
 
 # export Maneuver Variables
 export DeltaVMag, DeltaVVector
@@ -160,6 +160,7 @@ for f in (
     "orbitcalc_raan.jl",
     "orbitcalc_outgoingrla.jl",
     "orbitcalc_posx.jl",
+    "orbitcalc_posz.jl",
     "orbitcalc_velmag.jl",
     "orbitcalc_ecc.jl",
     "orbitcalc_pos_dot_vel.jl",

@@ -246,6 +246,24 @@ end
         @test calc_is_settable(calc.var) == true
     end
 
+    # PosZ
+    @testset "PosZ" begin
+        sc = make_sc()
+        calc = OrbitCalc(sc, PosZ())
+        # Read: matches Cartesian z component
+        sc_cart = get_state(sc, Cartesian())
+        @test isapprox(scalarize(get_calc(calc)), sc_cart.posvel[3]; atol=1e-12)
+        # Write: update z and verify spacecraft state and calc reflect it
+        target_z = 500.0
+        set_calc!(calc, target_z)
+        sc_cart = get_state(sc, Cartesian())
+        @test isapprox(sc_cart.posvel[3], target_z; atol=1e-12)
+        @test isapprox(scalarize(get_calc(calc)), target_z; atol=1e-12)
+        # Test trait methods
+        @test calc_numvars(calc.var) == 1
+        @test calc_is_settable(calc.var) == true
+    end
+
     # PosDotVel
     @testset "PosDotVel" begin
         sc = make_sc()
