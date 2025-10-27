@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pkg: [AstroBase, AstroStates, AstroEpochs, AstroUniverse]
+        pkg: [AstroBase, AstroStates, AstroEpochs, AstroUniverse, AstroCoords, AstroModels, AstroMan, AstroFun, AstroProp, AstroSolve]
     
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +25,7 @@ jobs:
           path: |
             ~/.julia/artifacts
             ~/.julia/scratchspaces
+            ~/.julia/packages
           key: ${{ runner.os }}-julia-cache-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
           restore-keys: |
             ${{ runner.os }}-julia-cache-
@@ -40,6 +41,18 @@ jobs:
             cd AstroEpochs && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.instantiate()'
           elif [ "${{ matrix.pkg }}" = "AstroUniverse" ]; then
             cd AstroUniverse && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroEpochs"); Pkg.instantiate()'
+          elif [ "${{ matrix.pkg }}" = "AstroCoords" ]; then
+            cd AstroCoords && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.instantiate()'
+          elif [ "${{ matrix.pkg }}" = "AstroModels" ]; then
+            cd AstroModels && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.instantiate()'
+          elif [ "${{ matrix.pkg }}" = "AstroMan" ]; then
+            cd AstroMan && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.develop(path="../AstroModels"); Pkg.instantiate()'
+          elif [ "${{ matrix.pkg }}" = "AstroFun" ]; then
+            cd AstroFun && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.develop(path="../AstroModels"); Pkg.develop(path="../AstroMan"); Pkg.instantiate()'
+          elif [ "${{ matrix.pkg }}" = "AstroProp" ]; then
+            cd AstroProp && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.develop(path="../AstroModels"); Pkg.develop(path="../AstroMan"); Pkg.instantiate()'
+          elif [ "${{ matrix.pkg }}" = "AstroSolve" ]; then
+            cd AstroSolve && julia --project=. -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="../AstroStates"); Pkg.develop(path="../AstroEpochs"); Pkg.develop(path="../AstroUniverse"); Pkg.develop(path="../AstroCoords"); Pkg.develop(path="../AstroModels"); Pkg.develop(path="../AstroMan"); Pkg.develop(path="../AstroFun"); Pkg.develop(path="../AstroProp"); Pkg.instantiate()'
           fi
 
       - name: Test with coverage
@@ -81,32 +94,6 @@ jobs:
           
       - name: Build and deploy docs
         working-directory: AstroBase
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: julia --project=docs docs/make.jl
-
-  docs-astrostates:
-    name: docs-astrostates
-    runs-on: ubuntu-latest
-    needs: docs-astrobase
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: julia-actions/setup-julia@v2
-        with:
-          version: '1.11'
-          
-      - name: Install dependencies
-        working-directory: AstroStates
-        run: |
-          julia --project=docs -e 'using Pkg; Pkg.develop(path="../AstroBase"); Pkg.develop(path="."); Pkg.instantiate()'
-          
-      - name: Build and deploy docs
-        working-directory: AstroStates
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: julia --project=docs docs/make.jl
