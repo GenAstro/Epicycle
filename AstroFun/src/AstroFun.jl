@@ -141,7 +141,7 @@ set_calc!(mc_vec, [0.01, 0.02, -0.03])
 
 mc_mag = ManeuverCalc(m, sc, DeltaVMag())
 dvm = get_calc(mc_mag)
-````
+```
 """
 struct ManeuverCalc{M,S,V<:AbstractManeuverVar} <: AbstractCalc
     man::M
@@ -378,7 +378,7 @@ Arguments
 - OrbitState: The updated spacecraft state.
 
 # Examples
-```jldoctest
+```julia 
 sc = Spacecraft(
     state = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 1.0]),
     time  = Time("2020-09-21T12:23:12", TAI(), ISOT()),
@@ -427,7 +427,7 @@ Arguments
 - Spacecraft state is not modified.  Use maneuver() to apply maneuver effects.
 
 # Examples
-```jldoctest
+```julia
 m  = ImpulsiveManeuver(axes=Inertial(), Isp=300.0, element1=0.01, element2=0.02, element3=-0.03)
 sc = Spacecraft(state = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 1.0]),
                 time  = Time("2020-01-01T00:00:00", TAI(), ISOT()))

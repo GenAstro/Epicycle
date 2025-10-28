@@ -4,11 +4,6 @@ CurrentModule = AstroFun
 
 # AstroFun
 
-Documentation for [AstroFun](https://github.com/GenAstro/AstroFun.jl).
+The AstroFun module provides fundamental orbital calculations for use in reports, solver variables, solver contraints, and stopping conditions.
 
-```@index
-```
-
-```@autodocs
-Modules = [AstroFun]
-```
+## Quick Start
