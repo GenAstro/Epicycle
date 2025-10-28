@@ -40,6 +40,18 @@ end
 
 println("🔍 Processing coverage files...")
 
+# DEBUG: Show current working directory and environment
+println("🐛 DEBUG: Current working directory: $(pwd())")
+println("🐛 DEBUG: JULIA_CODE_COVERAGE env var: $(get(ENV, "JULIA_CODE_COVERAGE", "NOT SET"))")
+println("🐛 DEBUG: Contents of current directory:")
+for item in readdir(".")
+    if isdir(item)
+        println("  📁 $item/")
+    else
+        println("  📄 $item")
+    end
+end
+
 # Look for .cov files directly in package src directories
 all_coverage = Coverage.FileCoverage[]
 
@@ -49,14 +61,62 @@ packages = [
     "AstroProp", "AstroSolve", "Epicycle"
 ]
 
+# DEBUG: Search for .cov files everywhere first
+println("🐛 DEBUG: Searching for ALL .cov files in entire directory tree...")
+function find_cov_files(dir=".")
+    cov_files = []
+    try
+        for (root, dirs, files) in walkdir(dir)
+            for file in files
+                if endswith(file, ".cov")
+                    push!(cov_files, joinpath(root, file))
+                end
+            end
+        end
+    catch e
+        println("  ⚠️  Error walking directory $dir: $e")
+    end
+    return cov_files
+end
+
+all_cov_files = find_cov_files()
+println("🐛 DEBUG: Found $(length(all_cov_files)) .cov files total:")
+for cov_file in all_cov_files[1:min(20, length(all_cov_files))]  # Limit output
+    println("  📊 $cov_file")
+end
+if length(all_cov_files) > 20
+    println("  ... and $(length(all_cov_files) - 20) more")
+end
+
 for pkg in packages
     src_path = "$pkg/src"
+    println("🔍 Processing coverage for $pkg...")
+    println("🐛 DEBUG: Checking directory: $src_path")
+    
     if isdir(src_path)
-        println("🔍 Processing coverage for $pkg...")
+        println("  ✅ Directory exists")
+        
+        # DEBUG: Show contents of src directory
+        println("🐛 DEBUG: Contents of $src_path:")
+        try
+            for item in readdir(src_path)
+                full_path = joinpath(src_path, item)
+                if isdir(full_path)
+                    println("    📁 $item/")
+                else
+                    println("    📄 $item")
+                    if endswith(item, ".cov")
+                        println("      🎯 FOUND .cov file!")
+                    end
+                end
+            end
+        catch e
+            println("    ⚠️  Error reading directory: $e")
+        end
         
         # Use the standard Coverage.process_folder function
-        # This should find .cov files automatically
         try
+            println("🐛 DEBUG: Calling Coverage.process_folder(\"$src_path\")")
             pkg_coverage = Coverage.process_folder(src_path)
             if !isempty(pkg_coverage)
                 append!(all_coverage, pkg_coverage)
@@ -68,7 +128,7 @@ for pkg in packages
             println("  ❌ Error processing coverage for $pkg: $e")
         end
     else
-        println("  → Directory $src_path does not exist")
+        println("  ❌ Directory $src_path does not exist")
     end
 end
 

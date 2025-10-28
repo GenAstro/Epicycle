@@ -45,6 +45,12 @@ else
                 # Set environment variables for coverage
                 ENV["JULIA_NUM_THREADS"] = "auto"
                 
+                # DEBUG: Show environment and directory before testing
+                println("🐛 DEBUG: About to test $pkg")
+                println("🐛 DEBUG: Current working directory: $(pwd())")
+                println("🐛 DEBUG: Package path: $pkg_path")
+                println("🐛 DEBUG: JULIA_CODE_COVERAGE before test: $(get(ENV, "JULIA_CODE_COVERAGE", "NOT SET"))")
+                
                 # First activate the package to ensure test dependencies are available
                 println("    → Activating $pkg environment at $pkg_path")
                 Pkg.activate(pkg_path)
@@ -54,8 +60,27 @@ else
                 # but use the package's test environment
                 cd(project_root) do
                     # Enable coverage and run tests
+                    println("🐛 DEBUG: About to run tests with coverage for $pkg")
+                    println("🐛 DEBUG: Working directory during test: $(pwd())")
+                    
                     withenv("JULIA_CODE_COVERAGE" => "user") do
+                        println("🐛 DEBUG: JULIA_CODE_COVERAGE during test: $(get(ENV, "JULIA_CODE_COVERAGE", "NOT SET"))")
                         Pkg.test(pkg; coverage=true)
+                        
+                        # DEBUG: Check for .cov files immediately after test
+                        println("🐛 DEBUG: Checking for .cov files immediately after testing $pkg...")
+                        pkg_src = joinpath(project_root, pkg, "src")
+                        if isdir(pkg_src)
+                            println("🐛 DEBUG: Contents of $pkg_src after test:")
+                            for item in readdir(pkg_src)
+                                println("    📄 $item")
+                                if endswith(item, ".cov")
+                                    println("      🎯 Found .cov file: $item")
+                                end
+                            end
+                        else
+                            println("🐛 DEBUG: $pkg_src does not exist")
+                        end
                     end
                 end
                 
@@ -77,6 +102,30 @@ println("🎉 All tests completed successfully!")
 
 # Generate coverage immediately while .cov files exist
 println("\n📈 Generating coverage immediately...")
+
+# DEBUG: Final check before coverage generation
+println("🐛 DEBUG: Final state before coverage generation:")
+println("🐛 DEBUG: Current working directory: $(pwd())")
+println("🐛 DEBUG: JULIA_CODE_COVERAGE: $(get(ENV, "JULIA_CODE_COVERAGE", "NOT SET"))")
+
+# Quick scan for .cov files before coverage generation
+println("🐛 DEBUG: Quick scan for .cov files in all package src directories:")
+packages_to_check = [
+    "AstroBase", "AstroStates", "AstroEpochs", "AstroUniverse",
+    "AstroCoords", "AstroModels", "AstroMan", "AstroFun", 
+    "AstroProp", "AstroSolve", "Epicycle"
+]
+
+for pkg in packages_to_check
+    src_dir = "$pkg/src"
+    if isdir(src_dir)
+        cov_count = length(filter(f -> endswith(f, ".cov"), readdir(src_dir)))
+        println("  📊 $pkg/src: $cov_count .cov files")
+    else
+        println("  ❌ $pkg/src: directory not found")
+    end
+end
+
 try
     include(joinpath(dirname(@__DIR__), "ci", "generate_coverage.jl"))
     println("✅ Coverage generation completed!")
