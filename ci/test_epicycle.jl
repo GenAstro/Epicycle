@@ -61,4 +61,13 @@ else
     end
 end
 
-println("✅ All tests completed successfully!")
+println("🎉 All tests completed successfully!")
+
+# Generate coverage immediately while .cov files exist
+println("\n📈 Generating coverage immediately...")
+try
+    include(joinpath(dirname(@__DIR__), "ci", "generate_coverage.jl"))
+    println("✅ Coverage generation completed!")
+catch e
+    println("⚠️  Coverage generation failed: $e")
+end
