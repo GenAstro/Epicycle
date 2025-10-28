@@ -4,11 +4,7 @@ CurrentModule = AstroCoords
 
 # AstroCoords
 
-Documentation for [AstroCoords](https://github.com/GenAstro/AstroCoords.jl).
+The AstroCoords module provides coordinate system transformations and utilities.
 
-```@index
-```
+## Quick Start
 
-```@autodocs
-Modules = [AstroCoords]
-```
