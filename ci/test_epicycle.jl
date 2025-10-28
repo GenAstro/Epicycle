@@ -42,11 +42,23 @@ else
         if isdir(pkg_path)
             println("  → Testing $pkg...")
             try
+                # Set environment variables for coverage
+                ENV["JULIA_NUM_THREADS"] = "auto"
+                
                 # First activate the package to ensure test dependencies are available
                 println("    → Activating $pkg environment at $pkg_path")
                 Pkg.activate(pkg_path)
                 Pkg.instantiate()  # Install test dependencies
-                Pkg.test()  # Run tests in the package's own environment
+                
+                # Run tests with coverage enabled - stay in root directory
+                # but use the package's test environment
+                cd(project_root) do
+                    # Enable coverage and run tests
+                    withenv("JULIA_CODE_COVERAGE" => "user") do
+                        Pkg.test(pkg; coverage=true)
+                    end
+                end
+                
                 println("    ✅ $pkg tests passed")
                 
                 # Return to main project

@@ -29,10 +29,18 @@ catch
     using CoverageTools
 end
 
+# Load Glob for file pattern matching
+try
+    using Glob
+catch
+    println("📥 Installing Glob.jl...")
+    Pkg.add("Glob")
+    using Glob
+end
+
 println("🔍 Processing coverage files...")
 
-# Look for coverage files in all package directories
-# Process each package and collect FileCoverage objects
+# Look for .cov files directly in package src directories
 all_coverage = Coverage.FileCoverage[]
 
 packages = [
@@ -42,9 +50,26 @@ packages = [
 ]
 
 for pkg in packages
-    pkg_coverage = Coverage.process_folder("$pkg/src")
-    append!(all_coverage, pkg_coverage)
-    println("  → Found $(length(pkg_coverage)) coverage files in $pkg/src")
+    src_path = "$pkg/src"
+    if isdir(src_path)
+        println("🔍 Processing coverage for $pkg...")
+        
+        # Use the standard Coverage.process_folder function
+        # This should find .cov files automatically
+        try
+            pkg_coverage = Coverage.process_folder(src_path)
+            if !isempty(pkg_coverage)
+                append!(all_coverage, pkg_coverage)
+                println("  ✅ Processed $(length(pkg_coverage)) coverage files for $pkg")
+            else
+                println("  ⚠️  No coverage processed for $pkg")
+            end
+        catch e
+            println("  ❌ Error processing coverage for $pkg: $e")
+        end
+    else
+        println("  → Directory $src_path does not exist")
+    end
 end
 
 if !isempty(all_coverage)
