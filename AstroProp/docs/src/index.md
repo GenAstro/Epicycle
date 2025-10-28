@@ -4,11 +4,6 @@ CurrentModule = AstroProp
 
 # AstroProp
 
-Documentation for [AstroProp](https://github.com/GenAstro/AstroProp.jl).
+AstroProp provides contains orbit propagation models for spacecraft. 
 
-```@index
-```
-
-```@autodocs
-Modules = [AstroProp]
-```
+# Quick Start
