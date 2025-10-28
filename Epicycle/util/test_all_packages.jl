@@ -3,6 +3,9 @@
 
 using Pkg
 
+# Ensure coverage is enabled for all subprocesses
+ENV["JULIA_CODE_COVERAGE"] = "user"
+
 # Get the repo root directory (two levels up from this script)
 script_dir = dirname(@__FILE__)
 repo_root = dirname(dirname(script_dir))
@@ -72,8 +75,8 @@ for pkg in packages
         # Activate package environment (deps already precompiled)
         Pkg.activate(pkg_path)
         
-        # Run tests (should be fast and clean now)
-        Pkg.test()
+        # Run tests with coverage enabled (should be fast and clean now)
+        Pkg.test(coverage=true)
         println("✅ $pkg tests passed")
         
     catch e

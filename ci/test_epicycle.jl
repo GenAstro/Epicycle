@@ -18,6 +18,10 @@ using Epicycle
 # Run the comprehensive test suite
 println("🏃 Running comprehensive tests...")
 
+# Set coverage environment globally for all tests
+ENV["JULIA_CODE_COVERAGE"] = "user"
+println("🐛 DEBUG: Set JULIA_CODE_COVERAGE globally to: $(get(ENV, "JULIA_CODE_COVERAGE", "NOT SET"))")
+
 # Get the project root directory (parent of ci directory)
 project_root = dirname(@__DIR__)
 test_script = joinpath(project_root, "Epicycle", "util", "test_all_packages.jl")
@@ -42,14 +46,15 @@ else
         if isdir(pkg_path)
             println("  → Testing $pkg...")
             try
-                # Set environment variables for coverage
+                # Set environment variables for coverage GLOBALLY
                 ENV["JULIA_NUM_THREADS"] = "auto"
+                ENV["JULIA_CODE_COVERAGE"] = "user"  # Set globally for subprocesses
                 
                 # DEBUG: Show environment and directory before testing
                 println("🐛 DEBUG: About to test $pkg")
                 println("🐛 DEBUG: Current working directory: $(pwd())")
                 println("🐛 DEBUG: Package path: $pkg_path")
-                println("🐛 DEBUG: JULIA_CODE_COVERAGE before test: $(get(ENV, "JULIA_CODE_COVERAGE", "NOT SET"))")
+                println("🐛 DEBUG: JULIA_CODE_COVERAGE set to: $(get(ENV, "JULIA_CODE_COVERAGE", "NOT SET"))")
                 
                 # First activate the package to ensure test dependencies are available
                 println("    → Activating $pkg environment at $pkg_path")
@@ -59,28 +64,29 @@ else
                 # Run tests with coverage enabled - stay in root directory
                 # but use the package's test environment
                 cd(project_root) do
-                    # Enable coverage and run tests
+                    # Coverage is now enabled globally via ENV
                     println("🐛 DEBUG: About to run tests with coverage for $pkg")
                     println("🐛 DEBUG: Working directory during test: $(pwd())")
+                    println("🐛 DEBUG: JULIA_CODE_COVERAGE during test: $(get(ENV, "JULIA_CODE_COVERAGE", "NOT SET"))")
                     
+                    # Ensure environment variable is set in this context too
                     withenv("JULIA_CODE_COVERAGE" => "user") do
-                        println("🐛 DEBUG: JULIA_CODE_COVERAGE during test: $(get(ENV, "JULIA_CODE_COVERAGE", "NOT SET"))")
                         Pkg.test(pkg; coverage=true)
-                        
-                        # DEBUG: Check for .cov files immediately after test
-                        println("🐛 DEBUG: Checking for .cov files immediately after testing $pkg...")
-                        pkg_src = joinpath(project_root, pkg, "src")
-                        if isdir(pkg_src)
-                            println("🐛 DEBUG: Contents of $pkg_src after test:")
-                            for item in readdir(pkg_src)
-                                println("    📄 $item")
-                                if endswith(item, ".cov")
-                                    println("      🎯 Found .cov file: $item")
-                                end
+                    end
+                    
+                    # DEBUG: Check for .cov files immediately after test
+                    println("🐛 DEBUG: Checking for .cov files immediately after testing $pkg...")
+                    pkg_src = joinpath(project_root, pkg, "src")
+                    if isdir(pkg_src)
+                        println("🐛 DEBUG: Contents of $pkg_src after test:")
+                        for item in readdir(pkg_src)
+                            println("    📄 $item")
+                            if endswith(item, ".cov")
+                                println("      🎯 Found .cov file: $item")
                             end
-                        else
-                            println("🐛 DEBUG: $pkg_src does not exist")
                         end
+                    else
+                        println("🐛 DEBUG: $pkg_src does not exist")
                     end
                 end
                 
