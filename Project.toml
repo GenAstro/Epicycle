@@ -1,3 +1,6 @@
+[workspace]
+projects = ["AstroBase", "AstroStates", "AstroEpochs", "AstroUniverse", "AstroCoords", "AstroModels", "AstroMan", "AstroFun", "AstroProp", "AstroSolve", "Epicycle"]
+
 [deps]
 AstroBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
 AstroCoords = "7b16edaa-6936-47b4-b191-819abb0f77bd"
@@ -9,4 +12,7 @@ AstroProp = "0e2365da-becf-4b4f-af1d-8bfff9db196c"
 AstroSolve = "d5c6b872-c897-4dc3-b364-70bab4e75788"
 AstroStates = "e8875680-ece1-4c6e-865d-f99ee1f9f9b4"
 AstroUniverse = "4bd44dca-1e45-43d2-b940-3f88da59ea6f"
+Coverage = "a2441757-f6aa-5fb2-8edb-039e3f45d037"
+CoverageTools = "c36e975a-824b-4404-a568-ef97ca766997"
 Epicycle = "83dc357c-0294-4c28-b122-f18155576d3d"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"

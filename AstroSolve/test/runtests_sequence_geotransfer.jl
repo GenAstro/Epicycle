@@ -6,8 +6,6 @@ using SNOW
 using OrdinaryDiffEq
 using LinearAlgebra
 
-using Epicycle
-
 @testset "GEO Transfer Sequence vs GMAT" begin
 
 # Create spacecraft matching GMAT initial state

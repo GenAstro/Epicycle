@@ -30,3 +30,5 @@ JuliaLocalPreferences.toml
 temp/
 
 *.out
+
+cov/
