@@ -4,11 +4,11 @@ CurrentModule = AstroMan
 
 # AstroMan
 
-Documentation for [AstroMan](https://github.com/GenAstro/AstroMan.jl).
+The AstroMan module provides utilities and functions for orbital maneuver calculations. 
 
-```@index
-```
+## Quick Start
 
-```@autodocs
-Modules = [AstroMan]
-```
+
+
+
+
