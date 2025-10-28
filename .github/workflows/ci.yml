@@ -4,8 +4,8 @@ on:
   pull_request:
 
 jobs:
-  setup-environment:
-    name: Setup Environment
+  ci-pipeline:
+    name: CI Pipeline - All Phases
     runs-on: ubuntu-latest
     
     steps:
@@ -26,103 +26,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-julia-cache-
 
-      - name: Setup Environment - Develop all packages
+      - name: Phase 1 - Setup Environment
         run: julia --project=. ci/setup_environment.jl
 
-  build-epicycle:
-    name: Build Epicycle
-    runs-on: ubuntu-latest
-    needs: setup-environment
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: julia-actions/setup-julia@v2
-        with:
-          version: '1.12'
-          
-      - name: Restore Julia cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.julia/artifacts
-            ~/.julia/scratchspaces
-            ~/.julia/packages
-          key: ${{ runner.os }}-julia-cache-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-julia-cache-
-
-      - name: Setup Environment - Develop all packages
-        run: julia --project=. ci/setup_environment.jl
-
-      - name: Build Epicycle - Compile all packages
+      - name: Phase 2 - Build Epicycle
         run: julia --project=. ci/build_epicycle.jl
 
-  test-epicycle:
-    name: Test Epicycle
-    runs-on: ubuntu-latest
-    needs: build-epicycle
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: julia-actions/setup-julia@v2
-        with:
-          version: '1.12'
-          
-      - name: Restore Julia cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.julia/artifacts
-            ~/.julia/scratchspaces
-            ~/.julia/packages
-          key: ${{ runner.os }}-julia-cache-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-julia-cache-
-
-      - name: Setup Environment - Develop all packages
-        run: julia --project=. ci/setup_environment.jl
-
-      - name: Build Epicycle - Compile all packages
-        run: julia --project=. ci/build_epicycle.jl
-
-      - name: Test Epicycle - Run comprehensive tests
+      - name: Phase 3 - Test Epicycle
         run: julia --project=. --code-coverage=user ci/test_epicycle.jl
 
-  generate-coverage:
-    name: Generate Coverage
-    runs-on: ubuntu-latest
-    needs: test-epicycle
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: julia-actions/setup-julia@v2
-        with:
-          version: '1.12'
-          
-      - name: Restore Julia cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.julia/artifacts
-            ~/.julia/scratchspaces
-            ~/.julia/packages
-          key: ${{ runner.os }}-julia-cache-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-julia-cache-
-
-      - name: Setup Environment - Develop all packages
-        run: julia --project=. ci/setup_environment.jl
-
-      - name: Build Epicycle - Compile all packages
-        run: julia --project=. ci/build_epicycle.jl
-
-      - name: Test Epicycle - Run comprehensive tests
-        run: julia --project=. --code-coverage=user ci/test_epicycle.jl
-
-      - name: Generate Coverage - Process and export LCOV
+      - name: Phase 4 - Generate Coverage
         run: julia --project=. ci/generate_coverage.jl
 
       - name: Upload coverage to Codecov

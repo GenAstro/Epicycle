@@ -1,0 +1,70 @@
+import AstroFun: AbstractOrbitVar, calc_input_statetag, calc_is_settable, calc_numvars
+import AstroFun: _evaluate, _set!, OrbitCalc, get_calc, set_calc!
+
+# Bring in the exact state/tag and model types you reference
+import AstroStates: KeplerianState, Keplerian
+import AstroModels: Spacecraft
+
+"""
+    Inc <: AbstractOrbitVar
+
+Tag struct indicating Keplerian inclination (radians) of an orbit.
+
+Examples
+```julia
+# sc::Spacecraft — replace with your Spacecraft instance
+inc_calc = OrbitCalc(Spacecraft(), Inc())
+i = get_calc(inc_calc)
+set_calc!(inc_calc, pi/4)        # set Inc to 45 degrees
+```
+See also
+- TA, RAAN, SMA
+- `subtypes(AbstractOrbitVar)` for a full list of supported variables
+"""
+struct Inc <: AbstractOrbitVar end
+calc_numvars(::Inc) = 1
+calc_is_settable(::Inc) = true
+calc_input_statetag(::Inc) = Keplerian()
+AstroFun._evaluate(::Inc, s::KeplerianState{T}) where {T} = s.inc
+
+function AstroFun._set!(::Inc, s::KeplerianState{T}, newval::AbstractVector{<:Real}) where {T}
+    length(newval) == 1 || error("Inc requires 1 element.")
+    KeplerianState(s.sma, s.ecc, convert(T, newval[1]), s.aop, s.raan, s.ta)
+end
+
+# Run the example and test set/get
+sc = Spacecraft(state = KeplerianState(7000.0, 0.01, pi/4, 0.0, 0.0, 0.0))
+inc_calc = OrbitCalc(sc, Inc())
+i = get_calc(inc_calc)
+set_calc!(inc_calc, pi/4)
+get_state(sc,Keplerian())
+
+"""
+    AngularMomentumVector <: AbstractOrbitVar
+
+Tag struct indicating Keplerian angular momentum vector of an orbit.
+
+Examples
+```julia
+# sc::Spacecraft — replace with your Spacecraft instance
+hvec_calc = OrbitCalc(Spacecraft(), AngularMomentumVector())
+i = get_calc(hvec_calc)
+```
+See also
+- TA, RAAN, SMA
+- `subtypes(AbstractOrbitVar)` for a full list of supported variables
+"""
+struct AngularMomentumVector <: AbstractOrbitVar end
+calc_numvars(::AngularMomentumVector) = 3
+calc_is_settable(::AngularMomentumVector) = false
+calc_input_statetag(::AngularMomentumVector) = Cartesian()
+function AstroFun._evaluate(::AngularMomentumVector, s::CartesianState{T}) where {T} 
+    pv = s.posvel
+    rv = pv[1:3]
+    vv = pv[4:6]
+    return cross(rv, vv)
+end
+
+sc = Spacecraft(state = KeplerianState(7000.0, 0.01, pi/4, 0.0, 0.0, 0.0))
+hvec_calc = OrbitCalc(sc, AngularMomentumVector())
+i = get_calc(hvec_calc)

@@ -1,30 +1,21 @@
 
-
-
 using SNOW
 using OrdinaryDiffEq
 using LinearAlgebra
 
-using AstroEpochs
-using AstroStates
-using AstroBase
-using AstroUniverse
-using AstroCoords
-using AstroProp
-using AstroMan
-using AstroSolve
-using AstroFun
+using Epicycle
 
 # Create spacecraft
 sat = Spacecraft(
-            state = KeplerianState(6578.0, 0.001, 28.5, 66.999, 355.0, 250.0), 
-            time = Time("2030-07-04T12:23:12", UTC(), ISOT())
+            state = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 1.0]), 
+            time = Time("2020-09-21T12:23:12", TAI(), ISOT())
             )
 
 # Create force models, integrator, and dynamics system
-gravity = PointMassGravity(earth,(moon,sun))
-forces  = ForceModel(gravity)
-integ   = IntegratorConfig(DP8(); abstol = 1e-11, reltol = 1e-11, dt = 4000)
+pm_grav = PointMassGravity(earth,(moon,sun))
+#pm_grav = PointMassGravity(earth,())
+forces = ForceModel(pm_grav)
+integ = IntegratorConfig(DP8(); abstol = 1e-11, reltol = 1e-11, dt = 4000)
 
 # Define which spacecraft to propagate and which force model to use
 dynsys = DynSys(
@@ -32,39 +23,25 @@ dynsys = DynSys(
           spacecraft = [sat]
           )
 
-# Dfine maneuver models
+# Create maneuver models for the hohmann transfer
 toi = ImpulsiveManeuver(
-    axes = VNB(),      # Local VNB axes about the spacecraft
-    element1 = 0.0,        # dv_V
-    element2 = 0.0,        # dv_N
-    element3 = 0.0,        # dv_B
-)
-
-mcc = ImpulsiveManeuver(
     axes = VNB(),
-    element1 = 0.0,
-    element2 = 0.0,
-    element3 = 0.0,
+    element1 = 0.1,
+    element2 = 0.2,
+    element3 = 0.3
 )
 
 moi = ImpulsiveManeuver(
     axes = VNB(),
-    element1 = 0.0,
-    element2 = 0.0,
-    element3 = 0.0,
+    element1 = 0.4,
+    element2 = 0.5,
+    element3 = 0.6
 )
 
 # Define toi as a solver variable
 var_toi = SolverVariable(
     calc = ManeuverCalc(toi, sat, DeltaVVector()),
     name = "toi",
-    lower_bound = [-10.0, 0.0, 0.0],
-    upper_bound = [10.0, 0.0, 0.0],
-)
-
-var_mcc = SolverVariable(
-    calc = ManeuverCalc(mcc, sat, DeltaVVector()),
-    name = "mcc",
     lower_bound = [-10.0, 0.0, 0.0],
     upper_bound = [10.0, 0.0, 0.0],
 )
@@ -83,7 +60,6 @@ pos_con = Constraint(
     lower_bounds = [pos_target],
     upper_bounds = [pos_target],
     scale = [1.0],
-    numvars=1
 )
 
 ecc_con = Constraint(
@@ -91,7 +67,6 @@ ecc_con = Constraint(
     lower_bounds = [0.0],
     upper_bounds = [0.0], 
     scale = [1.0],
-    numvars = 1
 )
 
 vel_target = sqrt(earth.mu / pos_target)
@@ -100,7 +75,6 @@ vel_con = Constraint(
     lower_bounds = [vel_target],
     upper_bounds = [vel_target],
     scale = [1.0],
-    numvars = 1
 )
 
 # Create the TOI Event
@@ -111,6 +85,7 @@ toi_event = Event(name = "toi",
                   funcs = [])
 
 # Create the prop to apopasis event
+
 prop_apo_fun() = propagate(dynsys, integ, StopAtApoapsis(sat))
 prop_event = Event(name = "prop_apo", event = prop_apo_fun)
 
@@ -127,8 +102,24 @@ add_events!(seq, moi_event, [prop_event])
 
 sm = SequenceManager(seq)
 
-f = get_fun_values(sm)
-
 x0 = get_var_values(sm)
+lx = get_var_lower_bounds(sm)
+ux = get_var_upper_bounds(sm)
+lg = get_fun_lower_bounds(sm)
+ug = get_fun_upper_bounds(sm)
+ng = length(lg)
 
-set_var_values(sm, x0)
+ip_options = Dict(
+        "max_iter" => 1000,
+        "tol" => 1e-6,
+        "output_file" => "ipopt_$(rand(UInt)).out",
+        "file_print_level" => 0,
+        )
+
+options = Options(derivatives= ForwardFD(), solver = IPOPT(ip_options))
+
+# Define a closure that matches SNOW's expected signature
+snow_solver_fun!(F, x) = solver_fun!(F, x, sm)
+xopt, fopt, info = minimize(snow_solver_fun!, x0, ng, lx, ux, lg, ug, options)
+
+println("Optimal Variables: ", xopt)
