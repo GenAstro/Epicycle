@@ -1,5 +1,6 @@
 using AstroCoords
 using Test
+using InteractiveUtils 
 
 @testset "AstroCoords.jl" begin
     
