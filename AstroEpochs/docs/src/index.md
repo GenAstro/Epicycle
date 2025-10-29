@@ -1,14 +1,3 @@
-```@meta
-CurrentModule = AstroEpochs
-```
+# AstroEpochs.jl
 
-# AstroEpochs
 
-Documentation for [AstroEpochs](https://github.com/GenAstro/AstroEpochs.jl).
-
-```@index
-```
-
-```@autodocs
-Modules = [AstroEpochs]
-```
