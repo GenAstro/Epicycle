@@ -90,13 +90,25 @@ include("kep_to_modkep.jl")
 """
     CartesianState(posvel)
 
-Mutable Cartesian state type. Parameterized for AD / alternate precisions.
+Cartesian position and velocity state representation.
+
+# Units
+- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
 
 # Fields
-- `posvel::Vector{T}`: 6-element position/velocity vector (x,y,z,vx,vy,vz)
+- `posvel::Vector{T}`: 6-element position/velocity vector [x, y, z, vx, vy, vz]
+  * **Position components** (x, y, z): Cartesian coordinates of spacecraft.
+    - Range: Any real values. 
+  * **Velocity components** (vx, vy, vz): Cartesian velocity vector components.
+    - Range: Any real values. 
 
 # Notes
-- Distance/time units must be consistent with the gravitational parameter `μ` used elsewhere.
+- Parametric so automatic differentiation and high-precision types are supported.
+
+# Examples
+```julia
+cart = CartesianState([6778.0, 0.0, 0.0, 0.0, 7.66, 0.0])
+```
 """
 mutable struct CartesianState{T} <: AbstractOrbitState
     posvel::Vector{T}   
