@@ -302,19 +302,31 @@ end
 Modified equinoctial elements representation.
 
 # Units
-- Distance/time units must be consistent with the gravitational parameter `μ` used in conversions.
-- Angles in radians.
+- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
-- `p`: Semi-latus rectum
-- `f`: Eccentricity vector component
-- `g`: Eccentricity vector component
-- `h`: Inclination vector component
-- `k`: Inclination vector component
-- `L`: True longitude (rad)
+- `p`: Semi-latus rectum. Parameter defining orbit size and shape.
+  * Range: p > 0. Related to semi-major axis and eccentricity: p = a(1-e²).
+- `f`: Eccentricity vector f-component. f = e⋅cos(ω + Ω).
+  * Range: Any real value. Eccentricity component in perifocal frame.
+- `g`: Eccentricity vector g-component. g = e⋅sin(ω + Ω).
+  * Range: Any real value. Eccentricity component in perifocal frame.
+- `h`: Inclination vector h-component. h = tan(i/2)⋅cos(Ω).
+  * Range: Any real value. Inclination component related to ascending node.
+- `k`: Inclination vector k-component. k = tan(i/2)⋅sin(Ω).
+  * Range: Any real value. Inclination component related to ascending node.
+- `L`: True longitude (rad). Ω + ω + ν combined angle measure.
+  * Range: [0, 2π). True longitude from reference direction.
 
 # Notes
-- Parametric for AD and high precision.
+- Parametric so automatic differentiation and high-precision types are supported.
+- Singularities reduced compared to classical elements, but still exist for retrograde equatorial orbits.
+
+# Examples
+```julia
+mee = ModifiedEquinoctialState(7000.0, 0.01, 0.0, 0.1, 0.0, π/4)
+```
 """
 struct ModifiedEquinoctialState{T<:Real} <: AbstractOrbitState
     p::T
@@ -523,7 +535,7 @@ Equinoctial orbital elements representation.
   * Range: Any real value. Related to inclination and node orientation.
 - `q`: Inclination vector q-component. q = tan(i/2)⋅sin(Ω).
   * Range: Any real value. Related to inclination and node orientation.
-- `mlong`: Mean longitude (rad). raan + aop + ta combined angle measure.
+- `mlong`: Mean longitude (rad). Ω + ω + ν combined angle measure.
   * Range: [0, 2π). Normalized mean longitude.
 
 # Notes
