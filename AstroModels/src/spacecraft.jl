@@ -32,7 +32,7 @@ sc = Spacecraft(
 sc = Spacecraft(state = OrbitState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03],Cartesian()))
 ```
 """
-mutable struct Spacecraft{S<:OrbitState, TT<:Time, CS<:AbstractCoordinateSystem, T<:Real}
+mutable struct Spacecraft{S<:OrbitState, TT<:Time, CS<:AbstractCoordinateSystem, T<:Real} <: AbstractPoint
     state::S
     time::TT
     mass::T
