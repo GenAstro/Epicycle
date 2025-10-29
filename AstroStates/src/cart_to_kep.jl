@@ -32,6 +32,12 @@ A vector `[a, e, i, Ω, ω, ν]` where:
 # Notes
 - Angles must be in radians.
 - Dimensional quantities must use consistent units with μ.
+
+# Examples
+```julia
+cart = [6778.0, 0.0, 0.0, 0.0, 7.66, 0.0]
+kep = cart_to_kep(cart, 398600.4418)
+```
 """
 function cart_to_kep(cart::Vector{<:Real}, μ::Real; tol::Float64=1e-12)
     if length(cart) != 6

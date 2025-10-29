@@ -32,6 +32,12 @@ Modified Keplerian state `[rₚ, rₐ, i, Ω, ω, ν]` or `fill(NaN, 6)` if inva
 # Notes
 - Parabolic orbits (`e ≈ 1`) and singular conics are not supported.
 - Units must be consistent. Angles in radians.
+
+# Examples
+```julia
+kep = [7000.0, 0.01, π/4, 0.0, 0.0, π/3]
+modkep = kep_to_modkep(kep)
+```
 """
 function kep_to_modkep(kep::Vector{<:Real}; tol::Float64 = 1e-12)
     if length(kep) != 6

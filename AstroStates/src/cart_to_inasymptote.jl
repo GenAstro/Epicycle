@@ -34,6 +34,12 @@ A 6-element vector: `[rₚ, C₃, λₐ, δₐ, θᵦ, ν]`
 # Notes
 - Angles are in radians.
 - Dimensional quantities are consistent units with μ.
+
+# Examples
+```julia
+cart = [10000.0, 0.0, 0.0, 0.0, 12.0, 0.0]  # Hyperbolic trajectory
+inasym = cart_to_inasymptote(cart, 398600.4418)
+```
 """
 function cart_to_inasymptote(cart::Vector{<:Real}, μ::Real; tol::Float64 = 1e-12)
     if length(cart) != 6

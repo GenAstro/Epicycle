@@ -33,6 +33,12 @@ A 6-element Spherical AZ-FPA state `[r, λ, δ, v, αₚ, ψ]`:
 # Notes
 - Returns `fill(NaN, 6)` if `r` or `v` are near zero or orbit is singular
 - All angles are in radians.
+
+# Examples
+```julia
+cart = [6778.0, 0.0, 0.0, 0.0, 7.66, 0.0]
+sphazfpa = cart_to_sphazfpa(cart)
+```
 """
 function cart_to_sphazfpa(cart::Vector{<:Real}; tol::Float64 = 1e-12)
     if length(cart) != 6

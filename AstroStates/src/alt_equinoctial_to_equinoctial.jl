@@ -37,6 +37,12 @@ Standard equinoctial state `[a, h, k, p, q, λ]`
 # Notes
 - Fails if inclination approaches 180°.
 - All angles in radians. Units consistent with `μ`.
+
+# Examples
+```julia
+alt_eq = [7000.0, 0.01, 0.0, 0.05, 0.0, π/4]
+std_eq = alt_equinoctial_to_equinoctial(alt_eq)
+```
 """
 function alt_equinoctial_to_equinoctial(alt::Vector{<:Real}; tol::Float64 = 1e-12)
     if length(alt) != 6

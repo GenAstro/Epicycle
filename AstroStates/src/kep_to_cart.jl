@@ -31,8 +31,11 @@ Convert a Keplerian state vector to a Cartesian state vector.
 # Returns
 A 6-element vector `[x, y, z, vx, vy, vz]` representing Cartesian position and velocity.
 
-# Example
-cart = kep_to_cart([7000.0, 0.01, pi/4,0.0,0.0,pi/3], 398600.4418)
+# Examples
+```julia
+kep = [7000.0, 0.01, π/4, 0.0, 0.0, π/3]
+cart = kep_to_cart(kep, 398600.4418)
+```
 
 # Notes
 - Angles must be in radians.

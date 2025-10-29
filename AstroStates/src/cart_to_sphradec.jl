@@ -32,6 +32,12 @@ A 6-element vector `[r, ra, dec, v, vra, vdec]` where:
 # Notes
 - Assumes all angles are in radians.
 - Units must be consistent between position and velocity components.
+
+# Examples
+```julia
+cart = [6778.0, 0.0, 0.0, 0.0, 7.66, 0.0]
+sphradec = cart_to_sphradec(cart)
+```
 """
 function cart_to_sphradec(state::Vector{<:Real}; tol::Float64=1e-12)
     if length(state) != 6

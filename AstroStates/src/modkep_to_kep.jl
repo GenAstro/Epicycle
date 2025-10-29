@@ -32,6 +32,12 @@ A classical Keplerian state `[a, e, i, Ω, ω, ν]` or `fill(NaN, 6)` if invalid
 # Notes
 - Returns `NaN` vector if input describes a parabolic, undefined, or inconsistent orbit.
 - Assumes input angles are in radians and distances use consistent units.
+
+# Examples
+```julia
+modkep = [6778.0, 42164.0, π/6, 0.0, 0.0, 0.0]
+kep = modkep_to_kep(modkep)
+```
 """
 function modkep_to_kep(modkep::Vector{<:Real}; tol::Float64 = 1e-12)
     if length(modkep) != 6

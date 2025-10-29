@@ -229,6 +229,7 @@ J = first(Zygote.jacobian(f, x))
 ```@autodocs
 Modules = [AstroStates]
 Order = [:type]
+Filter = t -> typeof(t) <: Type && t <: AbstractOrbitState
 ```
 
 ## Conversions Reference
@@ -236,6 +237,7 @@ Order = [:type]
 ```@autodocs
 Modules = [AstroStates]
 Order = [:function]
+Filter = t -> typeof(t) <: Function
 ```
 
 ## API Index

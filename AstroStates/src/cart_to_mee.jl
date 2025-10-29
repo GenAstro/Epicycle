@@ -23,6 +23,12 @@ Convert Cartesian state to Modified Equinoctial Elements (MEE).
 
 # Returns
 - A 6-element vector `[p, f, g, h, k, L]` representing the modified equinoctial elements.
+
+# Examples
+```julia
+cart = [6778.0, 0.0, 0.0, 0.0, 7.66, 0.0]
+mee = cart_to_mee(cart, 398600.4418)
+```
 """
 function cart_to_mee(cart::Vector{<:Real}, μ::Real; j::Float64 = 1.0, tol::Float64 = 1e-12)
     if length(cart) != 6

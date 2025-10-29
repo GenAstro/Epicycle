@@ -32,6 +32,12 @@ A 6-element Cartesian state vector `[x, y, z, vx, vy, vz]`.
 # Notes
 - All angles must be in radians.
 - Velocity frame uses local vertical/local horizontal.
+
+# Examples
+```julia
+sphazfpa = [6478.0, 0.0, π/4, 7.5, π/4, π/4]
+cart = sphazfpa_to_cart(sphazfpa)
+```
 """
 function sphazfpa_to_cart(spherical::Vector{<:Real})
     if length(spherical) != 6

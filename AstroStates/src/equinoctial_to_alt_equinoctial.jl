@@ -37,6 +37,12 @@ Alternate equinoctial state `[a, h, k, altp, altq, λ]`
 # Notes
 - Singular when inclination is near 180°, returns `fill(NaN, 6)` in that case.
 - Units and angles must be consistent; λ in radians.
+
+# Examples
+```julia
+eq = [7000.0, 0.01, 0.0, 0.1, 0.0, π/4]
+alt_eq = equinoctial_to_alt_equinoctial(eq)
+```
 """
 function equinoctial_to_alt_equinoctial(eq::Vector{<:Real}; tol::Float64 = 1e-12)
     if length(eq) != 6

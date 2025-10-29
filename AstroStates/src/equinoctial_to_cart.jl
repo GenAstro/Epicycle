@@ -34,6 +34,12 @@ Cartesian state `[x, y, z, vx, vy, vz]`
 # Notes
 - Returns `fill(NaN, 6)` if eccentricity is too high or radius becomes non-physical.
 - Assumes all angles are in radians and other units are consistent with μ.
+
+# Examples
+```julia
+eq = [7000.0, 0.01, 0.0, 0.1, 0.0, π/4]
+cart = equinoctial_to_cart(eq, 398600.4418)
+```
 """
 function equinoctial_to_cart(eq::Vector{<:Real}, μ::Real; tol::Float64 = 1e-12)
     if length(eq) != 6

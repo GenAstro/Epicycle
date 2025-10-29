@@ -33,6 +33,12 @@ Convert outgoing asymptote elements to Keplerian elements.
 # Notes
 - Returns `fill(NaN, 6)` if singularity is detected.
 - Angles in radians. Units consistent with `μ`.
+
+# Examples
+```julia
+outasym = [6778.0, 5.0, 0.0, π/4, π/2, π/2]
+kep = outasymptote_to_kep(outasym, 398600.4418)
+```
 """
 function outasymptote_to_kep(outasym::Vector{<:Real}, μ::Real; tol::Float64=1e-12)
     if length(outasym) != 6

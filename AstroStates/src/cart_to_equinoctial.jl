@@ -36,6 +36,12 @@ Equinoctial state `[a, h, k, p, q, λ]`:
 - All angles are in radians. Units consistent with `μ`.
 - Note that in most cases in states, h is the magnitude of angular momentum.  But, not
   for equinoctial elements.  
+
+# Examples
+```julia
+cart = [6778.0, 0.0, 0.0, 0.0, 7.66, 0.0]
+equinoctial = cart_to_equinoctial(cart, 398600.4418)
+```
 """
 function cart_to_equinoctial(cart::Vector{<:Real}, μ::Real; tol::Float64 = 1e-12)
     if length(cart) != 6

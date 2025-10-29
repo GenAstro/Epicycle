@@ -37,17 +37,8 @@ Notes
 
 Examples
 ```julia
-julia> using AstroStates
-
-julia> state = [7000.0, 0.0, 0.0, 7.5, π/2, 0.0];  # r, λᵣ, δᵣ, v, λᵥ, δᵥ
-julia> sphradec_to_cart(state)
-6-element Vector{Float64}:
- 7000.0
-    0.0
-    0.0
-    0.0
-    7.5
-    0.0
+sphradec = [7000.0, 0.0, 0.0, 7.5, π/2, 0.0]
+cart = sphradec_to_cart(sphradec)
 ```
 """
 function sphradec_to_cart(state::Vector{<:Real})

@@ -23,6 +23,12 @@ Convert Modified Equinoctial Elements to Cartesian state.
 # Returns
 - A 6-element vector `[x, y, z, vx, vy, vz]` representing the Cartesian position and velocity.
 
+# Examples
+```julia
+mee = [7000.0, 0.01, 0.0, 0.1, 0.0, π/4]
+cart = mee_to_cart(mee, 398600.4418)
+```
+
 """
 function mee_to_cart(mod_equinoct::Vector{<:Real}, μ::Real; j::Real = 1.0)
     if length(mod_equinoct) != 6
