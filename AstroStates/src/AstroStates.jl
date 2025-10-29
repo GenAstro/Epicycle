@@ -154,7 +154,6 @@ Keplerian orbital elements representation using classical osculating elements.
 # Notes
 - Parametric so automatic differentiation and high-precision types are supported.
 - Classical Keplerian elements have well-known singularities for special cases.
-- Existing constructors that forward positional arguments keep working; typical user code is unaffected.
 
 # Examples
 ```julia
@@ -376,21 +375,45 @@ function show(io::IO, state::IncomingAsymptoteState)
 end
 
 """
-    ModifiedKeplerianState(ra, rp, inc, raan, aop, ta)
+    ModifiedKeplerianState(rp, ra, inc, raan, aop, ta)
 
-Modified Keplerian orbital elements.
+Modified Keplerian orbital elements using periapsis and apoapsis radii instead of semi-major axis and eccentricity.
 
 # Units
 - Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
 - All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
-- `rp`: radius of periapsis
-- `ra`: radius of apoapsis
-- `inc`: Inclination (rad)
-- `raan`: Right ascension of ascending node (rad)
-- `aop`: Argument of periapsis (rad)
-- `ta`: True anomaly (rad)
+- `rp`: Radius of periapsis. Closest approach distance to central body.
+  * Range: rp > 0. Typically rp > central body radius for physical orbits.
+- `ra`: Radius of apoapsis. Farthest distance from central body (elliptic orbits only).
+  * Range: ra ≥ rp for elliptic orbits. For hyperbolic orbits: ra = ∞ (not used).
+- `inc`: Inclination (rad). Angle between orbit plane and reference xy-plane.
+  * Range: [0, π]. If inc < π/2: prograde orbit. If inc > π/2: retrograde orbit.
+  * inc = 0: equatorial orbit in xy-plane. inc = π/2: polar orbit.
+- `raan`: Right ascension of ascending node (rad). Orients the orbit plane.
+  * Range: [0, 2π). Angle from +x axis to ascending node, measured in xy-plane.
+  * Defines where orbit plane intersects reference plane (ascending crossing).
+  * Undefined for equatorial orbits (inc ≈ 0 or π).
+- `aop`: Argument of periapsis (rad). Orients the orbit within its plane.
+  * Range: [0, 2π). Angle from ascending node to periapsis point.
+  * Defines orientation of orbit ellipse within the orbital plane.
+  * Undefined for circular orbits (rp ≈ ra).
+- `ta`: True anomaly (rad). Spacecraft position within the orbit.
+  * Range: [0, 2π). Angle from periapsis to current spacecraft position.
+  * ta = 0: at periapsis. ta = π: at apoapsis (for elliptic orbits).
+  * Undefined for circular orbits (rp ≈ ra).
+
+# Notes
+- Parametric so automatic differentiation and high-precision types are supported.
+- Alternative to classical Keplerian elements using radius parameters instead of sma/ecc.
+- Shares same singularities as classical Keplerian elements for circular and equatorial orbits.
+
+# Examples
+```julia
+# 400 km x 35,786 km orbit (GTO-like)
+modkep = ModifiedKeplerianState(6778.0, 42164.0, π/6, 0.0, 0.0, 0.0)
+```
 """
 struct ModifiedKeplerianState{T<:Real} <: AbstractOrbitState
     rp::T
