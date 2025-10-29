@@ -1,11 +1,4 @@
-## Table of Contents
-
-```@index
-```
 # Reference Guide
 
-```@autodocs
-Modules = [AstroStates]
-Order = [:type, :function, :macro, :constant]
-```
+This page has been moved to the main documentation page.
 

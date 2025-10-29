@@ -8,7 +8,7 @@ The AstroStates module provides models, structs, utilities, and conversions for 
 
 The module offers multiple interfaces for transforming and storing states. Low‑level conversion functions (e.g., `cart_to_kep.jl`) can be used directly. A type system automatically provides concrete structs for each representation (e.g., `CartesianState`) and converts between all supported permutations. The `OrbitState` utility preserves type stability when the representation may change by storing the numeric state and a type tag in separate fields. The library supports automatic differentiation with ForwardDiff.jl and Zygote.jl.
 
-AstroStates is extensively tested against output from the General Mission Analysis Tool (GMAT) R2022a.
+AstroStates is tested against output from the General Mission Analysis Tool (GMAT) R2022a.
 
 References:
 
@@ -42,7 +42,7 @@ subtypes(AbstractOrbitState)
 ```
 The API is documented with docstrings; external references are intentionally omitted to avoid duplication. In the REPL, type `?` to enter help mode, then enter a name to view its documentation. For example, `?IncomingAsymptoteState` displays the incoming hyperbolic asymptote state, and `?cart_to_sphradec` shows the spherical RA/Dec conversion helper.
 
-## State Structs and Conversions
+## State Overview
 
 AstroStates provides a library of state structs to create, store, and convert orbit states.  These structs derive from AbstractOrbitState. You can create states from numeric vectors or by converting from another state struct; conversions are performed automatically via overloaded constructors. State structs print readably and expose elements as fields. To list supported representations, run `subtypes(AbstractOrbitState)`. Kinematic conversions (e.g., Cartesian, Spherical) do not require mu, while conic element conversions (e.g., Keplerian, Modified Equinoctial) do.
 
@@ -68,7 +68,7 @@ c.posvel
 h.c3
 ```
 
-## OrbitState container
+## OrbitState Container
 
 The OrbitState struct provides a type-stable container when the representation may change during a simulation but type stability is still required. For example, Epicycle’s Spacecraft uses OrbitState to accept different input representations and to switch state types during a run. OrbitState stores (1) the state data and (2) a tag that describes the representation. The tag is a state-type marker that parallels the concrete state struct names (e.g., Keplerian, Cartesian, etc.).
 
@@ -91,7 +91,7 @@ subtypes(AbstractOrbitStateType)
 ```
 ---
 
-## Conversion Functions
+## Conversions Overview
 
 The conversion functions in AstroStates are contained in individual files with function names like `cart_to_kep.jl`.  These functions can be used directly without the struct-based interfaces above when appropriate and when that is easier to integrate into other applications.  
 
@@ -188,11 +188,11 @@ end
 ```
 ---
 
-## Automatic Differentiation (ForwardDiff and Zygote)
+## Automatic Differentiation 
 
-Note: The time to precompile AD interfaces is substantial, but those times are only incurred on the first execution and when included in loops or functions the times are orders of magnitude faster. 
+All functions and conversions in AstroStates are fully differentiable using Julia's automatic differentation libraries ForwardDiff and Zygote. Examples for computing Jacobians are shown below.  
 
-## Automatic Differentiation (ForwardDiff)
+Note: The time to precompile AD interfaces is substantial, but those times are only incurred on the first execution and when included in loops or functions the times are orders of magnitude faster. REPL peformance for these examples is poor for that reason. 
 
 ```julia
 using ForwardDiff
@@ -209,8 +209,6 @@ f(x) = to_vector(KeplerianState(CartesianState(x, mu), mu))
 J = ForwardDiff.jacobian(f, x)
 ```
 
-## Zygote Example
-
 ```julia
 using Zygote
 using AstroStates
@@ -224,5 +222,25 @@ f(x) = to_vector(ModifiedEquinoctialState(CartesianState(x, mu), mu))
 
 # Compute the Jacobian of Modified Equinoctial elements w/r/t Cartesian
 J = first(Zygote.jacobian(f, x))  
+```
+
+## State Types Reference
+
+```@autodocs
+Modules = [AstroStates]
+Order = [:type]
+```
+
+## Conversions Reference
+
+```@autodocs
+Modules = [AstroStates]
+Order = [:function]
+```
+
+## API Index
+
+```@index
+Pages = ["index.md"]
 ```
 
