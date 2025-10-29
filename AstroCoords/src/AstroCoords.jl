@@ -93,7 +93,7 @@ See also: [`AbstractAxes`](@ref), [`ICRFAxes`](@ref), [`VNB`](@ref).
 """
 mutable struct CoordinateSystem{O<:AbstractPoint, A<:AbstractAxes} <: AbstractCoordinateSystem
     origin::O
-    axes::A
+    axes::A        # COV_EXCL_LINE tested but inlined away so cov does not detect
 end
 
 # Safe property accessor for show

@@ -94,8 +94,13 @@ function run_module_coverage(module_name::AbstractString; project::AbstractStrin
         """
         mktemp() do path, io
             write(io, script); close(io)
-            # Use user or all; if user misses, try :all
-            run(`$(Base.julia_cmd()) --project=$(root) --code-coverage=user -O0 --inline=no $(path)`)
+            # Try user first, fall back to all if it fails
+            try
+                run(`$(Base.julia_cmd()) --project=$(root) --code-coverage=user -O0 --inline=no --startup-file=no $(path)`)
+            catch e
+                @warn "Code coverage with user failed, trying with all" exception=e
+                run(`$(Base.julia_cmd()) --project=$(root) --code-coverage=all -O0 --inline=no --startup-file=no $(path)`)
+            end
         end
     end
 
