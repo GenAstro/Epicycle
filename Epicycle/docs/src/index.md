@@ -1,14 +1,17 @@
-```@meta
-CurrentModule = Epicycle
-```
+# Epicycle.jl Documentation
 
-# Epicycle
+**Professional astrodynamics and spacecraft trajectory analysis in Julia**
 
-Documentation for [Epicycle](https://github.com/GenAstro/Epicycle.jl).
+Welcome to the Epicycle ecosystem - a comprehensive suite of packages for spacecraft mission design, orbital mechanics, and astrodynamics analysis.
 
-```@index
-```
+## Quick Navigation
 
-```@autodocs
-Modules = [Epicycle]
-```
+### 📚 [Using Epicycle](welcome.md)
+Learn how to install, configure, and use the Epicycle ecosystem for your mission analysis needs.
+
+### 🚀 [Tutorials](unit_examples.md) 
+Hands-on examples and complete mission workflows using real aerospace scenarios.
+
+---
+
+*Epicycle: Making complex astrodynamics accessible and reliable.*
