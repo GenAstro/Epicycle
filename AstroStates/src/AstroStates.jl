@@ -360,7 +360,6 @@ Outgoing asymptote parameters for hyperbolic trajectories.
 
 # Notes
 - Parametric so automatic differentiation and high-precision types are supported.
-- Used for hyperbolic trajectory analysis and interplanetary mission design.
 - Singularities exist when trajectory becomes parabolic (c3 ≈ 0).
 - Singularities exist when e ≈ 0.  Note for elliptic orbits the apsides vector
   is used in place of the asymptote direction.
@@ -396,15 +395,34 @@ end
 Incoming asymptote parameters for hyperbolic trajectories.
 
 # Units
-- Distance and time units are arbitrary but must be consistent with the gravitational parameter `μ` used in the simulation.
+- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
-- `rp`: Periapsis radius
-- `c3`: Characteristic energy
-- `rla`: Right ascension of asymptote (rad)
-- `dla`: Declination of asymptote (rad)
-- `bpa`: B-plane angle (rad)
-- `ta`: True anomaly at asymptote (rad)
+- `rp`: Periapsis radius. 
+  * Range: rp > 0.
+- `c3`: Characteristic energy. Specific energy at infinity (v∞²).
+  * -∞ < c3 < ∞, c3 > 0 for hyperbolic trajectories.
+- `rla`: Right ascension of incoming asymptote (rad). 
+  * Range: [0, 2π).
+- `dla`: Declination of incoming asymptote (rad). 
+  * Range: [-π/2, π/2].
+- `bpa`: B-plane angle (rad). 
+  * Range: [0, 2π).
+- `ta`: True anomaly at asymptote (rad). 
+  * Range: [0, 2π).
+
+# Notes
+- Parametric so automatic differentiation and high-precision types are supported.
+- Singularities exist when trajectory becomes parabolic (c3 ≈ 0).
+- Singularities exist when e ≈ 0.  Note for elliptic orbits the apsides vector
+  is used in place of the asymptote direction.
+- Singular when asymptote direction is aligned with the reference z-axis (dla = ±π/2).
+
+# Examples
+```julia
+inasym = IncomingAsymptoteState(6778.0, 5.0, 0.0, π/4, π/2, π/2)
+```
 """
 struct IncomingAsymptoteState{T<:Real} <: AbstractOrbitState
     rp::T
@@ -416,7 +434,7 @@ struct IncomingAsymptoteState{T<:Real} <: AbstractOrbitState
 end
 
 function show(io::IO, state::IncomingAsymptoteState)
-    println(io, "OutGoingAsymptoteState:")
+    println(io, "IncomingAsymptoteState:")
     println(io, @sprintf("  rp        = %14.8f", state.rp))
     println(io, @sprintf("  c3        = %14.8f", state.c3))
     println(io, @sprintf("  rla (deg) = %14.8f", rad2deg(state.rla)))
