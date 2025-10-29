@@ -572,16 +572,32 @@ end
 Alternate equinoctial elements representation.
 
 # Units
-- Distance and time units are arbitrary but must be consistent with the gravitational parameter `μ` used in the simulation.
-- Angles are in radians.
+- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
-- `a`: Semi-major axis
-- `h`: e⋅g component of eccentricity vector
-- `k`: e⋅f component of eccentricity vector
-- `altp`: sin(i/2)⋅cos(Ω)
-- `altq`: sin(i/2)⋅sin(Ω)
-- `mlong`: Mean longitude [rad]
+- `a`: Semi-major axis. Defines orbit size and energy.
+  * Range: a ≠ 0. If a > 0: elliptic orbit. If a < 0: hyperbolic orbit.
+- `h`: Eccentricity vector h-component. h = e⋅sin(ω + Ω).
+  * Range: Any real value. Related to eccentricity and orientation.
+- `k`: Eccentricity vector k-component. k = e⋅cos(ω + Ω).
+  * Range: Any real value. Related to eccentricity and orientation.
+- `altp`: Alternate inclination vector p-component. altp = sin(i/2)⋅cos(Ω).
+  * Range: Any real value. Alternative inclination parameterization.
+- `altq`: Alternate inclination vector q-component. altq = sin(i/2)⋅sin(Ω).
+  * Range: Any real value. Alternative inclination parameterization.
+- `mlong`: Mean longitude (rad). Combined angle measure.
+  * Range: [0, 2π). Normalized mean longitude.
+
+# Notes
+- Parametric so automatic differentiation and high-precision types are supported.
+- Alternative to standard equinoctial elements using sin(i/2) instead of tan(i/2).
+- Singularities reduced compared to classical elements.
+
+# Examples
+```julia
+alteq = AlternateEquinoctialState(7000.0, 0.01, 0.0, 0.05, 0.0, π/4)
+```
 """
 struct AlternateEquinoctialState{T<:Real} <: AbstractOrbitState
     a::T
