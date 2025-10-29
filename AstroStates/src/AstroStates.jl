@@ -197,27 +197,31 @@ end
 Spherical coordinates state with right ascension and declination components.
 
 # Units
-- Distance/time units must be consistent with the gravitational parameter `μ` used in conversions.
+- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
 - All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
-- `r`: Radial distance. Magnitude of position vector from origin to spacecraft.
-  * Range: r > 0. Typically r ≥ 1e-10 for numerical stability.
+- `r`: Radial distance from central body center. 
+  * Range: r > 0.
 - `dec`: Declination (rad). Elevation angle of position above/below xy-plane.
-  * Range: [-π/2, π/2]. dec = 0: position in xy-plane. dec = ±π/2: at poles.
+  * Range: [-π/2, π/2]. dec = 0: equatorial. dec = ±π/2: polar.
 - `ra`: Right ascension (rad). Azimuthal angle of position in xy-plane.
-  * Range: [0, 2π) or (-∞, ∞). Measured counterclockwise from +x axis.
-- `v`: Velocity magnitude. Speed of spacecraft motion.
-  * Range: v ≥ 0. Typically v ≥ 1e-10 for numerical stability.
+  * Range: [0, 2π). Measured counterclockwise from +x axis.
+- `v`: Velocity magnitude. 
+  * Range: v ≥ 0.
 - `decv`: Declination of velocity (rad). Elevation angle of velocity vector.
   * Range: [-π/2, π/2]. Angle between velocity vector and xy-plane.
 - `rav`: Right ascension of velocity (rad). Azimuthal angle of velocity.
-  * Range: [0, 2π) or (-∞, ∞). Direction of velocity in xy-plane.
+  * Range: [0, 2π). Direction of velocity in xy-plane.
 
 # Notes
-- Parametric for automatic differentiation and arbitrary precision.
-- No inherent singularities, but precision loss occurs when r or v approach zero.
-- Useful for astronomy applications and telescope pointing.
+- Parametric so automatic differentiation and high-precision types are supported.
+- Singularities exist at r = 0 or v = 0 due to undefined angles.
+
+# Examples
+```julia
+radec = SphericalRADECState(6778.0, π/4, 0.0, 7.5, 0.0, π/2)
+```
 """
 struct SphericalRADECState{T<:Real} <: AbstractOrbitState
     r::T
