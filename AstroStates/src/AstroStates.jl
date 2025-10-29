@@ -241,22 +241,37 @@ end
 """
     SphericalAZIFPAState(r, ra, dec, v, vazi, fpa)
 
-Spherical azimuth / flight-path-angle representation of an orbital state.
+Spherical coordinates with azimuth and flight path angle velocity representation.
 
 # Units
-- Distance/time units must be consistent with the gravitational parameter `μ` in use.
-- All angular values are radians.
+- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
-- `r`: Radial distance from the central body center
-- `ra`: Right ascension
-- `dec`: Declination
-- `v`: Velocity magnitude
-- `vazi`: Velocity azimuth (angle east of north) [rad]
-- `fpa`: Flight path angle (above local horizontal) [rad]
+- `r`: Radial distance from central body center. Magnitude of position vector.
+  * Range: r > 0. 
+- `ra`: Right ascension (rad). Azimuthal angle of position in xy-plane.
+  * Range: [0, 2π). Measured counterclockwise from +x axis.
+- `dec`: Declination (rad). Elevation angle of position above/below xy-plane.
+  * Range: [-π/2, π/2]. dec = 0: position in xy-plane. dec = ±π/2: at poles.
+- `v`: Magnitude of velocity vector. 
+  * Range: v ≥ 0. 
+- `vazi`: Velocity azimuth (rad). Horizontal direction of velocity vector.
+  * Range: [0, 2π). Angle east of north in local horizontal plane.
+  * vazi = 0: northward velocity. vazi = π/2: eastward velocity.
+- `fpa`: Flight path angle (rad). Elevation of velocity above local horizontal.
+  * Range: [-π/2, π/2]. fpa = 0: horizontal flight. fpa > 0: climbing.
+  * fpa < 0: descending flight. fpa = ±π/2: purely radial motion.
 
 # Notes
-- Parametric for AD / arbitrary precision. 
+- Parametric so automatic differentiation and high-precision types are supported.
+- Singularities exist at r = 0 or v = 0 due to undefined angles.
+- Flight path angle and azimuth provide intuitive velocity direction description.
+
+# Examples
+```julia
+sph = SphericalAZIFPAState(6478.0, 0.0, π/4, 7.5, π/4, π/4)
+```
 """
 struct SphericalAZIFPAState{T<:Real} <: AbstractOrbitState
     r::T
