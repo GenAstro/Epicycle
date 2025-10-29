@@ -122,22 +122,44 @@ end
 """
     KeplerianState(a, e, i, raan, aop, ta)
 
-Keplerian orbital elements representation.
+Keplerian orbital elements representation using classical osculating elements.
 
 # Units
 - Distance/time units must be consistent with the gravitational parameter `μ` used in conversions.
+- All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
-- `sma`: Semi-major axis (must be nonzero)
-- `ecc`: Eccentricity, valid range: [0, ∞) (e≈1 is near-parabolic)
-- `inc`: Inclination (rad) in [0, π]
-- `raan`: Right ascension of ascending node (rad) in [0, 2π)
-- `aop`: Argument of periapsis (rad) in [0, 2π)
-- `ta`: True anomaly (rad) in [0, 2π)
+- `sma`: Semi-major axis (must be nonzero). Defines orbit size and energy.
+  * If sma > 0: elliptic orbit (bound). If sma < 0: hyperbolic orbit (unbound).
+  * For elliptic orbits, sma is half the major axis length.
+- `ecc`: Eccentricity. Defines orbit shape.
+  * ecc = 0: circular orbit. 0 < ecc < 1: elliptical orbit.
+  * ecc = 1: parabolic orbit. ecc > 1: hyperbolic orbit.
+  * Valid range: [0, ∞), but ecc ≈ 1 results in infinite sma.
+- `inc`: Inclination (rad). Angle between orbit plane and reference xy-plane.
+  * Range: [0, π]. If inc < π/2: prograde orbit. If inc > π/2: retrograde orbit.
+- `raan`: Right ascension of ascending node (rad). Orients the orbit plane.
+  * Range: [0, 2π). Angle from +x axis to ascending node, measured in xy-plane.
+  * Defines where orbit plane intersects reference plane (ascending crossing).
+  * Undefined for equatorial orbits (inc ≈ 0 or π).
+- `aop`: Argument of periapsis (rad). Orients the orbit within its plane.
+  * Range: [0, 2π). Angle from ascending node to periapsis point.
+  * Defines orientation of orbit ellipse within the orbital plane.
+  * Undefined for circular orbits (ecc ≈ 0).
+- `ta`: True anomaly (rad). Spacecraft position within the orbit.
+  * Range: [0, 2π). Angle from periapsis to current spacecraft position.
+  * ta = 0: at periapsis. ta = π: at apoapsis (for elliptic orbits).
+  * Undefined for circular orbits (ecc ≈ 0).
 
 # Notes
 - Parametric so automatic differentiation and high-precision types are supported.
+- Classical Keplerian elements have well-known singularities for special cases.
 - Existing constructors that forward positional arguments keep working; typical user code is unaffected.
+
+# Examples
+```julia
+k = KeplerianState(7000.0, 0.01, π/4, 0.0, 0.0, π/3)
+```
 """
 struct KeplerianState{T<:Real} <: AbstractOrbitState
     sma::T
@@ -161,22 +183,30 @@ end
 """
     SphericalRADECState(r, dec, ra, v, decv, rav)
 
-Spherical coordinates state with right ascension and declination.
+Spherical coordinates state with right ascension and declination components.
 
 # Units
 - Distance/time units must be consistent with the gravitational parameter `μ` used in conversions.
-- Angles in radians.
+- All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
-- `r`: Radial distance
-- `dec`: Declination (rad)
-- `ra`: Right ascension (rad)
-- `v`: Velocity magnitude
-- `decv`: Declination of velocity (rad)
-- `rav`: Right ascension of velocity (rad)
+- `r`: Radial distance. Magnitude of position vector from origin to spacecraft.
+  * Range: r > 0. Typically r ≥ 1e-10 for numerical stability.
+- `dec`: Declination (rad). Elevation angle of position above/below xy-plane.
+  * Range: [-π/2, π/2]. dec = 0: position in xy-plane. dec = ±π/2: at poles.
+- `ra`: Right ascension (rad). Azimuthal angle of position in xy-plane.
+  * Range: [0, 2π) or (-∞, ∞). Measured counterclockwise from +x axis.
+- `v`: Velocity magnitude. Speed of spacecraft motion.
+  * Range: v ≥ 0. Typically v ≥ 1e-10 for numerical stability.
+- `decv`: Declination of velocity (rad). Elevation angle of velocity vector.
+  * Range: [-π/2, π/2]. Angle between velocity vector and xy-plane.
+- `rav`: Right ascension of velocity (rad). Azimuthal angle of velocity.
+  * Range: [0, 2π) or (-∞, ∞). Direction of velocity in xy-plane.
 
 # Notes
-- Parametric for AD / arbitrary precision. 
+- Parametric for automatic differentiation and arbitrary precision.
+- No inherent singularities, but precision loss occurs when r or v approach zero.
+- Useful for astronomy applications and telescope pointing.
 """
 struct SphericalRADECState{T<:Real} <: AbstractOrbitState
     r::T
