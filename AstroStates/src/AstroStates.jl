@@ -508,17 +508,32 @@ end
 
 Equinoctial orbital elements representation.
 
+# Units
+- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- All angular quantities are in **radians**.
+
 # Fields (all `::T` where `T<:Real`)
-- `a`: Semi-major axis [must be ≠ 0]
-- `h`: e⋅g component of eccentricity vector
-- `k`: e⋅f component of eccentricity vector
-- `p`: tan(i/2)⋅cos(Ω)
-- `q`: tan(i/2)⋅sin(Ω)
-- `mlong`: Mean longitude (rad), normalized to [0, 2π)
+- `a`: Semi-major axis. Defines orbit size and energy.
+  * Range: a ≠ 0. If a > 0: elliptic orbit. If a < 0: hyperbolic orbit.
+- `h`: Eccentricity vector h-component. h = e⋅sin(ω + Ω).
+  * Range: Any real value. Related to eccentricity and orientation.
+- `k`: Eccentricity vector k-component. k = e⋅cos(ω + Ω).
+  * Range: Any real value. Related to eccentricity and orientation.
+- `p`: Inclination vector p-component. p = tan(i/2)⋅cos(Ω).
+  * Range: Any real value. Related to inclination and node orientation.
+- `q`: Inclination vector q-component. q = tan(i/2)⋅sin(Ω).
+  * Range: Any real value. Related to inclination and node orientation.
+- `mlong`: Mean longitude (rad). raan + aop + ta combined angle measure.
+  * Range: [0, 2π). Normalized mean longitude.
 
 # Notes
-- Distance and time units must be consistent with the gravitational parameter `μ` used elsewhere.
-- Angles are always in radians.
+- Parametric so automatic differentiation and high-precision types are supported.
+- Singularities are reduced compared to classical elements but still exist for retrograde equatorial orbits.
+
+# Examples
+```julia
+eq = EquinoctialState(7000.0, 0.01, 0.0, 0.1, 0.0, π/4)
+```
 """
 struct EquinoctialState{T<:Real} <: AbstractOrbitState
     a::T
