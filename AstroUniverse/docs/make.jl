@@ -11,10 +11,11 @@ makedocs(;
         canonical="https://GenAstro.github.io/Epicycle/AstroUniverse/",
         edit_link="main",
         assets=String[],
+        collapselevel=1,
+        sidebar_sitename=false,
     ),
     pages=[
-        "Home" => "index.md",
-        "Reference Guide" => "api.md",
+        "index.md",
     ],
     warnonly=true,         # Just warn, don't error
     checkdocs=:none        # Skip docstring completeness checks

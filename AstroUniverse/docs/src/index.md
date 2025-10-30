@@ -6,33 +6,76 @@ CurrentModule = AstroUniverse
 
 The AstroUniverse module provides models for celestial bodies, their physical properties, and related utilities for astrodynamics applications. It includes predefined celestial body objects with standard gravitational parameters and other physical constants commonly used in orbital mechanics.
 
-The module automatically downloads and manages SPICE kernels (NASA's ephemeris data) to provide accurate celestial body positions and orientations. All major solar system bodies are included with their standard gravitational parameters, allowing for immediate use in trajectory analysis without manual setup.
-
-AstroUniverse integrates seamlessly with other Epicycle modules, providing the foundational celestial body models used throughout the astrodynamics toolkit.
+The module automatically downloads and manages SPICE kernels (NASA's ephemeris data) to provide accurate celestial body positions and orientations using Scratch.jl. 
 
 ## Quick Start
 
-The example below shows how to access predefined celestial bodies and their properties:
+The example below shows how to access predefined celestial bodies and their properties and how to add a celestial body:
 
 ```julia
 using AstroUniverse
 
 # Access predefined celestial bodies
-earth_body = earth
-mars_body = mars
+earth.mu
+venus.naifid
 
-# Get gravitational parameters
-μ_earth = get_gravparam(earth)  # km³/s²
-μ_mars = get_gravparam(mars)
+# Create a custom body
+phobos = CelestialBody(
+    name = "Phobos",
+    naifid = 401,                    # NAIF ID for Phobos
+    mu = 7.0875e-4,       # km³/s² (gravitational parameter)
+    equatorial_radius = 11.1,                   # km (mean radius)
+)
 
-# All major solar system bodies are available
-bodies = [sun, mercury, venus, earth, moon, mars, jupiter, saturn, uranus, neptune, pluto]
+
 ```
 
-## Features
+## CelestialBody Structure
 
-- **Predefined celestial bodies**: All major solar system bodies with standard parameters
-- **SPICE kernel management**: Automatic download and loading of NASA ephemeris data  
-- **Gravitational parameters**: Standard GM values for all bodies
-- **Type-safe interfaces**: Consistent API across all celestial body objects
-- **Scratch space management**: Kernels cached locally to avoid repeated downloads
+The `CelestialBody` struct is the core data structure for representing astronomical objects in AstroUniverse. It stores the essential physical and orbital properties needed for astrodynamics calculations.
+
+### Fields
+
+- **`name::String`** - Human-readable name of the celestial body (e.g., "Earth", "Mars")
+- **`naifid::Int`** - NAIF ID number used by NASA SPICE for ephemeris lookups
+- **`mu::Float64`** - Standard gravitational parameter (GM) in km³/s²
+- **`equatorial_radius::Float64`** - Equatorial radius in kilometers
+- **`parent::Union{CelestialBody, Nothing}`** - Parent body for moons/satellites (Nothing for planets)
+
+### Usage Examples
+
+```julia
+# Access predefined properties
+println("Earth's GM: $(earth.mu) km³/s²")
+println("Moon's parent: $(moon.parent.name)")
+
+# Create asteroid Ceres
+ceres = CelestialBody(
+    name = "Ceres",
+    naifid = 2000001,
+    mu = 62.6284,           # km³/s²
+    equatorial_radius = 469.7,  # km
+    parent = nothing        # Dwarf planet, no parent
+)
+```
+
+### Predefined Bodies
+
+AstroUniverse includes all major solar system bodies:
+- **Planets**: `sun`, `mercury`, `venus`, `earth`, `mars`, `jupiter`, `saturn`, `uranus`, `neptune`
+- **Moons**: `moon` (Earth's), plus major moons of other planets
+- **Dwarf Planets**: `pluto`
+
+All predefined bodies include accurate physical parameters from NASA/JPL sources and are ready for immediate use in calculations.
+
+## Table of Contents
+
+```@index
+```
+
+## API Reference
+
+```@autodocs
+Modules = [AstroUniverse]
+Order = [:type, :function, :macro, :constant]
+```
