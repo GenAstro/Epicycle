@@ -11,12 +11,21 @@ makedocs(;
         canonical="https://GenAstro.github.io/Epicycle/AstroEpochs/",
         edit_link="main",
         assets=String[],
+        collapselevel=1,
+        sidebar_sitename=false,
     ),
     pages=[
-        "Home" => "index.md",
-        "API Reference" => "api.md",
-        "Internal Details" => "internal.md",
+        "index.md",
     ],
     warnonly=true,         # Just warn, don't error
     checkdocs=:none        # Skip docstring completeness checks
+)
+
+deploydocs(;
+    repo="github.com/GenAstro/Epicycle",
+    target="build",
+    dirname="AstroEpochs",
+    devbranch="main",
+    push_preview=true,
+    deploy_config=Documenter.GitHubActions()  # Uses GITHUB_TOKEN
 )

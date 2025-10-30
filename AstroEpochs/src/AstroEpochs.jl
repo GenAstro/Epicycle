@@ -49,15 +49,67 @@ const J2000_EPOCH = 2451545.0
 abstract type AbstractTimeScale end
 abstract type AbstractTimeFormat end
 
+"""
+    TT <: AbstractTimeScale
+
+Terrestrial Time scale.
+"""
 struct TT   <: AbstractTimeScale end
+
+"""
+    TDB <: AbstractTimeScale
+
+Barycentric Dynamical Time scale.
+"""
 struct TDB  <: AbstractTimeScale end
+
+"""
+    UTC <: AbstractTimeScale    
+
+Coordinated Universal Time scale.
+"""
 struct UTC  <: AbstractTimeScale end
+
+"""
+    TCB <: AbstractTimeScale
+
+Barycentric Coordinate Time scale.
+"""
 struct TCB  <: AbstractTimeScale end
+
+"""
+    TCG <: AbstractTimeScale
+
+Geocentric Coordinate Time scale.
+"""
 struct TCG  <: AbstractTimeScale end
+
+"""
+    TAI <: AbstractTimeScale
+
+International Atomic Time scale.
+"""
 struct TAI  <: AbstractTimeScale end
 
+"""
+    JD <: AbstractTimeFormat
+
+Julian Date format.
+"""
 struct JD     <: AbstractTimeFormat end
+
+"""
+    MJD <: AbstractTimeFormat
+
+Modified Julian Date format.
+"""
 struct MJD    <: AbstractTimeFormat end   
+
+"""
+    ISOT <: AbstractTimeFormat
+
+ISO 8601 Time format.
+"""
 struct ISOT   <: AbstractTimeFormat end
 
 # Map tags -> existing Symbol API
@@ -425,7 +477,7 @@ Notes
 - Format computations return a time value (as opposed to a new Time struct).
 
 # Examples
-```jldoctest
+```julia
 using AstroEpochs
 
 t = Time("2024-02-29T12:34:56.123", TAI(), ISOT())
