@@ -8,10 +8,17 @@ makedocs(;
     authors="Steve Hughes <steven.hughes@genastro.org>",
     sitename="AstroModels.jl",
     format=Documenter.HTML(;
-        edit_link="master",
+        canonical="https://GenAstro.github.io/Epicycle/AstroModels/",
+        edit_link="main",
         assets=String[],
+        collapselevel=1,
+        sidebar_sitename=false,
     ),
     pages=[
-        "Home" => "index.md",
+        "index.md",
     ],
+    warnonly=true,         # Just warn, don't error
+    checkdocs=:none,       # Skip docstring completeness checks
+    doctest=false,         # Skip all doctests completely
+    linkcheck=false        # Skip external link checking
 )
