@@ -18,7 +18,7 @@ Fields
 - Numeric parameter T is chosen by promotion: T = promote_type(eltype(state), typeof(time.jd1), typeof(mass)).
 
 # Examples
-```jldoctest
+```julia
 using AstroModels, AstroStates, AstroEpochs, AstroCoords, AstroUniverse
 
 sc = Spacecraft(
@@ -173,7 +173,7 @@ Notes
 
 # Examples
 
-```jldoctest
+```julia
 using AstroModels
 sc = Spacecraft(
            state=CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
@@ -228,7 +228,7 @@ Limitations
 
 # Examples
 
-```jldoctest
+```julia
 using AstroModels, AstroStates, AstroEpochs, AstroCoords, AstroUniverse
 sc = Spacecraft(
            state=CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
@@ -270,7 +270,7 @@ Limitations
 
 # Examples
 
-```jldoctest
+```julia
 using AstroModels, AstroStates, AstroEpochs
 sc = Spacecraft(
            state=CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),

@@ -84,7 +84,7 @@ Fields (units):
   If changing units, be consistent throughout the simulation.
 
 # Examples
-```jldoctest
+```julia
 using AstroUniverse
 moon_like = CelestialBody(name="MyMoon", 
                                  mu=4902.8, 
