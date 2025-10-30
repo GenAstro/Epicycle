@@ -209,3 +209,10 @@ println("∇(JD)/∇(TDB_seconds) = $(grad[1])")
 ```@index
 Pages = ["index.md"]
 ```
+
+## API Reference
+
+```@autodocs
+Modules = [AstroEpochs]
+Order = [:type, :function, :macro, :constant]
+```
