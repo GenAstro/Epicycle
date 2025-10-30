@@ -2,9 +2,13 @@
 # SPDX-License-Identifier:
 
 __precompile__()
-module AstroProp
 
-# TODO, trap error when user propagates a spacecraft in propagate() that is not in dynsys
+"""
+    module Prop
+
+Propagation interfaces, stopping conditions, and interface to OrdinaryDiffEq.
+"""
+module AstroProp
 
 using OrdinaryDiffEq, LinearAlgebra
 
@@ -28,8 +32,6 @@ export nbody_perts
 export PointMassGravity, compute_point_mass_gravity!, evaluate, accel_eval!
 
 export OrbitODE
-#export STMStore, add_stm!, get_stm
-#export StateTransitionMatrix, STMConfig,set_stm!, get_stm,  reset_stm!, has_stm, composable, assemble_stm
 export IntegratorConfig
 export OrbitPropagator, StopAt
 
@@ -39,16 +41,10 @@ struct PosVel <: AbstractState
     PosVel() = new(6)
 end
 
-
-
-#export get_state
-
 abstract type OrbitODE <: AbstractFun end
 
 include("point_mass_gravity.jl")
 include("stop_conditions.jl")
-
-#export StopAt
 
 struct IntegratorConfig
     integrator::Any                         # e.g., Vern7(), Tsit5()
@@ -66,10 +62,6 @@ struct IntegratorConfig
     end
 end
 
-# ==========================
-# State/ODE Assembly & Update & Registry (Dispatched on CartesianForceModel)
-# ==========================
-
 struct ForceModel{N} <: OrbitODE
     forces::NTuple{N, OrbitODE}
     center::Union{CelestialBody, Nothing}
@@ -78,13 +70,13 @@ end
 include("orbit_propagator.jl")
 
 function ForceModel(forces::Tuple{Vararg{T}}) where {T<:OrbitODE}
-    center = find_center(forces)
+    center = _find_center(forces)
     return ForceModel{length(forces)}(forces, center)
 end
 
 ForceModel(force::T) where {T<:OrbitODE} = ForceModel((force,))
 
-function find_center(forces::Tuple)
+function _find_center(forces::Tuple)
     centers = CelestialBody[]
     for f in forces
         if f isa PointMassGravity
@@ -100,9 +92,6 @@ function find_center(forces::Tuple)
     end
 end
 
-# =======================
-# DynSys Definition
-# =======================
 """
     DynSys(; spacecraft, forces)
 
@@ -123,7 +112,7 @@ struct DynSys
     end
 end
 
-function build_odereg(spacecraft_list::Vector{<:Spacecraft})
+function _build_odereg(spacecraft_list::Vector{<:Spacecraft})
     reg = Dict{Spacecraft, Dict{Symbol, UnitRange{Int}}}()
     index = 1
     for sc in spacecraft_list
@@ -133,7 +122,7 @@ function build_odereg(spacecraft_list::Vector{<:Spacecraft})
     return reg
 end
 
-function build_odes!(model::ForceModel, start_epoch, du, u, p, t, spacecraft_list::Vector{<:Spacecraft})
+function _build_odes!(model::ForceModel, start_epoch, du, u, p, t, spacecraft_list::Vector{<:Spacecraft})
     odereg = p[:odereg]
     for sc in spacecraft_list
         idxs = odereg[sc][:posvel]
@@ -150,7 +139,7 @@ function build_odes!(model::ForceModel, start_epoch, du, u, p, t, spacecraft_lis
     end
 end
 
-function build_state(model::ForceModel, spacecraft_list::Vector{<:Spacecraft}, odereg::Dict)
+function _build_state(model::ForceModel, spacecraft_list::Vector{<:Spacecraft}, odereg::Dict)
     max_index = maximum([maximum(v[:posvel]) for v in values(odereg)])
 
     #first_state = CartesianState(spacecraft_list[1].state, model.center.mu).posvel
@@ -164,7 +153,7 @@ function build_state(model::ForceModel, spacecraft_list::Vector{<:Spacecraft}, o
     return state_vector
 end
 
-function update_structs!(forces::ForceModel, sol_u::Vector{<:Real}, odereg::Dict, sol_t::Real = 0.0, full_sol::Union{Nothing,ODESolution} = nothing)
+function _update_structs!(forces::ForceModel, sol_u::Vector{<:Real}, odereg::Dict, sol_t::Real = 0.0, full_sol::Union{Nothing,ODESolution} = nothing)
     for (sc, idx_map) in odereg
         # Update dynamic state
         if :posvel in keys(idx_map)
@@ -198,16 +187,16 @@ function propagate(model::DynSys, config::IntegratorConfig,
        length(stop_conditions) == 1 ? stop_conditions[1] :
        CallbackSet(stop_conditions...)
 
-    odereg = build_odereg(model.spacecraft)
+    odereg = _build_odereg(model.spacecraft)
     params = (forces = model.forces, odereg = odereg)
-    state0 = build_state(model.forces, model.spacecraft, odereg)
+    state0 = _build_state(model.forces, model.spacecraft, odereg)
     start_epoch = model.spacecraft[1].time.tai
 
     tspan = direction == :forward ? (0.0, 1.0e12) :
     direction == :backward ? (0.0, -1.0e12) :
     error("Unknown direction: $direction. Use :forward or :backward.")
 
-    prob = ODEProblem((du, u, p, t) -> build_odes!(model.forces, start_epoch, du, u, p, t, model.spacecraft),
+    prob = ODEProblem((du, u, p, t) -> _build_odes!(model.forces, start_epoch, du, u, p, t, model.spacecraft),
            state0, tspan, params)
   
 
@@ -218,7 +207,7 @@ function propagate(model::DynSys, config::IntegratorConfig,
     abstol=config.abstol,
     kwargs...)
 
-    update_structs!(model.forces, sol.u[end], odereg, sol.t[end], sol)
+    _update_structs!(model.forces, sol.u[end], odereg, sol.t[end], sol)
 
     return sol
 end
