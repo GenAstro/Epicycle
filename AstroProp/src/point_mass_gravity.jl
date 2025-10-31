@@ -45,7 +45,6 @@ Compute the gravitational acceleration on a central body due to a tuple of pertu
 - Requires `AstroUniverse.translate(from::CelestialBody, to::CelestialBody, jd_tdb::Float64)` to return the vector from `from` to `to` in inertial coordinates.
 - Units must be consistent with the gravitational parameters (`mu`) of the celestial bodies.
 """
-
 function compute_point_mass_gravity!(
     t::Time,
     posvel::AbstractVector{T},
@@ -104,13 +103,23 @@ function compute_point_mass_gravity!(
     return nothing
 end
 
+""" 
+    accel_eval!(model::PointMassGravity, t::Time, x̄::Vector, 
+                 x̄̇::Vector, sc::Spacecraft, params; jac::Dict = Dict())
+
+Evaluate the acceleration due to point-mass gravity from central and perturbing bodies.
+"""
 function accel_eval!(model::PointMassGravity, t::Time, x̄::Vector, 
                         x̄̇::Vector, sc::Spacecraft, params; jac::Dict = Dict())
     compute_point_mass_gravity!(t,x̄, x̄̇, model.central_body, model.pert_bodies; jac = jac) 
     return x̄̇ 
 end
 
-# Validate that all names in force model are unique
+"""
+    function check_duplicates(bodies::Tuple{Vararg{CelestialBody}})
+    
+Validate that all names in force model are unique
+"""
 function check_duplicates(bodies::Tuple{Vararg{CelestialBody}})
     seen = Dict{String, Int}()
     for b in bodies

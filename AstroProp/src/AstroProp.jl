@@ -4,7 +4,7 @@
 __precompile__()
 
 """
-    module Prop
+    module AstroProp
 
 Propagation interfaces, stopping conditions, and interface to OrdinaryDiffEq.
 """
@@ -35,7 +35,19 @@ export OrbitODE
 export IntegratorConfig
 export OrbitPropagator, StopAt
 
-#TODO: Old tags used in ForceModels.  Should replace with new tags like Cartesian()
+"""
+    PosVel <: AbstractState
+
+Position-velocity state representation for orbital propagation. This is a legacy 
+state type used internally by the propagation system.
+
+# Fields
+- `numvars::Int`: Number of state variables (always 6 for position and velocity)
+
+# Notes
+This struct is marked for deprecation and should be replaced with new state 
+representations from AstroStates.
+"""
 struct PosVel <: AbstractState 
     numvars::Int
     PosVel() = new(6)
@@ -46,11 +58,27 @@ abstract type OrbitODE <: AbstractFun end
 include("point_mass_gravity.jl")
 include("stop_conditions.jl")
 
+"""
+    IntegratorConfig
+
+Configuration parameters for orbital integration using DifferentialEquations.jl solvers.
+
+# Fields
+- `integrator::Any`: ODE solver algorithm (e.g., `Vern7()`, `Tsit5()`)
+- `dt::Union{Nothing, Float64}`: Fixed step size in seconds, or `Nothing` for adaptive stepping
+- `reltol::Float64`: Relative tolerance for integration accuracy
+- `abstol::Float64`: Absolute tolerance for integration accuracy
+
+# Example
+```julia
+integ = IntegratorConfig(Vern7(); dt=3600.0, abstol = 1e-12, reltol=1e-12)
+```
+"""
 struct IntegratorConfig
-    integrator::Any                         # e.g., Vern7(), Tsit5()
-    dt::Union{Nothing, Float64}             # Optional step size (Nothing = adaptive)
-    reltol::Float64                         # Relative tolerance
-    abstol::Float64                         # Absolute tolerance
+    integrator::Any                         
+    dt::Union{Nothing, Float64}             
+    reltol::Float64                       
+    abstol::Float64                        
 
     function IntegratorConfig(
         integrator;
@@ -62,6 +90,27 @@ struct IntegratorConfig
     end
 end
 
+"""
+    ForceModel{N} <: OrbitODE
+
+A collection of orbital dynamics forces and perturbations for spacecraft propagation.
+
+# Fields
+- `forces::NTuple{N, OrbitODE}`: Tuple of force models (e.g., gravity, drag, solar radiation pressure)
+- `center::Union{CelestialBody, Nothing}`: Central gravitational body, determined automatically from forces
+
+# Constructor
+    ForceModel(forces...)
+    ForceModel(force_tuple)
+
+The central body is automatically determined from the primary gravitational force in the model.
+
+# Example
+```julia
+gravity = PointMassGravity(earth, ())
+model = ForceModel(gravity)
+```
+"""
 struct ForceModel{N} <: OrbitODE
     forces::NTuple{N, OrbitODE}
     center::Union{CelestialBody, Nothing}
@@ -69,6 +118,28 @@ end
 
 include("orbit_propagator.jl")
 
+"""
+    ForceModel(forces...)
+    ForceModel(force_tuple)
+
+Create a force model for orbital propagation from one or more force components.
+
+# Arguments
+- `forces...`: Variable number of force objects (e.g., `PointMassGravity`)
+- `force_tuple`: Tuple of force objects
+
+# Returns
+- `ForceModel{N}`: Force model with N force components
+
+The central gravitational body is automatically determined from the primary 
+gravitational force in the collection.
+
+# Examples
+```julia
+gravity = PointMassGravity(earth)
+model = ForceModel(gravity)
+```
+"""
 function ForceModel(forces::Tuple{Vararg{T}}) where {T<:OrbitODE}
     center = _find_center(forces)
     return ForceModel{length(forces)}(forces, center)
@@ -100,6 +171,23 @@ Container for a dynamic system segment.
 # Keyword Arguments
 - `spacecraft`: Vector of spacecraft structs (subtypes of `Spacecraft`)
 - `forces`: OrbitODE model (e.g. CartesianForceModel)
+
+# Fields
+- `spacecraft::Vector{<:Spacecraft}`: Collection of spacecraft to propagate
+- `forces::OrbitODE`: Force model defining the dynamics
+
+# Constructor
+    DynSys(; spacecraft, forces)
+
+# Example
+```julia
+sc = Spacecraft()
+gravity = PointMassGravity(earth, ())
+sys = DynSys(spacecraft=[sc], forces=gravity)
+```
+
+# Notes
+This interface will be deprecated in future releases
 """
 struct DynSys
     spacecraft::Vector{<:Spacecraft}
@@ -178,6 +266,14 @@ function _update_structs!(forces::ForceModel, sol_u::Vector{<:Real}, odereg::Dic
     end
 end
 
+"""
+    This interface will be deprecated in future releases.
+
+    propagate(model::DynSys, config::IntegratorConfig, stop_conditions...; 
+              direction=:forward, prop_stm=false, kwargs...)
+
+Propagate spacecraft orbital states using numerical integration.
+"""
 function propagate(model::DynSys, config::IntegratorConfig,
     stop_conditions...;
     direction::Symbol = :forward, prop_stm::Bool = false,
@@ -196,9 +292,8 @@ function propagate(model::DynSys, config::IntegratorConfig,
     direction == :backward ? (0.0, -1.0e12) :
     error("Unknown direction: $direction. Use :forward or :backward.")
 
-    prob = ODEProblem((du, u, p, t) -> _build_odes!(model.forces, start_epoch, du, u, p, t, model.spacecraft),
-           state0, tspan, params)
-  
+    prob = ODEProblem((du, u, p, t) -> _build_odes!(model.forces, start_epoch,
+         du, u, p, t, model.spacecraft), state0, tspan, params)
 
     sol = solve(prob, config.integrator;
     callback=callbackset,
