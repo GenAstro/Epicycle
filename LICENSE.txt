@@ -15,7 +15,7 @@ Agreement (CLA) based on The Apache Software Foundation (ASF) CLA.
 Each license option is described below.  The CLA is contained in CONTRIBUTING.txt 
 in the repository root directory. 
 
-# =========  LGPL V3 Key Principals 
+# =========  LGPL V3 Key Principles 
 
 1) You must provide the full source code of the LGPL libraries. 
 
@@ -176,7 +176,7 @@ Gen Astro Evaluation and Educational License
 Copyright 2025 Gen Astro LLC
 
 This work is licensed for evaluation and educational purposes only. It may NOT be 
-used for formal development, integration and test, operations or any other 
+used for formal development, integration and testing, operations or any other 
 commercial purpose without the purchase of a commercial license from Gen Astro LLC.
 
 The above copyright notice and this permission notice shall be included in all 
@@ -188,3 +188,30 @@ PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIG
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+# ========= Gen Astro Commercial Licenses
+
+The commercial license is a signed contractual agreement that allows you to 
+use our software without being subject to the requirements of the LGPL v3.0 or
+other open-source licenses.
+
+Key features of the commercial license include:
+
+Project-Based Licensing: Commercial licenses are typically issued per project, 
+with flexible terms that support unlimited users and installations as needed 
+within that project.
+
+Keep Your Code Proprietary: Any software, modules, or plugins that you develop 
+under the commercial license may be kept fully proprietary — there is no 
+obligation to release source code or contribute back.
+
+Flexible License Types.  We offer:
+
+- Annual subscription licenses
+- Perpetual licenses (one-time payment, non-expiring)
+- Site-wide licenses for organizational use
+- Framework licenses for government or large-scale multi-mission systems
+- Access to Enhanced Capabilities
+- Commercial licensees receive full access to our Enterprise features, including
+  advanced modules and capabilities not available under the open-source license
+  (export control laws apply)
