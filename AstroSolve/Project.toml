@@ -20,7 +20,7 @@ SNOW = "105f6ee8-0889-46b1-9d4b-65e03cbc8f13"
 
 [compat]
 NLsolve = "4.5"
-OrdinaryDiffEq = "6.101.0"
+OrdinaryDiffEq = "6.101"
 SNOW = "0.3"
 julia = "1.10"
 
