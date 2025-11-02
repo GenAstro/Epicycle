@@ -1,8 +1,4 @@
 
-using SNOW
-using OrdinaryDiffEq
-using LinearAlgebra
-
 using Epicycle
 
 # Create spacecraft

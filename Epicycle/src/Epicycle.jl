@@ -17,7 +17,10 @@ using Reexport
 @reexport using AstroProp
 @reexport using AstroSolve
 
-# Also re-export commonly used external packages
+# Rexport packages required to use Epicycle
 @reexport using OrdinaryDiffEq
+@reexport using SNOW
+@reexport using NLsolve
+@reexport using SPICE
 
 end

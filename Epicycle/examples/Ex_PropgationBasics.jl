@@ -1,5 +1,4 @@
 using Epicycle
-using LinearAlgebra
 
 # Spacecraft
 sat = Spacecraft(

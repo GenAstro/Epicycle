@@ -1,10 +1,3 @@
-
-
-
-using SNOW
-using OrdinaryDiffEq
-using LinearAlgebra
-
 using Epicycle
 
 # Create spacecraft matching GMAT initial state
