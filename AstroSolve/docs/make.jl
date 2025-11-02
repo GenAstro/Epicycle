@@ -13,9 +13,7 @@ makedocs(;
         assets=String[],
     ),
     pages=[
-        "Home" => "index.md",
-        "API Reference" => "api.md",
-        "Internal Details" => "internal.md",
+        "AstroSolve.jl" => "index.md",
     ],
     warnonly=true,         # Just warn, don't error
     checkdocs=:none        # Skip docstring completeness checks

@@ -86,11 +86,15 @@ AstroSolve seamlessly integrates with other Epicycle packages:
 - **AstroModels** - Spacecraft and celestial body modeling
 - **AstroMan** - Maneuver planning and execution
 
-## Next Steps
+## API Reference
 
-- **[API Reference](api.md)** - Complete function and type documentation
-- **[Internal Details](internal.md)** - Implementation details and advanced usage
-- **Examples** - Worked mission design examples and tutorials
+```@index
+```
+
+```@autodocs
+Modules = [AstroSolve]
+Order = [:type, :function, :macro, :constant]
+```
 
 ---
 
