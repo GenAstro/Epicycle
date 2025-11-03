@@ -1,15 +1,7 @@
 
 using Test
 using LinearAlgebra
-
-using AstroCoords
-using AstroProp
-using AstroEpochs
-using AstroStates
-using AstroMan
-using AstroUniverse
-using AstroFun
-using AstroSolve
+using Epicycle
 
 # Create spacecraft
 sat1 = Spacecraft(
