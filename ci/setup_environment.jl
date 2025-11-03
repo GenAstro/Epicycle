@@ -50,3 +50,4 @@ Pkg.resolve()
 println("✅ Environment setup complete!")
 println("📋 Package status:")
 Pkg.status()
+
