@@ -651,6 +651,54 @@ function solver_fun!(F::AbstractVector, x::AbstractVector, sm::SequenceManager)
     return 0
 end
 
+"""
+    trajectory_solve(seq::Sequence)
 
+Solve trajectory sequence using default SNOW/IPOPT configuration.
+"""
+function trajectory_solve(seq::Sequence)
+    trajectory_solve(seq, default_snow_options())
+end
 
+"""
+    trajectory_solve(seq::Sequence, options::SNOW.Options)
+
+Solve trajectory sequence using specified SNOW optimization options.
+"""
+function trajectory_solve(seq::Sequence, options::SNOW.Options)
+    # Hide all the optimization machinery
+    sm = SequenceManager(seq)
+    x0 = get_var_values(sm)
+    lx = get_var_lower_bounds(sm)
+    ux = get_var_upper_bounds(sm)
+    lg = get_fun_lower_bounds(sm)
+    ug = get_fun_upper_bounds(sm)
+    ng = length(lg)
+    
+    # Create closure for SNOW interface
+    snow_solver_fun!(F, x) = solver_fun!(F, x, sm)
+    xopt, fopt, info = minimize(snow_solver_fun!, x0, ng, lx, ux, lg, ug, options)
+    
+    # Evaluate constraints at the optimal solution to get constraint values
+    constraint_values = Vector{Float64}(undef, ng)
+    snow_solver_fun!(constraint_values, xopt)
+    
+    return (variables=xopt, objective=fopt, constraints=constraint_values, info=info)
+end
+
+"""
+    default_snow_options()
+
+Create default SNOW optimization options.
+"""
+function default_snow_options()
+    # Sensible aerospace defaults
+    ip_options = Dict(
+        "max_iter" => 1000,
+        "tol" => 1e-6,
+        "file_print_level" => 0,
+        "output_file" => "ipopt_$(rand(UInt)).out"
+    )
+    return Options(derivatives=ForwardFD(), solver=IPOPT(ip_options))
+end
 

@@ -32,6 +32,7 @@ include("runtests_gaps.jl")
 include("runtests_optimize.jl")
 include("runtests_sequence_geotransfer.jl")
 include("runtests_show.jl")
+include("runtests_sequence_report_enhanced.jl")
 
 
 
