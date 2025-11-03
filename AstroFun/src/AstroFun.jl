@@ -533,18 +533,51 @@ end
 
 """ 
     function Constraint(; calc::AbstractCalc,
-                         lower_bounds::AbstractVector{<:Real},
-                         upper_bounds::AbstractVector{<:Real},
-                         scale::AbstractVector{<:Real})
+                         lower_bounds::Union{AbstractVector{<:Real}, Nothing} = nothing,
+                         upper_bounds::Union{AbstractVector{<:Real}, Nothing} = nothing,
+                         scale::Union{AbstractVector{<:Real}, Nothing} = nothing)
 
-Keyword outer constructor for Constraint.
+Keyword outer constructor for Constraint with intelligent defaults.
+
+At least one of `lower_bounds` or `upper_bounds` must be specified.
+- If `lower_bounds` is not specified, defaults to `fill(-Inf, n)` where `n` is inferred from calc
+- If `upper_bounds` is not specified, defaults to `fill(Inf, n)` where `n` is inferred from calc  
+- If `scale` is not specified, defaults to `ones(T, n)` where `T` is inferred from bounds
 """ 
 function Constraint(; calc::AbstractCalc,
-                     lower_bounds::AbstractVector{<:Real},
-                     upper_bounds::AbstractVector{<:Real},
-                     scale::AbstractVector{<:Real})
-    return Constraint(calc, lower_bounds, upper_bounds, scale, _infer_numvars(calc))
+                     lower_bounds::Union{AbstractVector{<:Real}, Nothing} = nothing,
+                     upper_bounds::Union{AbstractVector{<:Real}, Nothing} = nothing,
+                     scale::Union{AbstractVector{<:Real}, Nothing} = nothing)
+    
+    # At least one bound must be specified
+    if lower_bounds === nothing && upper_bounds === nothing
+        throw(ArgumentError("Constraint: at least one of lower_bounds or upper_bounds must be specified"))
+    end
+    
+    # Infer number of variables from calc
+    n = _infer_numvars(calc)
+    
+    # Determine element type from provided bounds
+    if lower_bounds !== nothing && upper_bounds !== nothing
+        T = promote_type(eltype(lower_bounds), eltype(upper_bounds))
+    elseif lower_bounds !== nothing
+        T = eltype(lower_bounds)
+    else  # upper_bounds !== nothing
+        T = eltype(upper_bounds)
+    end
+    
+    # Apply defaults for unspecified bounds
+    lb = lower_bounds === nothing ? fill(T(-Inf), n) : convert(Vector{T}, lower_bounds)
+    ub = upper_bounds === nothing ? fill(T(Inf), n) : convert(Vector{T}, upper_bounds)
+    
+    # Apply default for scale if not specified
+    sc = scale === nothing ? ones(T, n) : convert(Vector{T}, scale)
+    
+    return Constraint(calc, lb, ub, sc, n)
 end
+
+#TODO.  Write a show method for Constraint.
+
 """
     function func_eval(constraint::Constraint)
 
