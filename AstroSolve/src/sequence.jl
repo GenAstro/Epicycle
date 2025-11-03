@@ -697,7 +697,7 @@ function default_snow_options()
         "max_iter" => 1000,
         "tol" => 1e-6,
         "file_print_level" => 0,
-        "output_file" => "ipopt_$(rand(UInt)).out"
+        "output_file" => "ipopt_$(randstring(10)).out"
     )
     return Options(derivatives=ForwardFD(), solver=IPOPT(ip_options))
 end
