@@ -260,3 +260,267 @@ S58 = Event(name="S58", vars=[sv58])
 
     @test ordered_vars == expected
 end
+
+@testset "Trajectory Solve Interface Tests" begin
+    
+    @testset "Default Options Test" begin
+        # Use proven working configuration from Ex_SimpleTarget.jl
+        sat = Spacecraft()
+        
+        # Create the propagator with point mass gravity model
+        gravity = PointMassGravity(earth, (moon, sun))
+        forces  = ForceModel(gravity)
+        integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
+        prop    = OrbitPropagator(forces, integ)
+        
+        # Create an impulsive maneuver (only V component will vary)
+        toi = ImpulsiveManeuver(
+            axes = VNB(),
+            element1 = 0.1,
+        )
+        
+        # Define DeltaVVector of toi as a solver variable
+        var_toi = SolverVariable(
+            calc = ManeuverCalc(toi, sat, DeltaVVector()),
+            name = "toi",
+            lower_bound = [-10.0, 0.0, 0.0],
+            upper_bound = [10.0, 0.0, 0.0],
+        )
+        
+        # Define a constraint on position magnitude of spacecraft
+        pos_target = 55000.0
+        pos_con = Constraint(
+            calc = OrbitCalc(sat, PosMag()),
+            lower_bounds = [pos_target],
+            upper_bounds = [pos_target],
+            scale = [1.0],
+        )
+        
+        # Create events
+        fun_toi() = maneuver(sat, toi) 
+        toi_event = Event(name = "TOI Maneuver", 
+                          event = fun_toi,
+                          vars = [var_toi],
+                          funcs = [])
+        
+        fun_prop_apo() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+        prop_event = Event(name = "Propagate to Apoapsis", 
+                           event = fun_prop_apo,
+                           funcs = [pos_con])
+        
+        # Build sequence
+        seq = Sequence()
+        add_events!(seq, prop_event, [toi_event]) 
+        
+        # Test default trajectory_solve(seq) - call only once
+        result = nothing
+        @test_nowarn result = trajectory_solve(seq)
+        
+        # Verify return structure
+        @test haskey(result, :variables)
+        @test haskey(result, :objective) 
+        @test haskey(result, :constraints)
+        @test haskey(result, :info)
+        
+        # Verify types and sizes
+        @test isa(result.variables, Vector{Float64})
+        @test isa(result.constraints, Vector{Float64})
+        @test result.info isa Union{Bool, Symbol}
+        @test length(result.variables) == 3  # 3-component DeltaV
+        @test length(result.constraints) == 1  # 1 position constraint
+    end
+    
+    @testset "Custom Options Test" begin
+        # Use same proven working configuration with custom options
+        sat = Spacecraft()
+        
+        gravity = PointMassGravity(earth, (moon, sun))
+        forces  = ForceModel(gravity)
+        integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
+        prop    = OrbitPropagator(forces, integ)
+        
+        toi = ImpulsiveManeuver(
+            axes = VNB(),
+            element1 = 0.1,
+        )
+        
+        var_toi = SolverVariable(
+            calc = ManeuverCalc(toi, sat, DeltaVVector()),
+            name = "toi",
+            lower_bound = [-10.0, 0.0, 0.0],
+            upper_bound = [10.0, 0.0, 0.0],
+        )
+        
+        pos_target = 55000.0
+        pos_con = Constraint(
+            calc = OrbitCalc(sat, PosMag()),
+            lower_bounds = [pos_target],
+            upper_bounds = [pos_target],
+            scale = [1.0],
+        )
+        
+        fun_toi() = maneuver(sat, toi) 
+        toi_event = Event(name = "TOI Maneuver", 
+                          event = fun_toi,
+                          vars = [var_toi],
+                          funcs = [])
+        
+        fun_prop_apo() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+        prop_event = Event(name = "Propagate to Apoapsis", 
+                           event = fun_prop_apo,
+                           funcs = [pos_con])
+        
+        seq = Sequence()
+        add_events!(seq, prop_event, [toi_event]) 
+        
+        # Create custom SNOW options - use same tolerance as default for reliability
+        custom_ip_options = Dict(
+            "max_iter" => 500,
+            "tol" => 1e-6,  # Same as default, not tighter
+            "file_print_level" => 0,
+            "output_file" => "ipopt_custom_$(time_ns())_$(rand(UInt32)).out"
+        )
+        custom_options = Options(derivatives=ForwardFD(), solver=IPOPT(custom_ip_options))
+        
+        # Test custom trajectory_solve(seq, options) - call only once
+        result = nothing
+        @test_nowarn result = trajectory_solve(seq, custom_options)
+        
+        # Verify same return structure
+        @test haskey(result, :variables)
+        @test haskey(result, :objective)
+        @test haskey(result, :constraints) 
+        @test haskey(result, :info)
+        @test length(result.variables) == 3
+        @test length(result.constraints) == 1
+    end
+    
+    @testset "Default Options Function Test" begin
+        # Test AstroSolve.default_snow_options() directly (fully qualified)
+        @test_nowarn options = AstroSolve.default_snow_options()
+        
+        options = AstroSolve.default_snow_options()
+        
+        # Verify it returns SNOW.Options
+        @test isa(options, Options)
+        
+        # Verify it has expected components (basic structure test)
+        @test isa(options.derivatives, ForwardFD)
+        @test isa(options.solver, IPOPT)
+        
+        # Test that default options work with trajectory_solve using simple working config
+        sat = Spacecraft()
+        
+        gravity = PointMassGravity(earth, (moon, sun))
+        forces  = ForceModel(gravity)
+        integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
+        prop    = OrbitPropagator(forces, integ)
+        
+        toi = ImpulsiveManeuver(
+            axes = VNB(),
+            element1 = 0.05,  # Smaller maneuver for faster convergence
+        )
+        
+        var_toi = SolverVariable(
+            calc = ManeuverCalc(toi, sat, DeltaVVector()),
+            name = "default_test",
+            lower_bound = [-5.0, 0.0, 0.0],
+            upper_bound = [5.0, 0.0, 0.0],
+        )
+        
+        pos_target = 50000.0  # Smaller target change
+        pos_con = Constraint(
+            calc = OrbitCalc(sat, PosMag()),
+            lower_bounds = [pos_target],
+            upper_bounds = [pos_target],
+            scale = [1.0],
+        )
+        
+        fun_toi() = maneuver(sat, toi) 
+        toi_event = Event(name = "TOI Maneuver", 
+                          event = fun_toi,
+                          vars = [var_toi],
+                          funcs = [])
+        
+        fun_prop_apo() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+        prop_event = Event(name = "Propagate to Apoapsis", 
+                           event = fun_prop_apo,
+                           funcs = [pos_con])
+        
+        seq = Sequence()
+        add_events!(seq, prop_event, [toi_event]) 
+        
+        # Use default options explicitly - call only once
+        result = nothing
+        @test_nowarn result = trajectory_solve(seq, AstroSolve.default_snow_options())
+        
+        @test result.info isa Union{Bool, Symbol}
+    end
+    
+    @testset "Constraint Values Test" begin
+        # Test constraint values using proven working config with multiple constraints
+        sat = Spacecraft()
+        
+        gravity = PointMassGravity(earth, (moon, sun))
+        forces  = ForceModel(gravity)
+        integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
+        prop    = OrbitPropagator(forces, integ)
+        
+        toi = ImpulsiveManeuver(
+            axes = VNB(),
+            element1 = 0.1,
+        )
+        
+        var_toi = SolverVariable(
+            calc = ManeuverCalc(toi, sat, DeltaVVector()),
+            name = "constraint_test",
+            lower_bound = [-10.0, 0.0, 0.0],
+            upper_bound = [10.0, 0.0, 0.0],
+        )
+        
+        # Multiple constraints to test constraint vector
+        pos_target = 55000.0
+        pos_con = Constraint(
+            calc = OrbitCalc(sat, PosMag()),
+            lower_bounds = [pos_target],
+            upper_bounds = [pos_target],
+            scale = [1.0],
+        )
+        
+        # Add a second constraint on SMA at apoapsis
+        sma_con = Constraint(
+            calc = OrbitCalc(sat, SMA()),
+            lower_bounds = [26000.0],  # Reasonable SMA range
+            upper_bounds = [30000.0],
+            scale = [1.0],
+        )
+        
+        fun_toi() = maneuver(sat, toi) 
+        toi_event = Event(name = "TOI Maneuver", 
+                          event = fun_toi,
+                          vars = [var_toi],
+                          funcs = [])
+        
+        fun_prop_apo() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+        prop_event = Event(name = "Propagate to Apoapsis", 
+                           event = fun_prop_apo,
+                           funcs = [pos_con, sma_con])
+        
+        seq = Sequence()
+        add_events!(seq, prop_event, [toi_event]) 
+        
+        result = trajectory_solve(seq)
+        
+        # Verify constraint values are returned
+        @test length(result.constraints) == 2  # 2 constraints
+        @test isa(result.constraints[1], Float64)
+        @test isa(result.constraints[2], Float64)
+        
+        # Constraint values should be within reasonable bounds for this problem
+        # (Note: exact values depend on convergence, but should be in expected ranges)
+        @test result.constraints[1] > 20000.0  # Position magnitude reasonable
+        @test result.constraints[2] > 20000.0  # SMA reasonable
+    end
+    
+end
+

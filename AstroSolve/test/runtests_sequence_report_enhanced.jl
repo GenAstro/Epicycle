@@ -205,4 +205,257 @@ using Epicycle
         @test occursin("Constraint Objects: 0 (0 constraint functions)", output)
     end
 
+    @testset "Large Sequence Truncation Test" begin
+        # Create 5 events to trigger execution order truncation (>3 events)
+        sat = Spacecraft(
+            state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
+            time = Time("2020-01-01T00:00:00", UTC(), ISOT())
+        )
+        
+        # Create 5 simple events
+        events = Event[]
+        for i in 1:5
+            event = Event(
+                name = "Event_$i",
+                event = () -> nothing  # Simple no-op function
+            )
+            push!(events, event)
+        end
+        
+        seq = Sequence()
+        add_events!(seq, events[1], Event[])
+        for i in 2:5
+            add_events!(seq, events[i], [events[i-1]])
+        end
+        
+        output = capture_output(sequence_report, seq)
+        @test occursin("Total Events: 5", output)
+        # Should show truncated execution order: Event_1 → Event_2 → ... → Event_5
+        @test occursin("Event_1\" → \"Event_2\" → ... → \"Event_5", output)
+    end
+
+    @testset "Single Component Variable Test" begin
+        sat = Spacecraft(
+            state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
+            time = Time("2020-01-01T00:00:00", UTC(), ISOT())
+        )
+        
+        # Create a single-component variable (scalar orbital element)
+        var_single = SolverVariable(
+            calc = OrbitCalc(sat, SMA()),
+            name = "sma_var",
+            lower_bound = [40000.0],
+            upper_bound = [45000.0],
+            shift = [0.0],
+            scale = [1.0]
+        )
+        
+        test_event = Event(
+            name = "SMA Test",
+            event = () -> nothing,
+            vars = [var_single]
+        )
+        
+        seq = Sequence()
+        add_events!(seq, test_event, Event[])
+        
+        output = capture_output(sequence_report, seq)
+        @test occursin("sma_var: SMA() (OrbitCalc) ∈ [40000.0, 45000.0]", output)
+    end
+
+    @testset "Inequality Constraints Test" begin
+        sat = Spacecraft(
+            state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
+            time = Time("2020-01-01T00:00:00", UTC(), ISOT())
+        )
+        
+        calc = OrbitCalc(sat, SMA())
+        
+        # Test lower bound only (≥)
+        con_lower = Constraint(calc=calc, lower_bounds=[40000.0])
+        
+        # Test upper bound only (≤)  
+        con_upper = Constraint(calc=calc, upper_bounds=[50000.0])
+        
+        test_event = Event(
+            name = "Inequality Test",
+            event = () -> nothing,
+            funcs = [con_lower, con_upper]
+        )
+        
+        seq = Sequence()
+        add_events!(seq, test_event, Event[])
+        
+        output = capture_output(sequence_report, seq)
+        @test occursin("≥ 40000.0", output)
+        @test occursin("≤ 50000.0", output)
+    end
+
+    @testset "Multiple Stateful Objects Test" begin
+        # Create multiple spacecraft to trigger stateful object pluralization
+        sat1 = Spacecraft(
+            state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
+            time = Time("2020-01-01T00:00:00", UTC(), ISOT())
+        )
+        sat2 = Spacecraft(
+            state = CartesianState([8000.0, 0.0, 0.0, 0.0, 7.0, 0.0]),
+            time = Time("2020-01-01T00:00:00", UTC(), ISOT())
+        )
+        sat3 = Spacecraft(
+            state = CartesianState([9000.0, 0.0, 0.0, 0.0, 6.5, 0.0]),
+            time = Time("2020-01-01T00:00:00", UTC(), ISOT())
+        )
+        
+        # Create multiple maneuvers to get more stateful objects
+        man1 = ImpulsiveManeuver(axes=VNB(), element1=1.0)
+        man2 = ImpulsiveManeuver(axes=VNB(), element1=1.5)
+        
+        var1 = SolverVariable(
+            calc = ManeuverCalc(man1, sat1, DeltaVVector()),
+            name = "var1",
+            lower_bound = [-2.0, -1.0, -1.0],
+            upper_bound = [2.0, 1.0, 1.0]
+        )
+        
+        var2 = SolverVariable(
+            calc = ManeuverCalc(man2, sat2, DeltaVVector()),
+            name = "var2", 
+            lower_bound = [-3.0, -1.0, -1.0],
+            upper_bound = [3.0, 1.0, 1.0]
+        )
+        
+        event1 = Event(
+            name = "Multi Event 1",
+            event = () -> maneuver(sat1, man1),
+            vars = [var1]
+        )
+        
+        event2 = Event(
+            name = "Multi Event 2", 
+            event = () -> maneuver(sat2, man2),
+            vars = [var2]
+        )
+        
+        seq = Sequence()
+        add_events!(seq, event1, Event[])
+        add_events!(seq, event2, [event1])
+        
+        output = capture_output(sequence_report, seq)
+        # Should show multiple stateful objects with counts
+        @test occursin("STATEFUL OBJECTS:", output)
+        # Should have multiple spacecraft and maneuvers, some with counts >1
+        @test (occursin("×", output) || (occursin("Spacecraft", output) && occursin("ImpulsiveManeuver", output)))
+    end
+
+    @testset "Fixed Variable Test" begin
+        sat = Spacecraft(
+            state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
+            time = Time("2020-01-01T00:00:00", UTC(), ISOT())
+        )
+        
+        # Create variable with fixed bounds (lower == upper)
+        var_fixed = SolverVariable(
+            calc = OrbitCalc(sat, SMA()),
+            name = "fixed_var",
+            lower_bound = [42000.0],
+            upper_bound = [42000.0],  # Same as lower
+            shift = [0.0],
+            scale = [1.0]
+        )
+        
+        test_event = Event(
+            name = "Fixed Test",
+            event = () -> nothing,
+            vars = [var_fixed]
+        )
+        
+        seq = Sequence()
+        add_events!(seq, test_event, Event[])
+        
+        # Test in solution report 
+        mock_result = (
+            variables = [42000.0],
+            constraints = Float64[],
+            info = true
+        )
+        
+        sol_output = capture_output(solution_report, seq, mock_result)
+        @test occursin("(fixed at 42000.0)", sol_output)
+    end
+
+    @testset "Backwards Compatibility Test" begin
+        sat = Spacecraft(
+            state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
+            time = Time("2020-01-01T00:00:00", UTC(), ISOT())
+        )
+        
+        var_test = SolverVariable(
+            calc = OrbitCalc(sat, SMA()),
+            name = "test_var",
+            lower_bound = [42000.0],
+            upper_bound = [42000.0]
+        )
+        
+        test_event = Event(
+            name = "Compat Test",
+            event = () -> nothing,
+            vars = [var_test]
+        )
+        
+        seq = Sequence()
+        add_events!(seq, test_event, Event[])
+        
+        # Test result without .constraints field (old format)
+        old_result = (
+            variables = [42001.0],
+            objective = [42001.0],  # No .constraints field
+            info = false
+        )
+        
+        @test_nowarn solution_report(seq, old_result)
+        
+        sol_output = capture_output(solution_report, seq, old_result)
+        @test occursin("Converged: false", sol_output)
+    end
+
+    @testset "Multi-Component Constraint Test" begin
+        # Test multi-component constraints using PositionVector (3 components)
+        sat = Spacecraft()
+        
+        # Create a 3-component position vector constraint 
+        pos_con = Constraint(
+            calc = OrbitCalc(sat, PositionVector()),
+            lower_bounds = [-55000.0, 0.5, 0.3],
+            upper_bounds = [-55000.0, 0.5, 0.3],
+            scale = [1.0, 1.0, 1.0]
+        )
+        
+        test_event = Event(
+            name = "Multi-Component Test",
+            event = () -> nothing,
+            funcs = [pos_con]
+        )
+        
+        seq = Sequence()
+        add_events!(seq, test_event, Event[])
+        
+        # Test sequence report shows multi-component constraint
+        output = capture_output(sequence_report, seq)
+        @test occursin("PositionVector() (OrbitCalc) (3 components)", output)
+        
+        # Test solution report with multi-component constraint values
+        mock_result = (
+            variables = Float64[],
+            constraints = [-55000.1, 0.51, 0.31],  # 3 constraint values
+            info = true
+        )
+        
+        sol_output = capture_output(solution_report, seq, mock_result)
+        @test occursin("PositionVector() (OrbitCalc) (3 components):", sol_output)
+        @test occursin("Component 1: -55000.1", sol_output)
+        @test occursin("Component 2: 0.51", sol_output) 
+        @test occursin("Component 3: 0.31", sol_output)
+        @test occursin("target: -55000.0", sol_output)
+    end
+
 nothing
