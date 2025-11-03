@@ -26,7 +26,8 @@ SNOW = "0.3"
 julia = "1.10"
 
 [extras]
+Epicycle = "83dc357c-0294-4c28-b122-f18155576d3d"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Test", "Epicycle"]
