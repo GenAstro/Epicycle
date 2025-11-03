@@ -32,9 +32,6 @@ jobs:
       - name: Phase 2 - Build Epicycle
         run: julia --project=. ci/build_epicycle.jl
 
-      - name: Phase 3 - Test Epicycle & Generate Coverage
-        run: julia --project=. --code-coverage=user ci/test_epicycle.jl
-
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:

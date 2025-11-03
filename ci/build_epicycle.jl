@@ -78,3 +78,30 @@ for pkg_name in packages_to_document
 end
 
 println("\n🎉 All documentation built successfully!")
+
+# Run tests while everything is hot in memory
+println("\n🧪 Running tests with coverage...")
+
+# Set coverage environment
+ENV["JULIA_CODE_COVERAGE"] = "user"
+
+try
+    # Path relative to project root, not ci directory
+    test_script = joinpath("..", "Epicycle", "util", "test_all_packages.jl")
+    include(test_script)
+    println("✅ All tests completed successfully!")
+catch e
+    println("❌ Tests failed: $e")
+    exit(1)
+end
+
+# Generate coverage
+println("\n📈 Generating coverage...")
+try
+    include(joinpath("ci", "generate_coverage.jl"))
+    println("✅ Coverage generation completed!")
+catch e
+    println("⚠️ Coverage generation failed: $e")
+end
+
+println("\n🎉 Tests run and coverage generated!")
