@@ -7,6 +7,10 @@ jobs:
   ci-pipeline:
     name: CI Pipeline - All Phases
     runs-on: macos-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
     
     steps:
       - uses: actions/checkout@v4
@@ -30,6 +34,8 @@ jobs:
         run: julia --project=. ci/setup_environment.jl
 
       - name: Phase 2 - Build Epicycle
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: julia --project=. ci/build_epicycle.jl
 
       - name: Upload coverage to Codecov
@@ -39,28 +45,10 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
-
-  docs-astrobase:
-    name: docs-astrobase
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: julia-actions/setup-julia@v2
+      - name: Deploy documentation to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: github.ref == 'refs/heads/main'
         with:
-          version: '1.11'
-          
-      - name: Install dependencies
-        working-directory: AstroBase
-        run: |
-          julia --project=docs -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
-          
-      - name: Build and deploy docs
-        working-directory: AstroBase
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: julia --project=docs docs/make.jl
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/build
+          force_orphan: true
