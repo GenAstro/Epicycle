@@ -2,14 +2,6 @@
 
 Welcome to Epicycle, an application for space mission analysis, trajectory optimization, and navigation. 
 
-## Design Philosophy
-
-Epicycle uses a modular architecture. You can import individual packages like `AstroStates` for specific functionality or `using Epicycle` to load the complete system.
-
-The framework is tested against GMAT validation cases and runs on Windows, macOS, and Linux. It uses Julia for performance and supports automatic differentiation with ForwardDiff.jl and Zygote.jl.
-
-## Core Capabilities
-
 Epicycle provides an integrated application for astrodynamics analysis with focus on breadth and extensible interfaces. The system covers orbital state representations, coordinate transformations, trajectory propagation, and optimization.
 
 The system handles Cartesian, Keplerian, and Modified Equinoctial orbital elements. Trajectory propagation uses Julia's differential equation solvers. Optimization connects SNOW algorithms with IPOPT.
