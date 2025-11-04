@@ -72,7 +72,7 @@ for pkg_name in packages_to_document
     
     try
         println("  🔨 Running $docs_make_path...")
-        include(joinpath("..", docs_make_path))
+        include(docs_make_path)
         println("  ✅ Documentation built successfully for $pkg_name")
     catch e
         println("  ❌ Failed to build docs for $pkg_name: $e")
@@ -84,7 +84,7 @@ println("\n🎉 All documentation built successfully!")
 
 # Build Epicycle main docs (for GitHub Pages deployment)
 println("\n📚 Building Epicycle main documentation...")
-epicycle_docs_path = joinpath("..", "Epicycle", "docs", "make.jl")
+epicycle_docs_path = joinpath("Epicycle", "docs", "make.jl")
 if isfile(epicycle_docs_path)
     try
         println("  🔨 Running Epicycle docs/make.jl...")
@@ -103,7 +103,7 @@ println("\n🧪 Running tests with coverage...")
 
 try
     # Path relative to project root, not ci directory
-    test_script = joinpath("..", "Epicycle", "util", "test_all_packages.jl")
+    test_script = joinpath("Epicycle", "util", "test_all_packages.jl")
     include(test_script)
     println("✅ All tests completed successfully!")
 catch e
