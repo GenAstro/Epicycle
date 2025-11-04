@@ -82,6 +82,22 @@ end
 
 println("\n🎉 All documentation built successfully!")
 
+# Build Epicycle main docs (for GitHub Pages deployment)
+println("\n📚 Building Epicycle main documentation...")
+epicycle_docs_path = joinpath("..", "Epicycle", "docs", "make.jl")
+if isfile(epicycle_docs_path)
+    try
+        println("  🔨 Running Epicycle docs/make.jl...")
+        include(epicycle_docs_path)
+        println("  ✅ Epicycle documentation built successfully")
+    catch e
+        println("  ❌ Failed to build Epicycle docs: $e")
+        exit(1)
+    end
+else
+    println("  ⚠️  No Epicycle docs/make.jl found")
+end
+
 # Run tests while everything is hot in memory
 println("\n🧪 Running tests with coverage...")
 
