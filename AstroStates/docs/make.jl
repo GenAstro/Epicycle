@@ -20,12 +20,3 @@ makedocs(;
     warnonly=true,         # Just warn, don't error
     checkdocs=:none        # Skip docstring completeness checks
 )
-
-deploydocs(;
-    repo="github.com/GenAstro/Epicycle",
-    target="build",
-    dirname="AstroStates",
-    devbranch="main",
-    push_preview=true,
-    deploy_config=Documenter.GitHubActions()  # Uses GITHUB_TOKEN
-)

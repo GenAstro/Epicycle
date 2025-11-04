@@ -45,13 +45,26 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
-      - name: Debug - List docs directories
+      - name: Debug - Check actual deployment status
         if: github.ref == 'refs/heads/main'
         run: |
-          echo "=== Checking for ALL docs build directories ==="
-          find . -name "build" -type d | grep docs || echo "No docs/build directories found"
+          echo "=== Checking what docs were actually built ==="
+          find . -name "build" -type d | grep docs
           
-          echo "=== All packages now deploy via Documenter.jl to gh-pages ==="
-          echo "Individual packages: https://genastro.github.io/Epicycle/PackageName/dev/"
-          echo "Main Epicycle docs: https://genastro.github.io/Epicycle/Epicycle/dev/"
-          echo "No GitHub Actions Pages deployment needed"
+          echo "=== Verifying Epicycle docs exist for deployment ==="
+          if [ -d "./Epicycle/docs/build" ]; then
+            echo "✅ Epicycle/docs/build EXISTS - ready for Pages deployment"
+            ls -la ./Epicycle/docs/build/
+          else
+            echo "❌ Epicycle/docs/build MISSING - deployment will fail"
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: ./Epicycle/docs/build
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+        if: github.ref == 'refs/heads/main'
