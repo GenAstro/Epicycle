@@ -45,11 +45,21 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
+      - name: Debug - List docs directories
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "=== Checking for docs build directories ==="
+          find . -name "build" -type d | grep docs || echo "No docs/build directories found"
+          echo "=== Contents of Epicycle/docs ==="
+          ls -la Epicycle/docs/ || echo "Epicycle/docs/ not found"
+          echo "=== Contents of root ==="
+          ls -la . | grep docs || echo "No docs directories in root"
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
         with:
-          path: ./docs/build
+          path: ./Epicycle/docs/build
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
