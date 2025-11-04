@@ -25,12 +25,26 @@ makedocs(;
                 "System Architecture" => "system_architecture.md",
                 "Package Overview" => "package_overview.md",
             ],
+            "New to Julia?" => [
+                "Why Julia?" => "why_julia.md",
+                "Installing Julia" => "installing_julia.md",
+                "Resources for Julia" => "resources_for_julia.md",
+            ],
         ],
         "Tutorials" => [
-            "Unit Examples" => "unit_examples.md",
-            "Complete Examples" => "complete_examples.md",
+            "Component Examples" => "unit_examples.md",
+            "End-to-End Examples" => "complete_examples.md",
         ],
     ],
     warnonly=true,         # Just warn, don't error
     checkdocs=:none        # Skip docstring completeness checks
+)
+
+deploydocs(;
+    repo="github.com/GenAstro/Epicycle",
+    target="build",
+    dirname="Epicycle",
+    devbranch="main",
+    push_preview=true,
+    deploy_config=Documenter.GitHubActions()  # Uses GITHUB_TOKEN
 )
