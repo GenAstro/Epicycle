@@ -11,8 +11,11 @@ println("🏗️  Building Epicycle...")
 using Pkg
 Pkg.activate(".")
 
-# This will trigger compilation of Epicycle and all Astro packages
-println("⚡ Loading Epicycle (this will trigger compilation)...")
+# Set coverage environment BEFORE loading any packages
+ENV["JULIA_CODE_COVERAGE"] = "user"
+
+# This will trigger compilation of Epicycle and all Astro packages (with coverage)
+println("⚡ Loading Epicycle (this will trigger compilation with coverage)...")
 @time using Epicycle
 
 println("✅ Epicycle build complete!")
@@ -81,9 +84,6 @@ println("\n🎉 All documentation built successfully!")
 
 # Run tests while everything is hot in memory
 println("\n🧪 Running tests with coverage...")
-
-# Set coverage environment
-ENV["JULIA_CODE_COVERAGE"] = "user"
 
 try
     # Path relative to project root, not ci directory

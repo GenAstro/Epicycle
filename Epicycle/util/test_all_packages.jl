@@ -43,7 +43,8 @@ for pkg in packages
         println("  → Precompiling $pkg test dependencies...")
         try
             Pkg.activate(pkg_path)
-            Pkg.instantiate()  # This will precompile everything
+            Pkg.resolve()      # Resolve test environment
+            Pkg.instantiate()  # Download and precompile test dependencies
         catch e
             println("    ⚠️  Warning: Could not precompile $pkg dependencies: $e")
         end
@@ -75,8 +76,14 @@ for pkg in packages
         # Activate package environment (deps already precompiled)
         Pkg.activate(pkg_path)
         
-        # Run tests with coverage enabled (should be fast and clean now)
-        Pkg.test(coverage=true)
+        # Run tests with Pkg.test() - should be faster now since coverage already enabled
+        println("  → Running Pkg.test() (coverage already enabled globally)...")
+        
+        # Activate package environment 
+        Pkg.activate(pkg_path)
+        
+        # Run tests - should not recompile since coverage already set
+        Pkg.test()
         println("✅ $pkg tests passed")
         
     catch e
