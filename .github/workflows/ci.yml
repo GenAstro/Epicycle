@@ -6,7 +6,7 @@ on:
 jobs:
   ci-pipeline:
     name: CI Pipeline - All Phases
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     
     steps:
       - uses: actions/checkout@v4
