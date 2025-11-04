@@ -6,11 +6,22 @@
 
 Epicycle is an application for space systems with a nod to the giants before us and to how far we've come.
 
-## Documentation
+## Component Documentation
 
-- **[Main Documentation](https://genastro.github.io/Epicycle/)** - Complete application guide *(coming soon)*
-- **[AstroBase Documentation](https://genastro.github.io/Epicycle/AstroBase/)** - Foundation types and abstractions
-- **[AstroStates Documentation](https://genastro.github.io/Epicycle/AstroStates/)** - State vector representations and conversions
+- **[Epicycle Application](https://genastro.github.io/Epicycle/Epicycle/dev/)** - Complete application guide
+
+## Component Documentation
+
+- **[AstroBase Documentation](https://genastro.github.io/Epicycle/AstroBase/dev/)** - Foundation types and abstractions
+- **[AstroStates Documentation](https://genastro.github.io/Epicycle/AstroStates/dev/)** - State vector representations and conversions
+- **[AstroEpochs Documentation](https://genastro.github.io/Epicycle/AstroEpochs/dev/)** - Time systems and epoch handling
+- **[AstroUniverse Documentation](https://genastro.github.io/Epicycle/AstroUniverse/dev/)** - Celestial body models and ephemeris
+- **[AstroCoords Documentation](https://genastro.github.io/Epicycle/AstroCoords/dev/)** - Coordinate systems and transformations
+- **[AstroModels Documentation](https://genastro.github.io/Epicycle/AstroModels/dev/)** - Spacecraft and physical models
+- **[AstroMan Documentation](https://genastro.github.io/Epicycle/AstroMan/dev/)** - Maneuver models and algorithms
+- **[AstroFun Documentation](https://genastro.github.io/Epicycle/AstroFun/dev/)** - I/O, stopping conditions, cost, and constraints
+- **[AstroProp Documentation](https://genastro.github.io/Epicycle/AstroProp/dev/)** - Trajectory propagation algorithms
+- **[AstroSolve Documentation](https://genastro.github.io/Epicycle/AstroSolve/dev/)** - Optimization and constraint solving
 
 ## Contributing to Epicycle 
 
@@ -21,8 +32,20 @@ Contributing is easy.
 3. Make your changes
 4. Submit a pull request
 
-YOU MUST AGREE TO OUR CONTRIBUTOR LICENSE AGREEMENT. TODO contributing
+We use the Linux Kernel's Developer's Certificate of Origin (DCO) as detailed in CONTRIBUTING.txt.
 
 ## License
 
-Gen Astro Epicycle is released under TODO license
+We believe in the power of open source to foster innovation and community-driven 
+development and also recognize the need for a sustainable business model and a model
+that can handle export-controlled aerospace content. 
+
+For these reasons, Epicycle is offered under a tri-licensing model. The license allows
+users to choose between the following three options:
+
+1) LGPL V3.0
+2) Evaluation and Education use Only
+3) Commercial License
+
+See LICENSE.txt for terms each license option.  For commercial licensing, 
+email licensing at genastro.org.

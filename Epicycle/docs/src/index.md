@@ -4,19 +4,20 @@ Welcome to Epicycle, an application for space mission analysis, trajectory optim
 
 ## Design Philosophy
 
-Epicycle embraces a modular architecture that adapts to your workflow. Whether you need a single capability like orbital state conversions (`using AstroStates`) or the complete mission design environment (`using Epicycle`), the system scales from focused analysis to comprehensive mission planning.
+Epicycle uses a modular architecture. You can import individual packages like `AstroStates` for specific functionality or `using Epicycle` to load the complete system.
 
-The framework prioritizes production readiness through extensive validation against GMAT test cases and comprehensive testing across Windows, macOS, and Linux platforms. Every algorithm undergoes rigorous verification to ensure reliability in mission-critical applications.
-
-Performance remains central to the design, leveraging Julia's computational speed while maintaining compatibility with automatic differentiation frameworks like ForwardDiff.jl and Zygote.jl. This enables gradient-based optimization and sensitivity analysis throughout the mission design process.
+The framework is tested against GMAT validation cases and runs on Windows, macOS, and Linux. It uses Julia for performance and supports automatic differentiation with ForwardDiff.jl and Zygote.jl.
 
 ## Core Capabilities
 
-Epicycle delivers a complete, integrated application for astrodynamics analysis that prioritizes breadth and extensibility. The system provides working implementations across the full mission design workflow - from orbital state representations and coordinate transformations to trajectory propagation and optimization - with interfaces designed for expanding the model library as capabilities mature.
+Epicycle provides an integrated application for astrodynamics analysis with focus on breadth and extensible interfaces. The system covers orbital state representations, coordinate transformations, trajectory propagation, and optimization.
 
-The application architecture handles essential orbital state representations including Cartesian, Keplerian, and Modified Equinoctial elements, enabling seamless transitions between formulations. Trajectory propagation integrates with Julia's differential equation ecosystem, while the optimization framework connects SNOW-based algorithms with IPOPT for nonlinear programming applications.
+The system handles Cartesian, Keplerian, and Modified Equinoctial orbital elements. Trajectory propagation uses Julia's differential equation solvers. Optimization connects SNOW algorithms with IPOPT.
 
-Rather than focusing on depth in individual models, Epicycle emphasizes the integration of components into a cohesive application. The extensible interface design supports systematic expansion of the model library, starting with enhanced physical models and growing toward more sophisticated capabilities as the framework matures.
+Current implementation emphasizes application integration over individual model depth. Interfaces are designed for systematic expansion of the model library.
+
+
+Julia, VS Code, Epicycle
 
 ### Package Architecture
 
@@ -29,11 +30,10 @@ Rather than focusing on depth in individual models, Epicycle emphasizes the inte
 | `AstroCoords` | Coordinate systems and transformations | 
 | `AstroModels` | Spacecraft and physicsl models | 
 | `AstroMan`| Maneuver models and algorithms |
-| `AstroFun` | Quantities used in I/O, stopping conditions, cost, constraints.
+| `AstroFun` | Quantities used in I/O, stopping conditions, cost, constraints
 | `AstroProp` | Trajectory propagation algorithms | 
 | `AstroSolve` | Optimization and constraint solving | 
 | `Epicycle` | The application.  `using Epicycle` loads everything. 
-
 
 ## Acknowledgments
 
@@ -57,6 +57,27 @@ Epicycle builds upon the foundational work of many contributors to the aerospace
 TODO: Visual Studio Code
 
 We gratefully acknowledge these projects and their maintainers, whose work makes Epicycle possible.
+
+### Support
+
+
+### License
+
+We believe in the power of open source to foster innovation and community-driven 
+development and also recognize the need for a sustainable business model and a model
+that can handle export-controlled aerospace content. 
+
+For these reasons, Epicycle is offered under a tri-licensing model. The license allows
+users to choose between the following three options:
+
+1) LGPL V3.0
+2) Evaluation and Education use Only
+3) Commercial License
+
+### Contributing
+
+To protect both contributors and our company, we use the Linux Kernel's Developer's 
+Certificate of Origin (DCO) as detailed in CONTRIBUTING.txt.
 
 ### 📚 [Using Epicycle](welcome.md)
 Learn how to install, configure, and use the Epicycle ecosystem for your mission analysis needs.
