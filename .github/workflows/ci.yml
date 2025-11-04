@@ -51,31 +51,7 @@ jobs:
           echo "=== Checking for ALL docs build directories ==="
           find . -name "build" -type d | grep docs || echo "No docs/build directories found"
           
-          echo "=== Specifically checking for Epicycle/docs/build ==="
-          if [ -d "./Epicycle/docs/build" ]; then
-            echo "✅ Epicycle/docs/build EXISTS"
-            echo "Contents:"
-            ls -la ./Epicycle/docs/build/
-          else
-            echo "❌ Epicycle/docs/build DOES NOT EXIST"
-          fi
-          
-          echo "=== Contents of Epicycle/docs ==="
-          ls -la Epicycle/docs/ || echo "Epicycle/docs/ not found"
-          
-          echo "=== Build script logs should show Epicycle docs building ==="
-          echo "Look for '📖 Building docs for Epicycle...' in the build logs above"
-          
-          echo "=== Final status check ==="
-          echo "Required for Pages deploy: ./Epicycle/docs/build must exist"
-          echo "Current status: $([ -d "./Epicycle/docs/build" ] && echo "EXISTS ✅" || echo "MISSING ❌")"
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        if: github.ref == 'refs/heads/main'
-        with:
-          path: ./Epicycle/docs/build
-
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
-        if: github.ref == 'refs/heads/main'
+          echo "=== All packages now deploy via Documenter.jl to gh-pages ==="
+          echo "Individual packages: https://genastro.github.io/Epicycle/PackageName/dev/"
+          echo "Main Epicycle docs: https://genastro.github.io/Epicycle/Epicycle/dev/"
+          echo "No GitHub Actions Pages deployment needed"
