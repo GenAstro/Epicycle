@@ -76,14 +76,14 @@ for pkg in packages
         # Activate package environment (deps already precompiled)
         Pkg.activate(pkg_path)
         
-        # Run tests with Pkg.test() - should be faster now since coverage already enabled
-        println("  → Running Pkg.test() (coverage already enabled globally)...")
+        # Run tests with explicit coverage enabled
+        println("  → Running Pkg.test() with coverage explicitly enabled...")
         
         # Activate package environment 
         Pkg.activate(pkg_path)
         
-        # Run tests - should not recompile since coverage already set
-        Pkg.test()
+        # Run tests with coverage explicitly enabled
+        Pkg.test(coverage=true)
         println("✅ $pkg tests passed")
         
     catch e
