@@ -98,7 +98,7 @@ end
 # Generate coverage
 println("\n📈 Generating coverage...")
 try
-    include(joinpath("ci", "generate_coverage.jl"))
+    include("generate_coverage.jl")
     println("✅ Coverage generation completed!")
 catch e
     println("⚠️ Coverage generation failed: $e")
