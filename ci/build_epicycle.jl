@@ -56,7 +56,7 @@ end
 packages_to_document = [
     "AstroBase", "AstroStates", "AstroEpochs", "AstroUniverse",
     "AstroCoords", "AstroModels", "AstroMan", "AstroFun", 
-    "AstroProp", "AstroSolve"
+    "AstroProp", "AstroSolve", "Epicycle"
 ]
 
 println("🏗️  Building documentation for $(length(packages_to_document)) packages...")
@@ -72,7 +72,7 @@ for pkg_name in packages_to_document
     
     try
         println("  🔨 Running $docs_make_path...")
-        include(docs_make_path)
+        include(joinpath("..", docs_make_path))
         println("  ✅ Documentation built successfully for $pkg_name")
     catch e
         println("  ❌ Failed to build docs for $pkg_name: $e")
@@ -82,28 +82,12 @@ end
 
 println("\n🎉 All documentation built successfully!")
 
-# Build Epicycle main docs (for GitHub Pages deployment)
-println("\n📚 Building Epicycle main documentation...")
-epicycle_docs_path = joinpath("Epicycle", "docs", "make.jl")
-if isfile(epicycle_docs_path)
-    try
-        println("  🔨 Running Epicycle docs/make.jl...")
-        include(epicycle_docs_path)
-        println("  ✅ Epicycle documentation built successfully")
-    catch e
-        println("  ❌ Failed to build Epicycle docs: $e")
-        exit(1)
-    end
-else
-    println("  ⚠️  No Epicycle docs/make.jl found")
-end
-
 # Run tests while everything is hot in memory
 println("\n🧪 Running tests with coverage...")
 
 try
     # Path relative to project root, not ci directory
-    test_script = joinpath("Epicycle", "util", "test_all_packages.jl")
+    test_script = joinpath("..", "Epicycle", "util", "test_all_packages.jl")
     include(test_script)
     println("✅ All tests completed successfully!")
 catch e

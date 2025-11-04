@@ -48,12 +48,27 @@ jobs:
       - name: Debug - List docs directories
         if: github.ref == 'refs/heads/main'
         run: |
-          echo "=== Checking for docs build directories ==="
+          echo "=== Checking for ALL docs build directories ==="
           find . -name "build" -type d | grep docs || echo "No docs/build directories found"
+          
+          echo "=== Specifically checking for Epicycle/docs/build ==="
+          if [ -d "./Epicycle/docs/build" ]; then
+            echo "✅ Epicycle/docs/build EXISTS"
+            echo "Contents:"
+            ls -la ./Epicycle/docs/build/
+          else
+            echo "❌ Epicycle/docs/build DOES NOT EXIST"
+          fi
+          
           echo "=== Contents of Epicycle/docs ==="
           ls -la Epicycle/docs/ || echo "Epicycle/docs/ not found"
-          echo "=== Contents of root ==="
-          ls -la . | grep docs || echo "No docs directories in root"
+          
+          echo "=== Build script logs should show Epicycle docs building ==="
+          echo "Look for '📖 Building docs for Epicycle...' in the build logs above"
+          
+          echo "=== Final status check ==="
+          echo "Required for Pages deploy: ./Epicycle/docs/build must exist"
+          echo "Current status: $([ -d "./Epicycle/docs/build" ] && echo "EXISTS ✅" || echo "MISSING ❌")"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
