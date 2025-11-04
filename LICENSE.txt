@@ -1,21 +1,18 @@
 We believe in the power of open source to foster innovation and community-driven 
-development and also recognize the need for a sustainable business model and the 
-inclusion of export-controlled content. 
+development and also recognize the need for a sustainable business model and a model
+that can handle export-controlled aerospace content. 
 
-For these reasons, Epicycle is offered under a tri-licensing model allowing users 
-to choose between the following three options:
+For these reasons, Epicycle is offered under a tri-licensing model. The license allows
+users to choose between the following three options:
 
 1) LGPL V3.0
 2) Evaluation and Education use Only
-3) Commercial License. 
+3) Commercial License
 
-To protect both our contributors and our company, we require a Contributor License 
-Agreement (CLA) based on The Apache Software Foundation (ASF) CLA. 
+To protect both contributors and our company, we use the Linux Kernel's Developer's 
+Certificate of Origin (DCO) as detailed in CONTRIBUTING.txt.
 
-Each license option is described below.  The CLA is contained in CONTRIBUTING.txt 
-in the repository root directory. 
-
-# =========  LGPL V3 Key Principles 
+# ========= LGPL v3 Key Principles
 
 1) You must provide the full source code of the LGPL libraries. 
 
