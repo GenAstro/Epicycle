@@ -22,3 +22,12 @@ makedocs(;
     doctest=false,         # Skip all doctests completely
     linkcheck=false        # Skip external link checking
 )
+
+deploydocs(;
+    repo="github.com/GenAstro/Epicycle",
+    target="build",
+    dirname="AstroModels",
+    devbranch="main",
+    push_preview=true,
+    deploy_config=Documenter.GitHubActions()  # Uses GITHUB_TOKEN
+)

@@ -74,6 +74,12 @@ for pkg_name in packages_to_document
         println("  🔨 Running $docs_make_path...")
         include(joinpath("..", docs_make_path))
         println("  ✅ Documentation built successfully for $pkg_name")
+        
+        # Add delay to prevent GitHub Pages deployment conflicts
+        if pkg_name != packages_to_document[end]  # Don't delay after the last package
+            println("  ⏱️  Waiting 30 seconds before next deployment...")
+            sleep(30)
+        end
     catch e
         println("  ❌ Failed to build docs for $pkg_name: $e")
         exit(1)
