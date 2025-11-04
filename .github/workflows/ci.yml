@@ -45,26 +45,8 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
-      - name: Debug - Check actual deployment status
+      - name: Debug - Check docs build
         if: github.ref == 'refs/heads/main'
         run: |
-          echo "=== Checking what docs were actually built ==="
+          echo "=== Built docs directories ==="
           find . -name "build" -type d | grep docs
-          
-          echo "=== Verifying Epicycle docs exist for deployment ==="
-          if [ -d "./Epicycle/docs/build" ]; then
-            echo "✅ Epicycle/docs/build EXISTS - ready for Pages deployment"
-            ls -la ./Epicycle/docs/build/
-          else
-            echo "❌ Epicycle/docs/build MISSING - deployment will fail"
-          fi
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        if: github.ref == 'refs/heads/main'
-        with:
-          path: ./Epicycle/docs/build
-
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
-        if: github.ref == 'refs/heads/main'
