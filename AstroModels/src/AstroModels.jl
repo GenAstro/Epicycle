@@ -1,14 +1,5 @@
-# Copyright 2025 Gen Astro LLC. All Rights Reserved.
-#
-# This software is licensed under the GNU AGPL v3.0,
-# WITHOUT ANY WARRANTY, including implied warranties of 
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-#
-# This file may also be used under a commercial license,
-# if one has been purchased from Gen Astro LLC.
-#
-# By modifying this software, you agree to the terms of the
-# Gen Astro LLC Contributor License Agreement.
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier:
 
 __precompile__()
 
