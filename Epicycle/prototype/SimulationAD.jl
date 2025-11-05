@@ -2,6 +2,7 @@ using Epicycle
 using ForwardDiff
 using FiniteDiff
 
+
 # ==== FULL APPROACH: Include state and mass as input variables ====
 
 # Function to simulate maneuver with all variables as inputs
@@ -72,43 +73,6 @@ println("\nPartial derivatives breakdown:")
 println("∂x/∂(dv1, dv2, dv3) = ", J_pos_dv[1, :])
 println("∂y/∂(dv1, dv2, dv3) = ", J_pos_dv[2, :])
 println("∂z/∂(dv1, dv2, dv3) = ", J_pos_dv[3, :])
-
-# ==== COMPARISON WITH FINITE DIFFERENCES ====
-println("\n" * "="^50)
-println("COMPARING WITH FINITE DIFFERENCES")
-println("="^50)
-
-# Compute Jacobian using FiniteDiff
-println("Computing Jacobian with FiniteDiff...")
-J_full_fd = FiniteDiff.finite_difference_jacobian(sim_maneuver_full, nominal_input)
-println("FiniteDiff Jacobian size: ", size(J_full_fd))
-
-#=
-# Extract ∂pos/∂dv portion for comparison
-J_pos_dv_fd = J_full_fd[:, 8:10]
-println("\nFiniteDiff ∂(position)/∂(delta-v) Jacobian:")
-println(J_pos_dv_fd)
-
-# Compare the two Jacobians
-println("\n" * "="^50)
-println("JACOBIAN COMPARISON")
-println("="^50)
-println("ForwardDiff ∂pos/∂dv:")
-println(J_pos_dv)
-println("\nFiniteDiff ∂pos/∂dv:")
-println(J_pos_dv_fd)
-
-# Compute difference
-diff_jacobian = J_pos_dv - J_pos_dv_fd
-println("\nDifference (ForwardDiff - FiniteDiff):")
-println(diff_jacobian)
-
-# Compute relative error
-rel_error = abs.(diff_jacobian) ./ (abs.(J_pos_dv_fd) .+ 1e-12)  # Add small number to avoid division by zero
-println("\nRelative error:")
-println(rel_error)
-
-println("\nMax absolute difference: ", maximum(abs.(diff_jacobian)))
-println("Max relative error: ", maximum(rel_error))
+    
 nothing # suppress output from last command
 =#

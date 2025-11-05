@@ -1,64 +1,161 @@
-# Unit Examples
+# Component Cheat Sheets
 
-**Bite-sized learning examples for specific concepts**
+## A Julia Language Cheat Sheet
 
-## Propagation Basics
+A Julia Language [Cheat Sheet](https://cheatsheet.juliadocs.org/).
 
-This example demonstrates basic orbital propagation with different stopping conditions:
+## Time Systems (AstroEpochs)
+
+AstroEpochs provides comprehensive time system handling for astrodynamics applications. It supports multiple time scales (UTC, TAI, TT, TDB) and formats (Julian Date, Modified Julian Date, ISO 8601) with high-precision conversions between them.
+
+```julia
+using AstroEpochs
+
+# Create from Julian Date
+t1 = Time(2451545.0, TT(), JD())
+
+# Create from Modified Julian Date  
+t2 = Time(51544.5, UTC(), MJD())
+
+# Create from ISO string
+t3 = Time("2000-01-01T12:00:00.000", TAI(), ISOT())
+
+# Access different representations
+t1.jd        # Julian Date value
+t1.mjd       # Modified Julian Date value  
+t1.isot      # ISO 8601 string
+
+# Convert between scales (creates new Time object)
+t_utc = t1.utc
+t_tdb = t1.tdb
+```
+
+See the full [Reference Material](https://genastro.github.io/Epicycle/AstroEpochs/dev/) for more details.
+
+## Orbital States (AstroStates)
+
+AstroStates handles spacecraft orbital state representations and conversions between state representations. It supports 10 representations include Cartesian, Keplerian, B-plane and other representations.
+
+```julia
+using AstroStates
+
+# Define a Cartesian state
+cart = CartesianState([7000.0, 0.0, 100.0, 0.0, 7.5, 2.5])
+
+# Convert to Keplerian then back to Cartesian
+mu = 398600.4418 
+kep   = KeplerianState(cart, mu)     
+cart2 = CartesianState(kep, mu)     
+
+# Display some state elements
+kep.sma
+kep.raan
+
+# Generate a vector containing the state struct data
+to_vector(kep)
+
+# See a list of all supported representations
+subtypes(AbstractOrbitState)
+```
+
+See the full [Reference Material](https://genastro.github.io/Epicycle/AstroStates/dev/) for more details.
+
+## Spacecraft Modeling (AstroModels)
+
+AstroModels provides the spacecraft model defining properties such as time, state, and mass.
+
+```julia
+using AstroModels, AstroStates, AstroEpochs
+
+# Method 1: Using a CartesianState struct
+sc = Spacecraft(
+    state = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
+    time = Time("2015-09-21T12:23:12", TAI(), ISOT()),
+    mass = 1000.0
+)
+
+# Method 2: Direct construction with OrbitState
+sc2 = Spacecraft(
+    state = OrbitState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03], Cartesian()),
+    time = Time("2015-09-21T12:23:12", TAI(), ISOT()),
+    mass = 1000.0
+)
+``` 
+
+See the full [Reference Material](https://genastro.github.io/Epicycle/AstroModels/dev/) for more details. 
+
+## Celestial Bodies (AstroUniverse)
+
+AstroUniverse provides access to celestial body data including gravitational parameters, physical properties, and NAIF identification codes. It includes predefined bodies and supports creation of custom celestial objects for specialized applications and performs translations between coordinate origins. 
+
+```julia
+using AstroUniverse
+
+# Access predefined celestial bodies
+earth.mu
+venus.naifid
+
+# Create a custom body
+phobos = CelestialBody(
+    name = "Phobos",
+    naifid = 401,                    # NAIF ID for Phobos
+    mu = 7.0875e-4,       # km³/s² (gravitational parameter)
+    equatorial_radius = 11.1,                   # km (mean radius)
+)
+
+```
+
+See the full [Reference Material](https://genastro.github.io/Epicycle/AstroUniverse/dev/) for more details.
+## Maneuvers (AstroMan)
+
+AstroMan provides maneuver modeling capabilities for trajectory modifications. It supports impulsive maneuvers with various coordinate frame options and specific impulse specifications for realistic propulsion modeling.
 
 ```julia
 using Epicycle
-using LinearAlgebra
+m = ImpulsiveManeuver(axes=Inertial(), 
+                      Isp=300.0, 
+                      element1=0.01, 
+                      element2=0.0, 
+                      element3=0.0)
 
-# Spacecraft
-sat = Spacecraft(
-    state=CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
-    time=Time("2015-09-21T12:23:12", TAI(), ISOT()),
-    #name="SC-StopAt",
-    coord_sys=CoordinateSystem(earth, ICRFAxes()),
-)
-
-# Forces + integrator
-gravity = PointMassGravity(earth,(moon,sun))
-forces  = ForceModel(gravity)
-integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
-prop    = OrbitPropagator(forces, integ)
-
-# Propagate to periapsis
-propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
-println(get_state(sat, Keplerian()))
-
-# Propagate to apoapsis
-propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
-println(get_state(sat, Keplerian()))
-
-# Stop when |r| reaches 7000 km 
-propagate(prop, sat, StopAt(sat, PosMag(), 7000.0))
-println(get_state(sat, SphericalRADEC()))       
-
-# Propagate to x-position crossing (increasing)
-sol = propagate(prop, sat, StopAt(sat, PosX(), 7.5; direction=+1))
-println(get_state(sat, Cartesian()))
-
-nothing
+sc = Spacecraft()
+maneuver(sc, m)
 ```
 
-## Time Systems
+See the full [Reference Material](https://genastro.github.io/Epicycle/AstroMan/dev/) for more details.
 
-*Coming soon: Examples showing time system conversions, epoch creation, and time calculations.*
+## Calculations Framework (AstroFun)
 
-## Orbital States  
+AstroFun provides a unified calculation framework for extracting and setting orbital parameters, celestial body properties, and maneuver characteristics. It offers a consistent interface for accessing computed quantities across the Epicycle ecosystem.
 
-*Coming soon: Examples demonstrating Cartesian, Keplerian, and spherical coordinate systems.*
+```julia
+using AstroFun, AstroStates, AstroModels
 
-## Spacecraft Modeling
+# Create a spacecraft with orbital state
+sc = Spacecraft(CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]), 
+                Time("2024-01-01T12:00:00"), 1000.0)
 
-*Coming soon: Examples of spacecraft creation, mass properties, and coordinate systems.*
+# Get semi-major axis from current state
+ecc_calc = OrbitCalc(sc, SMA())
+a = get_calc(ecc_calc)           
+set_calc!(ecc_calc, 10000.0)  
 
-## Calculations Framework
+# Set target incoming asymptote (rp = 6900, C3 = 14.0)
+hyp = OrbitCalc(sc, IncomingAsymptote())
+set_calc!(hyp, [6900.0, 14.0, 0.0, 0.0, 0.0, 0.0])  
+    
+# Set and get Earth's mu
+mu_calc = BodyCalc(earth, GravParam())
+μ = get_calc(mu_calc)            
+set_calc!(mu_calc, 3.986e5)      
 
-*Coming soon: Examples showing the calculation framework for orbital parameters.*
+# Set and get maneuver elements
+toi = ImpulsiveManeuver()
+dvvec_calc = ManeuverCalc(toi, sc, DeltaVVector())
+Δv = get_calc(dvvec_calc)   
+set_calc!(dvvec_calc, [0.2, 0.3, 0.4])
+```
 
-## Custom Calculations
+See the full [Reference Material](https://genastro.github.io/Epicycle/AstroFun/dev/) for more details.
 
-*Coming soon: Examples of creating custom calculation types for specialized analysis.*
+

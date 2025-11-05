@@ -6,11 +6,13 @@
 
 Epicycle is an application for space systems with a nod to the giants before us and to how far we've come.
 
-## Component Documentation
+## Documentation
+
+### The Epicycle Application
 
 - **[Epicycle Application](https://genastro.github.io/Epicycle/Epicycle/dev/)** - Complete application guide
 
-## Component Documentation
+### Component Documentation
 
 - **[AstroBase Documentation](https://genastro.github.io/Epicycle/AstroBase/dev/)** - Foundation types and abstractions
 - **[AstroStates Documentation](https://genastro.github.io/Epicycle/AstroStates/dev/)** - State vector representations and conversions

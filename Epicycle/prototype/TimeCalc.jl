@@ -36,8 +36,8 @@ end
 
 # Usage examples using existing AstroEpochs tags:
 sat = Spacecraft()
-tt_mjd = TimeCalc(sat, TT(), MJD())
-utc_jd = TimeCalc(sat, UTC(), JD())
+tt_mjd   = TimeCalc(sat, TT(), MJD())
+utc_jd   = TimeCalc(sat, UTC(), JD())
 tai_isot = TimeCalc(sat, TAI(), ISOT())
 
 get_calc(tt_mjd)  # Get time in TT MJD

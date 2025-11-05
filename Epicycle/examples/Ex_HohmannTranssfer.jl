@@ -9,7 +9,6 @@ sat = Spacecraft(
 
 # Create force models, integrator, and dynamics system
 pm_grav = PointMassGravity(earth,(moon,sun))
-#pm_grav = PointMassGravity(earth,())
 forces = ForceModel(pm_grav)
 integ = IntegratorConfig(DP8(); abstol = 1e-11, reltol = 1e-11, dt = 4000)
 
@@ -65,17 +64,9 @@ ecc_con = Constraint(
     scale = [1.0],
 )
 
-vel_target = sqrt(earth.mu / pos_target)
-vel_con = Constraint(
-    calc = OrbitCalc(sat, VelMag()),
-    lower_bounds = [vel_target],
-    upper_bounds = [vel_target],
-    scale = [1.0],
-)
-
 # Create the TOI Event
 toi_fun() = maneuver(sat, toi) 
-toi_event = Event(name = "toi", 
+toi_event = Event(name = "TOI", 
                   event = toi_fun, 
                   vars = [var_toi],
                   funcs = [])
@@ -83,11 +74,12 @@ toi_event = Event(name = "toi",
 # Create the prop to apopasis event
 
 prop_apo_fun() = propagate(dynsys, integ, StopAtApoapsis(sat))
-prop_event = Event(name = "prop_apo", event = prop_apo_fun)
+prop_event = Event(name = "Prop to Apoapsis", event = prop_apo_fun)
 
 # Create the TOI event. 
 moi_fun() = maneuver(sat, moi)
-moi_event = Event(event = moi_fun, 
+moi_event = Event(name = "MOI", 
+                  event = moi_fun,
                   vars = [var_moi],
                   funcs = [pos_con, ecc_con])
 
@@ -96,26 +88,6 @@ seq = Sequence()
 add_events!(seq, prop_event, [toi_event]) 
 add_events!(seq, moi_event, [prop_event])
 
-sm = SequenceManager(seq)
-
-x0 = get_var_values(sm)
-lx = get_var_lower_bounds(sm)
-ux = get_var_upper_bounds(sm)
-lg = get_fun_lower_bounds(sm)
-ug = get_fun_upper_bounds(sm)
-ng = length(lg)
-
-ip_options = Dict(
-        "max_iter" => 1000,
-        "tol" => 1e-6,
-        "output_file" => "ipopt_$(rand(UInt)).out",
-        "file_print_level" => 0,
-        )
-
-options = Options(derivatives= ForwardFD(), solver = IPOPT(ip_options))
-
-# Define a closure that matches SNOW's expected signature
-snow_solver_fun!(F, x) = solver_fun!(F, x, sm)
-xopt, fopt, info = minimize(snow_solver_fun!, x0, ng, lx, ux, lg, ug, options)
-
-println("Optimal Variables: ", xopt)
+result = trajectory_solve(seq)
+sequence_report(seq)
+solution_report(seq, result)

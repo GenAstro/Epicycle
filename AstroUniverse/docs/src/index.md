@@ -30,44 +30,6 @@ phobos = CelestialBody(
 
 ```
 
-## CelestialBody Structure
-
-The `CelestialBody` struct is the core data structure for representing astronomical objects in AstroUniverse. It stores the essential physical and orbital properties needed for astrodynamics calculations.
-
-### Fields
-
-- **`name::String`** - Human-readable name of the celestial body (e.g., "Earth", "Mars")
-- **`naifid::Int`** - NAIF ID number used by NASA SPICE for ephemeris lookups
-- **`mu::Float64`** - Standard gravitational parameter (GM) in km³/s²
-- **`equatorial_radius::Float64`** - Equatorial radius in kilometers
-- **`parent::Union{CelestialBody, Nothing}`** - Parent body for moons/satellites (Nothing for planets)
-
-### Usage Examples
-
-```julia
-# Access predefined properties
-println("Earth's GM: $(earth.mu) km³/s²")
-println("Moon's parent: $(moon.parent.name)")
-
-# Create asteroid Ceres
-ceres = CelestialBody(
-    name = "Ceres",
-    naifid = 2000001,
-    mu = 62.6284,           # km³/s²
-    equatorial_radius = 469.7,  # km
-    parent = nothing        # Dwarf planet, no parent
-)
-```
-
-### Predefined Bodies
-
-AstroUniverse includes all major solar system bodies:
-- **Planets**: `sun`, `mercury`, `venus`, `earth`, `mars`, `jupiter`, `saturn`, `uranus`, `neptune`
-- **Moons**: `moon` (Earth's), plus major moons of other planets
-- **Dwarf Planets**: `pluto`
-
-All predefined bodies include accurate physical parameters from NASA/JPL sources and are ready for immediate use in calculations.
-
 ## Table of Contents
 
 ```@index

@@ -12,7 +12,9 @@ prop    = OrbitPropagator(forces, integ)
 # Create an impulsive maneuver (only V component will vary)
 toi = ImpulsiveManeuver(
     axes = VNB(),
-    element1 = 0.1,
+    element1 = -0.239691,
+    element2 = -6.95095,
+    element3 = 0.0,
 )
 
 # Define DeltaVVector of toi as a solver variable
@@ -20,18 +22,18 @@ toi = ImpulsiveManeuver(
 var_toi = SolverVariable(
     calc = ManeuverCalc(toi, sat, DeltaVVector()),
     name = "toi",
-    lower_bound = [-10.0, 0.0, 0.0],
-    upper_bound = [10.0, 0.0, 0.0],
+    lower_bound = [-10.0, -10.0, -10.0],
+    upper_bound = [10.0, 10.0, 10.0],
 )
 
 # Define a constraint on position magnitude of spacecraft
 # Target apoapsis altitude of 55000 km
 pos_target = 55000.0
 pos_con = Constraint(
-    calc = OrbitCalc(sat, PosMag()),
-    lower_bounds = [pos_target],
-    upper_bounds = [pos_target],
-    scale = [1.0],
+    calc = OrbitCalc(sat, PositionVector()),
+    lower_bounds = [-54999.99999757, 0.51507678, 0.34751761],
+    upper_bounds = [-54999.99999757, 0.51507678, 0.34751761],
+    scale = [1.0, 1.0, 1.0],
 )
 
 # Create an event that applies the maneuver with toi as optimization variable

@@ -11,6 +11,7 @@ The AstroMan module provides utilities and functions for orbital maneuver calcul
 Apply an impulsive orbital maneuver:
 
 ```julia
+using Epicycle
 m = ImpulsiveManeuver(axes=Inertial(), 
                       Isp=300.0, 
                       element1=0.01, 

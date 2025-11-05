@@ -1,6 +1,6 @@
 # AstroSolve.jl
 
-AstroSolve provides a framework for solving astrodynamics design problems through constrained optimization and event-driven architecture. AstroSolve builds an event sequence as a Directed Acyclic Graph (DAG), which will soon be fully differentiable using AD. The DAG model for optimization is implemented in NASA's Copernicus software.  
+AstroSolve provides a framework for solving astrodynamics design problems through constrained optimization and event-driven architecture. AstroSolve builds an event sequence as a Directed Acyclic Graph (DAG), which will soon be fully differentiable using AD. The DAG model for optimization is inspired by the architecture used in NASA's Copernicus software.  
 
 **Reference:** Jacob Williams, Robert Falck, and Izaak Beekman. "Application of Modern Fortran to Spacecraft Trajectory Design and Optimization." *AIAA/AAS Space Flight Mechanics Meeting*, Kissimmee, FL, 2018. [Available online](https://ntrs.nasa.gov/api/citations/20180000413/downloads/20180000413.pdf)
 
