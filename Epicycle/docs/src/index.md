@@ -104,3 +104,11 @@ Certificate of Origin (DCO) as detailed in CONTRIBUTING.txt.
 ## Support
 
 For support, including technical support and services to apply Epicycle to your application, contact support [at] genastro.com
+
+## What is an Epicycle?
+
+Humankind has been studying planetary motion for millennia. An epicycle is a geometric theory developed by Ptolemy to explain why planets appear to reverse direction and perform small loops in their celestial paths. While this model represented a significant advancement over earlier theories, it was ultimately incorrect—and it would be nearly 1500 years before Kepler developed a more accurate framework for understanding orbital mechanics.
+
+We've come remarkably far in our understanding, yet fundamental questions remain. Either our theories of relativity, quantum mechanics, or both may be incomplete—reminding us that scientific discovery is an ongoing journey.
+
+The Epicycle software is a tribute to the brilliant minds who came before us, celebrating how far we've advanced while embracing the excitement of continuing to push the boundaries of knowledge and make new discoveries. 
