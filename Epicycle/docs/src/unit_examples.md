@@ -132,13 +132,14 @@ AstroFun provides a unified calculation framework for extracting and setting orb
 using AstroFun, AstroStates, AstroModels
 
 # Create a spacecraft with orbital state
-sc = Spacecraft(CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]), 
-                Time("2024-01-01T12:00:00"), 1000.0)
+sc = Spacecraft(state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]), 
+                time = Time("2024-01-01T12:00:00", UTC(), ISOT()), 
+                mass = 1000.0)
 
 # Get semi-major axis from current state
-ecc_calc = OrbitCalc(sc, SMA())
-a = get_calc(ecc_calc)           
-set_calc!(ecc_calc, 10000.0)  
+sma_calc = OrbitCalc(sc, SMA())
+a = get_calc(sma_calc)           
+set_calc!(sma_calc, 10000.0)  
 
 # Set target incoming asymptote (rp = 6900, C3 = 14.0)
 hyp = OrbitCalc(sc, IncomingAsymptote())
