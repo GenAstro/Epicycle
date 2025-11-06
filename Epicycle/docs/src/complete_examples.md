@@ -36,6 +36,12 @@ println(get_state(sat, SphericalRADEC()))
 # Propagate to x-position crossing (increasing)
 sol = propagate(prop, sat, StopAt(sat, PosX(), 7.5; direction=+1))
 println(get_state(sat, Cartesian()))
+
+# Propagate multiple spacecraft with multiple stopping conditions
+sc1 = Spacecraft(); sc2 = Spacecraft() 
+stop_sc1_node = StopAt(sc1, PosZ(), 0.0)
+stop_sc2_periapsis = StopAt(sc2, PosDotVel(), 0.0; direction=+1)
+propagate(prop, [sc1,sc2], stop_sc1_node, stop_sc2_periapsis)
 ```
 
 ## Impulsive Maneuvers
