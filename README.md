@@ -51,3 +51,6 @@ users to choose between the following three options:
 
 See LICENSE.txt for terms each license option.  For commercial licensing, 
 email licensing at genastro.org.
+
+## Notes
+Claude Sonnet and ChatGPT are used in the development of Epicycle.

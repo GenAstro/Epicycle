@@ -1,7 +1,7 @@
 name = "AstroProp"
 uuid = "0e2365da-becf-4b4f-af1d-8bfff9db196c"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "1.0.0-DEV"
+version = "0.3.0"
 
 [deps]
 AstroBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"

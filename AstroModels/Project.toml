@@ -1,7 +1,7 @@
 name = "AstroModels"
 uuid = "ac4cc047-8a77-4e9e-bb46-f1584e9a10ee"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "1.0.0-DEV"
+version = "0.1.0"
 
 [deps]
 AstroBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"

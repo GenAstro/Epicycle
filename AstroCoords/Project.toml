@@ -1,7 +1,7 @@
 name = "AstroCoords"
 uuid = "7b16edaa-6936-47b4-b191-819abb0f77bd"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "1.0.0-DEV"
+version = "0.1.0"
 
 [deps]
 AstroBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"

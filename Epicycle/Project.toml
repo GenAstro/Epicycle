@@ -1,7 +1,7 @@
 name = "Epicycle"
 uuid = "83dc357c-0294-4c28-b122-f18155576d3d"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "1.0.0-DEV"
+version = "0.4.0"
 
 [deps]
 AstroBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"

@@ -1,7 +1,7 @@
 name = "AstroFun"
 uuid = "4e6d50a3-795a-40f7-bdce-bebb06c496f9"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "1.0.0-DEV"
+version = "0.3.0"
 
 [deps]
 AstroBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
