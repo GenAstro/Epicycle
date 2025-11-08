@@ -1,4 +1,4 @@
-using AstroCoords
+using AstroFrames
 using Test
 using InteractiveUtils 
 using AstroUniverse  # for earth object
