@@ -10,7 +10,7 @@ using Reexport
 @reexport using AstroStates
 @reexport using AstroEpochs
 @reexport using AstroUniverse
-@reexport using AstroCoords
+@reexport using AstroFrames
 @reexport using AstroModels
 @reexport using AstroMan
 @reexport using AstroFun

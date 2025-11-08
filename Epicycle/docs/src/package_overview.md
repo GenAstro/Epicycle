@@ -20,7 +20,7 @@ High-precision astronomical time systems.
 ## AstroUniverse
 Celestial body models and ephemeris.
 
-## AstroCoords
+## AstroFrames
 Coordinate systems and transformations.
 
 ## AstroMan

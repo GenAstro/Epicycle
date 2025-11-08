@@ -22,7 +22,7 @@ Environmental and spacecraft modeling capabilities for realistic mission simulat
 ### [AstroUniverse](https://genastro.github.io/Epicycle/AstroUniverse/dev/)
 Celestial body models, ephemeris data, and gravitational parameters. Includes planetary data, gravitational constants, and ephemeris interfaces.
 
-### [AstroCoords](https://genastro.github.io/Epicycle/AstroCoords/dev/)
+### [AstroFrames](https://genastro.github.io/Epicycle/AstroFrames/dev/)
 Reference frames and coordinate system transformations. Handles inertial and rotating frames with precise transformation matrices.
 
 ### [AstroModels](https://genastro.github.io/Epicycle/AstroModels/dev/)

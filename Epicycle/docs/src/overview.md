@@ -56,7 +56,7 @@ Open architecture allows researchers to extend capabilities and integrate with e
 | `AstroStates` | Orbital state representations and conversions | 
 | `AstroEpochs` | Time systems and epoch handling | 
 | `AstroUniverse` | Celestial body models and ephemeris | 
-| `AstroCoords` | Coordinate systems and transformations | 
+| `AstroFrames` | Coordinate systems and transformations | 
 | `AstroModels` | Spacecraft and physical models | 
 | `AstroMan`| Maneuver models and algorithms |
 | `AstroFun` | Quantities used in I/O, stopping conditions, cost, constraints |
@@ -155,7 +155,7 @@ For developers interested in extending Epicycle, each package maintains its own 
 | `AstroStates` | Orbital state representations and conversions | 
 | `AstroEpochs` | Time systems and epoch handling | 
 | `AstroUniverse` | Celestial body models and ephemeris | 
-| `AstroCoords` | Coordinate systems and transformations | 
+| `AstroFrames` | Coordinate systems and transformations | 
 | `AstroModels` | Spacecraft and physical models | 
 | `AstroMan`| Maneuver models and algorithms |
 | `AstroFun` | Quantities used in I/O, stopping conditions, cost, constraints |
