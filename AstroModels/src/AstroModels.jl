@@ -10,11 +10,11 @@ module AstroModels
 
 using AstroEpochs
 using AstroStates
-using AstroCoords
+using AstroFrames
 using AstroUniverse
 
 # Import commonly used types to avoid qualification
-using AstroCoords: ICRFAxes, CoordinateSystem
+using AstroFrames: ICRFAxes, CoordinateSystem
 using AstroUniverse: earth
 
 export Spacecraft, get_state, to_posvel, set_posvel!

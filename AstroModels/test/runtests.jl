@@ -5,7 +5,7 @@ using Logging
 using AstroBase
 using AstroStates
 using AstroEpochs
-using AstroCoords
+using AstroFrames
 using AstroUniverse
 using AstroModels
 

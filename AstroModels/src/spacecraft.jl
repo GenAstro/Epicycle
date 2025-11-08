@@ -19,7 +19,7 @@ Fields
 
 # Examples
 ```julia
-using AstroModels, AstroStates, AstroEpochs, AstroCoords, AstroUniverse
+using AstroModels, AstroStates, AstroEpochs, AstroFrames, AstroUniverse
 
 sc = Spacecraft(
     state = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
@@ -229,7 +229,7 @@ Limitations
 # Examples
 
 ```julia
-using AstroModels, AstroStates, AstroEpochs, AstroCoords, AstroUniverse
+using AstroModels, AstroStates, AstroEpochs, AstroFrames, AstroUniverse
 sc = Spacecraft(
            state=CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
            time=Time("2015-09-21T12:23:12", TAI(), ISOT()));
