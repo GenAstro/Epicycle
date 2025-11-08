@@ -83,7 +83,7 @@ AstroBase is designed to be the foundation layer for:
 
 - **AstroStates** - Concrete state vector implementations
 - **AstroEpochs** - Time system implementations
-- **AstroCoords** - Coordinate system types
+- **AstroFrames** - Coordinate system types
 - **AstroModels** - Mathematical model types
 - **AstroProp** - Propagator implementations
 - **AstroSolve** - Solver algorithm types
