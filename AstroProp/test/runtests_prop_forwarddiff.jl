@@ -7,7 +7,7 @@ using AstroProp
 using AstroEpochs
 using AstroUniverse
 using ForwardDiff
-using AstroCoords
+using AstroFrames
 using Test
 using OrdinaryDiffEq
 using LinearAlgebra

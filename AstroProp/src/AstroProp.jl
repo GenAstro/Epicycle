@@ -16,7 +16,7 @@ using AstroBase
 using AstroStates
 using AstroEpochs
 using AstroUniverse
-using AstroCoords
+using AstroFrames
 using AstroModels: Spacecraft, to_posvel, set_posvel!
 import AstroModels: push_history_segment!
 using AstroFun: OrbitCalc, get_calc

@@ -8,7 +8,7 @@ using AstroBase
 using AstroStates
 using AstroEpochs
 using AstroUniverse
-using AstroCoords
+using AstroFrames
 using AstroModels
 using AstroMan
 using AstroFun
