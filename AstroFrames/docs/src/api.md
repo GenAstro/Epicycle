@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = AstroCoords
+CurrentModule = AstroFrames
 ```
 
 # API Reference
@@ -8,5 +8,5 @@ CurrentModule = AstroCoords
 ```
 
 ```@autodocs
-Modules = [AstroCoords]
+Modules = [AstroFrames]
 ```

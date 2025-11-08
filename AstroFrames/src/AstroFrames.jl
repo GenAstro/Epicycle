@@ -2,14 +2,14 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
 
 """
-    AstroCoords
+    AstroFrames
 
 Coordinate systems and reference frames for astrodynamics applications.
 
 Provides types for defining coordinate systems with customizable origins and axes orientations,
 supporting common reference frames like ICRF, J2000, and VNB for example .
 """
-module AstroCoords
+module AstroFrames
 
 using AstroBase
 using AstroUniverse

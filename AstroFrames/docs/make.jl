@@ -1,14 +1,14 @@
-using AstroCoords
+using AstroFrames
 using Documenter
 
-DocMeta.setdocmeta!(AstroCoords, :DocTestSetup, :(using AstroCoords); recursive=true)
+DocMeta.setdocmeta!(AstroFrames, :DocTestSetup, :(using AstroFrames); recursive=true)
 
 makedocs(;
-    modules=[AstroCoords],
+    modules=[AstroFrames],
     authors="Steve Hughes <steven.hughes@genastro.org>",
-    sitename="AstroCoords.jl",
+    sitename="AstroFrames.jl",
     format=Documenter.HTML(;
-        canonical="https://GenAstro.github.io/Epicycle/AstroCoords/",
+        canonical="https://GenAstro.github.io/Epicycle/AstroFrames/",
         edit_link="main",
         assets=String[],
     ),
@@ -23,7 +23,7 @@ makedocs(;
 deploydocs(;
     repo="github.com/GenAstro/Epicycle",
     target="build",
-    dirname="AstroCoords",
+    dirname="AstroFrames",
     devbranch="main",
     push_preview=true,
     deploy_config=Documenter.GitHubActions()  # Uses GITHUB_TOKEN

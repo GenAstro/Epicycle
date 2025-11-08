@@ -1,10 +1,10 @@
 ```@meta
-CurrentModule = AstroCoords
+CurrentModule = AstroFrames
 ```
 
-# AstroCoords
+# AstroFrames
 
-The AstroCoords package provides coordinate systems and reference frames for astrodynamics applications. AstroCoords provides types for defining coordinate systems with customizable origins and axes and conversions between different coordinates.
+The AstroFrames package provides coordinate systems and reference frames for astrodynamics applications. AstroFrames provides types for defining coordinate systems with customizable origins and axes and conversions between different coordinates.
 
 # Quick Start
 

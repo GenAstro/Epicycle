@@ -1,4 +1,4 @@
-name = "AstroCoords"
+name = "AstroFrames"
 uuid = "7b16edaa-6936-47b4-b191-819abb0f77bd"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
 version = "0.1.0"
