@@ -1,7 +1,7 @@
 
 using Test
 using LinearAlgebra
-using AstroCoords
+using AstroFrames
 using AstroProp
 using AstroEpochs
 using AstroStates

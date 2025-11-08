@@ -10,7 +10,7 @@ using AstroEpochs
 using AstroStates
 using AstroBase
 using AstroUniverse
-using AstroCoords
+using AstroFrames
 using AstroProp
 using AstroMan
 using AstroSolve
