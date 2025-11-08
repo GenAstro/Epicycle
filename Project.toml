@@ -1,9 +1,9 @@
 [workspace]
-projects = ["AstroBase", "AstroStates", "AstroEpochs", "AstroUniverse", "AstroCoords", "AstroModels", "AstroMan", "AstroFun", "AstroProp", "AstroSolve", "Epicycle"]
+projects = ["AstroBase", "AstroStates", "AstroEpochs", "AstroUniverse", "AstroFrames", "AstroModels", "AstroMan", "AstroFun", "AstroProp", "AstroSolve", "Epicycle"]
 
 [deps]
 AstroBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
-AstroCoords = "7b16edaa-6936-47b4-b191-819abb0f77bd"
+AstroFrames = "7b16edaa-6936-47b4-b191-819abb0f77bd"
 AstroEpochs = "241dcde3-d7a4-450d-948f-15f2ea2ba1fa"
 AstroFun = "4e6d50a3-795a-40f7-bdce-bebb06c496f9"
 AstroMan = "7696fc14-2f3a-46f6-b942-ece41ce8abed"
