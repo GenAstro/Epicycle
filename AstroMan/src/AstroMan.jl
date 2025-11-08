@@ -13,12 +13,12 @@ using LinearAlgebra
 using AstroBase
 using AstroEpochs
 using AstroStates
-using AstroCoords
+using AstroFrames
 using AstroModels: Spacecraft, to_posvel, set_posvel!
 import AstroModels: push_history_segment!
 
 export ImpulsiveManeuver, maneuver
-import AstroCoords: AbstractAxes, VNB, Inertial
+import AstroFrames: AbstractAxes, VNB, Inertial
 
 """
     MANEUVER_AXES
@@ -47,7 +47,7 @@ Fields
 
 # Examples
 ```jldoctest
-using AstroMan, AstroCoords
+using AstroMan, AstroFrames
 
 m = ImpulsiveManeuver(axes=VNB(), 
                       g0=9.81, Isp=300.0,
@@ -249,7 +249,7 @@ Arguments
 
 # Examples
 ```jldoctest
-using AstroMan, AstroCoords, AstroModels
+using AstroMan, AstroFrames, AstroModels
 
 m = ImpulsiveManeuver(axes=Inertial(), 
                       Isp=300.0, 

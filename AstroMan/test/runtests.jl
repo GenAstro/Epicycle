@@ -11,7 +11,7 @@ using AstroBase
 using AstroStates
 using AstroEpochs
 using AstroUniverse
-using AstroCoords
+using AstroFrames
 using AstroModels
 using AstroMan
 
@@ -127,7 +127,7 @@ end
     pv_zero_r = [0.0, 0.0, 0.0, 0.0, 7.5, 0.0]
     @test_throws ErrorException AstroMan.rot_mat_vnb_to_inertial(pv_zero_r)
 
-    import AstroCoords: AbstractAxes
+    import AstroFrames: AbstractAxes
     struct BadAxes <: AbstractAxes end
   
     # 1) Axes must be one of MANEUVER_AXES (positional constructor -> inner validation)
