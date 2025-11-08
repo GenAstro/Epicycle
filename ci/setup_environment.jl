@@ -28,7 +28,7 @@ packages = [
     "AstroStates", 
     "AstroEpochs",
     "AstroUniverse",
-    "AstroCoords",
+    "AstroFrames",
     "AstroModels",
     "AstroMan",
     "AstroFun",

@@ -31,7 +31,7 @@ else
     # Fallback: run tests for each package individually
     packages = [
         "AstroBase", "AstroStates", "AstroEpochs", "AstroUniverse",
-        "AstroCoords", "AstroModels", "AstroMan", "AstroFun", 
+        "AstroFrames", "AstroModels", "AstroMan", "AstroFun", 
         "AstroProp", "AstroSolve", "Epicycle"
     ]
     
