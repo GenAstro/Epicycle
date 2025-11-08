@@ -19,7 +19,7 @@ using AstroStates
 using AstroEpochs
 using AstroBase
 using AstroUniverse
-using AstroCoords
+using AstroFrames
 using AstroModels: Spacecraft, to_posvel, set_posvel!
 using AstroMan
 

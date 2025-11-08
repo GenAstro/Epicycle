@@ -2,7 +2,7 @@ using Test
 
 using AstroFun
 using AstroMan
-using AstroCoords
+using AstroFrames
 using AstroUniverse
 using AstroModels
 using AstroStates

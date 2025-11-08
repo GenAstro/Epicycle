@@ -5,7 +5,7 @@ using AstroFun
 using AstroStates
 using AstroEpochs
 using AstroUniverse
-using AstroCoords
+using AstroFrames
 using AstroModels
 
 # Rationale: Unknown OrbitVar must throw via calc_input_statetag fallback.

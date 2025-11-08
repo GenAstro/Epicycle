@@ -5,7 +5,7 @@ using AstroStates
 using AstroEpochs
 using AstroBase
 using AstroUniverse
-using AstroCoords
+using AstroFrames
 using AstroModels: Spacecraft, get_state 
 using AstroMan
 using AstroFun 
