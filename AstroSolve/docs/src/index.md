@@ -82,7 +82,7 @@ solution_report(seq, result)
 
 ## Core Functions
 
-This section contains reference material for the key user facing elements of AstroSolve. Note: Constraint is currently in the AstroFun module but will be moved to AstroSolve in a future release. 
+This section contains reference material for the key user facing elements of AstroSolve. Note: Constraint is currently in the AstroCallbacks module but will be moved to AstroSolve in a future release. 
 
 ```@docs
 SolverVariable

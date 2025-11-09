@@ -11,7 +11,7 @@ using AstroFrames
 using AstroProp
 using AstroManeuvers
 using AstroSolve
-using AstroFun
+using AstroCallbacks
 using ForwardDiff
 
 # Create spacecraft

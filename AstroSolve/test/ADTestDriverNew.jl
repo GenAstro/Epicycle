@@ -14,7 +14,7 @@ using AstroFrames
 using AstroProp
 using AstroManeuvers
 using AstroSolve
-using AstroFun
+using AstroCallbacks
 
 # Promote numeric leaves of a struct via its Functors.functor to eltype T
 _promote_via_functor(x, ::Type{T}) where {T} = begin

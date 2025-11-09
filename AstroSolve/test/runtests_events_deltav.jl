@@ -7,7 +7,7 @@ using AstroEpochs
 using AstroStates
 using AstroManeuvers
 using AstroUniverse
-using AstroFun
+using AstroCallbacks
 using AstroSolve
 
 @testset "Event Propagation Test" begin

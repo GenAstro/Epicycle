@@ -1,6 +1,6 @@
 using Test
 using AstroSolve
-using AstroFun
+using AstroCallbacks
 using AstroStates
 using AstroEpochs
 using AstroManeuvers

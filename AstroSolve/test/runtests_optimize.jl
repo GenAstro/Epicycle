@@ -10,7 +10,7 @@ using AstroUniverse
 using AstroFrames
 using AstroModels
 using AstroManeuvers
-using AstroFun
+using AstroCallbacks
 using AstroProp
 using AstroSolve
 

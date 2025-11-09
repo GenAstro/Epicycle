@@ -18,7 +18,7 @@ using Printf
 
 using AstroBase
 using AstroManeuvers
-using AstroFun
+using AstroCallbacks
 using AstroModels: Spacecraft, to_posvel, set_posvel!
 
 export SolverVariable, Event, Sequence, SequenceManager 
@@ -280,7 +280,7 @@ function set_sol_var(var::SolverVariable,val::Vector)
         throw(ArgumentError("set_sol_var: calc type $(typeof(var.calc)) does not support setting values."))
     end
 
-    # Delegate to AstroFun; accept vectors for both scalar and vector calcs
+    # Delegate to AstroCallbacks; accept vectors for both scalar and vector calcs
     n = var.numvars
     length(val) == n || throw(ArgumentError("set_sol_var: expected length $n (got $(length(val)))."))
     if n == 1
