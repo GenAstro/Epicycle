@@ -1,6 +1,6 @@
 using AstroModels 
 using AstroEpochs  
-import AstroFun: AbstractCalcVariable, AbstractCalc, set_calc!
+import AstroCallbacks: AbstractCalcVariable, AbstractCalc, set_calc!
 import AstroEpochs: AbstractTimeScale, AbstractTimeFormat
 
 # New abstract type for time variables  

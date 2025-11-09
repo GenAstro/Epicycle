@@ -35,7 +35,7 @@ High-level capabilities for trajectory design, optimization, and mission analysi
 ### [AstroManeuvers](https://genastro.github.io/Epicycle/AstroManeuvers/dev/)
 Maneuver models and algorithms for trajectory modification. Provides impulsive and finite-burn maneuver representations.
 
-### [AstroFun](https://genastro.github.io/Epicycle/AstroFun/dev/)
+### [AstroCallbacks](https://genastro.github.io/Epicycle/AstroCallbacks/dev/)
 Mission analysis utilities for constraints, objectives, and events. Includes stopping conditions, cost functions, and constraint definitions.
 
 ### [AstroProp](https://genastro.github.io/Epicycle/AstroProp/dev/)

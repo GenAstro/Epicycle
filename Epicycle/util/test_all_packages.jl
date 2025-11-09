@@ -22,7 +22,7 @@ packages = [
     "AstroFrames", 
     "AstroManeuvers",
     "AstroModels",
-    "AstroFun",
+    "AstroCallbacks",
     "AstroProp",
     "AstroSolve",
 ]

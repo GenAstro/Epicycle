@@ -1,5 +1,5 @@
-import AstroFun: AbstractOrbitVar, calc_input_statetag, calc_is_settable, calc_numvars
-import AstroFun: _evaluate, _set!, OrbitCalc, get_calc, set_calc!
+import AstroCallbacks: AbstractOrbitVar, calc_input_statetag, calc_is_settable, calc_numvars
+import AstroCallbacks: _evaluate, _set!, OrbitCalc, get_calc, set_calc!
 
 # Bring in the exact state/tag and model types you reference
 import AstroStates: KeplerianState, Keplerian
@@ -25,9 +25,9 @@ struct Inc <: AbstractOrbitVar end
 calc_numvars(::Inc) = 1
 calc_is_settable(::Inc) = true
 calc_input_statetag(::Inc) = Keplerian()
-AstroFun._evaluate(::Inc, s::KeplerianState{T}) where {T} = s.inc
+AstroCallbacks._evaluate(::Inc, s::KeplerianState{T}) where {T} = s.inc
 
-function AstroFun._set!(::Inc, s::KeplerianState{T}, newval::AbstractVector{<:Real}) where {T}
+function AstroCallbacks._set!(::Inc, s::KeplerianState{T}, newval::AbstractVector{<:Real}) where {T}
     length(newval) == 1 || error("Inc requires 1 element.")
     KeplerianState(s.sma, s.ecc, convert(T, newval[1]), s.aop, s.raan, s.ta)
 end
@@ -58,7 +58,7 @@ struct AngularMomentumVector <: AbstractOrbitVar end
 calc_numvars(::AngularMomentumVector) = 3
 calc_is_settable(::AngularMomentumVector) = false
 calc_input_statetag(::AngularMomentumVector) = Cartesian()
-function AstroFun._evaluate(::AngularMomentumVector, s::CartesianState{T}) where {T} 
+function AstroCallbacks._evaluate(::AngularMomentumVector, s::CartesianState{T}) where {T} 
     pv = s.posvel
     rv = pv[1:3]
     vv = pv[4:6]

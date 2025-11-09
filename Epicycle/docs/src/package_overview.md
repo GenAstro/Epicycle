@@ -11,7 +11,7 @@ High-fidelity trajectory propagation.
 ## AstroSolve
 Trajectory optimization and mission design.
 
-## AstroFun
+## AstroCallbacks
 Mission analysis calculations and constraints.
 
 ## AstroEpochs

@@ -13,7 +13,7 @@ using Reexport
 @reexport using AstroFrames
 @reexport using AstroModels
 @reexport using AstroManeuvers
-@reexport using AstroFun
+@reexport using AstroCallbacks
 @reexport using AstroProp
 @reexport using AstroSolve
 

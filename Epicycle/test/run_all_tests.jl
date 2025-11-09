@@ -17,7 +17,7 @@ pkgs = [
     "AstroFrames",
     "AstroModels",
     "AstroManeuvers",
-    "AstroFun",
+    "AstroCallbacks",
     "AstroProp",
     "AstroSolve",
 ]

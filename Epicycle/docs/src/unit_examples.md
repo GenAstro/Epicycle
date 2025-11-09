@@ -124,12 +124,12 @@ maneuver(sc, m)
 
 See the full [Reference Material](https://genastro.github.io/Epicycle/AstroManeuvers/dev/) for more details.
 
-## Calculations Framework (AstroFun)
+## Calculations Framework (AstroCallbacks)
 
-AstroFun provides a unified calculation framework for extracting and setting orbital parameters, celestial body properties, and maneuver characteristics. It offers a consistent interface for accessing computed quantities across the Epicycle ecosystem.
+AstroCallbacks provides a unified calculation framework for extracting and setting orbital parameters, celestial body properties, and maneuver characteristics. It offers a consistent interface for accessing computed quantities across the Epicycle ecosystem.
 
 ```julia
-using AstroFun, AstroStates, AstroModels
+using AstroCallbacks, AstroStates, AstroModels
 
 # Create a spacecraft with orbital state
 sc = Spacecraft(state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]), 
@@ -157,6 +157,6 @@ dvvec_calc = ManeuverCalc(toi, sc, DeltaVVector())
 set_calc!(dvvec_calc, [0.2, 0.3, 0.4])
 ```
 
-See the full [Reference Material](https://genastro.github.io/Epicycle/AstroFun/dev/) for more details.
+See the full [Reference Material](https://genastro.github.io/Epicycle/AstroCallbacks/dev/) for more details.
 
 

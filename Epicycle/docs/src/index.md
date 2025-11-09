@@ -29,7 +29,7 @@ The Epicycle ecosystem implements a layered architecture where each package prov
 | `AstroFrames` | Reference frames and coordinate system transformations | 
 | `AstroModels` | Spacecraft and physical models  | 
 | `AstroManeuvers` | Maneuver models and algorithms |
-| `AstroFun` | Utilities for constraints, objectives, and events |
+| `AstroCallbacks` | Utilities for constraints, objectives, and events |
 | `AstroProp` | Numerical integration and trajectory propagation methods | 
 | `AstroSolve` | Optimization algorithms and constraint solving capabilities | 
 

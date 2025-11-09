@@ -59,7 +59,7 @@ Open architecture allows researchers to extend capabilities and integrate with e
 | `AstroFrames` | Coordinate systems and transformations | 
 | `AstroModels` | Spacecraft and physical models | 
 | `AstroManeuvers`| Maneuver models and algorithms |
-| `AstroFun` | Quantities used in I/O, stopping conditions, cost, constraints |
+| `AstroCallbacks` | Quantities used in I/O, stopping conditions, cost, constraints |
 | `AstroProp` | Trajectory propagation algorithms | 
 | `AstroSolve` | Optimization and constraint solving | 
 | `Epicycle` | The application.  `using Epicycle` loads everything. |
@@ -158,7 +158,7 @@ For developers interested in extending Epicycle, each package maintains its own 
 | `AstroFrames` | Coordinate systems and transformations | 
 | `AstroModels` | Spacecraft and physical models | 
 | `AstroManeuvers`| Maneuver models and algorithms |
-| `AstroFun` | Quantities used in I/O, stopping conditions, cost, constraints |
+| `AstroCallbacks` | Quantities used in I/O, stopping conditions, cost, constraints |
 | `AstroProp` | Trajectory propagation algorithms | 
 | `AstroSolve` | Optimization and constraint solving | 
 | `Epicycle` | The application.  `using Epicycle` loads everything. |

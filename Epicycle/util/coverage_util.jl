@@ -8,7 +8,7 @@ module_name = "AstroUniverse"
 module_name = "AstroFrames"
 module_name = "AstroModels"
 module_name = "AstroManeuvers"
-module_name = "AstroFun"
+module_name = "AstroCallbacks"
 
 module_name = "AstroProp"
 module_name = "AstroSolve"
