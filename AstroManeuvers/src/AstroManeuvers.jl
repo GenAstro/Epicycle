@@ -6,7 +6,7 @@ __precompile__()
 """
 Module containing models for spacecraft maneuvers. 
 """
-module AstroMan
+module AstroManeuvers
 
 using LinearAlgebra
 
@@ -47,7 +47,7 @@ Fields
 
 # Examples
 ```jldoctest
-using AstroMan, AstroFrames
+using AstroManeuvers, AstroFrames
 
 m = ImpulsiveManeuver(axes=VNB(), 
                       g0=9.81, Isp=300.0,
@@ -249,7 +249,7 @@ Arguments
 
 # Examples
 ```jldoctest
-using AstroMan, AstroFrames, AstroModels
+using AstroManeuvers, AstroFrames, AstroModels
 
 m = ImpulsiveManeuver(axes=Inertial(), 
                       Isp=300.0, 

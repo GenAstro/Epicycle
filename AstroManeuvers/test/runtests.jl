@@ -13,7 +13,7 @@ using AstroEpochs
 using AstroUniverse
 using AstroFrames
 using AstroModels
-using AstroMan
+using AstroManeuvers
 
 
 
@@ -83,7 +83,7 @@ end
     dv2_inertial = [0.4, 0.5, 0.6] # second maneuver in inertial
 
     # Expected velocities
-    R1 = AstroMan.rot_mat_vnb_to_inertial(vcat(pos0, vel0))
+    R1 = AstroManeuvers.rot_mat_vnb_to_inertial(vcat(pos0, vel0))
     vel1 = vel0 .+ R1 * dv1_vnb
     vel2 = vel1 .+ dv2_inertial
 
@@ -121,11 +121,11 @@ end
     m = ImpulsiveManeuver(axes=Inertial(), g0=9.81, Isp=220.0,
                           element1=0.1, element2=0.2, element3=0.3)
     # Cover get_deltav_elements one-liner
-    @test AstroMan.get_deltav_elements(m) == (0.1, 0.2, 0.3)
+    @test AstroManeuvers.get_deltav_elements(m) == (0.1, 0.2, 0.3)
 
     # Cover VNB DCM error on zero-norm r or v
     pv_zero_r = [0.0, 0.0, 0.0, 0.0, 7.5, 0.0]
-    @test_throws ErrorException AstroMan.rot_mat_vnb_to_inertial(pv_zero_r)
+    @test_throws ErrorException AstroManeuvers.rot_mat_vnb_to_inertial(pv_zero_r)
 
     import AstroFrames: AbstractAxes
     struct BadAxes <: AbstractAxes end
@@ -147,7 +147,7 @@ end
 
     m2 = ImpulsiveManeuver(axes=Inertial(), g0=9.81, Isp=300.0, element1=0.1, element2=0.0, element3=0.0)
     @test m2 isa ImpulsiveManeuver
-    @test AstroMan.get_deltav_elements(m2) == (0.1, 0.0, 0.0)
+    @test AstroManeuvers.get_deltav_elements(m2) == (0.1, 0.0, 0.0)
 end
 
 @testset "ForwardDiff promotion behavior" begin
@@ -170,14 +170,14 @@ end
     @test sc.mass isa ForwardDiff.Dual
 
     # compute_mass_used promotes to Dual when initial_mass is Dual
-    used = AstroMan.compute_mass_used(m, ForwardDiff.Dual{Nothing}(1000.0, 1.0), m.Isp)
+    used = AstroManeuvers.compute_mass_used(m, ForwardDiff.Dual{Nothing}(1000.0, 1.0), m.Isp)
     @test used isa ForwardDiff.Dual
 end
 
 @testset "AD Jacobians: Δv_VNB → posvel and mass" begin
     # Spacecraft pos/vel (km, km/s) for VNB frame construction
     pv0 = [7000.0, 300.0, 0.0, 0.0, 7.5, 0.05]    # non-degenerate r, v
-    R = AstroMan.rot_mat_vnb_to_inertial(pv0)     # 3x3 DCM VNB→inertial
+    R = AstroManeuvers.rot_mat_vnb_to_inertial(pv0)     # 3x3 DCM VNB→inertial
 
     # Function mapping Δv in VNB (km/s) to new posvel (length-6)
     f_posvel(dv::AbstractVector) = vcat(pv0[1:3], pv0[4:6] .+ R * dv)
@@ -198,7 +198,7 @@ end
     g_mass(dv::AbstractVector) = begin
         m = ImpulsiveManeuver(axes=VNB(), g0=g0, Isp=Isp,
                               element1=dv[1], element2=dv[2], element3=dv[3])
-        m0 - AstroMan.compute_mass_used(m, m0, Isp)
+        m0 - AstroManeuvers.compute_mass_used(m, m0, Isp)
     end
 
     # ForwardDiff/Zygote gradients agree and match closed form

@@ -1,14 +1,14 @@
-using AstroMan
+using AstroManeuvers
 using Documenter
 
-DocMeta.setdocmeta!(AstroMan, :DocTestSetup, :(using AstroMan); recursive=true)
+DocMeta.setdocmeta!(AstroManeuvers, :DocTestSetup, :(using AstroManeuvers); recursive=true)
 
 makedocs(;
-    modules=[AstroMan],
+    modules=[AstroManeuvers],
     authors="Steve Hughes <steven.hughes@genastro.org>",
-    sitename="AstroMan.jl",
+    sitename="AstroManeuvers.jl",
     format=Documenter.HTML(;
-        canonical="https://GenAstro.github.io/Epicycle/AstroMan/",
+        canonical="https://GenAstro.github.io/Epicycle/AstroManeuvers/",
         edit_link="main",
         assets=String[],
         collapselevel=1,
@@ -26,7 +26,7 @@ makedocs(;
 deploydocs(;
     repo="github.com/GenAstro/Epicycle",
     target="build",
-    dirname="AstroMan",
+    dirname="AstroManeuvers",
     devbranch="main",
     push_preview=true,
     deploy_config=Documenter.GitHubActions()  # Uses GITHUB_TOKEN

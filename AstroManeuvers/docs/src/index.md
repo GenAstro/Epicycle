@@ -1,10 +1,10 @@
 ```@meta
-CurrentModule = AstroMan
+CurrentModule = AstroManeuvers
 ```
 
-# AstroMan
+# AstroManeuvers
 
-The AstroMan module provides utilities and functions for orbital maneuver calculations in astrodynamics applications. The module includes impulsive maneuver models and functions for applying maneuvers to spacecraft objects.
+The AstroManeuvers module provides utilities and functions for orbital maneuver calculations in astrodynamics applications. The module includes impulsive maneuver models and functions for applying maneuvers to spacecraft objects.
 
 ## Quick Start
 
@@ -30,7 +30,7 @@ maneuver(sc, m)
 ## API Reference
 
 ```@autodocs
-Modules = [AstroMan]
+Modules = [AstroManeuvers]
 Order = [:type, :function, :macro, :constant]
 ```
 
