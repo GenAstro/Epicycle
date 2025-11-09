@@ -6,7 +6,7 @@ using AstroEpochs
 using AstroStates
 using AstroUniverse
 using AstroModels: Spacecraft, to_posvel, set_posvel!
-using AstroFun: OrbitCalc, PosMag
+using AstroCallbacks: OrbitCalc, PosMag
 using AstroProp
 
 # Helpers

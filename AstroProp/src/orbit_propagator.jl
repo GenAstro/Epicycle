@@ -180,7 +180,7 @@ function _build_callback(cond::StopAt, dynsys)
     function g(u, t, integ)
         # Bring subject up-to-date from integrator state
         _subject_update_from_u!(subject, dynsys, u)
-        # Evaluate current value via AstroFun
+        # Evaluate current value via AstroCallbacks
         val = get_calc(calc)
         return val - target
     end

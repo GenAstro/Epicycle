@@ -9,14 +9,14 @@ using AstroUniverse
 using AstroFrames
 using AstroModels
 using AstroManeuvers
-using AstroFun
+using AstroCallbacks
 using AstroProp
 
 using AstroEpochs, AstroStates
 using AstroUniverse
 using AstroModels: Spacecraft
 using AstroProp
-using AstroFun: OrbitCalc, PosMag, get_calc
+using AstroCallbacks: OrbitCalc, PosMag, get_calc
 
 # Helpers
 make_sat_cart() = Spacecraft(

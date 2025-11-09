@@ -2,7 +2,7 @@ using Test
 using LinearAlgebra
 using AstroEpochs, AstroStates, AstroFrames, AstroUniverse
 using AstroModels: Spacecraft, to_posvel
-using AstroFun: OrbitCalc, PosMag, TA, PosX, get_calc
+using AstroCallbacks: OrbitCalc, PosMag, TA, PosX, get_calc
 using AstroProp: OrbitPropagator, StopAt, PointMassGravity, ForceModel, IntegratorConfig, propagate
 
 # Helper: fresh spacecraft for each test

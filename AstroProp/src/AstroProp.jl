@@ -19,9 +19,9 @@ using AstroUniverse
 using AstroFrames
 using AstroModels: Spacecraft, to_posvel, set_posvel!
 import AstroModels: push_history_segment!
-using AstroFun: OrbitCalc, get_calc
+using AstroCallbacks: OrbitCalc, get_calc
 
-import AstroFun: AbstractFun, AbstractCalcVariable, AbstractOrbitVar
+import AstroCallbacks: AbstractFun, AbstractCalcVariable, AbstractOrbitVar
 import AstroUniverse: translate
 export TwoBodyGravity, ExponentialAtmosphere, CartesianODE, IntegratorConfig
 export DynamicsSystem, propagate, DynSys, ForceModel
