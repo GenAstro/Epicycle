@@ -20,8 +20,8 @@ Epicycle is an application for space systems with a nod to the giants before us 
 - **[AstroUniverse Documentation](https://genastro.github.io/Epicycle/AstroUniverse/dev/)** - Celestial body models and ephemeris
 - **[AstroFrames Documentation](https://genastro.github.io/Epicycle/AstroFrames/dev/)** - Coordinate systems and transformations
 - **[AstroModels Documentation](https://genastro.github.io/Epicycle/AstroModels/dev/)** - Spacecraft and physical models
-- **[AstroMan Documentation](https://genastro.github.io/Epicycle/AstroMan/dev/)** - Maneuver models and algorithms
-- **[AstroFun Documentation](https://genastro.github.io/Epicycle/AstroFun/dev/)** - I/O, stopping conditions, cost, and constraints
+- **[AstroManeuvers Documentation](https://genastro.github.io/Epicycle/AstroManeuvers/dev/)** - Maneuver models and algorithms
+- **[AstroCallbacks Documentation](https://genastro.github.io/Epicycle/AstroCallbacks/dev/)** - I/O, stopping conditions, cost, and constraints
 - **[AstroProp Documentation](https://genastro.github.io/Epicycle/AstroProp/dev/)** - Trajectory propagation algorithms
 - **[AstroSolve Documentation](https://genastro.github.io/Epicycle/AstroSolve/dev/)** - Optimization and constraint solving
 

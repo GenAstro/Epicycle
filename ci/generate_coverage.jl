@@ -57,7 +57,7 @@ all_coverage = Coverage.FileCoverage[]
 
 packages = [
     "AstroBase", "AstroStates", "AstroEpochs", "AstroUniverse",
-    "AstroFrames", "AstroModels", "AstroManeuvers", "AstroFun", 
+    "AstroFrames", "AstroModels", "AstroManeuvers", "AstroCallbacks", 
     "AstroProp", "AstroSolve", "Epicycle"
 ]
 
