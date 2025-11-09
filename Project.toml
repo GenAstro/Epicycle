@@ -1,5 +1,5 @@
 [workspace]
-projects = ["AstroBase", "AstroStates", "AstroEpochs", "AstroUniverse", "AstroFrames", "AstroModels", "AstroManeuvers", "AstroFun", "AstroProp", "AstroSolve", "Epicycle"]
+projects = ["AstroBase", "AstroStates", "AstroEpochs", "AstroUniverse", "AstroFrames", "AstroModels", "AstroManeuvers", "AstroCallbacks", "AstroProp", "AstroSolve", "Epicycle"]
 
 [deps]
 AstroBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
