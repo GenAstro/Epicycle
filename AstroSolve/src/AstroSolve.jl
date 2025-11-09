@@ -17,7 +17,7 @@ using LinearAlgebra
 using Printf
 
 using AstroBase
-using AstroMan
+using AstroManeuvers
 using AstroFun
 using AstroModels: Spacecraft, to_posvel, set_posvel!
 

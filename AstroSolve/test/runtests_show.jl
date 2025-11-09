@@ -3,7 +3,7 @@ using AstroSolve
 using AstroFun
 using AstroStates
 using AstroEpochs
-using AstroMan
+using AstroManeuvers
 
 @testset "Show Methods Tests" begin
 

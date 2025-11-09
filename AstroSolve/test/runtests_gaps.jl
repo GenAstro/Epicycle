@@ -1,7 +1,7 @@
 using Test
 using AstroSolve
 using AstroFun
-using AstroMan
+using AstroManeuvers
 using AstroEpochs
 using AstroStates
 using AstroUniverse

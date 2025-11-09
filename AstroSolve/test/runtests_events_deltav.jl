@@ -5,7 +5,7 @@ using AstroFrames
 using AstroProp
 using AstroEpochs
 using AstroStates
-using AstroMan
+using AstroManeuvers
 using AstroUniverse
 using AstroFun
 using AstroSolve

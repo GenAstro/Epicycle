@@ -3,7 +3,7 @@ using AstroFrames
 using AstroProp
 using AstroEpochs
 using AstroStates
-using AstroMan
+using AstroManeuvers
 using AstroSolve
 using AstroUniverse
 using Test

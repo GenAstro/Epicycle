@@ -5,7 +5,7 @@ using AstroSolve
 using AstroFun
 using AstroStates
 using AstroEpochs
-using AstroMan
+using AstroManeuvers
 
 @testset "SolverVariable calc-constructor" begin
     # Spacecraft context

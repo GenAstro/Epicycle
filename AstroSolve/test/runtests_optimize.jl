@@ -9,7 +9,7 @@ using AstroEpochs
 using AstroUniverse
 using AstroFrames
 using AstroModels
-using AstroMan
+using AstroManeuvers
 using AstroFun
 using AstroProp
 using AstroSolve

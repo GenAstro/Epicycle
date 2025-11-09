@@ -12,7 +12,7 @@ using AstroBase
 using AstroUniverse
 using AstroFrames
 using AstroProp
-using AstroMan
+using AstroManeuvers
 using AstroSolve
 using AstroFun
 
