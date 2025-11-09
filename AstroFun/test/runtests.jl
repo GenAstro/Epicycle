@@ -7,7 +7,7 @@ using AstroBase
 using AstroUniverse
 using AstroFrames
 using AstroModels: Spacecraft, get_state 
-using AstroMan
+using AstroManeuvers
 using AstroFun 
 
 include("runtests_orbitcalcs.jl")

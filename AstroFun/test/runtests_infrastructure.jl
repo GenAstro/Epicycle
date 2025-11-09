@@ -1,7 +1,7 @@
 using Test
 
 using AstroFun
-using AstroMan
+using AstroManeuvers
 using AstroFrames
 using AstroUniverse
 using AstroModels
