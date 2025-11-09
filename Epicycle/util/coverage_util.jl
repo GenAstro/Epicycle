@@ -7,14 +7,14 @@ module_name = "AstroEpochs"    # Done
 module_name = "AstroUniverse"
 module_name = "AstroFrames"
 module_name = "AstroModels"
-module_name = "AstroMan"
+module_name = "AstroManeuvers"
 module_name = "AstroFun"
 
 module_name = "AstroProp"
 module_name = "AstroSolve"
 
 # Usage:
-module_name = "AstroMan"
+module_name = "AstroManeuvers"
 include("Epicycle/util/coverage_util.jl")                
 run_module_coverage(module_name; clean=true)   
 report_uncovered(module_name; context=1)

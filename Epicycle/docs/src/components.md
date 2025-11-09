@@ -32,7 +32,7 @@ Spacecraft and physical models for environmental interactions. Includes drag, so
 
 High-level capabilities for trajectory design, optimization, and mission analysis.
 
-### [AstroMan](https://genastro.github.io/Epicycle/AstroMan/dev/)
+### [AstroManeuvers](https://genastro.github.io/Epicycle/AstroManeuvers/dev/)
 Maneuver models and algorithms for trajectory modification. Provides impulsive and finite-burn maneuver representations.
 
 ### [AstroFun](https://genastro.github.io/Epicycle/AstroFun/dev/)

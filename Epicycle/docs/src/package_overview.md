@@ -23,7 +23,7 @@ Celestial body models and ephemeris.
 ## AstroFrames
 Coordinate systems and transformations.
 
-## AstroMan
+## AstroManeuvers
 Maneuver planning and execution.
 
 ## AstroModels

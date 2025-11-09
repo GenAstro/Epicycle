@@ -20,7 +20,7 @@ packages = [
     "AstroEpochs",
     "AstroUniverse",
     "AstroFrames", 
-    "AstroMan",
+    "AstroManeuvers",
     "AstroModels",
     "AstroFun",
     "AstroProp",

@@ -1,5 +1,5 @@
 # Fast development coverage for individual modules
-# Usage: include("dev_coverage.jl"); dev_coverage("AstroMan")
+# Usage: include("dev_coverage.jl"); dev_coverage("AstroManeuvers")
 
 using Coverage, Printf, Test
 
@@ -158,8 +158,8 @@ end
 
 println("📚 Dev coverage tools loaded!")
 println("Usage:")
-println("  dev_coverage(\"AstroMan\")              # Full coverage")
-println("  show_uncovered(\"AstroMan\")            # Show gaps")
-println("  dev_coverage(\"AstroMan\", run_tests=false) # Just analyze existing .cov files")
+println("  dev_coverage(\"AstroManeuvers\")              # Full coverage")
+println("  show_uncovered(\"AstroManeuvers\")            # Show gaps")
+println("  dev_coverage(\"AstroManeuvers\", run_tests=false) # Just analyze existing .cov files")
 
 nothing

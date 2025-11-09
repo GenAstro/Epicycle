@@ -106,9 +106,9 @@ phobos = CelestialBody(
 ```
 
 See the full [Reference Material](https://genastro.github.io/Epicycle/AstroUniverse/dev/) for more details.
-## Maneuvers (AstroMan)
+## Maneuvers (AstroManeuvers)
 
-AstroMan provides maneuver modeling capabilities for trajectory modifications. It supports impulsive maneuvers with various coordinate frame options and specific impulse specifications for realistic propulsion modeling.
+AstroManeuvers provides maneuver modeling capabilities for trajectory modifications. It supports impulsive maneuvers with various coordinate frame options and specific impulse specifications for realistic propulsion modeling.
 
 ```julia
 using Epicycle
@@ -122,7 +122,7 @@ sc = Spacecraft()
 maneuver(sc, m)
 ```
 
-See the full [Reference Material](https://genastro.github.io/Epicycle/AstroMan/dev/) for more details.
+See the full [Reference Material](https://genastro.github.io/Epicycle/AstroManeuvers/dev/) for more details.
 
 ## Calculations Framework (AstroFun)
 
