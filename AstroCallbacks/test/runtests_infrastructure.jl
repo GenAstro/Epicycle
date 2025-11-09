@@ -1,6 +1,6 @@
 using Test
 
-using AstroFun
+using AstroCallbacks
 using AstroManeuvers
 using AstroFrames
 using AstroUniverse
@@ -34,9 +34,9 @@ end
     bc = BodyCalc(earth, GravParam())
     mc = ManeuverCalc(ImpulsiveManeuver(), sc, DeltaVMag())
 
-    @test AstroFun._subjects_from_calc(oc) == (sc,)
-    @test AstroFun._subjects_from_calc(bc) == (earth,)
-    @test AstroFun._subjects_from_calc(mc) == (mc.man, sc)
+    @test AstroCallbacks._subjects_from_calc(oc) == (sc,)
+    @test AstroCallbacks._subjects_from_calc(bc) == (earth,)
+    @test AstroCallbacks._subjects_from_calc(mc) == (mc.man, sc)
 end
 
 # Rationale: ManeuverCalc get_calc for DeltaV variables reads from the ImpulsiveManeuver.
@@ -64,9 +64,9 @@ end
     bc = BodyCalc(earth, GravParam())
     mc = ManeuverCalc(ImpulsiveManeuver(), sc, DeltaVMag())
 
-    @test AstroFun._subjects_from_calc(oc) == (sc,)
-    @test AstroFun._subjects_from_calc(bc) == (earth,)
-    @test AstroFun._subjects_from_calc(mc) == (mc.man, sc)
+    @test AstroCallbacks._subjects_from_calc(oc) == (sc,)
+    @test AstroCallbacks._subjects_from_calc(bc) == (earth,)
+    @test AstroCallbacks._subjects_from_calc(mc) == (mc.man, sc)
 end
 
 # Rationale: func_eval always returns a Vector, for scalar and vector-valued calcs.
@@ -88,23 +88,23 @@ end
 end
 
 # Rationale: Default trait calc_numvars(::AbstractCalcVariable) returns 1 for variables without overrides.
-struct DummyVarNum <: AstroFun.AbstractCalcVariable end
+struct DummyVarNum <: AstroCallbacks.AbstractCalcVariable end
 @testset "calc_numvars default trait" begin
-    @test AstroFun.calc_numvars(DummyVarNum()) == 1
+    @test AstroCallbacks.calc_numvars(DummyVarNum()) == 1
 end
 
 # Rationale: convert_orbitcalc_state fast-path returns the identical object when target type matches.
 @testset "convert_orbitcalc_state fast-path" begin
     cs = CoordinateSystem(earth, Inertial())
     st = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 1.0])
-    out = AstroFun.convert_orbitcalc_state(st, cs, Cartesian())
+    out = AstroCallbacks.convert_orbitcalc_state(st, cs, Cartesian())
     @test out === st
 end
 
 # Rationale: Default trait calc_is_settable(::AbstractCalcVariable) is false without an override.
-struct DummyVarSettable <: AstroFun.AbstractCalcVariable end
+struct DummyVarSettable <: AstroCallbacks.AbstractCalcVariable end
 @testset "calc_is_settable default trait" begin
-    @test AstroFun.calc_is_settable(DummyVarSettable()) == false
+    @test AstroCallbacks.calc_is_settable(DummyVarSettable()) == false
 end
 
 # Rationale: Fallback set_calc! on non-settable variable throws a clear error mentioning the variable type.
@@ -116,7 +116,7 @@ end
     )
     mc = ManeuverCalc(m, sc, DeltaVMag())
     try
-        AstroFun.set_calc!(mc, 0.1)
+        AstroCallbacks.set_calc!(mc, 0.1)
         @test false
     catch e
         msg = sprint(showerror, e)
@@ -125,12 +125,12 @@ end
 end
 
 # Rationale: func_eval errors on unsupported calc return type (neither Number nor AbstractVector).
-struct FakeCalc <: AstroFun.AbstractCalc end
-AstroFun.get_calc(::FakeCalc) = [1.0 2.0; 3.0 4.0]  # Matrix triggers error path
+struct FakeCalc <: AstroCallbacks.AbstractCalc end
+AstroCallbacks.get_calc(::FakeCalc) = [1.0 2.0; 3.0 4.0]  # Matrix triggers error path
 @testset "func_eval unsupported calc return type" begin
     c = Constraint(calc=FakeCalc(), lower_bounds=[0.0], upper_bounds=[1.0], scale=[1.0])
     try
-        AstroFun.func_eval(c)
+        AstroCallbacks.func_eval(c)
         @test false
     catch e
         msg = sprint(showerror, e)
@@ -142,38 +142,38 @@ end
 
 
 # Rationale: calc_numvars default trait returns 1 for any variable without an override.
-struct __DummyVarNum__ <: AstroFun.AbstractCalcVariable end
+struct __DummyVarNum__ <: AstroCallbacks.AbstractCalcVariable end
 @testset "calc_numvars default trait = 1" begin
-    @test AstroFun.calc_numvars(__DummyVarNum__()) == 1
+    @test AstroCallbacks.calc_numvars(__DummyVarNum__()) == 1
 end
 
 # Rationale: to_concrete_state on an already-concrete AbstractState must be a pass-through.
 @testset "to_concrete_state passthrough for concrete state" begin
     st = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 1.0])
-    @test AstroFun.to_concrete_state(st) === st
+    @test AstroCallbacks.to_concrete_state(st) === st
 end
 
 # Rationale: convert_orbitcalc_state fast-path returns the identical instance when target type matches.
 @testset "convert_orbitcalc_state fast-path (no-op) returns same instance" begin
     cs = CoordinateSystem(earth, Inertial())
     st = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 1.0])
-    out = AstroFun.convert_orbitcalc_state(st, cs, Cartesian())
+    out = AstroCallbacks.convert_orbitcalc_state(st, cs, Cartesian())
     @test out === st
 end
 
 # Rationale: calc_is_settable default trait is false unless a variable explicitly overrides it.
-struct __DummyVarSettable__ <: AstroFun.AbstractCalcVariable end
+struct __DummyVarSettable__ <: AstroCallbacks.AbstractCalcVariable end
 @testset "calc_is_settable default trait = false" begin
-    @test AstroFun.calc_is_settable(__DummyVarSettable__()) == false
+    @test AstroCallbacks.calc_is_settable(__DummyVarSettable__()) == false
 end
 
-@eval AstroFun begin
+@eval AstroCallbacks begin
     __cov_fastpath__(st, cs) = convert_orbitcalc_state(st, cs, Cartesian())
 end
 @testset "convert_orbitcalc_state fast-path (no-op) returns same instance" begin
     cs = CoordinateSystem(earth, Inertial())
     st = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 1.0])
-    out = AstroFun.__cov_fastpath__(st, cs)
+    out = AstroCallbacks.__cov_fastpath__(st, cs)
     @test out === st
 end
 

@@ -1,7 +1,7 @@
 using Test
 using LinearAlgebra
 
-using AstroFun
+using AstroCallbacks
 using AstroStates
 using AstroEpochs
 using AstroUniverse
@@ -31,7 +31,7 @@ struct NoMuOrigin <: AbstractPoint end
     cs_nomu = CoordinateSystem(NoMuOrigin(), Inertial())
     cart = CartesianState([7000.0,300.0,0.0, 0.0,7.5,1.0])
     os = OrbitState(to_vector(cart), Cartesian())
-    @test_throws ErrorException AstroFun.convert_orbitcalc_state(os, cs_nomu, Keplerian())
+    @test_throws ErrorException AstroCallbacks.convert_orbitcalc_state(os, cs_nomu, Keplerian())
 end
 
 # Rationale: convert_orbitcalc_state: Cartesian→Keplerian succeeds 
@@ -40,7 +40,7 @@ end
     cs = CoordinateSystem(earth, Inertial())
     cart = CartesianState([7000.0,300.0,0.0, 0.0,7.5,1.0])
     os = OrbitState(to_vector(cart), Cartesian())
-    kep = AstroFun.convert_orbitcalc_state(os, cs, Keplerian())
+    kep = AstroCallbacks.convert_orbitcalc_state(os, cs, Keplerian())
     @test kep isa KeplerianState
 end
 

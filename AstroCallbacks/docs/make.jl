@@ -1,14 +1,14 @@
-using AstroFun
+using AstroCallbacks
 using Documenter
 
-DocMeta.setdocmeta!(AstroFun, :DocTestSetup, :(using AstroFun); recursive=true)
+DocMeta.setdocmeta!(AstroCallbacks, :DocTestSetup, :(using AstroCallbacks); recursive=true)
 
 makedocs(;
-    modules=[AstroFun],
+    modules=[AstroCallbacks],
     authors="Steve Hughes <steven.hughes@genastro.org>",
-    sitename="AstroFun.jl",
+    sitename="AstroCallbacks.jl",
     format=Documenter.HTML(;
-        canonical="https://GenAstro.github.io/Epicycle/AstroFun/",
+        canonical="https://GenAstro.github.io/Epicycle/AstroCallbacks/",
         edit_link="main",
         assets=String[],
         collapselevel=1,
@@ -26,7 +26,7 @@ makedocs(;
 deploydocs(;
     repo="github.com/GenAstro/Epicycle",
     target="build",
-    dirname="AstroFun",
+    dirname="AstroCallbacks",
     devbranch="main",
     push_preview=true,
     deploy_config=Documenter.GitHubActions()  # Uses GITHUB_TOKEN

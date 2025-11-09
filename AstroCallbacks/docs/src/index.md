@@ -1,16 +1,16 @@
 ```@meta
-CurrentModule = AstroFun
+CurrentModule = AstroCallbacks
 ```
 
-# AstroFun
+# AstroCallbacks
 
-AstroFun provides fundamental calculations used throughout the Epicycle ecosystem. These calculations can be used in targeting and optimization variables and constraints, propagator stopping conditions, I/O operations, and eventally solver-for and consider parameters for orbit determination.
+AstroCallbacks provides fundamental calculations used throughout the Epicycle ecosystem. These calculations can be used in targeting and optimization variables and constraints, propagator stopping conditions, I/O operations, and eventally solver-for and consider parameters for orbit determination.
 
 The module serves as a foundation for higher-level astrodynamics operations, providing core mathematical functions and utilities needed across multiple Epicycle packages.
 
 ## Calculation Framework
 
-AstroFun contains the "Calcs" - a collection of structs that provide a unified interface for setting and getting quantities throughout Epicycle. These calculation objects can be used in stopping conditions, solver variables and constraints, and estimator solve-for and consider parameters.
+AstroCallbacks contains the "Calcs" - a collection of structs that provide a unified interface for setting and getting quantities throughout Epicycle. These calculation objects can be used in stopping conditions, solver variables and constraints, and estimator solve-for and consider parameters.
 
 The Calc framework provides type-stable access to commonly needed astrodynamics quantities while maintaining automatic differentiation compatibility. Each Calc struct implements standardized interfaces for both retrieving values from spacecraft states, celestial bodies, and setting target values for optimization.
 
@@ -29,7 +29,7 @@ Each Calc type supports both getter operations (extracting values) and setter op
 Examples of common orbital calculations: (see AstroProp and AstroSolve docs for interation into those packages in stopping conditions, optimization variables, and constraints.)
 
 ```julia
-using AstroFun, AstroStates, AstroModels
+using AstroCallbacks, AstroStates, AstroModels
 
 # Create a spacecraft with orbital state
 sc = Spacecraft(state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]), 
@@ -65,6 +65,6 @@ set_calc!(dvvec_calc, [0.2, 0.3, 0.4])
 ## API Reference
 
 ```@autodocs
-Modules = [AstroFun]
+Modules = [AstroCallbacks]
 Order = [:type, :function, :macro, :constant]
 ```

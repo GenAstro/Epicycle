@@ -4,11 +4,11 @@
 __precompile__()
 
 """
-    module AstroFun
+    module AstroCallbacks
 
 Defines interfaces to define and evaluate solve-for variables and constraint functions.
 """
-module AstroFun
+module AstroCallbacks
 
 # TODO: REFACTOR THIS CODE TO USE GET/SET METHODS ON MODELS AND CALL THEM. 
 #       CURRENTLY THIS CODE ACCESSES FIELDS DIRECTLY, WHICH IS BAD PRACTICE.
@@ -178,9 +178,9 @@ end
 Extract the references used in a Calc instance. For example, an OrbitCalc
 will return the spacecraft it references.
 """
-_subjects_from_calc(c::AstroFun.OrbitCalc)    = (c.sc,)
-_subjects_from_calc(c::AstroFun.ManeuverCalc) = (c.man, c.sc)
-_subjects_from_calc(c::AstroFun.BodyCalc)     = (c.body,)
+_subjects_from_calc(c::AstroCallbacks.OrbitCalc)    = (c.sc,)
+_subjects_from_calc(c::AstroCallbacks.ManeuverCalc) = (c.man, c.sc)
+_subjects_from_calc(c::AstroCallbacks.BodyCalc)     = (c.body,)
 
 """
     function get_calc(c::AbstractCalc)
@@ -271,7 +271,7 @@ function convert_orbitcalc_state(
             μ = _extract_mu(cs)
             if μ === nothing
                 typein = typeof(st)
-                msg = "AstroFun.convert_orbitcalc_state: μ is required but missing; " *
+                msg = "AstroCallbacks.convert_orbitcalc_state: μ is required but missing; " *
                       "cannot convert orbit state from $(typein) to $(target) using " *
                       "CoordinateSystem(origin=$(typeof(cs.origin)), " *
                       "axes=$(typeof(cs.axes))). Use a celestial-body origin (with μ) " *

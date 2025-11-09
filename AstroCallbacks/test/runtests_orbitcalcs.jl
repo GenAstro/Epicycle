@@ -1,6 +1,6 @@
 using Test
 using LinearAlgebra
-using AstroFun
+using AstroCallbacks
 using AstroStates
 using AstroEpochs
 
@@ -21,7 +21,7 @@ end
     cs = CoordinateSystem(earth, Inertial())
     cart = CartesianState([7000.0,300.0,0.0, 0.0,7.5,1.0])
     os = OrbitState(to_vector(cart), Cartesian())
-    st = AstroFun.convert_orbitcalc_state(os, cs, Cartesian())
+    st = AstroCallbacks.convert_orbitcalc_state(os, cs, Cartesian())
     @test st isa CartesianState
     @test to_vector(st) == to_vector(cart)
 end

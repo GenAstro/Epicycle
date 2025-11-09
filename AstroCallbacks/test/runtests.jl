@@ -8,7 +8,7 @@ using AstroUniverse
 using AstroFrames
 using AstroModels: Spacecraft, get_state 
 using AstroManeuvers
-using AstroFun 
+using AstroCallbacks 
 
 include("runtests_orbitcalcs.jl")
 include("runtests_constraint.jl")

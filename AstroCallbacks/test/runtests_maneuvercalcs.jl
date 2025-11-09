@@ -1,6 +1,6 @@
 using Test
 using LinearAlgebra
-using AstroFun
+using AstroCallbacks
 using AstroStates
 using AstroEpochs
 
