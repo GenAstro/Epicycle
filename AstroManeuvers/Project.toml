@@ -3,22 +3,3 @@ uuid = "7696fc14-2f3a-46f6-b942-ece41ce8abed"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
 version = "0.1.0"
 
-[deps]
-AstroBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
-AstroFrames = "7b16edaa-6936-47b4-b191-819abb0f77bd"
-AstroEpochs = "241dcde3-d7a4-450d-948f-15f2ea2ba1fa"
-AstroModels = "ac4cc047-8a77-4e9e-bb46-f1584e9a10ee"
-AstroStates = "e8875680-ece1-4c6e-865d-f99ee1f9f9b4"
-AstroUniverse = "4bd44dca-1e45-43d2-b940-3f88da59ea6f"
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-
-[compat]
-julia = "1.10"
-
-[extras]
-ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
-
-[targets]
-test = ["Test", "ForwardDiff", "Zygote"]
