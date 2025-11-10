@@ -1,5 +1,52 @@
 # AstroBase
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://GenAstro.github.io/AstroBase.jl/stable/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://GenAstro.github.io/AstroBase.jl/dev/)
-[![Build Status](https://github.com/GenAstro/AstroBase.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/GenAstro/AstroBase.jl/actions/workflows/CI.yml?query=branch%3Amaster)
+## Epicycle Overview
+
+Epicycle is an application and package ecosystem for space mission design and navigation. It contains packages that handle astrodynamics models and algorithms that integrate seamlessly to allow users to setup and solve hard problems, fast.
+
+## AstroBase Overview
+
+AstroBase provides core abstract types shared across the Epicycle ecosystem. These fundamental types form the public type hierarchy used by higher-level packages including AstroStates, AstroEpochs, AstroFrames, AstroProp, and AstroSolve.
+
+The module defines base abstractions for variables (states, controls, time, parameters), functions, calculation variables, orbit state types, and geometric points. This shared foundation enables consistent interfaces and type hierarchies across all Epicycle packages.
+
+## Installation
+
+```julia
+using Pkg
+Pkg.add("AstroBase")
+```
+
+## Documentation
+
+Full documentation is available at: [AstroBase Documentation](https://genastro.github.io/Epicycle/AstroBase/dev/)
+
+## Contributing to Epicycle 
+
+Contributing is easy.
+
+1. Fork the project
+2. Create a new feature branch
+3. Make your changes
+4. Submit a pull request
+
+We use the Linux Kernel's Developer's Certificate of Origin (DCO) as detailed in CONTRIBUTING.txt.
+
+## License
+
+We believe in the power of open source to foster innovation and community-driven 
+development and also recognize the need for a sustainable business model and a model
+that can handle export-controlled aerospace content. 
+
+For these reasons, Epicycle is offered under a tri-licensing model. The license allows
+users to choose between the following three options:
+
+1) LGPL V3.0
+2) Evaluation and Education use Only
+3) Commercial License
+
+See LICENSE.txt for terms each license option.  For commercial licensing, 
+email licensing at genastro.org.
+
+## Notes
+Claude Sonnet and ChatGPT are used in the development of Epicycle.
