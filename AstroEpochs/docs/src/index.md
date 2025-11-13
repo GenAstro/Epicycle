@@ -18,6 +18,10 @@ The AstroEpochs module provides time system implementations for astronomical app
 
 The API for AstroEpochs is inspired by Astropy.Time. The numerics are built on Julia Space Mission Design's Tempo.jl library. AstroEpochs.jl is tested against Astropy.Time. 
 
+## Comparison with Other Julia Time-Keeping Libraries
+
+Tempo.jl and AstroTime.jl are other high-quality Julia packages for astronomical time handling with distinct design philosophies. AstroTime.jl, developed by the JuliaAstro community, supports six astronomical time scales (TAI, TT, TCG, TCB, TDB, and UT1) using scale-specific types that change with each conversion. Tempo.jl supports UTC, TAI, TT, TDB, TCG, and TCB with efficient, allocation-free conversions and a type-stable architecture that allows time scale changes without changing the struct type—critical for performance in Epicycle's propagation and optimization algorithms. AstroEpochs.jl is an API built on Tempo.jl that provides type stability and seamless integration with the Epicycle ecosystem while using an interface styled after AstroPy.Time, a widely adopted standard in the astronomical community. 
+
 ## Quickstart
 
 ```julia
