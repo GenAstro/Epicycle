@@ -31,46 +31,21 @@ This example creates an orbit and propagates to periapis
 
 ## Installing Julia
 
-Epicycle requires Julia 1.9 or later. Here's how to install Julia on different platforms:
+Epicycle requires Julia 1.10 or later. 
 
-### Windows
-1. Download the installer from [julialang.org](https://julialang.org/downloads/)
-2. Run the `.exe` installer and follow the setup wizard
-3. Add Julia to your PATH when prompted
-4. Verify installation by opening Command Prompt and typing `julia --version`
+For installation instructions, see the [Julia Downloads page](https://julialang.org/install/). Platform-specific guides are available for Windows, macOS, and Linux.
 
-### macOS
-**Option 1: Official Installer**
-1. Download the `.dmg` file from [julialang.org](https://julialang.org/downloads/)
-2. Mount the disk image and drag Julia to Applications
-3. Add to PATH: `sudo ln -s /Applications/Julia-1.12.app/Contents/Resources/julia/bin/julia /usr/local/bin/julia`
+## Installing VS Code
 
-**Option 2: Homebrew**
-```bash
-brew install julia
-```
+Visual Studio Code is the recommended editor for using Epicycle. It provides excellent support for Julia through the Julia Language Server, including syntax highlighting, intelligent code completion, debugging, and integrated REPL.
 
-### Linux
-**Ubuntu/Debian:**
-```bash
-# Add Julia repository
-curl -fsSL https://install.julialang.org | sh
-# Follow the installation script prompts
-```
+For complete installation and setup instructions, see the [VS Code Julia Tutorial](https://code.visualstudio.com/docs/languages/julia). This guide covers:
 
-**From tarball (all Linux distributions):**
-```bash
-# Download and extract
-wget https://julialang-s3.julialang.org/bin/linux/x64/1.12/julia-1.12.1-linux-x86_64.tar.gz
-tar zxvf julia-1.12.1-linux-x86_64.tar.gz
-sudo mv julia-1.12.1 /opt/
-sudo ln -s /opt/julia-1.12.1/bin/julia /usr/local/bin/julia
-```
-
-**Verify Installation:**
-```bash
-julia --version
-```
+- Installing VS Code
+- Installing the Julia extension
+- Configuring the Julia Language Server
+- Using the integrated REPL
+- Debugging Julia code  
 
 ## Installing Epicycle
 
@@ -138,66 +113,3 @@ Once installed, explore the documentation:
 - [Complete Examples](complete_examples.md) - See full mission simulations
 - [Components](components.md) - Understand the package structure
 
-## Installing VS Code
-
-Visual Studio Code is the recommended editor for using Epicycle. It provides excellent support for Julia through the Julia Language Server, including syntax highlighting, intelligent code completion, debugging, and integrated REPL (Like the MATLAB workspace).
-
-### Installing VS Code
-
-Download and install Visual Studio Code from the [official website](https://code.visualstudio.com/). Follow the platform-specific installation guides:
-
-- **Windows**: [VS Code on Windows](https://code.visualstudio.com/docs/setup/windows)
-- **macOS**: [VS Code on macOS](https://code.visualstudio.com/docs/setup/mac)
-- **Linux**: [VS Code on Linux](https://code.visualstudio.com/docs/setup/linux)
-
-### Julia Extension
-
-After installing VS Code, add Julia support:
-
-1. Open VS Code
-2. Go to Extensions (Ctrl+Shift+X / Cmd+Shift+X)
-3. Search for "Julia" and install the official Julia extension by Julia Team
-4. Restart VS Code
-
-### Configuring Julia in VS Code
-
-The Julia extension needs to know where your Julia installation is located:
-
-1. Open VS Code settings (Ctrl+, / Cmd+,)
-2. Search for "julia executable"
-3. Set the path to your Julia binary:
-   - **Windows**: `C:\Users\YourName\AppData\Local\Programs\Julia-1.12.1\bin\julia.exe`
-   - **macOS**: `/Applications/Julia-1.12.app/Contents/Resources/julia/bin/julia`
-   - **Linux**: `/usr/local/bin/julia` (or wherever you installed Julia)
-
-### Julia Language Server
-
-The Julia Language Server provides advanced IDE features and is automatically installed with the Julia extension. For detailed configuration and troubleshooting:
-
-- [Julia VS Code Documentation](https://www.julia-vscode.org/)
-- [Julia Language Server Features](https://www.julia-vscode.org/docs/stable/userguide/overview/)
-
-### Recommended VS Code Settings for Julia
-
-Add these settings to your VS Code configuration for the best Julia experience:
-
-```json
-{
-    "julia.enableTelemetry": false,
-    "julia.execution.resultDisplay.repl": true,
-    "julia.execution.codeInREPL": true,
-    "julia.lint.run": true,
-    "julia.format.indent": 4
-}
-```
-
-### Getting Started with Julia in VS Code
-
-1. Create a new file with `.jl` extension
-2. Start the Julia REPL: Ctrl+Shift+P (Cmd+Shift+P) → "Julia: Start REPL"
-3. Execute code: Ctrl+Enter (Cmd+Enter) to run current line/selection
-4. Use F5 to run the entire file
-
-For comprehensive guides on using Julia with VS Code, see:
-- [Julia VS Code User Guide](https://www.julia-vscode.org/docs/stable/userguide/getting_started/)
-- [VS Code Julia Tutorial](https://code.visualstudio.com/docs/languages/julia)  
