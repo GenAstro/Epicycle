@@ -94,7 +94,7 @@ users to choose between the following three options:
 2) Evaluation and Education use Only
 3) Commercial License
 
-See LICENSE.txt for the terms of each license option. For licensing questions contact licensing [at] genastro.com
+See LICENSE.txt for the terms of each license option. For licensing questions contact licensing [at] genastro.org
 
 ## Contributing
 
@@ -103,7 +103,7 @@ Certificate of Origin (DCO) as detailed in CONTRIBUTING.txt.
 
 ## Support
 
-For support, including technical support and services to apply Epicycle to your application, contact support [at] genastro.com
+For support, including technical support and services to apply Epicycle to your application, contact support [at] genastro.org
 
 ## What is an Epicycle?
 
