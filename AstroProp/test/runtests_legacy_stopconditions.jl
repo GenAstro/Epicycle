@@ -2,7 +2,7 @@ using Test
 using LinearAlgebra
 using OrdinaryDiffEq
 
-using AstroBase
+using EpicycleBase
 using AstroStates
 using AstroEpochs
 using AstroUniverse

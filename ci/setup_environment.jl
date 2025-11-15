@@ -24,7 +24,7 @@ Pkg.instantiate()
 
 # Develop all workspace packages
 packages = [
-    "AstroBase",
+    "EpicycleBase",
     "AstroStates", 
     "AstroEpochs",
     "AstroUniverse",

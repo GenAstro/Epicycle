@@ -6,7 +6,7 @@ module Epicycle
 using Reexport
 
 # Import all the individual packages (now available via Pkg.develop)
-@reexport using AstroBase
+@reexport using EpicycleBase
 @reexport using AstroStates
 @reexport using AstroEpochs
 @reexport using AstroUniverse

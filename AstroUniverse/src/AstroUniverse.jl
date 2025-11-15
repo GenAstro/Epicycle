@@ -12,7 +12,7 @@ using SPICE
 using Scratch
 using Downloads
 
-using AstroBase
+using EpicycleBase
 
 import Base: show
 

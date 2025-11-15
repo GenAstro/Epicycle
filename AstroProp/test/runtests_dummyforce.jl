@@ -3,7 +3,7 @@ include("dummy_force.jl")
 using Test
 using ForwardDiff
 #using StaticArrays
-using AstroBase
+using EpicycleBase
 using AstroEpochs
 using AstroProp
 

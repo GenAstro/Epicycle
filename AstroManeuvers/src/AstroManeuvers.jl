@@ -10,7 +10,7 @@ module AstroManeuvers
 
 using LinearAlgebra
 
-using AstroBase
+using EpicycleBase
 using AstroEpochs
 using AstroStates
 using AstroFrames

@@ -8,12 +8,12 @@ module AstroStates
 
 # TODO validate state type inputs and call from OrbitState and AbstractOrbitState constructors
 
-using AstroBase
+using EpicycleBase
 
 abstract type AbstractOrbitState <: AbstractState end
 
 import Base: show
-import AstroBase: AbstractOrbitStateType
+import EpicycleBase: AbstractOrbitStateType
 
 using LinearAlgebra
 using Printf

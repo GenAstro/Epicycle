@@ -23,7 +23,7 @@ println("📊 Loaded packages:")
 
 # Verify all packages are available
 packages_to_check = [
-    :AstroBase, :AstroStates, :AstroEpochs, :AstroUniverse,
+    :EpicycleBase, :AstroStates, :AstroEpochs, :AstroUniverse,
     :AstroFrames, :AstroModels, :AstroManeuvers, :AstroCallbacks,
     :AstroProp, :AstroSolve
 ]
@@ -54,7 +54,7 @@ end
 
 # List of packages to build docs for
 packages_to_document = [
-    "AstroBase", "AstroStates", "AstroEpochs", "AstroUniverse",
+    "EpicycleBase", "AstroStates", "AstroEpochs", "AstroUniverse",
     "AstroFrames", "AstroModels", "AstroManeuvers", "AstroCallbacks", 
     "AstroProp", "AstroSolve", "Epicycle"
 ]

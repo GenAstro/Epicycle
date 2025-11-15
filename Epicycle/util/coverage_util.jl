@@ -1,7 +1,7 @@
 #= 
 
 # ===== To run from monorepo root (c:\Users\steve\Dev\Epicycle). 
-module_name = "AstroBase"      # Done
+module_name = "EpicycleBase"      # Done
 module_name = "AstroStates"
 module_name = "AstroEpochs"    # Done
 module_name = "AstroUniverse"
@@ -23,7 +23,7 @@ report_uncovered(module_name; files=["AstroStates.jl"], context = 1)
 
 report_uncovered(module_name) # list ranges
 report_uncovered(module_name; context=1) # show 1 line of context
-report_uncovered(["AstroBase/src","AstroStates/src"])# multiple packages
+report_uncovered(["EpicycleBase/src","AstroStates/src"])# multiple packages
 report_uncovered(module_name; exclude=["AstroStates/src/AstroStates.jl"]) # skip loader
 
 =#
@@ -208,7 +208,7 @@ function rm_cov!(roots::Vector{<:AbstractString})
     return n
 end
 
-# Convenience for a single module directory, e.g. "AstroBase" or "AstroStates"
+# Convenience for a single module directory, e.g. "EpicycleBase" or "AstroStates"
 report_uncovered(mod::AbstractString; kwargs...) =
     report_uncovered([joinpath(mod, "src")]; kwargs...)
 

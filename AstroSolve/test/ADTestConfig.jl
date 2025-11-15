@@ -7,7 +7,7 @@ using LinearAlgebra
 
 using AstroEpochs
 using AstroStates
-using AstroBase
+using EpicycleBase
 using AstroUniverse
 using AstroFrames
 using AstroProp

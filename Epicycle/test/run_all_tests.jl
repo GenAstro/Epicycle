@@ -10,7 +10,7 @@ temp_env = mktempdir()
 Pkg.activate(temp_env)
 
 pkgs = [
-    "AstroBase",
+    "EpicycleBase",
     "AstroStates",
     "AstroEpochs",
     "AstroUniverse",

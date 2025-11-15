@@ -12,7 +12,7 @@ module AstroProp
 
 using OrdinaryDiffEq, LinearAlgebra
 
-using AstroBase
+using EpicycleBase
 using AstroStates
 using AstroEpochs
 using AstroUniverse

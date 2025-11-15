@@ -15,7 +15,7 @@ original_project = Base.active_project()
 
 # List of all packages in the monorepo
 packages = [
-    "AstroBase",
+    "EpicycleBase",
     "AstroStates",
     "AstroEpochs",
     "AstroUniverse",

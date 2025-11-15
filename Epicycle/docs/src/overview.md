@@ -4,7 +4,7 @@ Epicycle is a comprehensive Julia package ecosystem for astrodynamics and space 
 
 The ecosystem consists of 11 specialized packages that work together to provide everything from fundamental astronomical calculations to advanced trajectory optimization:
 
-- **Foundation Layer**: AstroBase (frames & constants), AstroStates (spacecraft states), AstroEpochs (time systems)
+- **Foundation Layer**: EpicycleBase (frames & constants), AstroStates (spacecraft states), AstroEpochs (time systems)
 - **Dynamics Layer**: AstroDynamics (propagation), AstroForces (force modeling), AstroSimulation (mission simulation)  
 - **Analysis Layer**: AstroTrajectories (orbital analysis), AstroManeuvers (spacecraft maneuvers), AstroEvents (mission events)
 - **Mission Layer**: AstroMissions (mission design), AstroOptimization (trajectory optimization)
@@ -52,7 +52,7 @@ Open architecture allows researchers to extend capabilities and integrate with e
 
 | Package | Purpose | 
 |:--------|:--------|
-| `AstroBase` | Core abstractions and type hierarchy |
+| `EpicycleBase` | Core abstractions and type hierarchy |
 | `AstroStates` | Orbital state representations and conversions | 
 | `AstroEpochs` | Time systems and epoch handling | 
 | `AstroUniverse` | Celestial body models and ephemeris | 
@@ -151,7 +151,7 @@ For developers interested in extending Epicycle, each package maintains its own 
 
 | Package | Purpose | 
 |:--------|:--------|
-| `AstroBase` | Core abstractions and type hierarchy |
+| `EpicycleBase` | Core abstractions and type hierarchy |
 | `AstroStates` | Orbital state representations and conversions | 
 | `AstroEpochs` | Time systems and epoch handling | 
 | `AstroUniverse` | Celestial body models and ephemeris | 

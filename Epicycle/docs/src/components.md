@@ -6,7 +6,7 @@ The Epicycle ecosystem consists of eleven specialized packages organized in arch
 
 Core abstractions and fundamental representations that underpin all mission analysis capabilities.
 
-### [AstroBase](https://genastro.github.io/Epicycle/AstroBase/dev/)
+### [EpicycleBase](https://genastro.github.io/Epicycle/EpicycleBase/dev/)
 Core abstractions, type hierarchy, and fundamental constants. Provides the foundational types and interfaces used throughout the ecosystem.
 
 ### [AstroStates](https://genastro.github.io/Epicycle/AstroStates/dev/)

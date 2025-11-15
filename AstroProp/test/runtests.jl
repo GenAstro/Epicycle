@@ -4,7 +4,7 @@ using Test
 using OrdinaryDiffEq
 using LinearAlgebra
 
-using AstroBase
+using EpicycleBase
 using AstroStates
 using AstroEpochs
 using AstroUniverse

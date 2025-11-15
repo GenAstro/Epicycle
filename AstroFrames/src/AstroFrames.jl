@@ -11,7 +11,7 @@ supporting common reference frames like ICRF, J2000, and VNB for example .
 """
 module AstroFrames
 
-using AstroBase
+using EpicycleBase
 using AstroUniverse
 
 export AbstractAxes

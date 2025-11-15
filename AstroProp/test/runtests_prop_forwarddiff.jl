@@ -1,7 +1,7 @@
 using ForwardDiff
 using Test
 
-using AstroBase
+using EpicycleBase
 using AstroStates
 using AstroProp
 using AstroEpochs

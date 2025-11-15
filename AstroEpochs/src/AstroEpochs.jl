@@ -34,7 +34,7 @@ module AstroEpochs
 using Printf
 using Tempo
 
-using AstroBase 
+using EpicycleBase 
 
 export Time
 export TAI, TT, TDB, UTC, TCB, TCG

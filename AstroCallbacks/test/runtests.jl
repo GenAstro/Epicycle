@@ -3,7 +3,7 @@ using LinearAlgebra
 
 using AstroStates
 using AstroEpochs
-using AstroBase
+using EpicycleBase
 using AstroUniverse
 using AstroFrames
 using AstroModels: Spacecraft, get_state 

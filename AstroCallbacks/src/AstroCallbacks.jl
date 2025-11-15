@@ -17,7 +17,7 @@ using LinearAlgebra
 
 using AstroStates
 using AstroEpochs
-using AstroBase
+using EpicycleBase
 using AstroUniverse
 using AstroFrames
 using AstroModels: Spacecraft, to_posvel, set_posvel!
@@ -39,7 +39,7 @@ export DeltaVMag, DeltaVVector
 # export Body Variables 
 export GravParam
 
-import AstroBase: AbstractCalcVariable, AbstractOrbitVar, AbstractBodyVar, AbstractManeuverVar
+import EpicycleBase: AbstractCalcVariable, AbstractOrbitVar, AbstractBodyVar, AbstractManeuverVar
 
 abstract type AbstractCalc end
 

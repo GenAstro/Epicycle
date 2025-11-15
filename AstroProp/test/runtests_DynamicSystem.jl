@@ -1,7 +1,7 @@
 
 using Test
 using AstroStates
-using AstroBase
+using EpicycleBase
 using AstroEpochs
 using AstroUniverse
 using AstroProp

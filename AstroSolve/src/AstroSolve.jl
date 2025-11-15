@@ -16,7 +16,7 @@ using SNOW
 using LinearAlgebra
 using Printf
 
-using AstroBase
+using EpicycleBase
 using AstroManeuvers
 using AstroCallbacks
 using AstroModels: Spacecraft, to_posvel, set_posvel!

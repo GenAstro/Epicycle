@@ -2,7 +2,7 @@ using Test
 using ForwardDiff
 using Logging
 
-using AstroBase
+using EpicycleBase
 using AstroStates
 using AstroEpochs
 using AstroFrames
@@ -276,7 +276,7 @@ end
 end
 
 # Construct a CoordinateSystem with an origin that has no μ field
-struct FakeBody <: AstroBase.AbstractPoint
+struct FakeBody <: EpicycleBase.AbstractPoint
     name::String
 end
 
