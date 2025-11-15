@@ -4,13 +4,13 @@
 __precompile__()
 
 """
-    module AstroBase
+    module EpicycleBase
 
 Core abstract types shared across Epicycle (variables, states, controls, time, functions, points).
 These form the public type hierarchy used by higher-level packages (AstroStates, AstroEpochs, AstroFrames,
 AstroProp, AstroSolve, …).
 """
-module AstroBase
+module EpicycleBase
 
 export AbstractVar, AbstractState, AbstractControl, AbstractTime, AbstractParam
 export AbstractFun, AlgebraicFun
