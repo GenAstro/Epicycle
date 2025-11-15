@@ -1,30 +1,30 @@
-# AstroBase.jl
+# EpicycleBase.jl
 
 *Foundation package for space systems analysis and astrodynamics*
 
 ## Overview
 
-AstroBase provides the core abstract type hierarchy that forms the foundation for the entire Epicycle space systems application. It defines the fundamental types for variables, states, controls, time systems, functions, and geometric points that are used throughout the higher-level packages.
+EpicycleBase provides the core abstract type hierarchy that forms the foundation for the entire Epicycle space systems application. It defines the fundamental types for variables, states, controls, time systems, functions, and geometric points that are used throughout the higher-level packages.
 
 ## Installation
 
-AstroBase is part of the Epicycle monorepo. To use it:
+EpicycleBase is part of the Epicycle monorepo. To use it:
 
 ```julia
 using Pkg
-Pkg.develop(url="https://github.com/GenAstro/Epicycle", subdir="AstroBase")
-using AstroBase
+Pkg.develop(url="https://github.com/GenAstro/Epicycle", subdir="EpicycleBase")
+using EpicycleBase
 ```
 
 Or from within the Epicycle monorepo:
 
 ```julia
-using AstroBase
+using EpicycleBase
 ```
 
 ## Type Hierarchy
 
-AstroBase defines several key abstract type hierarchies:
+EpicycleBase defines several key abstract type hierarchies:
 
 ### Variables and Parameters
 - `AbstractVar` - Base type for all variable kinds
@@ -50,9 +50,9 @@ AstroBase defines several key abstract type hierarchies:
 ## Usage Example
 
 ```julia
-using AstroBase
+using EpicycleBase
 
-# Define custom types using AstroBase foundations
+# Define custom types using EpicycleBase foundations
 struct MyOrbitState <: AbstractState
     position::Vector{Float64}
     velocity::Vector{Float64}
@@ -70,7 +70,7 @@ end
 
 ## Philosophy
 
-AstroBase follows the principle that "good abstractions enable powerful compositions." By providing a solid foundation of abstract types, the higher-level packages in Epicycle can:
+EpicycleBase follows the principle that "good abstractions enable powerful compositions." By providing a solid foundation of abstract types, the higher-level packages in Epicycle can:
 
 - Share common interfaces
 - Ensure type safety across the system
@@ -79,7 +79,7 @@ AstroBase follows the principle that "good abstractions enable powerful composit
 
 ## Integration with Epicycle
 
-AstroBase is designed to be the foundation layer for:
+EpicycleBase is designed to be the foundation layer for:
 
 - **AstroStates** - Concrete state vector implementations
 - **AstroEpochs** - Time system implementations
@@ -92,7 +92,7 @@ All higher-level packages in Epicycle build upon the abstract types defined here
 
 ## Contributing
 
-AstroBase is part of the larger Epicycle project. See the main repository for contribution guidelines.
+EpicycleBase is part of the larger Epicycle project. See the main repository for contribution guidelines.
 
 ## License
 

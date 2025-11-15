@@ -1,4 +1,4 @@
-name = "AstroBase"
+name = "EpicycleBase"
 uuid = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
 version = "1.0.0-DEV"

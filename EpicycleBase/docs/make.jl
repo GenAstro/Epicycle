@@ -1,14 +1,14 @@
-using AstroBase
+using EpicycleBase
 using Documenter
 
-DocMeta.setdocmeta!(AstroBase, :DocTestSetup, :(using AstroBase); recursive=true)
+DocMeta.setdocmeta!(EpicycleBase, :DocTestSetup, :(using EpicycleBase); recursive=true)
 
 makedocs(;
-    modules=[AstroBase],
+    modules=[EpicycleBase],
     authors="Steve Hughes <steven.hughes@genastro.org>",
-    sitename="AstroBase.jl",
+    sitename="EpicycleBase.jl",
     format=Documenter.HTML(;
-        canonical="https://GenAstro.github.io/Epicycle/AstroBase/",
+        canonical="https://GenAstro.github.io/Epicycle/EpicycleBase/",
         edit_link="main",
         assets=String[],
     ),
@@ -23,7 +23,7 @@ makedocs(;
 deploydocs(;
     repo="github.com/GenAstro/Epicycle",
     target="build",
-    dirname="AstroBase",
+    dirname="EpicycleBase",
     devbranch="main",
     push_preview=true,
     deploy_config=Documenter.GitHubActions()  # Uses GITHUB_TOKEN

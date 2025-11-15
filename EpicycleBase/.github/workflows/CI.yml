@@ -67,6 +67,6 @@ jobs:
         shell: julia --project=docs --color=yes {0}
         run: |
           using Documenter: DocMeta, doctest
-          using AstroBase
-          DocMeta.setdocmeta!(AstroBase, :DocTestSetup, :(using AstroBase); recursive=true)
-          doctest(AstroBase)
+          using EpicycleBase
+          DocMeta.setdocmeta!(EpicycleBase, :DocTestSetup, :(using EpicycleBase); recursive=true)
+          doctest(EpicycleBase)

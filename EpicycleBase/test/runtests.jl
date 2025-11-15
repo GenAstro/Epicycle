@@ -3,20 +3,20 @@
 
 using Test
 
-using AstroBase
+using EpicycleBase
 
 @testset "no_op function call" begin
-    @test AstroBase.no_op() === nothing
+    @test EpicycleBase.no_op() === nothing
 end 
 
-@testset "AstroBase exports" begin
+@testset "EpicycleBase exports" begin
     for sym in (:AbstractVar, :AbstractState, :AbstractControl, :AbstractTime, :AbstractParam,
                 :AbstractFun, :AlgebraicFun, :AbstractPoint)
-        @test Base.isexported(AstroBase, sym)
+        @test Base.isexported(EpicycleBase, sym)
     end
 end
 
-@testset "AstroBase type hierarchy" begin
+@testset "EpicycleBase type hierarchy" begin
     @test isabstracttype(AbstractVar)
     @test isabstracttype(AbstractState)
     @test isabstracttype(AbstractControl)
@@ -35,7 +35,7 @@ end
     @test AbstractPoint <: Any
 end
 
-@testset "AstroBase abstractness (non-instantiable)" begin
+@testset "EpicycleBase abstractness (non-instantiable)" begin
     @test_throws MethodError AbstractVar()
     @test_throws MethodError AbstractState()
     @test_throws MethodError AbstractControl()
@@ -46,13 +46,13 @@ end
     @test_throws MethodError AbstractPoint()
 end
 
-@testset "AstroBase subtyping works for user types" begin
-    struct MyState    <: AstroBase.AbstractState   end
-    struct MyControl  <: AstroBase.AbstractControl end
-    struct MyTime     <: AstroBase.AbstractTime    end
-    struct MyParam    <: AstroBase.AbstractParam   end
-    struct MyAlgFun   <: AstroBase.AlgebraicFun    end
-    struct MyPoint    <: AstroBase.AbstractPoint   end
+@testset "EpicycleBase subtyping works for user types" begin
+    struct MyState    <: EpicycleBase.AbstractState   end
+    struct MyControl  <: EpicycleBase.AbstractControl end
+    struct MyTime     <: EpicycleBase.AbstractTime    end
+    struct MyParam    <: EpicycleBase.AbstractParam   end
+    struct MyAlgFun   <: EpicycleBase.AlgebraicFun    end
+    struct MyPoint    <: EpicycleBase.AbstractPoint   end
 
     # Construct trivial instances to ensure no conflicts
     @test MyState()    isa MyState
@@ -63,11 +63,11 @@ end
     @test MyPoint()    isa MyPoint
 
     # And confirm subtyping
-    @test MyState    <: AstroBase.AbstractState
-    @test MyControl  <: AstroBase.AbstractControl
-    @test MyTime     <: AstroBase.AbstractTime
-    @test MyParam    <: AstroBase.AbstractParam
-    @test MyAlgFun   <: AstroBase.AlgebraicFun
-    @test MyPoint    <: AstroBase.AbstractPoint
+    @test MyState    <: EpicycleBase.AbstractState
+    @test MyControl  <: EpicycleBase.AbstractControl
+    @test MyTime     <: EpicycleBase.AbstractTime
+    @test MyParam    <: EpicycleBase.AbstractParam
+    @test MyAlgFun   <: EpicycleBase.AlgebraicFun
+    @test MyPoint    <: EpicycleBase.AbstractPoint
 end
 nothing

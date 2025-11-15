@@ -1,12 +1,12 @@
-# AstroBase
+# EpicycleBase
 
 ## Epicycle Overview
 
 Epicycle is an application and package ecosystem for space mission design and navigation. It contains packages that handle astrodynamics models and algorithms that integrate seamlessly to allow users to setup and solve hard problems, fast.
 
-## AstroBase Overview
+## EpicycleBase Overview
 
-AstroBase provides core abstract types shared across the Epicycle ecosystem. These fundamental types form the public type hierarchy used by higher-level packages including AstroStates, AstroEpochs, AstroFrames, AstroProp, and AstroSolve.
+EpicycleBase provides core abstract types shared across the Epicycle ecosystem. These fundamental types form the public type hierarchy used by higher-level packages including AstroStates, AstroEpochs, AstroFrames, AstroProp, and AstroSolve.
 
 The module defines base abstractions for variables (states, controls, time, parameters), functions, calculation variables, orbit state types, and geometric points. This shared foundation enables consistent interfaces and type hierarchies across all Epicycle packages.
 
@@ -14,12 +14,12 @@ The module defines base abstractions for variables (states, controls, time, para
 
 ```julia
 using Pkg
-Pkg.add("AstroBase")
+Pkg.add("EpicycleBase")
 ```
 
 ## Documentation
 
-Full documentation is available at: [AstroBase Documentation](https://genastro.github.io/Epicycle/AstroBase/dev/)
+Full documentation is available at: [EpicycleBase Documentation](https://genastro.github.io/Epicycle/EpicycleBase/dev/)
 
 ## Contributing to Epicycle 
 

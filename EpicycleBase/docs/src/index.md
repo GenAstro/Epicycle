@@ -1,10 +1,10 @@
 ```@meta
-CurrentModule = AstroBase
+CurrentModule = EpicycleBase
 ```
 
-# AstroBase
+# EpicycleBase
 
-Documentation for [AstroBase](https://github.com/GenAstro/AstroBase.jl).
+Documentation for [EpicycleBase](https://github.com/GenAstro/EpicycleBase.jl).
 
 ```@index
 ```

@@ -119,7 +119,7 @@ abstract type AbstractPoint end
 A no-op function that returns nothing. Useful as a default callback placeholder.
 
 # Notes:
-- Unexported utility; reference as AstroBase.no_op.
+- Unexported utility; reference as EpicycleBase.no_op.
 """
 function no_op()
     return nothing
