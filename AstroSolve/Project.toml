@@ -4,7 +4,7 @@ authors = ["Steve Hughes <steven.hughes@genastro.org>"]
 version = "0.3.0"
 
 [deps]
-AstroBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
+EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
 AstroFrames = "7b16edaa-6936-47b4-b191-819abb0f77bd"
 AstroEpochs = "241dcde3-d7a4-450d-948f-15f2ea2ba1fa"
 AstroCallbacks = "4e6d50a3-795a-40f7-bdce-bebb06c496f9"
