@@ -3,17 +3,3 @@ uuid = "e8875680-ece1-4c6e-865d-f99ee1f9f9b4"
 authors = ["Steve Hughes <steven.hughes@genastro.com>"]
 version = "0.9.0"
 
-[deps]
-EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-
-[compat]
-julia = "1.10"
-
-[extras]
-Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[targets]
-test = ["Test", "Logging"]
