@@ -11,6 +11,11 @@ AstroStates = "e8875680-ece1-4c6e-865d-f99ee1f9f9b4"
 AstroUniverse = "4bd44dca-1e45-43d2-b940-3f88da59ea6f"
 
 [compat]
+EpicycleBase = "0.1.0"
+AstroEpochs = "0.5.0"
+AstroStates = "0.9.0"
+AstroUniverse = "0.1.0"
+AstroFrames = "0.1.0"
 julia = "1.10"
 
 [extras]
