@@ -100,7 +100,6 @@ function SequenceManager(seq::Sequence)
     ordered_vars = order_unique_vars(sorted_events)
     ordered_funcs = Constraint[]
     fun_sizes = Int[]
-    found = IdSet()
     for event in sorted_events
         for c in event.funcs
             push!(ordered_funcs, c)
@@ -121,7 +120,7 @@ function SequenceManager(seq::Sequence)
 end
 
 """
-    _push_stateful!(out::Vector{Any}, seen::IdSet, objs)
+    _push_stateful!(out::Vector{Any}, seen::Set{UInt}, objs)
 
 Push unique stateful objects to output vector, preserving discovery order.
 
@@ -130,17 +129,17 @@ already seen are added to the output collection.
 
 # Arguments
 - `out::Vector{Any}`: Output collection to append to
-- `seen::IdSet`: Set tracking already discovered objects
+- `seen::Set{UInt}`: Set tracking object IDs of already discovered objects
 - `objs`: Collection of objects to check and potentially add
 
 # Returns
 - `Vector{Any}`: The modified output vector (for chaining)
 """
-@inline function _push_stateful!(out::Vector{Any}, seen::IdSet, objs)
+@inline function _push_stateful!(out::Vector{Any}, seen::Set{UInt}, objs)
     for obj in objs
-        if is_astrosolve_stateful(typeof(obj)) && !(obj in seen)
+        if is_astrosolve_stateful(typeof(obj)) && !(objectid(obj) in seen)
             push!(out, obj)
-            push!(seen, obj)
+            push!(seen, objectid(obj))
         end
     end
     return out
@@ -163,7 +162,7 @@ objects referenced throughout the sequence.
 - `Vector{Any}`: Collection of unique stateful objects in discovery order
 """
 function find_all_stateful_structs(ordered_vars, sorted_events)
-    seen = IdSet()
+    seen = Set{UInt}()
     out  = Any[]
 
     # 1) From SolverVariables (via calc containers)
