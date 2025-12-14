@@ -10,6 +10,7 @@ Fields
 - name::String — user label.
 - history::Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}} — time-tagged history (e.g., [(time, posvel)]) grouped in segments.
 - coord_sys::CS — coordinate system (origin and axes) associated with the spacecraft.
+- cad_model::CADModel — 3D model for visualization
 
 # Notes:
 - Use the keyword constructor to create spacecraft and only define the fields you want to change from the defaults.
@@ -39,6 +40,7 @@ mutable struct Spacecraft{S<:OrbitState, TT<:Time, CS<:AbstractCoordinateSystem,
     name::String
     history::Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}
     coord_sys::CS
+    cad_model::CADModel
 end
 
 """
@@ -58,7 +60,8 @@ function Spacecraft(state::Union{AbstractState,OrbitState}, time::TT;
     mass::Real = 1000.0,
     name::AbstractString = "unnamed",
     history::Union{Nothing,AbstractVector} = nothing,
-    coord_sys::CS = CoordinateSystem(earth, ICRFAxes())
+    coord_sys::CS = CoordinateSystem(earth, ICRFAxes()),
+    cad_model::CADModel = CADModel()
     ) where {TT<:Time, CS<:AbstractCoordinateSystem}
 
     # Normalize to OrbitState
@@ -92,16 +95,17 @@ function Spacecraft(state::Union{AbstractState,OrbitState}, time::TT;
         Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}() :
         convert(Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}, history)
 
-    return Spacecraft{typeof(os_T), TTIME, CS, Tnum}(os_T, t_T, mass_T, String(name), hist_T, coord_sys)
+    return Spacecraft{typeof(os_T), TTIME, CS, Tnum}(os_T, t_T, mass_T, String(name), hist_T, coord_sys, cad_model)
 end
 
 """
     Spacecraft(; state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
-                      time = Time("2015-09-21T12:23:12", TDB(), ISOT()),
+                      time = Time("2015-09-21T12:23:12", UTC(), ISOT()),
                       mass = 1000.0,
                       name = "unnamed",
                       history = nothing,
-                      coord_sys = CoordinateSystem(earth, ICRFAxes()))
+                      coord_sys = CoordinateSystem(earth, ICRFAxes()),
+                      cad_model = CADModel())
 
 Kwarg outer constructor for Spacecraft with defaults for all fields.
 """
@@ -110,8 +114,9 @@ function Spacecraft(; state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
                       mass = 1000.0,
                       name = "unnamed",
                       history = nothing,
-                      coord_sys = CoordinateSystem(earth, ICRFAxes()))
-    Spacecraft(state, time; mass=mass, name=name, history=history, coord_sys=coord_sys)
+                      coord_sys = CoordinateSystem(earth, ICRFAxes()),
+                      cad_model = CADModel())
+    Spacecraft(state, time; mass=mass, name=name, history=history, coord_sys=coord_sys, cad_model=cad_model)
 end
 
 """
@@ -125,6 +130,7 @@ function Base.show(io::IO, sc::Spacecraft)
      _indent_and_print(io, sc.state, "  ")
      _indent_and_print(io, sc.coord_sys, "  ")
      println(io, "  Total Mass = ", sc.mass, " kg")
+     _indent_and_print(io, sc.cad_model, "  ")
  end
 
 """
@@ -154,6 +160,7 @@ function Base.deepcopy_internal(sc::Spacecraft, dict::IdDict)
         name      = getfield(sc, :name),
         history   = Base.deepcopy_internal(getfield(sc, :history), dict),
         coord_sys = getfield(sc, :coord_sys),
+        cad_model = getfield(sc, :cad_model),
     )
 end
 
@@ -395,7 +402,8 @@ function Base.promote(sc::Spacecraft{S,TT,CS,T}, ::Type{Tnew}) where {S,TT,CS,T,
         mass_promoted,
         sc.name,
         history_preserved,
-        sc.coord_sys
+        sc.coord_sys,
+        sc.cad_model
     )
 end
 

@@ -84,6 +84,7 @@ Spacecraft: SC-001
     origin = Earth
     axes   = ICRFAxes
   Total Mass = 1000.0 kg
+  CADModel: (no model)
 """
 
     # Capture pretty text/plain representation and compare (ignore trailing newline)
@@ -350,5 +351,7 @@ end
     @test eltype(sc.state.state) === Float64
     @test typeof(sc.mass) === Float64
 end
+
+include("runtests_cadmodel.jl")
 
 nothing
