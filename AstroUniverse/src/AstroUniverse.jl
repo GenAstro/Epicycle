@@ -76,6 +76,7 @@ Fields (units):
 - equatorial_radius::T — equatorial radius 
 - flattening::T — geometric flattening 
 - naifid::Int — NAIF body ID
+- texture_file::String — path to texture image file for visualization (optional)
 
 # Notes:
 - Numeric fields (mu, equatorial_radius, flattening) are promoted to a common element type `T`
@@ -90,7 +91,8 @@ moon_like = CelestialBody(name="MyMoon",
                                  mu=4902.8, 
                                  equatorial_radius=1737.4, 
                                  flattening=0.0,
-                                 naifid=301);
+                                 naifid=301,
+                                 texture_file="path/to/moon_texture.jpg");
 show(moon_like)
 
 # output
@@ -100,6 +102,7 @@ CelestialBody:
   Equatorial Radius  = 1737.4
   Flattening         = 0.0
   NAIF ID            = 301
+  Texture File       = path/to/moon_texture.jpg
 ```
 """
 mutable struct CelestialBody{T<:Real} <: AbstractPoint
@@ -108,6 +111,7 @@ mutable struct CelestialBody{T<:Real} <: AbstractPoint
     equatorial_radius::T
     flattening::T
     naifid::Int
+    texture_file::String
 
     function CelestialBody{T}(
         name::String,
@@ -115,6 +119,7 @@ mutable struct CelestialBody{T<:Real} <: AbstractPoint
         equatorial_radius::T,
         flattening::T,
         naifid::Int,
+        texture_file::String,
     ) where {T<:Real}
         if !isfinite(mu) || mu <= 0
             throw(ArgumentError("CelestialBody: μ must be finite and > 0; got $(mu)."))
@@ -125,12 +130,12 @@ mutable struct CelestialBody{T<:Real} <: AbstractPoint
         if !isfinite(flattening) || flattening < 0 || flattening >= 1
             throw(ArgumentError("CelestialBody: flattening must be finite and in [0, 1); got $(flattening)."))
         end
-        return new{T}(name, mu, equatorial_radius, flattening, naifid)
+        return new{T}(name, mu, equatorial_radius, flattening, naifid, texture_file)
     end
 end
 
 """
-    CelestialBody(name::AbstractString, mu::Real, equatorial_radius::Real, flattening::Real, naifid::Integer)
+   CelestialBody(name::AbstractString, mu::Real, equatorial_radius::Real, flattening::Real, naifid::Integer, texture_file::AbstractString)
 
 Positional outer constructor that promotes numeric fields to a common type.
 """
@@ -140,15 +145,17 @@ function CelestialBody(
     equatorial_radius,
     flattening,
     naifid::Integer,
+    texture_file::AbstractString="",
 )
     T = promote_type(typeof(mu), typeof(equatorial_radius), typeof(flattening))
-    return CelestialBody{T}(String(name), T(mu), T(equatorial_radius), T(flattening), Int(naifid))
+    return CelestialBody{T}(String(name), T(mu), T(equatorial_radius), T(flattening), Int(naifid), String(texture_file))
 end
 
 """
     CelestialBody(; name="unnamed", mu=earth.mu,
                     equatorial_radius=earth.equatorial_radius,
-                    flattening=earth.flattening, naifid=earth.naifid)
+                    flattening=earth.flattening, naifid=earth.naifid,
+                    texture_file="")
 
 Keyword outer constructor that defaults all fields to Earth's values.
 Numeric fields are promoted to a common element type.
@@ -159,9 +166,11 @@ function CelestialBody(;
     equatorial_radius::Real = EARTH_DEFAULTS.equatorial_radius,
     flattening::Real = EARTH_DEFAULTS.flattening,
     naifid::Integer = EARTH_DEFAULTS.naifid,
+    texture_file::AbstractString = "",
 )
     T = promote_type(typeof(mu), typeof(equatorial_radius), typeof(flattening))
-    return CelestialBody{T}(String(name), T(mu), T(equatorial_radius), T(flattening), Int(naifid))
+    return CelestialBody{T}(String(name), T(mu), T(equatorial_radius), T(flattening),
+           Int(naifid), String(texture_file))
 end
 
 """
@@ -176,6 +185,8 @@ function show(io::IO, ::MIME"text/plain", body::CelestialBody)
     println(io, "  Equatorial Radius  = ", body.equatorial_radius)
     println(io, "  Flattening         = ", body.flattening)
     println(io, "  NAIF ID            = ", body.naifid)
+    texture_display = isempty(body.texture_file) ? "(none)" : body.texture_file
+    println(io, "  Texture File       = ", texture_display)
 end
 
 """
@@ -190,17 +201,20 @@ end
 """
 Sun (NAIF ID 10) CelestialBody model.
 """
-sun = CelestialBody("Sun", 1.32712440018e11, 696342.0, 0.0, 10)
+sun = CelestialBody("Sun", 1.32712440018e11, 696342.0, 0.0, 10, 
+      joinpath(dirname(@__DIR__), "data", "SunTexture.jpg"))
 
 """
 Mercury (NAIF ID 199) CelestialBody model.
 """
-mercury = CelestialBody("Mercury", 22032.0, 2439.7, 0.0, 199)
+mercury = CelestialBody("Mercury", 22032.0, 2439.7, 0.0, 199, 
+          joinpath(dirname(@__DIR__), "data", "MercuryTexture.jpg"))
 
 """
 Venus (NAIF ID 299) CelestialBody model.
 """
-venus = CelestialBody("Venus", 324858.592, 6051.8, 0.0, 299)
+venus = CelestialBody("Venus", 324858.592, 6051.8, 0.0, 299, 
+        joinpath(dirname(@__DIR__), "data", "VenusTexture.jpg"))
 
 """
 Earth (NAIF ID 399) CelestialBody model.
@@ -211,42 +225,49 @@ earth = CelestialBody(
     EARTH_DEFAULTS.equatorial_radius,
     EARTH_DEFAULTS.flattening,
     EARTH_DEFAULTS.naifid,
+    joinpath(dirname(@__DIR__), "data", "EarthTexture.jpg"),
 )
 
 """
 Moon (NAIF ID 301) CelestialBody model.
 """
-moon = CelestialBody("Moon", 4902.8, 1737.4, 0.0, 301)
+moon = CelestialBody("Moon", 4902.8, 1737.4, 0.0, 301, 
+       joinpath(dirname(@__DIR__), "data", "MoonTexture.jpg"))
 
 """
 Mars (NAIF ID 499) CelestialBody model.
 """
-mars = CelestialBody("Mars", 42828.375214, 3396.2, 0.005, 499)
+mars = CelestialBody("Mars", 42828.375214, 3396.2, 0.005, 499, 
+       joinpath(dirname(@__DIR__), "data", "MarsTexture.jpg"))
 
 """
 Jupiter (NAIF ID 599) CelestialBody model.
 """
-jupiter = CelestialBody("Jupiter", 126686534.0, 71492.0, 0.06487, 599)
+jupiter = CelestialBody("Jupiter", 126686534.0, 71492.0, 0.06487, 599, 
+          joinpath(dirname(@__DIR__), "data", "JupiterTexture.jpg"))
 
 """
 Saturn (NAIF ID 699) CelestialBody model.
 """
-saturn = CelestialBody("Saturn", 37931187.0, 60268.0, 0.09796, 699)
+saturn = CelestialBody("Saturn", 37931187.0, 60268.0, 0.09796, 699, 
+         joinpath(dirname(@__DIR__), "data", "SaturnTexture.jpg"))
 
 """
 Uranus (NAIF ID 799) CelestialBody model.
 """
-uranus = CelestialBody("Uranus", 5793959.0, 25559.0, 0.0229, 799)
+uranus = CelestialBody("Uranus", 5793959.0, 25559.0, 0.0229, 799, 
+         joinpath(dirname(@__DIR__), "data", "UranusTexture.jpg"))
 
 """
 Neptune (NAIF ID 899) CelestialBody model.
 """
-neptune = CelestialBody("Neptune", 6836529.0, 24764.0, 0.0171, 899)
+neptune = CelestialBody("Neptune", 6836529.0, 24764.0, 0.0171, 899, 
+          joinpath(dirname(@__DIR__), "data", "NeptuneTexture.jpg"))
 
 """
 Pluto (NAIF ID 999) CelestialBody model.
 """ 
-pluto = CelestialBody("Pluto", 870.3, 1188.3, 0.0, 999)
+pluto = CelestialBody("Pluto", 870.3, 1188.3, 0.0, 999, "")
 
 """
     function translate(from::CelestialBody, to::CelestialBody, jd_tdb::Real)
