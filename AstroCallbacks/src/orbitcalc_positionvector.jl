@@ -22,12 +22,10 @@ struct PositionVector <: AbstractOrbitVar end
 calc_input_statetag(::PositionVector) = Cartesian()
 calc_is_settable(::PositionVector) = true   # COV_EXCL_LINE (inlined)
 calc_numvars(::PositionVector) = 3          # COV_EXCL_LINE (inlined)
-_evaluate(::PositionVector, s::CartesianState) = s.posvel[1:3]
+_evaluate(::PositionVector, s::CartesianState) = collect(s.position)
 
 function _set!(::PositionVector, s::CartesianState, newpos::Vector{<:Real}) 
     length(newpos) == 3 || error("PositionVector requires 3 elements.")
-    @inbounds begin
-        s.posvel[1:3] = newpos
-    end
+    s.position = SVector{3}(newpos[1], newpos[2], newpos[3])
     return s
 end

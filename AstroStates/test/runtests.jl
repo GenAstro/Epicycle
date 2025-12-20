@@ -258,6 +258,7 @@ include("runtests_cart_sphradec_inputValidation.jl")
 include("runtests_outasymp_kep_inputValidation.jl")
 include("runtests_kep_modkep_inputValidation.jl")
 include("runtests_alt_equinoctial_equinoctial_inputValidation.jl")
+include("runtests_cart_constructors.jl")
 
 println(" ")
 println(" Starting state differentation tests... precompile takes several minutes")

@@ -12,6 +12,7 @@ AstroModels = "ac4cc047-8a77-4e9e-bb46-f1584e9a10ee"
 AstroStates = "e8875680-ece1-4c6e-865d-f99ee1f9f9b4"
 AstroUniverse = "4bd44dca-1e45-43d2-b940-3f88da59ea6f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 EpicycleBase = "0.1.0"
@@ -21,6 +22,7 @@ AstroUniverse = "0.1.0"
 AstroFrames = "0.1.0"
 AstroModels = "0.1.0"
 AstroManeuvers = "0.1.0"
+StaticArrays = "1"
 julia = "1.10"
 
 [extras]

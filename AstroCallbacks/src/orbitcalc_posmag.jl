@@ -21,12 +21,10 @@ struct PosMag <: AbstractOrbitVar end
 calc_input_statetag(::PosMag) = Cartesian()
 calc_is_settable(::PosMag) = true       # COV_EXCL_LINE (inlined)
 calc_numvars(::PosMag) = 1              # COV_EXCL_LINE (inlined)
-_evaluate(::PosMag, s::CartesianState) = norm(s.posvel[1:3])
+_evaluate(::PosMag, s::CartesianState) = norm(s.position)
 
 function _set!(::PosMag, s::CartesianState, newpos::Vector{<:Real}) 
     length(newpos) == 1 || error("PosMag requires 1 element.")
-    @inbounds begin
-        s.posvel[1:3] = s.posvel[1:3]/norm(s.posvel[1:3]) * newpos[1]
-    end
+    s.position = s.position / norm(s.position) * newpos[1]
     return s
 end

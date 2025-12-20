@@ -22,6 +22,7 @@ using AstroUniverse
 using AstroFrames
 using AstroModels: Spacecraft, to_posvel, set_posvel!
 using AstroManeuvers
+using StaticArrays
 
 import AstroStates: state_tag_to_type, state_type_to_tag
 

@@ -21,12 +21,10 @@ struct PosX <: AbstractOrbitVar end
 calc_input_statetag(::PosX) = Cartesian()
 calc_is_settable(::PosX) = true        # COV_EXCL_LINE (inlined)
 calc_numvars(::PosX) = 1               # COV_EXCL_LINE (inlined)
-_evaluate(::PosX, s::CartesianState) = s.posvel[1]
+_evaluate(::PosX, s::CartesianState) = s.position[1]
 
 function _set!(::PosX, s::CartesianState, newpos::Vector{<:Real}) 
     length(newpos) == 1 || error("PosX requires 1 element.")
-    @inbounds begin
-        s.posvel[1] = newpos[1];
-    end
+    s.position = SVector{3}(newpos[1], s.position[2], s.position[3])
     return s
 end
