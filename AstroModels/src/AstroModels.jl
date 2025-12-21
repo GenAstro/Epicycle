@@ -20,10 +20,14 @@ using AstroUniverse: earth
 export Spacecraft, get_state, to_posvel, set_posvel!
 export push_history_segment!
 export CADModel
+export HistorySegment, SpacecraftHistory
+export push_state!, push_segment!, new_segment!
+export to_float64
 
 import EpicycleBase: AbstractPoint
 
 include("cadmodel.jl")
+include("spacecraft_history.jl")
 include("spacecraft.jl")
 
 end
