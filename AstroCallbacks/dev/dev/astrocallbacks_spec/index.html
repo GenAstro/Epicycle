@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>AstroCallbacks – Spec (v0.1) · AstroCallbacks.jl</title><meta name="title" content="AstroCallbacks – Spec (v0.1) · AstroCallbacks.jl"/><meta property="og:title" content="AstroCallbacks – Spec (v0.1) · AstroCallbacks.jl"/><meta property="twitter:title" content="AstroCallbacks – Spec (v0.1) · AstroCallbacks.jl"/><meta name="description" content="Documentation for AstroCallbacks.jl."/><meta property="og:description" content="Documentation for AstroCallbacks.jl."/><meta property="twitter:description" content="Documentation for AstroCallbacks.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/AstroCallbacks/dev/astrocallbacks_spec/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/AstroCallbacks/dev/astrocallbacks_spec/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/AstroCallbacks/dev/astrocallbacks_spec/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">AstroCallbacks</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>AstroCallbacks – Spec (v0.1)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>AstroCallbacks – Spec (v0.1)</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/AstroCallbacks/docs/src/dev/astrocallbacks_spec.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="AstroCallbacks-–-Spec-(v0.1)"><a class="docs-heading-anchor" href="#AstroCallbacks-–-Spec-(v0.1)">AstroCallbacks – Spec (v0.1)</a><a id="AstroCallbacks-–-Spec-(v0.1)-1"></a><a class="docs-heading-anchor-permalink" href="#AstroCallbacks-–-Spec-(v0.1)" title="Permalink"></a></h1><h2 id="1.-Overview-and-Scope-(What-are-we-building?)"><a class="docs-heading-anchor" href="#1.-Overview-and-Scope-(What-are-we-building?)">1. Overview and Scope (What are we building?)</a><a id="1.-Overview-and-Scope-(What-are-we-building?)-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Overview-and-Scope-(What-are-we-building?)" title="Permalink"></a></h2><p><strong>Purpose:</strong></p><p>AstroCallbacks provides a unified interface for defining and evaluating quantities of interest from astrodynamics domain objects (spacecraft, maneuvers, celestial bodies). Calcs enable reuse - define a quantity once, use it everywhere (optimization, plotting, propagation, reporting, event detection, estimation).</p><p><strong>In-scope:</strong></p><ul><li>Standard calc definition that is expressive and applies across ecosystem and to custom calcs</li><li>Standardized access patterns: <code>get_calc()</code> and <code>set_calc!()</code></li><li>Type-safe variable definitions using Julia&#39;s type hierarchy</li><li>Spacecraft state quantities (position, velocity, orbital elements)</li><li>Time-based quantities (epochs, durations, in various scales/formats)</li><li>Control quantities (maneuver parameters)</li><li>Celestial body properties</li><li>User-defined custom quantities</li><li>Composable calculations (derive new quantities from existing ones)</li><li>Calc attribute system (settability, continuity, differentiability, etc.)</li></ul><p><strong>Out-of-scope:</strong></p><ul><li>How optimizers use calcs (that&#39;s AstroSolve)</li><li>How plotting tools use calcs (external plotting packages)</li><li>Report formatting and generation (reporting packages)</li><li>Event sequencing logic (AstroSolve)</li><li>Numerical optimization algorithms</li></ul><h2 id="2.-Requirements-(What-we-are-building.)"><a class="docs-heading-anchor" href="#2.-Requirements-(What-we-are-building.)">2. Requirements (What we are building.)</a><a id="2.-Requirements-(What-we-are-building.)-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Requirements-(What-we-are-building.)" title="Permalink"></a></h2><h3 id="Functional-Requirements-Calc-Types"><a class="docs-heading-anchor" href="#Functional-Requirements-Calc-Types">Functional Requirements - Calc Types</a><a id="Functional-Requirements-Calc-Types-1"></a><a class="docs-heading-anchor-permalink" href="#Functional-Requirements-Calc-Types" title="Permalink"></a></h3><p>AstroCallbacks shall support calcs for:</p><ul><li>AstroState state elements (AstroStates.jl)</li><li>AstroTime time elements (AstroEpochs.jl)</li><li>Maneuver elements (AstroManeuvers.jl)</li><li>CelestialBody properties (AstroUniverse.jl)</li><li>Spacecraft properties (AstroModels.jl)</li><li>ForceModel properties (AstroProp.jl)</li><li>User-defined custom calcs</li></ul><p>Note, this list is based on current functionality.  The design needs to be extendible as the system grows. </p><h3 id="Functional-Requirements-Calc-Interface"><a class="docs-heading-anchor" href="#Functional-Requirements-Calc-Interface">Functional Requirements - Calc Interface</a><a id="Functional-Requirements-Calc-Interface-1"></a><a class="docs-heading-anchor-permalink" href="#Functional-Requirements-Calc-Interface" title="Permalink"></a></h3><p>AstroCallbacks shall provide interfaces for:</p><ul><li>Reading current values from domain objects (e.g., via a get method)</li><li>Writing new values to mutable domain objects (e.g., via a set method, when calc is settable)</li></ul><p>AstroCallbacks shall expose calc attributes to support integration:</p><ul><li>Is the calc numeric (returns numeric type vs non-numeric like String)</li><li>Calc dimensionality (scalar or vector, with size)</li><li>Is the calc settable (supports modification)</li><li>Is the calc continuous (suitable for gradient-based optimization)</li><li>Does the calc support automatic differentiation</li></ul><h3 id="Integration-Requirements"><a class="docs-heading-anchor" href="#Integration-Requirements">Integration Requirements</a><a id="Integration-Requirements-1"></a><a class="docs-heading-anchor-permalink" href="#Integration-Requirements" title="Permalink"></a></h3><p>AstroCallbacks calcs shall support integration into:</p><ul><li>Propagation stopping conditions (e.g., <code>StopAt</code> using time calc)</li><li>Optimization/estimation variables (solve-fors via <code>SolverVariable</code>)</li><li>Optimization/estimation constraints (via <code>Constraint</code>)</li><li>Plotting (time series evaluation)</li><li>Reporting (formatted output, including non-numeric calcs)</li></ul><p>AstroCallbacks shall ensure:</p><ul><li>Automatic differentiation (AD) compatibility for numeric mutable calcs</li><li>Changes to calc values are visible to external code (e.g., event function closures)</li></ul><h3 id="Extensibility-Requirements"><a class="docs-heading-anchor" href="#Extensibility-Requirements">Extensibility Requirements</a><a id="Extensibility-Requirements-1"></a><a class="docs-heading-anchor-permalink" href="#Extensibility-Requirements" title="Permalink"></a></h3><p>AstroCallbacks shall enable:</p><ul><li>Users to define custom variable types</li><li>Users to define custom calc implementations (extend get and optionally set methods)</li><li>Package developers to add new subject-variable combinations</li></ul><h3 id="Design-Requirements"><a class="docs-heading-anchor" href="#Design-Requirements">Design Requirements</a><a id="Design-Requirements-1"></a><a class="docs-heading-anchor-permalink" href="#Design-Requirements" title="Permalink"></a></h3><p>AstroCallbacks shall ensure:</p><ul><li>Calcs can reference multiple domain objects (composite calculations)</li><li>Calcs can derive new quantities from existing calcs</li><li>Type-stable operations for compiler optimization</li><li>Clear error messages for invalid operations (type mismatches, setting read-only calcs, out-of-range values)</li></ul><h2 id="3.-Design-(How-we-are-building-it.)"><a class="docs-heading-anchor" href="#3.-Design-(How-we-are-building-it.)">3. Design (How we are building it.)</a><a id="3.-Design-(How-we-are-building-it.)-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Design-(How-we-are-building-it.)" title="Permalink"></a></h2><h3 id="Design-Overview"><a class="docs-heading-anchor" href="#Design-Overview">Design Overview</a><a id="Design-Overview-1"></a><a class="docs-heading-anchor-permalink" href="#Design-Overview" title="Permalink"></a></h3><p>The AstroCallbacks design centers on <strong>calc objects</strong> - lightweight wrappers that bind one or more domain objects (the &quot;subject(s)&quot;) to a specific quantity of interest (the &quot;variable&quot;). This subject-variable binding pattern enables type-safe, extensible quantity access across the Epicycle ecosystem.</p><p><strong>Core Architecture:</strong></p><ul><li><strong>Calc Types</strong> (<code>OrbitCalc</code>, <code>ManeuverCalc</code>, <code>BodyCalc</code>, <code>TimeCalc</code>) - categorized by subject type</li><li><strong>Variable Types</strong> (<code>SMA</code>, <code>Cartesian</code>, <code>DeltaVMag</code>, etc.) - define which quantity to access</li><li><strong>Access Interface</strong> (<code>get_calc()</code>, <code>set_calc!()</code>) - retrieve and modify values via multiple dispatch</li><li><strong>Attribute System</strong> - calcs self-describe capabilities (settability, continuity, dimensionality, AD compatibility)</li></ul><p><strong>Key Design Principles:</strong></p><ol><li><strong>Separation of concerns</strong>: Calcs define <em>what</em> quantities are; external modules determine <em>how</em> to use them</li><li><strong>Type safety</strong>: Compiler catches invalid subject-variable combinations at compile time</li><li><strong>Extensibility</strong>: Users and packages add new calcs via Julia&#39;s multiple dispatch</li><li><strong>Composability</strong>: Calcs can reference multiple objects and aggregate values from other calcs</li><li><strong>Mutable references</strong>: Calcs hold references to mutable domain objects, enabling in-place updates during propagation and optimization</li><li><strong>Encapsulation</strong>: Calcs interact with domain objects through public get/set methods, not direct field access</li></ol><p><strong>Information Flow:</strong></p><pre><code class="nohighlight hljs">Domain Object (Spacecraft, Maneuver, Time)
+    ↓ wrapped by
+Calc (OrbitCalc, ManeuverCalc, TimeCalc) + Variable Type (SMA, Cartesian, JD)
+    ↓ accessed via
+get_calc() / set_calc!()
+    ↓ returns/accepts
+Numeric or Non-numeric Value
+    ↓ consumed by
+External Modules (AstroSolve, plotting, reporting)</code></pre><p><strong>Calc Patterns:</strong></p><p>The design supports three complementary patterns for defining calcs:</p><ol><li><p><strong>Subject-Variable Binding</strong> - Standard pattern for accessing properties of domain objects</p><ul><li>Example: <code>OrbitCalc(spacecraft, SMA())</code> accesses semi-major axis</li><li>Use when: Accessing a well-defined quantity from a single subject type</li><li>Characteristics: Type-safe, extensible via dispatch, clear semantics</li></ul></li><li><p><strong>Multi-Subject Calcs</strong> - Access quantities involving multiple domain objects</p><ul><li>Example: <code>RelativeMotionCalc(sat1, sat2, RelativeDistance())</code> </li><li>Use when: Quantity depends on relationships between multiple objects</li><li>Characteristics: Same subject-variable binding pattern, multiple subjects</li></ul></li><li><p><strong>Function-Based Calcs</strong> - Arbitrary computations over domain objects</p><ul><li>Example: Custom cost function, complex constraint, physics-based metric</li><li>Use when: Computation doesn&#39;t map cleanly to a variable type, or requires complex logic</li><li>Characteristics: Maximum flexibility, user-defined computation</li><li>Implementation: Custom calc struct holds function + object references, <code>get_calc()</code> evaluates function</li></ul></li></ol><p>All three patterns share the same public interface (<code>get_calc()</code>, <code>set_calc!()</code>, attribute functions) enabling uniform integration into optimization, plotting, and reporting workflows regardless of underlying implementation.</p><p>The following subsections detail the specific types, functions, patterns, and conventions that implement this design.</p><h3 id="Core-Components"><a class="docs-heading-anchor" href="#Core-Components">Core Components</a><a id="Core-Components-1"></a><a class="docs-heading-anchor-permalink" href="#Core-Components" title="Permalink"></a></h3><p><strong>Calc Types (the wrappers):</strong></p><p>Calc types are structs that hold references to domain objects and specify what quantity to access:</p><ul><li><code>OrbitCalc</code> - accesses spacecraft state quantities (mutable)</li><li><code>ManeuverCalc</code> - accesses maneuver parameters (mutable)</li><li><code>BodyCalc</code> - accesses celestial body properties (typically read-only)</li><li><code>TimeCalc</code> - accesses time values with specified scale/format (mutable)</li><li>Custom calc types - user-defined for multi-subject or composite calculations</li></ul><p><strong>Variable Type Hierarchy (what quantities):</strong></p><p>Variable types specify <em>which</em> quantity a calc accesses. They are immutable singleton types organized in a hierarchy:</p><ul><li><code>AbstractCalcVariable</code> - base type for all variable types<ul><li><code>AbstractOrbitVar</code> - base for orbit quantities<ul><li><code>SMA</code>, <code>Inc</code>, <code>RAAN</code>, <code>Cartesian</code>, etc. - concrete orbit variable types</li></ul></li><li><code>AbstractManeuverVar</code> - base for maneuver quantities<ul><li><code>DeltaVMag</code>, <code>DeltaVVector</code>, etc. - concrete maneuver variable types</li></ul></li><li><code>AbstractBodyVar</code> - base for body quantities<ul><li><code>GravParam</code>, <code>Radius</code>, etc. - concrete body variable types</li></ul></li><li>User-defined variable types for custom quantities</li></ul></li></ul><p><strong>Relationship:</strong></p><p>Calc types combine one or more subjects with a variable type: <code>CalcType(subject(s)..., VariableType())</code></p><p>Example: <code>OrbitCalc(spacecraft, SMA())</code> creates a calc that accesses the SMA of the spacecraft.</p><p><strong>Functions:</strong></p><p><strong>Core Access:</strong></p><ul><li><code>get_calc(calc)</code> - retrieve current value from calc</li><li><code>set_calc!(calc, value)</code> - update mutable calc (! indicates mutation)</li></ul><p><strong>Calc Attributes:</strong></p><ul><li><code>is_settable(calc)</code> - returns true if calc supports modification</li><li><code>is_numeric(calc)</code> - returns true if calc returns numeric type</li><li><code>length(calc)</code> - returns dimensionality (1 for scalar, n for vector)</li></ul><p><strong>Extensibility:</strong></p><ul><li><code>make_calc(subject(s), variable)</code> - dispatch point for creating calcs (extensibility)</li></ul><p><strong>Patterns:</strong></p><ul><li><strong>Subject-Variable Binding</strong>: <code>CalcType(subject(s), variable_type)</code><ul><li>Example: <code>OrbitCalc(spacecraft, SMA())</code>, <code>ManeuverCalc(maneuver, DeltaVVector())</code></li></ul></li><li><strong>Direct Object Reference</strong>: <code>CalcType(object, ...params)</code><ul><li>Example: <code>TimeCalc(sat.time, TDB(), JD())</code></li></ul></li><li><strong>Composite Calcs</strong>: Custom struct holds multiple references, aggregates in <code>get_calc()</code></li></ul><h3 id="Usage-Examples"><a class="docs-heading-anchor" href="#Usage-Examples">Usage Examples</a><a id="Usage-Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Usage-Examples" title="Permalink"></a></h3><p><strong>Use Case: Full Spacecraft State and Core API</strong></p><p>Demonstrates complete calc API: creation, get, set, and attribute queries.</p><pre><code class="language-julia hljs"># Create spacecraft
+sat = Spacecraft(
+    state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
+    time = Time(&quot;2025-01-01T00:00:00&quot;, UTC(), ISOT())
+)
+
+# Create calc for full Cartesian state
+state_calc = OrbitCalc(sat, IncomingAsymptote())
+
+# Read current value
+current_state = get_calc(state_calc)  
+# Returns: [7000.0, 0.0, 0.0, 0.0, 7.5, 0.0] (6-element vector [x,y,z,vx,vy,vz])
+
+# Modify value (if settable)
+new_state = [7100.0, 100.0, 50.0, 0.1, 7.6, 0.2]
+set_calc!(state_calc, new_state)
+# Spacecraft state updated in-place
+
+# Query calc attributes
+is_settable(state_calc)  # Returns: true (can modify spacecraft state)
+is_numeric(state_calc)   # Returns: true (returns Float64 vector)
+length(state_calc)       # Returns: 6 (dimensionality: [x,y,z,vx,vy,vz])
+
+# Other element types
+state_calc = OrbitCalc(sat, IncomingAsymptote())</code></pre><hr/><p><strong>Use Case: Spacecraft State Element</strong></p><p>Access individual orbital elements (scalar or vector quantities).</p><pre><code class="language-julia hljs"># Scalar orbital element
+sma_calc = OrbitCalc(sat, SMA())         # Semi-major axis (km)
+inc_calc = OrbitCalc(sat, Inc())         # Inclination (rad)</code></pre><hr/><p><strong>Use Case: Time in Different Scales and Formats</strong></p><p>Time calcs support multiple time scales (UTC, TDB, TT) and formats (numeric vs string).</p><pre><code class="language-julia hljs"># Numeric formats (settable, for optimization/plotting)
+jd_calc = TimeCalc(sat.time, TDB(), JD())        # Julian Date
+mjd_calc = TimeCalc(sat.time, UTC(), MJD())      # Modified Julian Date  
+
+# String format (read-only, for reporting)
+iso_calc = TimeCalc(sat.time, UTC(), ISOT())           # ISO 8601 string
+# get_calc(iso_calc) returns &quot;2025-01-01T00:00:00&quot;</code></pre><hr/><p><strong>Use Case: Custom Composite Calc</strong></p><p>Aggregate values from multiple existing calcs.</p><pre><code class="language-julia hljs"># Define custom calc struct (holds references to multiple objects)
+struct TotalDeltaVCalc
+    maneuvers::Vector{ImpulsiveManeuver}
+    spacecraft::Spacecraft
+end
+
+# Implement get_calc (aggregates from other calcs)
+function AstroCallbacks.get_calc(calc::TotalDeltaVCalc)
+    total = 0.0
+    for mnv in calc.maneuvers
+        dv_calc = ManeuverCalc(mnv, calc.spacecraft, DeltaVMag())
+        total += get_calc(dv_calc)
+    end
+    return total
+end
+
+# Usage
+toi = ImpulsiveManeuver(axes=VNB(), element1=2.5, element2=0.0, element3=0.0)
+mcc = ImpulsiveManeuver(axes=VNB(), element1=0.6, element2=0.5, element3=0.0) 
+moi = ImpulsiveManeuver(axes=VNB(), element1=0.3, element2=0.0, element3=0.0)
+
+total_dv_calc = TotalDeltaVCalc([toi, mcc, moi], sat)
+# get_calc(total_dv_calc) returns ~3.27 km/s</code></pre><hr/><p><strong>Use Case: Maneuver Parameters (Multi-Subject Pattern)</strong></p><p>Access and modify impulsive maneuver delta-v components.</p><pre><code class="language-julia hljs"># Create maneuver in VNB frame
+toi = ImpulsiveManeuver(axes=VNB(), element1=2.5, element2=0.1, element3=-0.2)
+
+# Scalar maneuver magnitude (read-only, computed)
+mag_calc = ManeuverCalc(toi, sat, DeltaVMag())
+# get_calc(mag_calc) returns ~2.51 km/s
+
+# Vector maneuver components (settable)
+vec_calc = ManeuverCalc(toi, sat, DeltaVVector())
+# get_calc(vec_calc) returns [2.5, 0.1, -0.2]
+# set_calc!(vec_calc, [2.6, 0.0, 0.0]) updates maneuver
+
+# Note: ManeuverCalc demonstrates Pattern 2 (Multi-Subject Calcs)
+# Takes two subjects: maneuver and spacecraft (needed for frame transformations)</code></pre><hr/><p><strong>Use Case: Celestial Body Properties</strong></p><p>Access celestial body properties (typically read-only).</p><pre><code class="language-julia hljs"># Body gravitational parameter
+mu_calc = BodyCalc(earth, GravParam())
+# get_calc(mu_calc) returns 398600.4418 (km³/s²)
+
+# Body equatorial radius  
+radius_calc = BodyCalc(earth, Radius())
+# get_calc(radius_calc) returns 6378.137 (km)
+
+# Body properties are typically read-only
+# set_calc!(mu_calc, new_value) would throw error</code></pre><hr/><p><strong>Use Case: Custom Variable and Vector Calcs</strong></p><p>Wrap user-defined parameters as calcs for optimization.</p><pre><code class="language-julia hljs"># Scalar parameter
+stop_radius = VariableCalc(10000.0)
+get_calc(stop_radius)           # Returns: 10000.0
+set_calc!(stop_radius, 9500.0)  # Updates internal value
+get_calc(stop_radius)           # Returns: 9500.0
+
+# Vector parameter
+gains = VariableCalc([0.1, 0.2, 0.3])
+get_calc(gains)                    # Returns: [0.1, 0.2, 0.3]
+set_calc!(gains, [0.15, 0.25, 0.35])
+
+# Use in optimization
+var_radius = SolverVariable(calc=stop_radius, lower=8000.0, upper=12000.0)
+var_gains = SolverVariable(calc=gains, lower=[0.0, 0.0, 0.0], upper=[1.0, 1.0, 1.0])
+
+# Use in functions (accepts calc or literal)
+propagate(prop, sat, StopAt(sat, PosMag(), stop_radius))
+# StopAt evaluates: get_calc(stop_radius) during propagation
+
+# Pattern: Any function accepting numeric values can accept calc
+# Enables parameter optimization without changing function signatures</code></pre><hr/><p><strong>Use Case (DEFERRED): Spacecraft Properties</strong></p><p>Design validation for spacecraft-level properties (mass, area, coefficients).</p><pre><code class="language-julia hljs"># Mass (changes with maneuvers)
+mass_calc = SpacecraftCalc(sat, Mass())
+# get_calc(mass_calc) returns current mass (kg)
+# set_calc!(mass_calc, 1500.0) updates mass
+
+# Drag coefficient (configuration parameter)
+cd_calc = SpacecraftCalc(sat, DragCoefficient())
+# get_calc(cd_calc) returns Cd value
+# set_calc!(cd_calc, 2.2) updates coefficient
+
+# Pattern: Same subject-variable binding, works with existing design
+# DEFERRED: Implementation not required for initial release</code></pre><hr/><p><strong>Use Case (DEFERRED): ForceModel Properties</strong></p><p>Design validation for force model configuration parameters.</p><pre><code class="language-julia hljs"># Gravity field degree/order
+degree_calc = ForceModelCalc(gravity_model, GravityDegree())
+# get_calc(degree_calc) returns current degree
+# set_calc!(degree_calc, 8) updates degree
+
+# Integrator tolerance
+tol_calc = IntegratorCalc(integrator, RelativeTolerance())
+# get_calc(tol_calc) returns current reltol
+# set_calc!(tol_calc, 1e-10) updates tolerance
+
+# Pattern: Same subject-variable binding, extends naturally to new domains
+# DEFERRED: Implementation not required for initial release</code></pre><hr/><p><strong>Use Case: Relative/Elapsed Time</strong></p><p>Elapsed time from anchor captured at construction.</p><pre><code class="language-julia hljs"># Time interval between two epochs (explicit endpoints)
+t1 = Time(&quot;2025-01-01T00:00:00&quot;, UTC(), ISOT())
+t2 = Time(&quot;2025-01-15T12:00:00&quot;, UTC(), ISOT())
+dt_calc = TimeInterval(t1, t2, Days())
+# get_calc(dt_calc) returns 14.5 (days)
+
+# Elapsed time from anchor (captured at construction)
+# Use case: &quot;propagate for 3 days&quot;, &quot;stop after 2 hours&quot;, time-series plotting
+elapsed_calc = RelativeTimeCalc(sat, ElapsedDays())
+# Constructor deep copies sat.time as immutable anchor
+# get_calc(elapsed_calc) returns days elapsed from anchor to current sat.time
+
+# Different time units via variable type
+elapsed_sec = RelativeTimeCalc(sat, ElapsedSeconds())
+elapsed_hr = RelativeTimeCalc(sat, ElapsedHours())
+
+# Use in propagation stopping conditions
+propagate(prop, sat, StopAt(sat, elapsed_calc, 3.0))  # Stop after 3 days from anchor
+
+# Use in optimization (anchor remains fixed across iterations)
+var_time = SolverVariable(calc=elapsed_calc, lower=0.0, upper=10.0)
+
+# Use in plotting (anchor set once, tracks elapsed time)
+times = []
+smas = []
+for step in propagation_history
+    push!(times, get_calc(elapsed_calc))  # Elapsed days from anchor
+    push!(smas, get_calc(OrbitCalc(sat, SMA())))
+end
+plot(times, smas)  # X-axis: days from mission start
+
+# Pattern: RelativeTimeCalc follows subject-variable binding
+# Variable types: ElapsedDays(), ElapsedSeconds(), ElapsedHours()
+# Anchor captured at construction, remains immutable thereafter</code></pre><hr/><p><strong>Use Case: Function-Based Calc</strong></p><p>Arbitrary computation using closure pattern (Pattern 3).</p><pre><code class="language-julia hljs"># Define custom calc with function + references
+struct CustomCostCalc
+    func::Function
+    spacecraft::Spacecraft
+    target_sma::Float64
+end
+
+# Implement get_calc (evaluates custom function)
+function AstroCallbacks.get_calc(calc::CustomCostCalc)
+    sma_calc = OrbitCalc(calc.spacecraft, SMA())
+    current_sma = get_calc(sma_calc)
+    return (current_sma - calc.target_sma)^2  # Quadratic cost
+end
+
+# Usage
+cost_calc = CustomCostCalc(
+    (sc, tgt) -&gt; (get_calc(OrbitCalc(sc, SMA())) - tgt)^2,
+    sat,
+    42000.0  # target GEO radius
+)
+# get_calc(cost_calc) evaluates arbitrary function
+
+# Pattern: Maximum flexibility, any computation, same interface</code></pre><hr/><p><strong>Use Case: Attribute Queries</strong></p><p>External modules check calc attributes before use.</p><pre><code class="language-julia hljs"># Optimizer checks before creating SolverVariable
+state_calc = OrbitCalc(sat, Cartesian())
+if is_settable(state_calc) &amp;&amp; is_numeric(state_calc)
+    var = SolverVariable(calc=state_calc, lower=..., upper=...)
+else
+    error(&quot;Calc must be settable and numeric for optimization&quot;)
+end
+
+# Plotter queries dimensionality
+sma_calc = OrbitCalc(sat, SMA())
+if length(sma_calc) == 1
+    plot_scalar_timeseries(sma_calc)
+else
+    plot_vector_timeseries(sma_calc)
+end
+
+# Reporter handles non-numeric calcs
+time_calc = TimeCalc(sat.time, UTC(), ISOT())
+if is_numeric(time_calc)
+    println(&quot;Time: &quot;, get_calc(time_calc))
+else
+    println(&quot;Time: &quot;, get_calc(time_calc))  # String output
+end</code></pre><hr/><p><strong>Use Case: Error Cases</strong></p><p>External modules check calc attributes before use.</p><pre><code class="language-julia hljs"># Optimizer checks before creating SolverVariable
+state_calc = OrbitCalc(sat, Cartesian())
+if is_settable(state_calc) &amp;&amp; is_numeric(state_calc)
+    var = SolverVariable(calc=state_calc, lower=..., upper=...)
+else
+    error(&quot;Calc must be settable and numeric for optimization&quot;)
+end
+
+# Plotter queries dimensionality
+sma_calc = OrbitCalc(sat, SMA())
+if length(sma_calc) == 1
+    plot_scalar_timeseries(sma_calc)
+else
+    plot_vector_timeseries(sma_calc)
+end
+
+# Reporter handles non-numeric calcs
+time_calc = TimeCalc(sat.time, UTC(), ISOT())
+if is_numeric(time_calc)
+    println(&quot;Time: &quot;, get_calc(time_calc))
+else
+    println(&quot;Time: &quot;, get_calc(time_calc))  # String output
+end</code></pre><hr/><p><strong>Error Cases</strong></p><p>Invalid operations produce clear error messages.</p><pre><code class="language-julia hljs"># Error: Setting read-only calc
+mu_calc = BodyCalc(earth, GravParam())
+# set_calc!(mu_calc, 400000.0)
+# ERROR: Cannot set_calc! on read-only BodyCalc(earth, GravParam())
+
+# Error: Type mismatch
+state_calc = OrbitCalc(sat, Cartesian())
+# set_calc!(state_calc, &quot;invalid&quot;)
+# ERROR: Expected Vector{Float64}, got String
+
+# Error: Out-of-range value
+sma_calc = OrbitCalc(sat, SMA())
+# set_calc!(sma_calc, -7000.0)
+# ERROR: SMA must be positive, got -7000.0
+
+# Error: Unsupported variable type
+# calc = OrbitCalc(sat, UnsupportedVariable())
+# ERROR: No method get_calc(::OrbitCalc{Spacecraft, UnsupportedVariable})</code></pre><hr/><h3 id="Design-Decisions-and-Rationale"><a class="docs-heading-anchor" href="#Design-Decisions-and-Rationale">Design Decisions and Rationale</a><a id="Design-Decisions-and-Rationale-1"></a><a class="docs-heading-anchor-permalink" href="#Design-Decisions-and-Rationale" title="Permalink"></a></h3><p><strong>Why get/set pattern instead of property access?</strong></p><ul><li>Enables dispatch on variable type</li><li>Supports conversions (e.g., time scale/format conversions)</li><li>Allows validation and side effects</li><li>Works with AD frameworks</li></ul><p><strong>Why subject-variable binding pattern?</strong></p><ul><li>Type-safe: compiler catches invalid combinations</li><li>Extensible: users can add new combinations via multiple dispatch</li><li>Self-documenting: <code>OrbitCalc(sat, SMA())</code> is clear</li><li>Alternative considered: string-based lookup (&quot;sma&quot;) - rejected for type safety</li></ul><p><strong>Why separate calc types per subject?</strong></p><ul><li>Clear ownership: OrbitCalc operates on spacecraft, ManeuverCalc on maneuvers</li><li>Enables subject-specific optimizations</li><li>Better error messages</li><li>Alternative: single universal Calc type - rejected for clarity and dispatch</li></ul><p><strong>Why mutable domain objects?</strong></p><ul><li>In-place propagation requires mutable spacecraft</li><li>Optimization requires modifying variables without recreating objects</li><li>Alternative: immutable with copy-on-write - rejected for performance</li></ul><p><strong>Calc Attributes System</strong></p><p>External modules query calc capabilities before use:</p><ul><li><strong>Settability</strong>: Can optimizer modify this? (<code>is_settable(calc)</code>)</li><li><strong>Value Type</strong>: Numeric or non-numeric? (<code>value_type(calc)</code>)</li><li><strong>Continuity</strong>: Suitable for gradient-based optimization? (<code>is_continuous(calc)</code>)</li><li><strong>Dimensionality</strong>: Scalar or vector? (<code>length(get_calc(calc))</code>)</li><li><strong>Differentiability</strong>: Supports AD? (implementation-dependent)</li></ul><p><strong>Why attributes instead of fixed calc categories?</strong></p><ul><li>Flexible: same calc can be numeric in one format, string in another (TimeCalc)</li><li>Extensible: users can add custom attributes</li><li>Self-describing: calcs declare their own capabilities</li><li>Enables runtime checks in external modules</li></ul><h3 id="Conventions-and-Constraints"><a class="docs-heading-anchor" href="#Conventions-and-Constraints">Conventions &amp; Constraints</a><a id="Conventions-and-Constraints-1"></a><a class="docs-heading-anchor-permalink" href="#Conventions-and-Constraints" title="Permalink"></a></h3><p><strong>Naming:</strong></p><ul><li>Calc types named by subject: <code>OrbitCalc</code>, <code>ManeuverCalc</code>, <code>BodyCalc</code>, <code>TimeCalc</code></li><li>Variable types named by quantity: <code>SMA</code>, <code>Inc</code>, <code>Cartesian</code>, <code>DeltaVMag</code></li><li>Follow Julia style: CamelCase for types, snake_case for functions</li></ul><p><strong>Numeric Types:</strong></p><ul><li>Default: Float64 for all numeric calculations</li><li>AD compatibility: all numeric calcs must work with ForwardDiff.Dual</li><li>Vector returns: <code>Vector{Float64}</code> (not SVector - simplicity over performance here)</li></ul><p><strong>Mutability:</strong></p><ul><li>Domain objects (Spacecraft, Maneuver, Time) are mutable</li><li>Calc objects themselves are typically immutable (just hold references)</li><li>Variable type objects (SMA(), Cartesian()) are immutable singletons</li></ul><p><strong>Error Handling:</strong></p><ul><li>Throw errors for invalid inputs (wrong types, out-of-range values)</li><li>Throw errors for unsupported operations (set_calc! on read-only calc)</li><li>Validation at calc construction when possible</li><li>Clear error messages: &quot;Cannot set_calc! on read-only calc OrbitCalc(sat, SMA())&quot;</li></ul><p><strong>Units:</strong></p><ul><li>Distances: km</li><li>Velocities: km/s  </li><li>Angles: radians (internal), may accept degrees in constructors with explicit type</li><li>Time: Julian Date (Float64) for numeric formats</li><li>Mass: kg</li><li>Gravitational parameter: km³/s²</li></ul><h2 id="4.-Package-Interactions-(Where-it-fits)"><a class="docs-heading-anchor" href="#4.-Package-Interactions-(Where-it-fits)">4. Package Interactions (Where it fits)</a><a id="4.-Package-Interactions-(Where-it-fits)-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Package-Interactions-(Where-it-fits)" title="Permalink"></a></h2><p><strong>Package Dependencies:</strong></p><ul><li>AstroStates - spacecraft state representations (CartesianState, etc.)</li><li>AstroManeuvers - maneuver types (ImpulsiveManeuver, etc.)</li><li>AstroUniverse - celestial bodies</li><li>AstroEpochs - Time type and time scale/format handling</li></ul><p><strong>Used by:</strong></p><ul><li>AstroSolve - optimization variables and constraints</li><li>Plotting packages - time series of orbit elements, state components</li><li>Reporting tools - formatted output of mission data</li><li>Custom analysis scripts - user-defined calculations</li></ul><p><strong>Example Interactions:</strong></p><p><strong>AstroSolve Integration:</strong></p><pre><code class="language-julia hljs"># AstroSolve checks calc attributes before creating SolverVariable
+state_calc = OrbitCalc(sat, Cartesian())
+
+# Hypothetical: AstroSolve validates before use
+if is_settable(state_calc) &amp;&amp; is_continuous(state_calc)
+    var = SolverVariable(calc=state_calc, lower=..., upper=...)
+else
+    error(&quot;Calc must be settable and continuous for optimization&quot;)
+end</code></pre><p><strong>Plotting Integration:</strong></p><pre><code class="language-julia hljs"># Plotting package queries calc over time
+sma_calc = OrbitCalc(sat, SMA())
+sma_values = []
+for t in time_range
+    set_time!(sat, t)
+    push!(sma_values, get_calc(sma_calc))
+end
+plot(time_range, sma_values)</code></pre><p><strong>Reporting Integration:</strong></p><pre><code class="language-julia hljs"># Reporting accepts any calc, including non-numeric
+time_calc = TimeCalc(sat.time, UTC(), ISOT())
+sma_calc = OrbitCalc(sat, SMA())
+
+println(&quot;Time: &quot;, get_calc(time_calc))      # &quot;2025-01-01T00:00:00&quot;
+println(&quot;SMA: &quot;, get_calc(sma_calc), &quot; km&quot;) # &quot;7000.0 km&quot;</code></pre><h2 id="5.-Testing-(How-we-verify-it)"><a class="docs-heading-anchor" href="#5.-Testing-(How-we-verify-it)">5. Testing (How we verify it)</a><a id="5.-Testing-(How-we-verify-it)-1"></a><a class="docs-heading-anchor-permalink" href="#5.-Testing-(How-we-verify-it)" title="Permalink"></a></h2><h3 id="Test-categories:"><a class="docs-heading-anchor" href="#Test-categories:">Test categories:</a><a id="Test-categories:-1"></a><a class="docs-heading-anchor-permalink" href="#Test-categories:" title="Permalink"></a></h3><p><strong>Input Validation</strong></p><ul><li>Invalid types rejected (e.g., passing non-spacecraft to OrbitCalc)</li><li>Out-of-range values caught in set_calc! (e.g., negative SMA)</li><li>Inconsistent combinations detected (e.g., unsupported variable types)</li><li>Clear error messages provided</li></ul><p><strong>Correctness</strong></p><ul><li>get_calc returns correct values from domain objects</li><li>set_calc! properly updates underlying objects</li><li>Mutability contracts honored (read-only calcs throw on set_calc!)</li><li>Type stability maintained</li><li>Vector calcs return correct dimensions</li></ul><p><strong>Numeric Accuracy</strong></p><ul><li>State conversions accurate (Cartesian ↔ Keplerian)</li><li>Time scale conversions accurate (UTC ↔ TDB ↔ TT)</li><li>Tolerance: 1e-12 for dimensionless quantities</li><li>Reference: validated against published ephemerides, analytical solutions</li></ul><p><strong>Integration</strong></p><ul><li>Works with AstroStates state representations</li><li>Compatible with ForwardDiff for AD</li><li>Calcs properly update when domain objects change</li><li>Composite calcs correctly aggregate values</li></ul><p><strong>Regression</strong></p><ul><li>Fixed bugs have test coverage with issue references</li><li>Known edge cases covered (singularities in orbital elements, time scale boundaries, etc.)</li></ul><h3 id="Notes:"><a class="docs-heading-anchor" href="#Notes:">Notes:</a><a id="Notes:-1"></a><a class="docs-heading-anchor-permalink" href="#Notes:" title="Permalink"></a></h3><ul><li>Calc-specific edge cases in individual calc tests</li><li>Performance benchmarks not required unless performance issues identified</li></ul><h2 id="6.-Implementation-Plan"><a class="docs-heading-anchor" href="#6.-Implementation-Plan">6. Implementation Plan</a><a id="6.-Implementation-Plan-1"></a><a class="docs-heading-anchor-permalink" href="#6.-Implementation-Plan" title="Permalink"></a></h2><ul><li>Refactor function names for attributes and test<ul><li>Change <code>calc_is_settable()</code> → <code>is_settable()</code></li><li>Change <code>calc_numvars()</code> → <code>length()</code></li><li>Add <code>is_numeric()</code> (new function)</li><li>Update all tests to use new naming convention</li></ul></li><li>Implement Cartesian() and other state reps</li><li><strong>TODO: Resolve ManeuverCalc constructor interface inconsistency</strong><ul><li>Current: Struct has 3 fields (man, sc, var) but examples show both 2-arg and 3-arg constructors</li><li>Examples in maneuvercalc_deltavvector.jl show: <code>ManeuverCalc(dv, DeltaVVector())</code></li><li>Docstring in AstroCallbacks.jl shows: <code>ManeuverCalc(m, sc, DeltaVVector())</code></li><li>Decision needed: Should constructors take minimum args? Does DeltaVVector need spacecraft?</li><li>Impact: Update all examples and docs to match chosen interface</li><li>Principle: Constructors should take minimum required arg set</li></ul></li></ul></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Friday 9 January 2026 16:12">Friday 9 January 2026</span>. Using Julia version 1.12.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
