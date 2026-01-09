@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Spacecraft Specification · AstroModels.jl</title><meta name="title" content="Spacecraft Specification · AstroModels.jl"/><meta property="og:title" content="Spacecraft Specification · AstroModels.jl"/><meta property="twitter:title" content="Spacecraft Specification · AstroModels.jl"/><meta name="description" content="Documentation for AstroModels.jl."/><meta property="og:description" content="Documentation for AstroModels.jl."/><meta property="twitter:description" content="Documentation for AstroModels.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/AstroModels/dev/spacecraft_spec/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/AstroModels/dev/spacecraft_spec/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/AstroModels/dev/spacecraft_spec/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">QuickStart</a></li><li><span class="tocitem">Spacecraft</span><ul><li><a class="tocitem" href="../../spacecraft/">Overview</a></li><li><a class="tocitem" href="../../spacecraft_time/">Time</a></li><li><a class="tocitem" href="../../spacecraft_state/">State</a></li><li><a class="tocitem" href="../../spacecraft_coord_sys/">Coordinate System</a></li><li><a class="tocitem" href="../../spacecraft_mass/">Mass</a></li><li><a class="tocitem" href="../../spacecraft_cad_model/">CAD Model</a></li><li><a class="tocitem" href="../../history/">History</a></li></ul></li><li><a class="tocitem" href="../../reference/">Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Spacecraft Specification</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Spacecraft Specification</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/AstroModels/docs/src/dev/spacecraft_spec.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Spacecraft-Specification"><a class="docs-heading-anchor" href="#Spacecraft-Specification">Spacecraft Specification</a><a id="Spacecraft-Specification-1"></a><a class="docs-heading-anchor-permalink" href="#Spacecraft-Specification" title="Permalink"></a></h1><h2 id="History"><a class="docs-heading-anchor" href="#History">History</a><a id="History-1"></a><a class="docs-heading-anchor-permalink" href="#History" title="Permalink"></a></h2><h3 id="1.-Overview-and-Motivation"><a class="docs-heading-anchor" href="#1.-Overview-and-Motivation">1. Overview &amp; Motivation</a><a id="1.-Overview-and-Motivation-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Overview-and-Motivation" title="Permalink"></a></h3><p>The history field of Spacecraft stores propagated orbit state data for use in creating ephemeris files, 3D plots, reports etc. History segments are used to delineate discontinuities, and for separate mission events such as maneuver(), and propagate().</p><ul><li><p>History is stored as a vector of Time and matrix of cartesian state numbers but does not use the CartesianState struct. It does not scale well with new data like CoordinateSystem, segment name etc. Users access history data directly and the interface does not hide implementation so it is brittle.</p></li><li><p>Implement a composed solution that provides an extendible interface for adding more history attributes like CoordinateSystem. Provide a better user interface that hides the implementation of the data/struct from the user. This means, accessing data for plotting, reporting etc. and a clean interface for integration with AstroCallbacks. </p></li></ul><h3 id="2.-Requirements"><a class="docs-heading-anchor" href="#2.-Requirements">2. Requirements</a><a id="2.-Requirements-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Requirements" title="Permalink"></a></h3><h4 id="Data-Requirements"><a class="docs-heading-anchor" href="#Data-Requirements">Data Requirements</a><a id="Data-Requirements-1"></a><a class="docs-heading-anchor-permalink" href="#Data-Requirements" title="Permalink"></a></h4><ul><li>Store Time and CartesianState per data point within a segment</li><li>Store CoordinateSystem per segment</li><li>Support segment metadata (name, description, event type)</li><li>Support multiple segments with discontinuities between them</li><li>The history struct shall be extensible to handle potential fields and future metadata needs</li></ul><h4 id="Query/Access-Requirements"><a class="docs-heading-anchor" href="#Query/Access-Requirements">Query/Access Requirements</a><a id="Query/Access-Requirements-1"></a><a class="docs-heading-anchor-permalink" href="#Query/Access-Requirements" title="Permalink"></a></h4><ul><li>Access state at specific point</li><li>Access state at specific time (with interpolation if needed)</li><li>Access full segment by index or name</li><li>Access data over time range (potentially spanning multiple segments)</li><li>Export to arrays/matrices for plotting libraries</li><li>Provide efficient iteration over time-state pairs</li><li>Support querying segment boundaries and metadata</li></ul><h4 id="Non-functional-Requirements"><a class="docs-heading-anchor" href="#Non-functional-Requirements">Non-functional Requirements</a><a id="Non-functional-Requirements-1"></a><a class="docs-heading-anchor-permalink" href="#Non-functional-Requirements" title="Permalink"></a></h4><ul><li>Efficient append operations during propagation</li><li>Memory efficient for long-duration propagations</li><li>Type stable for performance-critical operations</li><li>Minimal overhead for single-segment use cases</li></ul><h4 id="Interface-Requirements"><a class="docs-heading-anchor" href="#Interface-Requirements">Interface Requirements</a><a id="Interface-Requirements-1"></a><a class="docs-heading-anchor-permalink" href="#Interface-Requirements" title="Permalink"></a></h4><ul><li>Provide clean API for AstroCallbacks integration (adding history points during propagation)</li><li>Support ephemeris file generation (access to time-ordered state data)</li><li>Support 3D plotting (efficient bulk data access)</li><li>Hide implementation details from user code (abstraction barrier)</li></ul><h3 id="3.-Proposed-Data-Structure"><a class="docs-heading-anchor" href="#3.-Proposed-Data-Structure">3. Proposed Data Structure</a><a id="3.-Proposed-Data-Structure-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Proposed-Data-Structure" title="Permalink"></a></h3><h4 id="Core-Types"><a class="docs-heading-anchor" href="#Core-Types">Core Types</a><a id="Core-Types-1"></a><a class="docs-heading-anchor-permalink" href="#Core-Types" title="Permalink"></a></h4><pre><code class="language-julia hljs">&quot;&quot;&quot;
+    HistorySegment
+
+Represents a continuous segment of spacecraft trajectory history.
+&quot;&quot;&quot;
+struct HistorySegment
+    times::Vector{Time}                      # Ordered vector of time points
+    states::Vector{CartesianState{Float64}}  # State vectors (always Float64)
+    coordinate_system::CoordinateSystem      # Reference frame for this segment
+    name::String                             # Optional segment identifier
+    metadata::Dict{String, Any}              # Extensible metadata storage
+end
+
+&quot;&quot;&quot;
+    SpacecraftHistory
+
+Container for spacecraft trajectory history, organized into segments.
+&quot;&quot;&quot;
+struct SpacecraftHistory
+    segments::Vector{HistorySegment}         # Solution trajectory segments
+    iterations::Vector{HistorySegment}       # Solver iteration segments (diagnostic)
+    record_segments::Bool                    # Enable solution segment recording
+    record_iterations::Bool                  # Enable iteration segment recording
+end</code></pre><h4 id="Design-Rationale"><a class="docs-heading-anchor" href="#Design-Rationale">Design Rationale</a><a id="Design-Rationale-1"></a><a class="docs-heading-anchor-permalink" href="#Design-Rationale" title="Permalink"></a></h4><p><strong>Storage Type Choice:</strong></p><ul><li>History stores Float64 exclusively for simplicity and type stability</li><li>AD types (Dual numbers) are automatically cast to Float64 during recording</li><li>History is for output/analysis (plots, ephemeris), not gradient computation</li><li>Eliminates type parameter complexity while maintaining performance</li></ul><p><strong>HistorySegment Fields:</strong></p><ul><li><code>times</code> and <code>states</code> as parallel vectors for efficient storage and access</li><li><code>coordinate_system</code> at segment level (assumes single frame per segment)</li><li><code>name</code> for human-readable identification (empty string if unnamed)</li><li><code>metadata</code> Dict provides extensibility without modifying struct</li></ul><p><strong>SpacecraftHistory:</strong></p><ul><li>Separates solution trajectory (<code>segments</code>) from diagnostic data (<code>iterations</code>)</li><li>Recording flags control which segments are populated during propagation</li><li>Default behavior: record solution only, skip iterations for efficiency</li><li>Thin abstraction layer to hide implementation</li></ul><h4 id="Alternative-Considerations"><a class="docs-heading-anchor" href="#Alternative-Considerations">Alternative Considerations</a><a id="Alternative-Considerations-1"></a><a class="docs-heading-anchor-permalink" href="#Alternative-Considerations" title="Permalink"></a></h4><ol><li><strong>Single vectors vs. Vector of tuples:</strong> Parallel vectors chosen for performance and easier bulk access</li><li><strong>Mutable vs. Immutable:</strong> Immutable structs chosen for safety; append operations create new segments or history</li><li><strong>Dict metadata vs. explicit fields:</strong> Dict provides flexibility; can refactor to explicit fields if common patterns emerge</li><li><strong>Separate coordinate system per point:</strong> Too granular; segment-level is sufficient for most use cases</li></ol><h3 id="4.-API-Design"><a class="docs-heading-anchor" href="#4.-API-Design">4. API Design</a><a id="4.-API-Design-1"></a><a class="docs-heading-anchor-permalink" href="#4.-API-Design" title="Permalink"></a></h3><h4 id="Constructors"><a class="docs-heading-anchor" href="#Constructors">Constructors</a><a id="Constructors-1"></a><a class="docs-heading-anchor-permalink" href="#Constructors" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Create empty history
+SpacecraftHistory()
+
+# Create empty segment
+HistorySegment(coord_system::CoordinateSystem; 
+               name::String=&quot;&quot;, 
+               metadata::Dict{String,Any}=Dict{String,Any}())
+
+# Create segment from existing data
+HistorySegment(times::Vector{Time}, 
+               states::Vector{CartesianState{Float64}}, 
+               coord_system::CoordinateSystem;
+               name::String=&quot;&quot;,
+               metadata::Dict{String,Any}=Dict{String,Any}())</code></pre><h4 id="Adding/Updating-History"><a class="docs-heading-anchor" href="#Adding/Updating-History">Adding/Updating History</a><a id="Adding/Updating-History-1"></a><a class="docs-heading-anchor-permalink" href="#Adding/Updating-History" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Add a point to an existing segment (mutates segment&#39;s times/states vectors)
+# Automatically converts Dual/BigFloat to Float64
+push_state!(segment::HistorySegment, time::Time, state::CartesianState)
+
+# Add a new segment to history (routes based on history.record_segments and history.record_iterations flags)
+# - If record_iterations=true: adds to history.iterations
+# - If record_segments=true and record_iterations=false: adds to history.segments
+# - Otherwise: no-op (segment not recorded)
+push_segment!(history::SpacecraftHistory, segment::HistorySegment)
+
+# Start a new segment (convenience for propagation - creates and adds empty segment)
+new_segment!(history::SpacecraftHistory, 
+             coord_system::CoordinateSystem; 
+             name::String=&quot;&quot;,
+             metadata::Dict{String,Any}=Dict{String,Any}())</code></pre><h4 id="Query/Access-Methods"><a class="docs-heading-anchor" href="#Query/Access-Methods">Query/Access Methods</a><a id="Query/Access-Methods-1"></a><a class="docs-heading-anchor-permalink" href="#Query/Access-Methods" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Direct field access (no getters needed)
+segment.times                    # Vector{Time{Float64}}
+segment.states                   # Vector{CartesianState{Float64}}
+segment.coordinate_system        # CoordinateSystem
+segment.name                     # String
+segment.metadata                 # Dict{String,Any}
+
+history.segments                 # Vector{HistorySegment} - solution trajectory
+history.iterations               # Vector{HistorySegment} - solver iterations (if recorded)
+history.record_segments          # Bool - is solution recording enabled?
+history.record_iterations        # Bool - is iteration recording enabled?
+history.record_iterations        # Bool - is iteration recording enabled?
+history[i]                       # Get segment by index from solution trajectory
+length(history)                  # Number of solution segments
+isempty(history)                 # Check if solution trajectory empty
+isempty(segment)                 # Check if segment empty
+
+# Iteration (iterates over solution segments only)tory)                 # Check if empty
+isempty(segment)                 # Check if segment empty
+
+# Iteration
+for segment in history
+    # Process each segment
+end</code></pre><h4 id="Export/Conversion"><a class="docs-heading-anchor" href="#Export/Conversion">Export/Conversion</a><a id="Export/Conversion-1"></a><a class="docs-heading-anchor-permalink" href="#Export/Conversion" title="Permalink"></a></h4><p>Export functions TBD when integrating with plotting/reporting systems</p><h4 id="Integration-Points"><a class="docs-heading-anchor" href="#Integration-Points">Integration Points</a><a id="Integration-Points-1"></a><a class="docs-heading-anchor-permalink" href="#Integration-Points" title="Permalink"></a></h4><pre><code class="language-julia hljs"># For AstroCallbacks - append during propagation
+# Callback adds (time, state) to current segment
+function record_history!(history::SpacecraftHistory, time::Time, state::CartesianState)
+    current_segment = last(history.segments)
+    push_state!(current_segment, time, state)
+end
+
+# For propagate() - start new segment
+function propagate!(sc::Spacecraft, ...)
+    new_segment!(sc.history, sc.coordinate_system, name=&quot;propagate_\$(timestamp)&quot;)
+    # ... propagation loop calls record_history!
+end
+
+# For maneuver() - mark discontinuity with new segment  
+function maneuver!(sc::Spacecraft, ...)
+    new_segment!(sc.history, sc.coordinate_system, name=&quot;maneuver_\$(timestamp)&quot;)
+    # ... maneuver updates state
+end</code></pre><h4 id="Design-Notes"><a class="docs-heading-anchor" href="#Design-Notes">Design Notes</a><a id="Design-Notes-1"></a><a class="docs-heading-anchor-permalink" href="#Design-Notes" title="Permalink"></a></h4><ul><li><strong>Immutability compromise:</strong> While structs are immutable, the vectors they contain can be mutated for efficiency during propagation. <code>push_state!</code> modifies the underlying vector.</li><li><strong>Naming convention:</strong> <code>push_*!</code> for mutations, direct field access for data retrieval</li><li><strong>Type inference:</strong> Return types preserve <code>T</code> parameter for type stability</li><li><strong>Segment access:</strong> Direct indexing <code>history[i]</code> in Phase 1, name-based lookup in Phase 2</li><li><strong>No getter functions:</strong> Fields are public, use direct access (e.g., <code>segment.times</code> not <code>get_times(segment)</code>)</li></ul><h3 id="5.-Usage-Examples"><a class="docs-heading-anchor" href="#5.-Usage-Examples">5. Usage Examples</a><a id="5.-Usage-Examples-1"></a><a class="docs-heading-anchor-permalink" href="#5.-Usage-Examples" title="Permalink"></a></h3><p>This section explores how the history design integrates with other system components and enables common user workflows.</p><h4 id="Plotting-Integration"><a class="docs-heading-anchor" href="#Plotting-Integration">Plotting Integration</a><a id="Plotting-Integration-1"></a><a class="docs-heading-anchor-permalink" href="#Plotting-Integration" title="Permalink"></a></h4><p><strong>Use Case:</strong> User wants to visualize trajectory after propagation</p><pre><code class="language-julia hljs"># Simple case - plot entire trajectory
+propagate!(sat, duration=3days)
+view = View3D()
+add_spacecraft!(view, sat)
+display_view(view)</code></pre><p><strong>Requirements from History:</strong></p><ul><li>Efficient iteration over segments and time-state pairs</li><li>Extract position data (x, y, z) from CartesianState</li><li>Support per-segment visualization (different colors for each segment)</li><li>Query coordinate system for proper frame rendering</li></ul><h4 id="AstroCallbacks-Integration"><a class="docs-heading-anchor" href="#AstroCallbacks-Integration">AstroCallbacks Integration</a><a id="AstroCallbacks-Integration-1"></a><a class="docs-heading-anchor-permalink" href="#AstroCallbacks-Integration" title="Permalink"></a></h4><p><strong>Use Case:</strong> History is recorded automatically during propagation</p><pre><code class="language-julia hljs"># History recording happens automatically
+propagate!(sat, duration=1day)
+# sat.history now contains trajectory data</code></pre><p><strong>Requirements from History:</strong></p><ul><li>Fast append operations (<code>push_state!</code>) called frequently during integration</li><li>Access to current segment for appending</li><li>Automatic segment creation when propagate() or maneuver() is called</li></ul><p><strong>Internal Implementation Note:</strong> History recording is handled internally by the propagation system via callbacks. Users don&#39;t need to configure history recording - it just works.</p><h4 id="Ephemeris-File-Generation"><a class="docs-heading-anchor" href="#Ephemeris-File-Generation">Ephemeris File Generation</a><a id="Ephemeris-File-Generation-1"></a><a class="docs-heading-anchor-permalink" href="#Ephemeris-File-Generation" title="Permalink"></a></h4><p><strong>Use Case:</strong> Export trajectory to SPK or other ephemeris format</p><pre><code class="language-julia hljs"># Create ephemeris configuration
+ephem = EphemerisFile(
+    filename = &quot;mission.bsp&quot;,
+    format = :spk,
+    interpolation = :hermite
+)
+
+# Add spacecraft trajectory
+add_spacecraft!(ephem, sat)
+
+# Write the file
+write_ephemeris(ephem)</code></pre><p><strong>Requirements from History:</strong></p><ul><li>Time-ordered state data access per segment</li><li>Coordinate system metadata for frame specifications</li><li>Segment boundaries map naturally to SPK segments</li><li>Support iteration for different interpolation schemes</li></ul><p><strong>Requirements from History:</strong></p><ul><li>Time-ordered state data access per segment</li><li>Coordinate system metadata for frame specifications</li><li>Segment boundaries map naturally to SPK segments</li><li>Support iteration for different interpolation schemes</li></ul><h4 id="2D-Plotting"><a class="docs-heading-anchor" href="#2D-Plotting">2D Plotting</a><a id="2D-Plotting-1"></a><a class="docs-heading-anchor-permalink" href="#2D-Plotting" title="Permalink"></a></h4><p><strong>Use Case:</strong> Create 2D plots of trajectory data</p><pre><code class="language-julia hljs"># Create plot configuration
+plot2d = Plot2D(
+    title = &quot;Altitude Profile&quot;,
+    xlabel = &quot;Time (days)&quot;,
+    ylabel = &quot;Altitude (km)&quot;
+)
+
+# Add quantities to plot
+add_quantity!(plot2d, sat, :altitude)
+add_quantity!(plot2d, sat, :velocity_magnitude)
+
+# Display the plot
+display_plot(plot2d)</code></pre><p><strong>Requirements from History:</strong></p><ul><li>Efficient extraction of time series data</li><li>Access to full state vectors for computing derived quantities</li><li>Support for multiple spacecraft on same plot</li><li>Handle segment boundaries (discontinuities in plots)</li></ul><h4 id="Report-Generation"><a class="docs-heading-anchor" href="#Report-Generation">Report Generation</a><a id="Report-Generation-1"></a><a class="docs-heading-anchor-permalink" href="#Report-Generation" title="Permalink"></a></h4><p><strong>Use Case:</strong> Generate mission analysis reports</p><pre><code class="language-julia hljs"># Create report configuration
+report = MissionReport(
+    title = &quot;Orbital Analysis&quot;,
+    format = :pdf
+)
+
+# Add report sections
+add_section!(report, :trajectory_summary, sat)
+add_section!(report, :maneuver_performance, sat)
+add_section!(report, :orbit_statistics, sat)
+
+# Generate the report
+generate_report(report, &quot;mission_report.pdf&quot;)</code></pre><p><strong>Requirements from History:</strong></p><ul><li>Query time ranges and statistics per segment</li><li>Access segment metadata (names, event types)</li><li>Extract state data for analysis functions</li><li>Support tabular data export for report tables</li></ul><h4 id="Common-User-Workflows"><a class="docs-heading-anchor" href="#Common-User-Workflows">Common User Workflows</a><a id="Common-User-Workflows-1"></a><a class="docs-heading-anchor-permalink" href="#Common-User-Workflows" title="Permalink"></a></h4><p><strong>Workflow 1: Quick trajectory inspection (segments transparent)</strong></p><pre><code class="language-julia hljs">propagate!(sat, duration=2days)
+plot(sat.history)  # User doesn&#39;t think about segments</code></pre><p><strong>Workflow 2: Multi-phase mission (segments visible)</strong></p><pre><code class="language-julia hljs">propagate!(sat, duration=1day)
+maneuver!(sat, dv=[0.1, 0, 0])
+propagate!(sat, duration=1day)
+
+# User wants to see each phase
+for (i, segment) in enumerate(history.segments)
+    println(&quot;Segment \$i: \$(segment.name), \$(length(segment.times)) points&quot;)
+end</code></pre><p><strong>Workflow 3: Custom analysis (full API access)</strong></p><pre><code class="language-julia hljs"># User has direct field access
+segment1_times = history.segments[1].times
+segment1_states = history.segments[1].states
+# Custom processing...</code></pre><h4 id="Design-Implications"><a class="docs-heading-anchor" href="#Design-Implications">Design Implications</a><a id="Design-Implications-1"></a><a class="docs-heading-anchor-permalink" href="#Design-Implications" title="Permalink"></a></h4><ul><li><strong>Flattening is key:</strong> Many operations (plot, export) should work across all segments by default</li><li><strong>Segment awareness optional:</strong> User shouldn&#39;t need to know about segments for simple cases</li><li><strong>Performance matters for callbacks:</strong> <code>push_state!</code> will be called thousands of times</li><li><strong>Metadata enables rich features:</strong> Names, coordinate systems, metadata enable better reports/plots</li><li><strong>Standard interfaces:</strong> Consider implementing standard Julia interfaces (Tables.jl, Plots.jl recipes)</li></ul><h3 id="6.-Implementation-Details"><a class="docs-heading-anchor" href="#6.-Implementation-Details">6. Implementation Details</a><a id="6.-Implementation-Details-1"></a><a class="docs-heading-anchor-permalink" href="#6.-Implementation-Details" title="Permalink"></a></h3><h4 id="Storage-Format"><a class="docs-heading-anchor" href="#Storage-Format">Storage Format</a><a id="Storage-Format-1"></a><a class="docs-heading-anchor-permalink" href="#Storage-Format" title="Permalink"></a></h4><p>mutable struct SpacecraftHistory     segments::Vector{HistorySegment}     iterations::Vector{HistorySegment}     record<em>segments::Bool     record</em>iterations::Bool end</p><pre><code class="nohighlight hljs">- Mutable to allow flag modification by solver
+- Separate vectors for solution vs iteration segments
+- No type parameters - history always stores Float64
+- Internal vectors
+- Simple wrapper around vector of segments
+- No type parameters - history always stores Float64
+- Immutable struct, but internal vector can grow via `push!`
+
+**HistorySegment struct:**</code></pre><p>julia struct HistorySegment     times::Vector{Time}     states::Vector{CartesianState{Float64}}     coordinate_system::CoordinateSystem     name::String     metadata::Dict{String, Any} end</p><pre><code class="nohighlight hljs">- Parallel vectors (`times`, `states`) for cache-friendly access
+- Concrete Float64 type for full type stability
+- Immutable struct protects invariants, but vectors can be mutated internally
+
+**Memory layout:**
+- Contiguous vectors enable SIMD and efficient bulk operations
+- Vector{CartesianState{Float64}} stores actual data inline (not pointers)
+- Metadata Dict only allocated when needed (empty dict is lightweight)
+
+#### Indexing Strategy
+
+**Direct field access (internal use only):**</code></pre><p>julia</p><h1 id="Fast-path-for-performance-critical-code"><a class="docs-heading-anchor" href="#Fast-path-for-performance-critical-code">Fast path for performance-critical code</a><a id="Fast-path-for-performance-critical-code-1"></a><a class="docs-heading-anchor-permalink" href="#Fast-path-for-performance-critical-code" title="Permalink"></a></h1><p>segment = getfield(history, :segments)[idx] times_vec = getfield(segment, :times)</p><pre><code class="nohighlight hljs">
+**Property access via getproperty (user interface):**</code></pre><p>julia Base.getproperty(h::SpacecraftHistory, s::Symbol) =      if s === :num_segments         length(getfield(h, :segments))     elseif s === :segments         getfield(h, :segments)     else         getfield(h, s)     end</p><p>Base.getproperty(seg::HistorySegment, s::Symbol) =      if s === :num_points         length(getfield(seg, :times))     else         getfield(seg, s)     end</p><pre><code class="nohighlight hljs">
+**Array-like indexing:**</code></pre><p>julia</p><h1 id="Access-segment-by-index"><a class="docs-heading-anchor" href="#Access-segment-by-index">Access segment by index</a><a id="Access-segment-by-index-1"></a><a class="docs-heading-anchor-permalink" href="#Access-segment-by-index" title="Permalink"></a></h1><p>Base.getindex(h::SpacecraftHistory, i::Int) = h.segments[i] Base.getindex(h::SpacecraftHistory, r::UnitRange) = h.segments[r]</p><h1 id="Iteration-support"><a class="docs-heading-anchor" href="#Iteration-support">Iteration support</a><a id="Iteration-support-1"></a><a class="docs-heading-anchor-permalink" href="#Iteration-support" title="Permalink"></a></h1><p>Base.iterate(h::SpacecraftHistory, state=1) =      state &gt; length(h.segments) ? nothing : (h.segments[state], state+1)</p><p>Base.length(h::SpacecraftHistory) = length(h.segments)</p><pre><code class="nohighlight hljs">
+**Segment lookup by name (Phase 2):**</code></pre><p>julia Base.getindex(h::SpacecraftHistory, name::String) =      findfirst(seg -&gt; seg.name == name, h.segments)</p><pre><code class="nohighlight hljs">
+#### Memory Management
+
+**Preallocating segments:**
+- During propagation, segments grow incrementally
+- Consider sizehint! for expected trajectory length:</code></pre><p>julia function new<em>segment!(history, coord</em>sys; expected<em>points=1000, kwargs...)     segment = HistorySegment(coord</em>sys; kwargs...)     sizehint!(segment.times, expected<em>points)     sizehint!(segment.states, expected</em>points)     push!(history.segments, segment) end</p><pre><code class="nohighlight hljs">
+
+
+**Append performance:**</code></pre><p>julia function push<em>state!(segment::HistorySegment, time::Time, state::CartesianState)     # Direct field access for performance     times = getfield(segment, :times)     states = getfield(segment, :states)     # Convert to Float64 (handles Dual, BigFloat, etc.)     state</em>f64 = to<em>float64(state)     push!(times, time)     push!(states, state</em>f64)     return nothing end</p><pre><code class="nohighlight hljs">- Amortized O(1) append due to vector growth strategy
+- Critical path during integration - no allocations except vector resize
+- `to_float64` handles automatic conversion from AD types
+
+**Type conversion helper:**</code></pre><p>julia</p><h1 id="Conversion-from-any-CartesianState{T}-to-CartesianState{Float64}"><a class="docs-heading-anchor" href="#Conversion-from-any-CartesianState{T}-to-CartesianState{Float64}">Conversion from any CartesianState{T} to CartesianState{Float64}</a><a id="Conversion-from-any-CartesianState{T}-to-CartesianState{Float64}-1"></a><a class="docs-heading-anchor-permalink" href="#Conversion-from-any-CartesianState{T}-to-CartesianState{Float64}" title="Permalink"></a></h1><p>to<em>float64(state::CartesianState{Float64}) = state  # No-op for Float64 to</em>float64(state::CartesianState) = CartesianState(Float64.(to_vector(state)))</p><pre><code class="nohighlight hljs">
+**Memory footprint estimate:**
+- Each Time: ~24 bytes
+- Each CartesianState{Float64}: ~48 bytes (6 Float64s)
+- Per point overhead: ~72 bytes
+- 10,000 points ≈ 700 KB
+- Segment metadata: negligible unless Dict is populated
+
+**Cleanup considerations:**
+- History is immutable from spacecraft perspective
+- Clear history by creating new empty history
+- Segments are garbage collected when history is replaced
+- No manual memory management needed
+
+#### Type Stability
+
+**Concrete Float64 storage:**</code></pre><p>julia</p><h1 id="History-always-uses-concrete-Float64-type"><a class="docs-heading-anchor" href="#History-always-uses-concrete-Float64-type">History always uses concrete Float64 type</a><a id="History-always-uses-concrete-Float64-type-1"></a><a class="docs-heading-anchor-permalink" href="#History-always-uses-concrete-Float64-type" title="Permalink"></a></h1><p>history = SpacecraftHistory() segment = HistorySegment(coord_sys)</p><h1 id="Automatic-conversion-from-any-numeric-type"><a class="docs-heading-anchor" href="#Automatic-conversion-from-any-numeric-type">Automatic conversion from any numeric type</a><a id="Automatic-conversion-from-any-numeric-type-1"></a><a class="docs-heading-anchor-permalink" href="#Automatic-conversion-from-any-numeric-type" title="Permalink"></a></h1><p>state<em>dual = CartesianState{Dual}([...])  # From AD propagation push</em>state!(segment, time, state_dual)     # Converts to Float64 internally</p><h1 id="Result-is-always-type-stable-Float64"><a class="docs-heading-anchor" href="#Result-is-always-type-stable-Float64">Result is always type-stable Float64</a><a id="Result-is-always-type-stable-Float64-1"></a><a class="docs-heading-anchor-permalink" href="#Result-is-always-type-stable-Float64" title="Permalink"></a></h1><p>stored_state = segment.states[1]  # CartesianState{Float64}</p><pre><code class="nohighlight hljs">
+**Type stability benefits:**
+- No type parameters eliminates parametric complexity
+- Vector{CartesianState{Float64}} is fully concrete
+- AD overhead isolated to propagation, not storage
+- metadata Dict is type-unstable by design (flexibility &gt; performance here)
+- Use getfield() in hot loops to avoid getproperty overhead
+
+**P# Solver Iteration Recording (Optional Feature)
+
+**Requirement:** Support recording solver iterations for trajectory optimization diagnostics.
+
+**Use Case:** During trajectory optimization, the solver may evaluate thousands of candidate trajectories. By default, only the final converged solution is recorded in history. For debugging convergence issues or visualizing the optimization process, users can opt to record all iterations.
+
+**Design:**
+- Separate storage: `iterations` vector contains iteration segments, `segments` contains solution
+- Two independent flags control recording:
+  - `record_segments::Bool = true` - Controls solution segment recording
+  - `record_iterations::Bool = false` - Controls iteration segment recording
+- Routing logic in `push_segment!`:
+  ```julia
+  function push_segment!(history, segment)
+      if history.record_iterations
+          push!(history.iterations, segment)
+      elseif history.record_segments
+          push!(history.segments, segment)
+      end
+      # If both false: segment not recorded (no-op)
+  end
+  ```
+
+**Solver Integration (AstroSolve):**</code></pre><p>julia</p><h1 id="In-trajectory*solve(seq,-options;-record*iterationsfalse)"><a class="docs-heading-anchor" href="#In-trajectory*solve(seq,-options;-record*iterationsfalse)">In trajectory<em>solve(seq, options; record</em>iterations=false)</a><a id="In-trajectory*solve(seq,-options;-record*iterationsfalse)-1"></a><a class="docs-heading-anchor-permalink" href="#In-trajectory*solve(seq,-options;-record*iterationsfalse)" title="Permalink"></a></h1><h1 id="Default-mode:-record_iterationsfalse"><a class="docs-heading-anchor" href="#Default-mode:-record_iterationsfalse">Default mode: record_iterations=false</a><a id="Default-mode:-record_iterationsfalse-1"></a><a class="docs-heading-anchor-permalink" href="#Default-mode:-record_iterationsfalse" title="Permalink"></a></h1><p>sc.history.record<em>segments = false      # Don&#39;t record during optimization sc.history.record</em>iterations = false</p><h1 id="...-optimizer-runs,-history-not-populated-..."><a class="docs-heading-anchor" href="#...-optimizer-runs,-history-not-populated-...">... optimizer runs, history not populated ...</a><a id="...-optimizer-runs,-history-not-populated-...-1"></a><a class="docs-heading-anchor-permalink" href="#...-optimizer-runs,-history-not-populated-..." title="Permalink"></a></h1><p>sc.history.record_segments = true       # Record final solution only</p><h1 id="...-execute-sequence-one-final-time-..."><a class="docs-heading-anchor" href="#...-execute-sequence-one-final-time-...">... execute sequence one final time ...</a><a id="...-execute-sequence-one-final-time-...-1"></a><a class="docs-heading-anchor-permalink" href="#...-execute-sequence-one-final-time-..." title="Permalink"></a></h1><h1 id="Diagnostic-mode:-record_iterationstrue"><a class="docs-heading-anchor" href="#Diagnostic-mode:-record_iterationstrue">Diagnostic mode: record_iterations=true</a><a id="Diagnostic-mode:-record_iterationstrue-1"></a><a class="docs-heading-anchor-permalink" href="#Diagnostic-mode:-record_iterationstrue" title="Permalink"></a></h1><p>sc.history.record<em>segments = false      # Don&#39;t record in segments sc.history.record</em>iterations = true     # Do record in iterations</p><h1 id="...-optimizer-runs,-all-iterations-stored-in-history.iterations-..."><a class="docs-heading-anchor" href="#...-optimizer-runs,-all-iterations-stored-in-history.iterations-...">... optimizer runs, all iterations stored in history.iterations ...</a><a id="...-optimizer-runs,-all-iterations-stored-in-history.iterations-...-1"></a><a class="docs-heading-anchor-permalink" href="#...-optimizer-runs,-all-iterations-stored-in-history.iterations-..." title="Permalink"></a></h1><p>sc.history.record<em>iterations = false    # Switch to solution mode sc.history.record</em>segments = true</p><h1 id="...-execute-sequence-final-time,-solution-in-history.segments-..."><a class="docs-heading-anchor" href="#...-execute-sequence-final-time,-solution-in-history.segments-...">... execute sequence final time, solution in history.segments ...</a><a id="...-execute-sequence-final-time,-solution-in-history.segments-...-1"></a><a class="docs-heading-anchor-permalink" href="#...-execute-sequence-final-time,-solution-in-history.segments-..." title="Permalink"></a></h1><pre><code class="nohighlight hljs">
+**Benefits:**
+- Clean separation: solution data vs diagnostic data
+- Memory efficient default: iterations not recorded unless requested
+- Opt-in diagnostics: power users can visualize convergence behavior
+- Natural access: `history.segments` always contains solution trajectory
+
+**Rationale:**
+- Alternative considered: Single `segments` vector with `is_iteration::Bool` field per segment
+  - Rejected: Mixing solution and diagnostic data complicates filtering for ephemeris, plots
+  - Rejected: Requires checking metadata/field for every operation
+- Separate vectors make intent clear: iterations are purely diagnostic, segments are mission data
+
+**Example Usage:**</code></pre><p>julia</p><h1 id="Debug-mode-see-all-optimization-iterations"><a class="docs-heading-anchor" href="#Debug-mode-see-all-optimization-iterations">Debug mode - see all optimization iterations</a><a id="Debug-mode-see-all-optimization-iterations-1"></a><a class="docs-heading-anchor-permalink" href="#Debug-mode-see-all-optimization-iterations" title="Permalink"></a></h1><p>result = trajectory<em>solve(seq, options; record</em>iterations=true) view = View3D() add_spacecraft!(view, sat)</p><h1 id="Visualize-shows-all-iteration-trajectories-overlaid-(diagnostic-view)"><a class="docs-heading-anchor" href="#Visualize-shows-all-iteration-trajectories-overlaid-(diagnostic-view)">Visualize shows all iteration trajectories overlaid (diagnostic view)</a><a id="Visualize-shows-all-iteration-trajectories-overlaid-(diagnostic-view)-1"></a><a class="docs-heading-anchor-permalink" href="#Visualize-shows-all-iteration-trajectories-overlaid-(diagnostic-view)" title="Permalink"></a></h1><h1 id="Production-mode-clean-final-solution-only-(default)"><a class="docs-heading-anchor" href="#Production-mode-clean-final-solution-only-(default)">Production mode - clean final solution only (default)</a><a id="Production-mode-clean-final-solution-only-(default)-1"></a><a class="docs-heading-anchor-permalink" href="#Production-mode-clean-final-solution-only-(default)" title="Permalink"></a></h1><p>result = trajectory<em>solve(seq, options)  # record</em>iterations=false view = View3D()   add_spacecraft!(view, sat)</p><h1 id="Visualize-shows-only-final-converged-trajectory"><a class="docs-heading-anchor" href="#Visualize-shows-only-final-converged-trajectory">Visualize shows only final converged trajectory</a><a id="Visualize-shows-only-final-converged-trajectory-1"></a><a class="docs-heading-anchor-permalink" href="#Visualize-shows-only-final-converged-trajectory" title="Permalink"></a></h1><pre><code class="nohighlight hljs">
+###erformance validation:**</code></pre><p>julia</p><h1 id="Should-show-no-allocations-in-steady-state"><a class="docs-heading-anchor" href="#Should-show-no-allocations-in-steady-state">Should show no allocations in steady state</a><a id="Should-show-no-allocations-in-steady-state-1"></a><a class="docs-heading-anchor-permalink" href="#Should-show-no-allocations-in-steady-state" title="Permalink"></a></h1><p>@btime push_state!(<span>$</span>segment, <span>$</span>time, <span>$</span>state)</p><pre><code class="nohighlight hljs">
+### 7. Migration Strategy
+
+**No backwards compatibility required** - breaking change acceptable since API is pre-release.
+
+#### Package-Level Changes
+
+**1. AstroModels (Core definitions)**
+- Define `HistorySegment` and `SpacecraftHistory` structs
+- Implement API functions (constructors, push_state!, push_segment!, queries)
+- Update `Spacecraft` type: `history::Vector{...}` → `history::SpacecraftHistory`
+- Remove old history accessor functions
+- Export new types and functions
+
+**2. AstroCallbacks (History recording)**
+- Update callback functions to use `push_state!` instead of vector append
+- Replace: `push!(sc.history[end], (time, vec(state)))` 
+- With: `push_state!(current_segment(sc.history), time, state)`
+- Add segment management if callbacks control propagation phases
+
+**3. AstroProp (Propagation)**
+- Call `new_segment!` at propagation start
+- Update state recording to use `push_state!`
+- Add segment naming/metadata for propagation phases
+- Ensure coordinate system passed to segment constructor
+
+**4. Epicycle (Visualization - View3D)**
+- Update history access to iterate over segments
+- Use `get_positions()` for 3D rendering per segment
+- Iterate over segments if rendering with different styles
+- Handle coordinate system transformations for multi-frame histories
+
+**5. Examples &amp; Tests**
+- Update all example scripts using history
+- Replace manual history indexing with API calls
+- Add examples demonstrating segment-based workflows
+- Update plotting examples to use `to_matrix()` or `get_positions()`
+
+#### Implementation Order
+</code></pre><p>Phase 1: Core (AstroModels) ├─ Define structs ├─ Implement API functions   └─ Add tests</p><p>Phase 2: Recording (AstroCallbacks + AstroProp) ├─ Update propagation to create segments ├─ Update callbacks to push states └─ Test basic propagation</p><p>Phase 3: Consumers (Epicycle + Examples) ├─ Update View3D rendering ├─ Update plotting utilities ├─ Update examples and docs └─ Full integration tests</p><p>Phase 4: Cleanup ├─ Remove commented-out old code ├─ Update package documentation └─ Verify all tests pass</p><pre><code class="nohighlight hljs">
+#### Code Changes Required
+
+**AstroModels/src/spacecraft.jl:**</code></pre><p>julia</p><h1 id="OLD"><a class="docs-heading-anchor" href="#OLD">OLD</a><a id="OLD-1"></a><a class="docs-heading-anchor-permalink" href="#OLD" title="Permalink"></a></h1><p>mutable struct Spacecraft{T}     # ...     history::Vector{Vector{Tuple{Time, Vector{Float64}}}} end</p><h1 id="NEW"><a class="docs-heading-anchor" href="#NEW">NEW</a><a id="NEW-1"></a><a class="docs-heading-anchor-permalink" href="#NEW" title="Permalink"></a></h1><p>mutable struct Spacecraft{T}     # ...     history::SpacecraftHistory end</p><h1 id="Update-constructor"><a class="docs-heading-anchor" href="#Update-constructor">Update constructor</a><a id="Update-constructor-1"></a><a class="docs-heading-anchor-permalink" href="#Update-constructor" title="Permalink"></a></h1><p>Spacecraft(...) = Spacecraft(..., SpacecraftHistory(), ...)</p><pre><code class="nohighlight hljs">
+**AstroCallbacks recording:**</code></pre><p>julia</p><h1 id="OLD-2"><a class="docs-heading-anchor" href="#OLD-2">OLD</a><a class="docs-heading-anchor-permalink" href="#OLD-2" title="Permalink"></a></h1><p>function record_callback(time, state, ...)     push!(sc.history[end], (time, Vector{Float64}(vec(state)))) end</p><h1 id="NEW-2"><a class="docs-heading-anchor" href="#NEW-2">NEW</a><a class="docs-heading-anchor-permalink" href="#NEW-2" title="Permalink"></a></h1><p>function record<em>callback(time, state, ...)     segment = last(sc.history.segments)     push</em>state!(segment, time, CartesianState(state)) end</p><ul><li>✓ Solver iteration history: Separate <code>iterations</code> vector with opt-in recording (Section 6.5)</li><li>✓ History recording control: <code>enabled</code> and <code>record_iterations</code> flags on SpacecraftHistory (Section 6.5)</li></ul><pre><code class="nohighlight hljs">
+**AstroProp propagation start:**</code></pre><p>julia</p><h1 id="OLD-3"><a class="docs-heading-anchor" href="#OLD-3">OLD</a><a class="docs-heading-anchor-permalink" href="#OLD-3" title="Permalink"></a></h1><p>propagate!(sc, ...) = begin     push!(sc.history, Vector{Tuple{Time,Vector{Float64}}}())     # ... end</p><h1 id="NEW-3"><a class="docs-heading-anchor" href="#NEW-3">NEW</a><a class="docs-heading-anchor-permalink" href="#NEW-3" title="Permalink"></a></h1><p>propagate!(sc, ...) = begin     new<em>segment!(sc.history, sc.coordinate</em>system,                   name=&quot;propagate_<span>$</span>(now())&quot;)     # ... end</p><pre><code class="nohighlight hljs">
+**Epicycle View3D rendering:**</code></pre><p>julia</p><h1 id="OLD-4"><a class="docs-heading-anchor" href="#OLD-4">OLD</a><a class="docs-heading-anchor-permalink" href="#OLD-4" title="Permalink"></a></h1><p>positions = [hist[2] for seg in sc.history for hist in seg]</p><h1 id="NEW-4"><a class="docs-heading-anchor" href="#NEW-4">NEW</a><a class="docs-heading-anchor-permalink" href="#NEW-4" title="Permalink"></a></h1><h1 id="Iterate-per-segment,-handle-coordinate-systems"><a class="docs-heading-anchor" href="#Iterate-per-segment,-handle-coordinate-systems">Iterate per segment, handle coordinate systems</a><a id="Iterate-per-segment,-handle-coordinate-systems-1"></a><a class="docs-heading-anchor-permalink" href="#Iterate-per-segment,-handle-coordinate-systems" title="Permalink"></a></h1><p>for segment in sc.history.segments     positions = get_positions(segment)  # Nx3 matrix per segment     # ... render with segment&#39;s coordinate system end ```</p><h4 id="File-Locations"><a class="docs-heading-anchor" href="#File-Locations">File Locations</a><a id="File-Locations-1"></a><a class="docs-heading-anchor-permalink" href="#File-Locations" title="Permalink"></a></h4><ul><li><code>AstroModels/src/history.jl</code> - New file with struct definitions and API</li><li><code>AstroModels/src/spacecraft.jl</code> - Update Spacecraft type</li><li><code>AstroModels/src/AstroModels.jl</code> - Add exports</li><li><code>AstroCallbacks/src/recording.jl</code> - Update recording callbacks</li><li><code>AstroProp/src/propagate.jl</code> - Update propagation functions</li><li><code>Epicycle/src/view3d.jl</code> - Update visualization</li><li><code>examples/</code> - Update all example scripts</li></ul><h4 id="Migration-Checklist"><a class="docs-heading-anchor" href="#Migration-Checklist">Migration Checklist</a><a id="Migration-Checklist-1"></a><a class="docs-heading-anchor-permalink" href="#Migration-Checklist" title="Permalink"></a></h4><p>Strategy:  Implement code, tests, and docs simultaneously as we go. </p><ol><li>Update AstroModels first, then address modules that integrate with AstroModels </li></ol><p>in this order AstroProp, Epicycle(View3D), AstroCallbacks</p><ul><li>[x] Implement HistorySegment, unit test, doc strings </li><li>[x] Implement SpacecraftHistory, unit test, and docstrings</li><li>[x] Update Spacecraft type definition and update AstroModels test and docs</li><li>[x] AstroProp integration</li><li>[x] AstroManeuvers integration</li><li>[x] AstroCallbacks integration (no changes needed)</li><li>[x] Update Epicycle View3D access patterns</li><li>[x] Update/add examples</li><li>[ ] Write Spacecraft user guide (quick reference?, other user material)</li><li>[ ] Run full test suite across all packages</li><li>[ ] Remove old commented code</li></ul><h3 id="8.-Testing-Plan"><a class="docs-heading-anchor" href="#8.-Testing-Plan">8. Testing Plan</a><a id="8.-Testing-Plan-1"></a><a class="docs-heading-anchor-permalink" href="#8.-Testing-Plan" title="Permalink"></a></h3><p>Tests will be developed alongside implementation (TDD approach):</p><ul><li>Write unit test for each function as it&#39;s implemented</li><li>Verify type stability, edge cases, and API contracts</li><li>Add integration tests after each phase (propagate → record → query workflows)</li><li>Benchmark performance-critical operations (push<em>state!, get</em>positions)</li></ul><p>See Migration Checklist for test coverage strategy.</p><h3 id="9.-Open-Questions"><a class="docs-heading-anchor" href="#9.-Open-Questions">9. Open Questions</a><a id="9.-Open-Questions-1"></a><a class="docs-heading-anchor-permalink" href="#9.-Open-Questions" title="Permalink"></a></h3><p><strong>Resolved:</strong></p><ul><li>✓ Dual → Float64 conversion: Use <code>Float64.(to_vector(state))</code> via <code>to_float64()</code> helper (Section 6)</li><li>✓ Solver iteration history: Separate <code>iterations</code> vector with opt-in recording (Section 6.5)</li><li>✓ History recording control: <code>record_segments</code> and <code>record_iterations</code> flags on SpacecraftHistory (Section 6.5)</li></ul><p><strong>To be addressed during implementation:</strong></p><ul><li>Error handling strategy (throw vs return codes)</li><li>Time interpolation implementation (defer to Phase 2)</li></ul></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Friday 9 January 2026 16:11">Friday 9 January 2026</span>. Using Julia version 1.12.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

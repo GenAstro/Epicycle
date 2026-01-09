@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>History · AstroModels.jl</title><meta name="title" content="History · AstroModels.jl"/><meta property="og:title" content="History · AstroModels.jl"/><meta property="twitter:title" content="History · AstroModels.jl"/><meta name="description" content="Documentation for AstroModels.jl."/><meta property="og:description" content="Documentation for AstroModels.jl."/><meta property="twitter:description" content="Documentation for AstroModels.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/AstroModels/history/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/AstroModels/history/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/AstroModels/history/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">QuickStart</a></li><li><span class="tocitem">Spacecraft</span><ul><li><a class="tocitem" href="../spacecraft/">Overview</a></li><li><a class="tocitem" href="../spacecraft_time/">Time</a></li><li><a class="tocitem" href="../spacecraft_state/">State</a></li><li><a class="tocitem" href="../spacecraft_coord_sys/">Coordinate System</a></li><li><a class="tocitem" href="../spacecraft_mass/">Mass</a></li><li><a class="tocitem" href="../spacecraft_cad_model/">CAD Model</a></li><li class="is-active"><a class="tocitem" href>History</a><ul class="internal"><li><a class="tocitem" href="#Data-Structures"><span>Data Structures</span></a></li><li><a class="tocitem" href="#Accessing-History-Data"><span>Accessing History Data</span></a></li><li><a class="tocitem" href="#Solution-vs-Iterations"><span>Solution vs Iterations</span></a></li><li><a class="tocitem" href="#Recording-Control"><span>Recording Control</span></a></li><li><a class="tocitem" href="#Common-Patterns"><span>Common Patterns</span></a></li><li><a class="tocitem" href="#Integration-with-Other-Modules"><span>Integration with Other Modules</span></a></li><li><a class="tocitem" href="#See-Also"><span>See Also</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../reference/">Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Spacecraft</a></li><li class="is-active"><a href>History</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>History</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/AstroModels/docs/src/history.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Spacecraft-History"><a class="docs-heading-anchor" href="#Spacecraft-History">Spacecraft History</a><a id="Spacecraft-History-1"></a><a class="docs-heading-anchor-permalink" href="#Spacecraft-History" title="Permalink"></a></h1><p>Trajectory history is automatically recorded during spacecraft propagation and organized into segments. This guide covers the history data structures and how to access trajectory data. </p><p><code>SpacecraftHistory</code> stores the time-ordered position and velocity data generated during propagation. History is organized into <strong>segments</strong> - continuous chunks of trajectory separated by discontinuities (e.g., maneuvers) or mission phases.</p><h2 id="Data-Structures"><a class="docs-heading-anchor" href="#Data-Structures">Data Structures</a><a id="Data-Structures-1"></a><a class="docs-heading-anchor-permalink" href="#Data-Structures" title="Permalink"></a></h2><h3 id="SpacecraftHistory"><a class="docs-heading-anchor" href="#SpacecraftHistory">SpacecraftHistory</a><a id="SpacecraftHistory-1"></a><a class="docs-heading-anchor-permalink" href="#SpacecraftHistory" title="Permalink"></a></h3><p>Container for all trajectory segments:</p><pre><code class="language-julia hljs">mutable struct SpacecraftHistory
+    segments::Vector{HistorySegment}      # Solution trajectory
+    iterations::Vector{HistorySegment}    # Solver iterations (diagnostic)
+    record_segments::Bool                  # Enable solution recording
+    record_iterations::Bool                # Enable iteration recording
+end</code></pre><p><strong>Two types of segments:</strong></p><ul><li><strong><code>segments</code></strong>: Final solution trajectory (mission data)</li><li><strong><code>iterations</code></strong>: Solver convergence iterations (diagnostic data)</li></ul><h3 id="HistorySegment"><a class="docs-heading-anchor" href="#HistorySegment">HistorySegment</a><a id="HistorySegment-1"></a><a class="docs-heading-anchor-permalink" href="#HistorySegment" title="Permalink"></a></h3><p>A continuous segment of trajectory data:</p><pre><code class="language-julia hljs">struct HistorySegment
+    times::Vector{Time{Float64}}              # Time points
+    states::Vector{CartesianState{Float64}}   # Position/velocity states
+    coordinate_system::CoordinateSystem        # Reference frame
+    name::String                               # Segment identifier
+    metadata::Dict{String, Any}                # Extensible metadata
+end</code></pre><p><strong>Key points:</strong></p><ul><li>States always stored as <code>Float64</code> (automatic conversion from AD types)</li><li>Parallel <code>times</code> and <code>states</code> vectors</li><li>Coordinate system applies to entire segment</li><li>Optional name for identification</li></ul><h2 id="Accessing-History-Data"><a class="docs-heading-anchor" href="#Accessing-History-Data">Accessing History Data</a><a id="Accessing-History-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Accessing-History-Data" title="Permalink"></a></h2><p>Spacecraft history is automatically populated during propagation and maneuvers. The examples below use a spacecraft <code>sat</code> with populated history created by this setup:</p><div class="admonition is-info" id="Full-Epicycle-Ecosystem-Required-eed492980b8f9a39"><header class="admonition-header">Full Epicycle Ecosystem Required<a class="admonition-anchor" href="#Full-Epicycle-Ecosystem-Required-eed492980b8f9a39" title="Permalink"></a></header><div class="admonition-body"><p>The setup below requires AstroProp and AstroManeuvers. The data access examples below work with any populated <code>SpacecraftHistory</code>.</p></div></div><pre><code class="language-julia hljs">using Epicycle
+using LinearAlgebra
+    
+# Create spacecraft
+sat = Spacecraft()
+
+# Setup propagator
+gravity = PointMassGravity(earth, ())  # Only Earth gravity
+forces  = ForceModel(gravity)
+integ   = IntegratorConfig(DP8(); abstol=1e-12, reltol=1e-12, dt=60.0)
+prop    = OrbitPropagator(forces, integ)
+
+# Setup maneuver
+toi = ImpulsiveManeuver(
+    axes = VNB(),
+    element1 = 2.518,
+)
+
+# Propagate and maneuver - this populates history
+propagate(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
+maneuver(sat, toi)
+propagate(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
+
+# sat.history now contains 3 segments</code></pre><h3 id="Basic-Access"><a class="docs-heading-anchor" href="#Basic-Access">Basic Access</a><a id="Basic-Access-1"></a><a class="docs-heading-anchor-permalink" href="#Basic-Access" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Access segments
+history = sat.history
+segments = history.segments
+
+# Number of segments
+n = length(history)
+
+# Check if empty
+is_empty = isempty(history)
+
+# Get specific segment
+segment = history[1]              # First segment
+segment = history.segments[2]     # Second segment</code></pre><h3 id="Iteration"><a class="docs-heading-anchor" href="#Iteration">Iteration</a><a id="Iteration-1"></a><a class="docs-heading-anchor-permalink" href="#Iteration" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Iterate over all segments
+for segment in sat.history
+    println(&quot;Segment: $(segment.name)&quot;)
+    println(&quot;  Points: $(length(segment.times))&quot;)
+end</code></pre><h3 id="Segment-Data"><a class="docs-heading-anchor" href="#Segment-Data">Segment Data</a><a id="Segment-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Segment-Data" title="Permalink"></a></h3><pre><code class="language-julia hljs">segment = history.segments[1]
+
+# Access times and states
+times = segment.times                    # Vector{Time{Float64}}
+states = segment.states                  # Vector{CartesianState{Float64}}
+
+# Get coordinate system
+coord_sys = segment.coordinate_system
+
+# Get name and metadata
+name = segment.name
+metadata = segment.metadata</code></pre><h3 id="Extracting-Position/Velocity"><a class="docs-heading-anchor" href="#Extracting-Position/Velocity">Extracting Position/Velocity</a><a id="Extracting-Position/Velocity-1"></a><a class="docs-heading-anchor-permalink" href="#Extracting-Position/Velocity" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Loop over states in a segment
+for (t, state) in zip(segment.times, segment.states)
+    x, y, z = state.position
+    vx, vy, vz = state.velocity
+    # Process data...
+end</code></pre><h2 id="Solution-vs-Iterations"><a class="docs-heading-anchor" href="#Solution-vs-Iterations">Solution vs Iterations</a><a id="Solution-vs-Iterations-1"></a><a class="docs-heading-anchor-permalink" href="#Solution-vs-Iterations" title="Permalink"></a></h2><h3 id="Solution-Trajectory-(segments)"><a class="docs-heading-anchor" href="#Solution-Trajectory-(segments)">Solution Trajectory (segments)</a><a id="Solution-Trajectory-(segments)-1"></a><a class="docs-heading-anchor-permalink" href="#Solution-Trajectory-(segments)" title="Permalink"></a></h3><p>The <code>segments</code> field contains the final mission trajectory:</p><pre><code class="language-julia hljs"># Final trajectory after propagation or optimization
+for segment in sat.history.segments
+    # This is the actual mission trajectory
+end</code></pre><p>This is what you use for:</p><ul><li>Visualization (plotting orbits)</li><li>Ephemeris generation</li><li>Mission analysis</li><li>Reports</li></ul><h3 id="Solver-Iterations-(iterations)"><a class="docs-heading-anchor" href="#Solver-Iterations-(iterations)">Solver Iterations (iterations)</a><a id="Solver-Iterations-(iterations)-1"></a><a class="docs-heading-anchor-permalink" href="#Solver-Iterations-(iterations)" title="Permalink"></a></h3><p>The <code>iterations</code> field contains diagnostic data from trajectory optimization:</p><pre><code class="language-julia hljs"># Check if iterations were recorded
+if !isempty(sat.history.iterations)
+    println(&quot;Solver iterations: &quot;, length(sat.history.iterations))
+    
+    # Analyze convergence
+    for iteration in sat.history.iterations
+        # Each iteration is a full trajectory attempt
+    end
+end</code></pre><p>Iterations are <strong>opt-in</strong> and used for:</p><ul><li>Debugging convergence problems</li><li>Visualizing optimization process</li><li>Performance analysis</li></ul><p>See <a href="https://genastro.github.io/Epicycle/AstroSolve/dev/">AstroSolve documentation</a> for <code>trajectory_solve(...; record_iterations=true)</code>.</p><h2 id="Recording-Control"><a class="docs-heading-anchor" href="#Recording-Control">Recording Control</a><a id="Recording-Control-1"></a><a class="docs-heading-anchor-permalink" href="#Recording-Control" title="Permalink"></a></h2><p>History recording is controlled by flags:</p><pre><code class="language-julia hljs">history = sat.history
+
+# Check recording status
+history.record_segments      # true = recording solution
+history.record_iterations    # true = recording iterations
+
+# Flags are typically managed by solver
+# Users rarely need to modify these directly</code></pre><p><strong>Default behavior:</strong></p><ul><li><code>record_segments = true</code>: Solution trajectory is recorded</li><li><code>record_iterations = false</code>: Iterations not recorded (saves memory)</li></ul><h2 id="Common-Patterns"><a class="docs-heading-anchor" href="#Common-Patterns">Common Patterns</a><a id="Common-Patterns-1"></a><a class="docs-heading-anchor-permalink" href="#Common-Patterns" title="Permalink"></a></h2><h3 id="Check-for-Data"><a class="docs-heading-anchor" href="#Check-for-Data">Check for Data</a><a id="Check-for-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Check-for-Data" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Check if spacecraft has history
+if !isempty(sat.history)
+    println(&quot;History contains $(length(sat.history)) segments&quot;)
+else
+    println(&quot;No history recorded&quot;)
+end</code></pre><h3 id="Multi-Segment-Missions"><a class="docs-heading-anchor" href="#Multi-Segment-Missions">Multi-Segment Missions</a><a id="Multi-Segment-Missions-1"></a><a class="docs-heading-anchor-permalink" href="#Multi-Segment-Missions" title="Permalink"></a></h3><pre><code class="language-julia hljs"># After multi-phase mission
+propagate(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
+maneuver(sat, toi)
+propagate(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
+
+# Inspect phases
+for (i, segment) in enumerate(sat.history)
+    println(&quot;Segment $i: $(segment.name)&quot;)
+    t_start = segment.times[1]
+    t_end = segment.times[end]
+    println(&quot;  Duration: $(t_end - t_start)&quot;)
+end</code></pre><h3 id="Coordinate-System-Awareness"><a class="docs-heading-anchor" href="#Coordinate-System-Awareness">Coordinate System Awareness</a><a id="Coordinate-System-Awareness-1"></a><a class="docs-heading-anchor-permalink" href="#Coordinate-System-Awareness" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Segments may have different coordinate systems
+for segment in sat.history
+    origin = segment.coordinate_system.origin
+    axes = segment.coordinate_system.axes
+    println(&quot;Frame: $(origin.name) $(typeof(axes))&quot;)
+end</code></pre><h2 id="Integration-with-Other-Modules"><a class="docs-heading-anchor" href="#Integration-with-Other-Modules">Integration with Other Modules</a><a id="Integration-with-Other-Modules-1"></a><a class="docs-heading-anchor-permalink" href="#Integration-with-Other-Modules" title="Permalink"></a></h2><h3 id="Automatic-Recording"><a class="docs-heading-anchor" href="#Automatic-Recording">Automatic Recording</a><a id="Automatic-Recording-1"></a><a class="docs-heading-anchor-permalink" href="#Automatic-Recording" title="Permalink"></a></h3><p>History is populated automatically:</p><p><strong>AstroProp</strong>: Creates new segment when <code>propagate()</code> is called</p><pre><code class="language-julia hljs">propagate(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
+# sat.history now contains propagation data</code></pre><p><strong>AstroManeuvers</strong>: Creates new segment at maneuver application</p><pre><code class="language-julia hljs">maneuver(sat, toi)
+# New segment created for post-maneuver trajectory</code></pre><p>See respective module documentation for details on how they interact with history.</p><h3 id="Visualization"><a class="docs-heading-anchor" href="#Visualization">Visualization</a><a id="Visualization-1"></a><a class="docs-heading-anchor-permalink" href="#Visualization" title="Permalink"></a></h3><p><strong>View3D</strong> (in Epicycle module) automatically renders all segments:</p><pre><code class="language-julia hljs">using Epicycle
+
+view = View3D()
+add_spacecraft!(view, sat)  # Renders entire history
+display_view(view)</code></pre><p>Each segment can be rendered with different colors for multi-phase missions.</p><h2 id="See-Also"><a class="docs-heading-anchor" href="#See-Also">See Also</a><a id="See-Also-1"></a><a class="docs-heading-anchor-permalink" href="#See-Also" title="Permalink"></a></h2><ul><li><a href="../spacecraft/">Spacecraft Guide</a> - Spacecraft construction and fields</li><li><a href="https://genastro.github.io/Epicycle/AstroProp/dev/">AstroProp Documentation</a> - Orbit propagation</li><li><a href="https://genastro.github.io/Epicycle/AstroSolve/dev/">AstroSolve Documentation</a> - Trajectory optimization</li><li><a href="../reference/">Reference</a> - Complete API documentation</li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../spacecraft_cad_model/">« CAD Model</a><a class="docs-footer-nextpage" href="../reference/">Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Friday 9 January 2026 16:11">Friday 9 January 2026</span>. Using Julia version 1.12.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
