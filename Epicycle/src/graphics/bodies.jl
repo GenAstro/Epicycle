@@ -47,7 +47,7 @@ Render central celestial body with texture mapping from CelestialBody.texture_fi
 - Texture loading cached for performance
 
 # V1.0 Rendering
-- Standard resolution (50x50 grid)
+- Uses GeometryBasics.Sphere for proper UV mapping at poles
 - FastShading for performance
 - Sphere mesh with equatorial radius from body
 """
@@ -59,16 +59,9 @@ function render_body!(lscene::LScene, coord_sys::CoordinateSystem)
     # Get radius from the celestial body
     R = body.equatorial_radius  # km
     
-    # Create sphere mesh with proper pole handling
-    n_lon = 100
-    n_lat = 51  # Odd number ensures equator is sampled
-    θ = LinRange(0, 2π, n_lon)
-    φ = LinRange(0, π, n_lat)
-    
-    # Spherical coordinates to Cartesian
-    x = [R * sin(φ_i) * cos(θ_i) for φ_i in φ, θ_i in θ]
-    y = [R * sin(φ_i) * sin(θ_i) for φ_i in φ, θ_i in θ]
-    z = [R * cos(φ_i) for φ_i in φ, θ_i in θ]
+    # Use GeometryBasics.Sphere with proper UV coordinates
+    # This avoids pole singularities that cause texture artifacts
+    sphere = GeometryBasics.Sphere(GeometryBasics.Point3f(0, 0, 0), Float32(R))
     
     # Texture path from body field (empty string if none)
     texture_path = body.texture_file
@@ -83,7 +76,7 @@ function render_body!(lscene::LScene, coord_sys::CoordinateSystem)
         end
     end
     
-    surface!(lscene, x, y, z,
+    mesh!(lscene, sphere,
         color=color,
         shading=FastShading,
         interpolate=!isa(color, Symbol))  # Only interpolate for textures
