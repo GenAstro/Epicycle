@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>EpicycleGraphics Design Specification · Epicycle.jl</title><meta name="title" content="EpicycleGraphics Design Specification · Epicycle.jl"/><meta property="og:title" content="EpicycleGraphics Design Specification · Epicycle.jl"/><meta property="twitter:title" content="EpicycleGraphics Design Specification · Epicycle.jl"/><meta name="description" content="Documentation for Epicycle.jl."/><meta property="og:description" content="Documentation for Epicycle.jl."/><meta property="twitter:description" content="Documentation for Epicycle.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/dev/EpicycleGraphics_Spec/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/dev/EpicycleGraphics_Spec/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/dev/EpicycleGraphics_Spec/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox"/><label class="tocitem" for="menuitem-3"><span class="docs-label">Tutorials</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../unit_examples/">Component Cheat Sheets</a></li><li><a class="tocitem" href="../../complete_examples/">End-to-End Examples</a></li></ul></li><li><a class="tocitem" href="../../graphics/">Graphics</a></li><li><a class="tocitem" href="../../components/">Components</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>EpicycleGraphics Design Specification</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>EpicycleGraphics Design Specification</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/docs/src/dev/EpicycleGraphics_Spec.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="EpicycleGraphics-Design-Specification"><a class="docs-heading-anchor" href="#EpicycleGraphics-Design-Specification">EpicycleGraphics Design Specification</a><a id="EpicycleGraphics-Design-Specification-1"></a><a class="docs-heading-anchor-permalink" href="#EpicycleGraphics-Design-Specification" title="Permalink"></a></h1><h2 id="Table-of-Contents"><a class="docs-heading-anchor" href="#Table-of-Contents">Table of Contents</a><a id="Table-of-Contents-1"></a><a class="docs-heading-anchor-permalink" href="#Table-of-Contents" title="Permalink"></a></h2><ol><li><a href="#features--roadmap">Features &amp; Roadmap</a></li><li><a href="#architecture-principles">Architecture Principles</a></li><li><a href="#data-ownership">Data Ownership</a></li><li><a href="#core-api-design">Core API Design</a></li><li><a href="#attributes--customization">Attributes &amp; Customization</a></li><li><a href="#default-behaviors">Default Behaviors</a></li><li><a href="#use-cases--examples">Use Cases &amp; Examples</a></li></ol><hr/><h2 id="Features-and-Roadmap"><a class="docs-heading-anchor" href="#Features-and-Roadmap">Features &amp; Roadmap</a><a id="Features-and-Roadmap-1"></a><a class="docs-heading-anchor-permalink" href="#Features-and-Roadmap" title="Permalink"></a></h2><h3 id="Objects"><a class="docs-heading-anchor" href="#Objects">Objects</a><a id="Objects-1"></a><a class="docs-heading-anchor-permalink" href="#Objects" title="Permalink"></a></h3><ul><li>Spacecraft (with 3D models)</li><li>Stars (from AstroUniverse)</li><li>Celestial Bodies (Earth, Moon, Sun, planets)</li><li>Ground Stations</li><li>Labels (for spacecraft and bodies)</li></ul><h3 id="Overlays"><a class="docs-heading-anchor" href="#Overlays">Overlays</a><a id="Overlays-1"></a><a class="docs-heading-anchor-permalink" href="#Overlays" title="Permalink"></a></h3><ul><li>Trajectory (multi-segment support)</li><li>Reference Planes (equatorial, ecliptic, orbital)</li><li>Sensor Cones (field of view)</li><li>Visibility Masks</li><li>Reference Axes (inertial, body-fixed, LVLH)</li><li>Vectors (velocity, sun direction, custom)</li><li>Milky Way skybox</li></ul><h3 id="Attributes"><a class="docs-heading-anchor" href="#Attributes">Attributes</a><a id="Attributes-1"></a><a class="docs-heading-anchor-permalink" href="#Attributes" title="Permalink"></a></h3><ul><li>Colors (RGBA with alpha channel)</li><li>Per-segment trajectory colors (for multi-phase missions, maneuvers)</li><li>Coordinate systems (from AstroFrames: CoordinateSystem with origin and axes types)</li><li>Coordinate frames (for axes display)</li><li>Line widths, sizes, scales</li><li>Transparency/alpha values</li><li>Labels (text, color, size)</li><li>Iteration trajectory display (for solver diagnostics)</li></ul><h3 id="Animation"><a class="docs-heading-anchor" href="#Animation">Animation</a><a id="Animation-1"></a><a class="docs-heading-anchor-permalink" href="#Animation" title="Permalink"></a></h3><ul><li>Real-time playback</li><li>Playback controls: play/pause/stop/step</li><li>Variable speed (faster/slower than real-time)</li><li>Time display and scrubbing</li><li>FPS control</li></ul><h3 id="Version-1.0-MVP-Minimal-Viable-Product"><a class="docs-heading-anchor" href="#Version-1.0-MVP-Minimal-Viable-Product">Version 1.0 MVP - Minimal Viable Product</a><a id="Version-1.0-MVP-Minimal-Viable-Product-1"></a><a class="docs-heading-anchor-permalink" href="#Version-1.0-MVP-Minimal-Viable-Product" title="Permalink"></a></h3><p><strong>Core Feature: Single Spacecraft Visualization (Use Case 0)</strong></p><ul><li>Single spacecraft with trajectory from history</li><li>Earth with texture (always visible)</li><li>Star field background (always visible)</li><li>Equatorial plane with grid (always visible)</li><li>Spacecraft 3D model (if present in spacecraft.model)</li><li>Spacecraft marker (simple, always visible)</li><li>Spacecraft label showing spacecraft.name (always visible)</li><li>Basic camera controls (GLMakie defaults)</li><li>GCRF coordinate system only (validated, errors on non-GCRF)</li></ul><p><strong>Explicitly OUT of V1.0:</strong></p><ul><li>Multiple spacecraft</li><li>Customization (colors, line widths, sizes, alpha, etc.)</li><li>User control of stars/plane visibility</li><li>Animation</li><li>Multiple celestial bodies</li><li>Overlays (vectors, axes, custom planes)</li><li>Solver/optimization integration</li><li>2D plotting (Use Case 7)</li><li>Multiple coordinate systems (V1.1+)</li><li>Ground stations, sensor cones, custom vectors</li></ul><hr/><h2 id="Architecture-Principles"><a class="docs-heading-anchor" href="#Architecture-Principles">Architecture Principles</a><a id="Architecture-Principles-1"></a><a class="docs-heading-anchor-permalink" href="#Architecture-Principles" title="Permalink"></a></h2><h3 id="1.-Separation-of-Concerns"><a class="docs-heading-anchor" href="#1.-Separation-of-Concerns">1. Separation of Concerns</a><a id="1.-Separation-of-Concerns-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Separation-of-Concerns" title="Permalink"></a></h3><ul><li><strong>Domain data lives in domain modules</strong> (AstroModels, AstroUniverse)</li><li><strong>Visualization metadata on domain objects</strong> where sensible (textures, models)</li><li><strong>EpicycleGraphics handles scene composition and rendering only</strong></li></ul><h3 id="2.-Default-Driven-Design"><a class="docs-heading-anchor" href="#2.-Default-Driven-Design">2. Default-Driven Design</a><a id="2.-Default-Driven-Design-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Default-Driven-Design" title="Permalink"></a></h3><ul><li><strong>Zero configuration produces professional results</strong> - smart defaults</li><li><strong>Customization is explicit and clear</strong> - setter functions</li><li><strong>Convention over configuration</strong> - sensible choices for common cases</li></ul><h3 id="3.-Composability"><a class="docs-heading-anchor" href="#3.-Composability">3. Composability</a><a id="3.-Composability-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Composability" title="Permalink"></a></h3><ul><li>Builder pattern for scene construction</li><li>Immutable domain objects</li><li>Mutable view configuration via setters</li></ul><h3 id="4.-Epicycle-Consistency"><a class="docs-heading-anchor" href="#4.-Epicycle-Consistency">4. Epicycle Consistency</a><a id="4.-Epicycle-Consistency-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Epicycle-Consistency" title="Permalink"></a></h3><ul><li>Kwargs for flexibility</li><li>Time handling via Time structs</li><li>History-based data extraction</li></ul><h3 id="5.-Appropriate-Abstraction-Levels"><a class="docs-heading-anchor" href="#5.-Appropriate-Abstraction-Levels">5. Appropriate Abstraction Levels</a><a id="5.-Appropriate-Abstraction-Levels-1"></a><a class="docs-heading-anchor-permalink" href="#5.-Appropriate-Abstraction-Levels" title="Permalink"></a></h3><ul><li><strong>Custom APIs for domain-specific features</strong> - spacecraft data extraction, trajectory rendering, color handling</li><li><strong>Standard APIs for standard features</strong> - leverage Makie directly for axis labels, legends, grids, fonts, styling</li><li><strong>ColorLike everywhere</strong> - unified color system across 3D and 2D</li><li><strong>Less code to maintain, better documentation leverage</strong> - don&#39;t reinvent wheels that Makie already provides</li></ul><hr/><h2 id="Data-Ownership"><a class="docs-heading-anchor" href="#Data-Ownership">Data Ownership</a><a id="Data-Ownership-1"></a><a class="docs-heading-anchor-permalink" href="#Data-Ownership" title="Permalink"></a></h2><h3 id="AstroFrames"><a class="docs-heading-anchor" href="#AstroFrames">AstroFrames</a><a id="AstroFrames-1"></a><a class="docs-heading-anchor-permalink" href="#AstroFrames" title="Permalink"></a></h3><p><strong>Coordinate systems used by View3D:</strong></p><pre><code class="language-julia hljs"># CoordinateSystem from AstroFrames defines origin and axes
+struct CoordinateSystem
+    origin::CelestialBody  # e.g., Earth, Sun, Moon
+    axes::AxesType         # e.g., GCRF(), ITRF(), etc.
+end
+
+# Common axes types:
+# - GCRF() - Geocentric Celestial Reference Frame (inertial)
+# - ITRF() - International Terrestrial Reference Frame (Earth-fixed)
+# - Other axes types as defined in AstroFrames</code></pre><h3 id="AstroModels"><a class="docs-heading-anchor" href="#AstroModels">AstroModels</a><a id="AstroModels-1"></a><a class="docs-heading-anchor-permalink" href="#AstroModels" title="Permalink"></a></h3><p><strong>Additions to existing Spacecraft struct:</strong></p><pre><code class="language-julia hljs">struct Spacecraft
+    # ... existing fields ...
+    history::Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}
+    model::Union{SpacecraftModel, Nothing}  # NEW - 3D model metadata
+end
+
+struct SpacecraftModel
+    mesh_path::String      # Path to .obj/.stl/.ply file
+    scale::Float64         # Default size scaling
+    offset::Vec3f          # Model origin offset (optional)
+    rotation::Quaternion   # Default orientation (optional)
+end</code></pre><h3 id="AstroUniverse"><a class="docs-heading-anchor" href="#AstroUniverse">AstroUniverse</a><a id="AstroUniverse-1"></a><a class="docs-heading-anchor-permalink" href="#AstroUniverse" title="Permalink"></a></h3><p><strong>Additions to existing CelestialBody:</strong></p><pre><code class="language-julia hljs">struct CelestialBody
+    # ... existing fields (name, radius, μ, etc.) ...
+    texture_path::Union{String, Nothing}  # NEW - texture image path
+    rotation_elements::Union{RotationElements, Nothing}  # For future animation
+end</code></pre><p><strong>Star field data:</strong></p><pre><code class="language-julia hljs">struct StarField
+    positions::Vector{Vec3f}     # Pre-computed positions on celestial sphere
+    magnitudes::Vector{Float64}  # Brightness values
+    colors::Vector{RGB}          # Star colors (white/yellow/blue based on type)
+end
+
+struct Universe
+    # ... existing fields ...
+    stars::Union{StarField, Nothing}  # NEW - star catalog
+end</code></pre><h3 id="EpicycleGraphics"><a class="docs-heading-anchor" href="#EpicycleGraphics">EpicycleGraphics</a><a id="EpicycleGraphics-1"></a><a class="docs-heading-anchor-permalink" href="#EpicycleGraphics" title="Permalink"></a></h3><p><strong>Visualization-only structures:</strong></p><pre><code class="language-julia hljs">struct View3D
+    # Object references (domain data)
+    spacecraft::Vector{Spacecraft}
+    celestial_bodies::Vector{CelestialBody}
+    
+    # Visualization primitives (no domain data)
+    planes::Vector{Plane3D}
+    vectors::Vector{Vector3D}
+    axes::Vector{Axes3D}
+    
+    # Universe reference
+    universe::Universe
+    
+    # Display preferences (per-object customization)
+    options::Dict{Any, Dict{Symbol, Any}}
+    
+    # Scene-level settings
+    show_stars::Bool
+    background::Symbol  # :black, :space
+    coordinate_system::CoordinateSystem  # From AstroFrames (default: GCRF origin with GCRF axes)
+    
+    # Internal rendering state (private)
+    _scene::Union{Nothing, Scene}
+end
+
+struct Plane3D
+    type::Symbol  # :equatorial, :ecliptic, :orbital, :custom
+    reference_body::Union{CelestialBody, Nothing}
+    color::RGBA
+    grid_spacing::Union{Tuple{Float64, Float64}, Nothing}  # (fine, coarse)
+end
+
+struct Vector3D
+    name::String
+    source::Spacecraft  # Which object it&#39;s attached to
+    vector_type::Symbol  # :velocity, :sun, :nadir, :custom
+    color::RGBA
+    scale::Float64
+    vector_func::Union{Function, Nothing}  # (time) -&gt; Vec3 for custom
+end
+
+struct Axes3D
+    frame::Symbol  # :inertial, :body, :lvlh, :orbital
+    reference::Union{Spacecraft, CelestialBody}
+    colors::Tuple{RGBA, RGBA, RGBA}  # X, Y, Z axis colors
+    length::Float64
+    linewidth::Float64
+end</code></pre><hr/><h2 id="Core-API-Design"><a class="docs-heading-anchor" href="#Core-API-Design">Core API Design</a><a id="Core-API-Design-1"></a><a class="docs-heading-anchor-permalink" href="#Core-API-Design" title="Permalink"></a></h2><h3 id="Scene-Construction-(Builder-Pattern)"><a class="docs-heading-anchor" href="#Scene-Construction-(Builder-Pattern)">Scene Construction (Builder Pattern)</a><a id="Scene-Construction-(Builder-Pattern)-1"></a><a class="docs-heading-anchor-permalink" href="#Scene-Construction-(Builder-Pattern)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Create view with universe reference
+view = View3D(universe)  # Default: GCRF origin with GCRF() axes
+# view = View3D(universe; coordinate_system=CoordinateSystem(Earth, ITRF()))  # ECEF
+
+# Add objects (plural functions accept multiple objects)
+add_spacecraft!(view, mysat, yoursat)
+add_bodies!(view, earth, moon)
+add_planes!(view, (:equatorial, earth), (:ecliptic, sun))
+add_vectors!(view, (mysat, :velocity), (yoursat, :sun))
+add_axes!(view, (mysat, :body), (earth, :inertial))
+
+# Can also add single objects
+add_spacecraft!(view, another_sat)
+add_bodies!(view, mars)
+
+# Remove objects
+remove_spacecraft!(view, mysat)
+remove_bodies!(view, moon)
+
+# Update display (refresh after modifying object data)
+update_display!(view)
+
+# Display with rendering options
+display(view; 
+    size = (800, 600),
+    camera_position = :auto,  # or Vec3f(x,y,z)
+    background = :black,
+    time = nothing  # Optional: specific time to display, or nothing for latest/current
+)
+
+# Animate with playback options
+animate(view;
+    start_time = nothing,  # Auto from earliest in history
+    end_time = nothing,    # Auto from latest in history
+    speed = 10.0,          # 10x real-time
+    show_time = true,      # Display time overlay
+    fps = 30
+)
+# If time extends beyond history, spacecraft simply won&#39;t be shown for those times</code></pre><h3 id="Separation-of-&quot;What&quot;-from-&quot;How&quot;"><a class="docs-heading-anchor" href="#Separation-of-&quot;What&quot;-from-&quot;How&quot;">Separation of &quot;What&quot; from &quot;How&quot;</a><a id="Separation-of-&quot;What&quot;-from-&quot;How&quot;-1"></a><a class="docs-heading-anchor-permalink" href="#Separation-of-&quot;What&quot;-from-&quot;How&quot;" title="Permalink"></a></h3><ul><li><strong>Scene content (WHAT)</strong>: Objects added to View3D</li><li><strong>Rendering options (HOW)</strong>: Kwargs to <code>display()</code> and <code>animate()</code></li><li><strong>Time range</strong>: Auto-detected from spacecraft history</li></ul><hr/><h2 id="Attributes-and-Customization"><a class="docs-heading-anchor" href="#Attributes-and-Customization">Attributes &amp; Customization</a><a id="Attributes-and-Customization-1"></a><a class="docs-heading-anchor-permalink" href="#Attributes-and-Customization" title="Permalink"></a></h2><h3 id="Philosophy"><a class="docs-heading-anchor" href="#Philosophy">Philosophy</a><a id="Philosophy-1"></a><a class="docs-heading-anchor-permalink" href="#Philosophy" title="Permalink"></a></h3><ol><li><strong>Smart defaults make common cases beautiful</strong></li><li><strong>Kwargs-first for initial setup</strong> - declare attributes when adding objects</li><li><strong>Setters for later changes</strong> - update attributes after adding (solver iterations, interactive changes)</li><li><strong>Flexible color input, consistent internal representation</strong> (ColorLike → RGBA{Float32})</li><li><strong>First-class multi-segment support</strong> - scalar for uniform, vector for per-segment</li></ol><h3 id="Kwargs-Pattern-(Primary)"><a class="docs-heading-anchor" href="#Kwargs-Pattern-(Primary)">Kwargs Pattern (Primary)</a><a id="Kwargs-Pattern-(Primary)-1"></a><a class="docs-heading-anchor-permalink" href="#Kwargs-Pattern-(Primary)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Single spacecraft - simple attributes
+add_spacecraft!(view, sat1;
+    color = :cyan,
+    linewidth = 2.5,
+    show_model = true,
+    model_scale = 1000.0,
+    show_label = true,  # Shows sat1.name
+    show_iterations = false)  # Default: hide solver iterations
+
+# Single spacecraft - per-segment attributes (multi-phase mission)
+add_spacecraft!(view, transfer_sat;
+    color = [:red, :orange, :yellow, :green],      # Per-segment colors
+    linewidth = [3.0, 1.5, 1.5, 3.0],              # Thick for burns, thin for coasts
+    alpha = [1.0, 0.8, 0.6, 0.4],                  # Progressive fade
+    show_model = true,
+    show_label = true)  # Shows transfer_sat.name
+
+# Multiple spacecraft - different configurations
+add_spacecraft!(view,
+    sat1,  # Uses defaults (auto color from palette)
+    sat2;  # Also uses defaults
+    linewidth = 2.0)  # Applied to both
+
+add_spacecraft!(view, sat3;
+    color = :magenta,
+    linewidth = 3.5,
+    show_model = false,
+    label = &quot;Debris&quot;)
+
+# Full example with all trajectory attributes
+add_spacecraft!(view, mission_sat;
+    # Trajectory appearance
+    color = [:red, :orange, :green],     # Or single: :cyan
+    linewidth = [3.0, 2.0, 2.0],         # Or single: 2.5
+    alpha = [1.0, 0.8, 0.6],             # Or single: 1.0
+    
+    # Model display
+    show_model = true,
+    model_scale = 2000.0,
+    
+    # Marker (for distant views)
+    show_marker = true,                  # Or :auto for automatic
+    marker = :circle,
+    marker_size = 10.0,
+    marker_color = :cyan,                # Or :auto to match trajectory
+    
+    # Label
+    show_label = true,                   # Shows mission_sat.name
+    label_color = :white,
+    label_size = 14.0,
+    
+    # Advanced
+    show_attitude = false,
+    show_trajectory = true,
+    show_iterations = false)             # Solver iteration diagnostics</code></pre><h3 id="Iteration-Display"><a class="docs-heading-anchor" href="#Iteration-Display">Iteration Display</a><a id="Iteration-Display-1"></a><a class="docs-heading-anchor-permalink" href="#Iteration-Display" title="Permalink"></a></h3><p><strong>Purpose</strong>: Visualize solver convergence by showing iteration history from <code>trajectory_solve(...; record_iterations=true)</code></p><pre><code class="language-julia hljs"># Default: show only final trajectory (from spacecraft.history.segments)
+add_spacecraft!(view, sat;
+    color = :cyan,
+    linewidth = 2.5)
+
+# Enable iteration display (from spacecraft.history.iterations)
+add_spacecraft!(view, sat;
+    color = :cyan,
+    linewidth = 2.5,
+    show_iterations = true)  # Shows solver iterations behind final trajectory
+
+# Typical diagnostic workflow:
+# 1. Run trajectory_solve with record_iterations=true
+result = trajectory_solve(seq, options; record_iterations=true)
+
+# 2. Visualize convergence
+view = View3D(universe)
+add_spacecraft!(view, sat; show_iterations=true)
+display(view)  # See how solver converged to solution</code></pre><p><strong>Implementation details:</strong></p><ul><li>Iterations rendered first (background layer) with default styling</li><li>Final trajectory rendered on top (foreground layer)</li><li>Default iteration style: gray, thin, semi-transparent (hard-coded for V1.0)</li><li>Only shown if <code>spacecraft.history.iterations</code> contains data</li><li>If <code>show_iterations=true</code> but no iteration data exists, silently ignored</li></ul><p><strong>Future enhancements (V1.1+):</strong></p><ul><li><code>iteration_color</code>: Custom color for iteration trajectories</li><li><code>iteration_linewidth</code>: Custom line width</li><li><code>iteration_alpha</code>: Custom transparency</li><li><code>show_progression</code>: Progressive styling showing convergence pattern</li></ul><h3 id="Setter-Functions-(Secondary-for-changes-after-adding)"><a class="docs-heading-anchor" href="#Setter-Functions-(Secondary-for-changes-after-adding)">Setter Functions (Secondary - for changes after adding)</a><a id="Setter-Functions-(Secondary-for-changes-after-adding)-1"></a><a class="docs-heading-anchor-permalink" href="#Setter-Functions-(Secondary-for-changes-after-adding)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Generic attribute setter
+set_attribute!(view, object, attribute::Symbol, value)
+
+# Color convenience setter  
+set_color!(view, object, color)  # For trajectory color
+
+# Use cases for setters:
+# 1. Changing attributes after initial setup
+set_attribute!(view, mysat, :linewidth, 5.0)
+set_color!(view, mysat, :red)  # Change trajectory color
+
+# 2. Solver iterations - update colors during optimization
+for iteration in solver
+    set_color!(view, current_solution, :gray)  # Dim old solution
+    # ... compute new solution ...
+    set_color!(view, new_solution, :cyan)      # Highlight new
+    update_display!(view)
+end
+
+# 3. Per-segment colors for complex missions
+set_color!(view, mysat, [
+    RGBA(1, 0, 0, 1),     # Phase 1: red
+    RGBA(1, 0.5, 0, 1),   # Phase 2: orange  
+    RGBA(0, 1, 0, 1)      # Phase 3: green
+])</code></pre><h3 id="Kwargs-Defaults"><a class="docs-heading-anchor" href="#Kwargs-Defaults">Kwargs Defaults</a><a id="Kwargs-Defaults-1"></a><a class="docs-heading-anchor-permalink" href="#Kwargs-Defaults" title="Permalink"></a></h3><p>Smart defaults ensure zero-configuration produces professional results:</p><p><strong>Spacecraft:</strong></p><pre><code class="language-julia hljs">DEFAULT_SPACECRAFT_KWARGS = (
+    color = :auto,              # Auto-cycle from palette
+    linewidth = 2.0,
+    alpha = 1.0,
+    show_trajectory = :auto,    # true if history exists
+    show_model = :auto,         # true if spacecraft.model !== nothing
+    show_attitude = false,
+    show_marker = :auto,        # true when camera far from spacecraft (model too small)
+    marker = :circle,           # Shape: :circle, :rect, :diamond, :cross, :xcross, etc.
+    marker_size = 8.0,          # Marker size in pixels
+    marker_color = :auto,       # Same as trajectory color if not specified
+    show_label = false,         # Display spacecraft.name as label
+    label_color = :white,
+    label_size = 12.0
+)</code></pre><p><strong>Celestial Bodies:</strong></p><pre><code class="language-julia hljs">DEFAULT_BODY_KWARGS = (
+    show_texture = :auto,       # true if body.texture_path !== nothing
+    show_axes = false,
+    show_grid = false,
+    grid_spacing = :auto,       # Based on body radius
+    show_label = false,         # Display body.name as label
+    label_color = :white,
+    label_size = 14.0
+)</code></pre><p><strong>Planes:</strong></p><pre><code class="language-julia hljs">DEFAULT_PLANE_KWARGS = (
+    color = :auto,              # Depends on plane type (equatorial=green, etc.)
+    alpha = 0.2,
+    grid_spacing = :auto,       # Based on orbit size
+    extent = :auto              # Auto to encompass trajectories
+)</code></pre><p><strong>Vectors:</strong></p><pre><code class="language-julia hljs">DEFAULT_VECTOR_KWARGS = (
+    color = :cyan,
+    scale = 1.0,
+    linewidth = 2.0,
+    arrowsize = :auto           # Based on vector length
+)</code></pre><p><strong>Auto-cycling color palette for spacecraft:</strong></p><pre><code class="language-julia hljs">DEFAULT_TRAJECTORY_COLORS = [
+    :cyan,      # RGBA(0.0, 1.0, 1.0, 1.0)
+    :magenta,   # RGBA(1.0, 0.0, 1.0, 1.0)
+    :yellow,    # RGBA(1.0, 1.0, 0.0, 1.0)
+    :green,     # RGBA(0.0, 1.0, 0.0, 1.0)
+    :orange,    # RGBA(1.0, 0.5, 0.0, 1.0)
+    :red        # RGBA(1.0, 0.0, 0.0, 1.0)
+]
+# Cycles: sat1=cyan, sat2=magenta, sat3=yellow, sat4=green, sat5=orange, sat6=red, sat7=cyan, ...</code></pre><h3 id="Available-Attributes-(Kwargs)"><a class="docs-heading-anchor" href="#Available-Attributes-(Kwargs)">Available Attributes (Kwargs)</a><a id="Available-Attributes-(Kwargs)-1"></a><a class="docs-heading-anchor-permalink" href="#Available-Attributes-(Kwargs)" title="Permalink"></a></h3><h4 id="Spacecraft"><a class="docs-heading-anchor" href="#Spacecraft">Spacecraft</a><a id="Spacecraft-1"></a><a class="docs-heading-anchor-permalink" href="#Spacecraft" title="Permalink"></a></h4><p><strong>Trajectory appearance:</strong></p><ul><li><code>color</code> → ColorLike or Vector{ColorLike} (default: auto from palette, cycles through DEFAULT<em>TRAJECTORY</em>COLORS)</li><li><code>linewidth</code> → Float64 or Vector{Float64} (default: 2.0)</li><li><code>alpha</code> → Float64 or Vector{Float64} (default: 1.0)</li><li><code>show_trajectory</code> → Bool (default: true if history exists)</li></ul><p><strong>Model display:</strong></p><ul><li><code>show_model</code> → Bool (default: true if spacecraft.model !== nothing)</li><li><code>model_scale</code> → Float64 (default: 1.0, multiplies spacecraft.model.scale)</li><li><code>show_attitude</code> → Bool (default: false)</li></ul><p><strong>Marker (for distant views):</strong></p><ul><li><code>show_marker</code> → Bool (default: :auto - true when model too small to see)</li><li><code>marker</code> → Symbol (default: :circle, options: :rect, :diamond, :cross, :xcross, :utriangle, :dtriangle, etc.)</li><li><code>marker_size</code> → Float64 (default: 8.0 pixels)</li><li><code>marker_color</code> → ColorLike (default: :auto - same as trajectory color)</li></ul><p><strong>Label:</strong></p><ul><li><code>show_label</code> → Bool (default: false - displays spacecraft.name from domain object)</li><li><code>label_color</code> → ColorLike (default: :white)</li><li><code>label_size</code> → Float64 (default: 12.0)</li></ul><h4 id="Celestial-Body"><a class="docs-heading-anchor" href="#Celestial-Body">Celestial Body</a><a id="Celestial-Body-1"></a><a class="docs-heading-anchor-permalink" href="#Celestial-Body" title="Permalink"></a></h4><p><strong>Appearance:</strong></p><ul><li><code>show_texture</code> → Bool (default: true if body.texture_path !== nothing)</li><li><code>show_axes</code> → Bool (default: false)</li><li><code>show_grid</code> → Bool (default: false)</li><li><code>grid_spacing</code> → Tuple{Float64, Float64} (default: auto based on body radius)</li></ul><p><strong>Label:</strong></p><ul><li><code>show_label</code> → Bool (default: false - displays body.name from domain object)</li><li><code>label_color</code> → ColorLike (default: :white)</li><li><code>label_size</code> → Float64 (default: 14.0)</li></ul><h4 id="Plane"><a class="docs-heading-anchor" href="#Plane">Plane</a><a id="Plane-1"></a><a class="docs-heading-anchor-permalink" href="#Plane" title="Permalink"></a></h4><ul><li><code>color</code> → ColorLike (default: depends on type - see Reference Planes defaults)</li><li><code>alpha</code> → Float64 (default: 0.2)</li><li><code>grid_spacing</code> → Tuple{Float64, Float64} (default: auto based on orbit size)</li><li><code>extent</code> → Float64 (default: auto to encompass trajectories)</li></ul><h4 id="Vector"><a class="docs-heading-anchor" href="#Vector">Vector</a><a id="Vector-1"></a><a class="docs-heading-anchor-permalink" href="#Vector" title="Permalink"></a></h4><ul><li><code>color</code> → ColorLike (default: :cyan)</li><li><code>scale</code> → Float64 (default: 1.0)</li><li><code>linewidth</code> → Float64 (default: 2.0)</li><li><code>arrowsize</code> → Float64 (default: auto based on vector length)</li></ul><hr/><h2 id="Default-Behaviors"><a class="docs-heading-anchor" href="#Default-Behaviors">Default Behaviors</a><a id="Default-Behaviors-1"></a><a class="docs-heading-anchor-permalink" href="#Default-Behaviors" title="Permalink"></a></h2><h3 id="Kwargs-First-Philosophy"><a class="docs-heading-anchor" href="#Kwargs-First-Philosophy">Kwargs-First Philosophy</a><a id="Kwargs-First-Philosophy-1"></a><a class="docs-heading-anchor-permalink" href="#Kwargs-First-Philosophy" title="Permalink"></a></h3><ul><li><strong>Primary configuration</strong>: kwargs at <code>add_*!()</code> time (declarative)</li><li><strong>Secondary updates</strong>: setters after adding (imperative, for solver iterations)</li><li><strong>Smart defaults</strong>: zero configuration produces professional results</li><li><strong>Per-segment support</strong>: scalar for uniform, vector for per-segment</li></ul><h3 id="Color-Palette-(Auto-Cycling)"><a class="docs-heading-anchor" href="#Color-Palette-(Auto-Cycling)">Color Palette (Auto-Cycling)</a><a id="Color-Palette-(Auto-Cycling)-1"></a><a class="docs-heading-anchor-permalink" href="#Color-Palette-(Auto-Cycling)" title="Permalink"></a></h3><p>When spacecraft are added without explicit <code>color</code> kwarg, colors auto-cycle from:</p><pre><code class="language-julia hljs">DEFAULT_TRAJECTORY_COLORS = [:cyan, :magenta, :yellow, :green, :orange, :red]</code></pre><p>First spacecraft gets cyan, second gets magenta, etc. Cycles back to cyan after red.</p><h3 id="Visibility-Defaults"><a class="docs-heading-anchor" href="#Visibility-Defaults">Visibility Defaults</a><a id="Visibility-Defaults-1"></a><a class="docs-heading-anchor-permalink" href="#Visibility-Defaults" title="Permalink"></a></h3><ul><li>Show trajectory if spacecraft has history (<code>show_trajectory = true</code>)</li><li>Show model if <code>spacecraft.model !== nothing</code> (<code>show_model = true</code>)</li><li>Show marker when <code>show_marker = :auto</code> and model appears too small (camera far from spacecraft)<ul><li>Threshold: model projected size &lt; ~10 pixels → show marker instead</li><li>Can force with <code>show_marker = true</code> or disable with <code>show_marker = false</code></li></ul></li><li>Show texture if <code>body.texture_path !== nothing</code> (<code>show_texture = true</code>)</li><li>Show stars by default (<code>view.show_stars = true</code>)</li><li>Don&#39;t show attitude/axes by default (reduces clutter: <code>show_attitude = false</code>)</li><li>Don&#39;t show labels by default (add via <code>label</code> kwarg)</li></ul><h3 id="Attribute-Polymorphism-(Scalar-vs-Vector)"><a class="docs-heading-anchor" href="#Attribute-Polymorphism-(Scalar-vs-Vector)">Attribute Polymorphism (Scalar vs Vector)</a><a id="Attribute-Polymorphism-(Scalar-vs-Vector)-1"></a><a class="docs-heading-anchor-permalink" href="#Attribute-Polymorphism-(Scalar-vs-Vector)" title="Permalink"></a></h3><ul><li><strong>Scalar value</strong>: applies to all segments uniformly<pre><code class="language-julia hljs">add_spacecraft!(view, sat; color = :cyan, linewidth = 2.0)</code></pre></li><li><strong>Vector value</strong>: per-segment (must match number of history segments)<pre><code class="language-julia hljs">add_spacecraft!(view, sat; 
+    color = [:red, :orange, :yellow],
+    linewidth = [3.0, 2.0, 2.0])</code></pre></li></ul><h3 id="Coordinate-System-Defaults"><a class="docs-heading-anchor" href="#Coordinate-System-Defaults">Coordinate System Defaults</a><a id="Coordinate-System-Defaults-1"></a><a class="docs-heading-anchor-permalink" href="#Coordinate-System-Defaults" title="Permalink"></a></h3><ul><li>Default coordinate system: <code>CoordinateSystem(Earth, GCRF())</code> (Earth-centered inertial)</li><li>From AstroFrames: CoordinateSystem has origin (e.g., Earth, Sun) and axes type (e.g., GCRF(), ITRF())</li><li>All position/velocity data in spacecraft history assumed to be in this frame</li><li>Alternative: <code>CoordinateSystem(Earth, ITRF())</code> - Earth-fixed, rotating with Earth</li><li>Coordinate system affects:<ul><li>How trajectories are displayed</li><li>Reference plane orientations</li><li>Star field rotation (for ITRF)</li><li>Ground station positions</li></ul></li></ul><h3 id="Scale-Defaults"><a class="docs-heading-anchor" href="#Scale-Defaults">Scale Defaults</a><a id="Scale-Defaults-1"></a><a class="docs-heading-anchor-permalink" href="#Scale-Defaults" title="Permalink"></a></h3><ul><li>Camera auto-scales to fit the trajectories (not all object like far way planets)</li><li>Trajectory linewidth: 2.0</li><li>Model scale: 1.0 (assumes models are pre-scaled)</li><li>Plane grid spacing: auto based on orbit size</li><li>Star field radius: 10,000,000 km (large enough to appear infinite)</li></ul><h3 id="Reference-Planes"><a class="docs-heading-anchor" href="#Reference-Planes">Reference Planes</a><a id="Reference-Planes-1"></a><a class="docs-heading-anchor-permalink" href="#Reference-Planes" title="Permalink"></a></h3><ul><li>Equatorial: Green, RGBA(0, 1, 0, 0.2)</li><li>Ecliptic: Blue, RGBA(0, 0.5, 1, 0.2)</li><li>Orbital: Gray, RGBA(0.5, 0.5, 0.5, 0.2)</li></ul><h3 id="Time-Handling"><a class="docs-heading-anchor" href="#Time-Handling">Time Handling</a><a id="Time-Handling-1"></a><a class="docs-heading-anchor-permalink" href="#Time-Handling" title="Permalink"></a></h3><ul><li>Time range specified in <code>animate()</code> kwargs (start<em>time, end</em>time)</li><li>Default: use union of all spacecraft history time ranges</li><li>If display time is outside spacecraft history, spacecraft not rendered</li><li>Interpolation between history points as needed</li><li>Bodies and stars always rendered (independent of time)</li></ul><hr/><h2 id="2D-Plotting-Integration"><a class="docs-heading-anchor" href="#2D-Plotting-Integration">2D Plotting Integration</a><a id="2D-Plotting-Integration-1"></a><a class="docs-heading-anchor-permalink" href="#2D-Plotting-Integration" title="Permalink"></a></h2><h3 id="Time-Series-API-with-AstroCallbacks"><a class="docs-heading-anchor" href="#Time-Series-API-with-AstroCallbacks">Time-Series API with AstroCallbacks</a><a id="Time-Series-API-with-AstroCallbacks-1"></a><a class="docs-heading-anchor-permalink" href="#Time-Series-API-with-AstroCallbacks" title="Permalink"></a></h3><p>EpicycleGraphics integrates with AstroCallbacks to provide type-safe extraction of time-series data from spacecraft history and celestial bodies.</p><p><strong>Primary API - Full Calc Struct:</strong></p><pre><code class="language-julia hljs">plot_timeseries!(ax::Axis, calc::AbstractCalc; color, linewidth, label, kwargs...)</code></pre><p>Accepts any Calc type from AstroCallbacks. This is the most flexible form and supports:</p><ul><li><code>OrbitCalc(spacecraft, var_tag; dependency=nothing, coordinate_system=nothing)</code></li><li><code>BodyCalc(body, var_tag)</code></li><li><code>ManeuverCalc(maneuver, spacecraft, var_tag)</code></li></ul><p><strong>Convenience Dispatch - Simple OrbitCalc:</strong></p><pre><code class="language-julia hljs">plot_timeseries!(ax::Axis, spacecraft::Spacecraft, var::AbstractOrbitVar; kwargs...)</code></pre><p>Automatically constructs <code>OrbitCalc(spacecraft, var)</code> for simple cases without optional kwargs.</p><p><strong>How it works:</strong></p><ol><li>Extracts time values from spacecraft history (or appropriate source)</li><li>Evaluates <code>get_calc(calc)</code> at each time point</li><li>Plots using Makie&#39;s <code>lines!()</code> or <code>scatter!()</code> with provided attributes</li><li>Returns plot object for legend integration</li></ol><p><strong>Supported kwargs:</strong></p><ul><li><code>color</code> → ColorLike (default: :blue)</li><li><code>linewidth</code> → Float64 (default: 2.0)</li><li><code>linestyle</code> → Symbol (default: :solid, options: :dash, :dot, :dashdot)</li><li><code>label</code> → String (default: nothing, for legend)</li><li><code>alpha</code> → Float64 (default: 1.0)</li><li>Plus any standard Makie line attributes</li></ul><p><strong>Time extraction:</strong></p><ul><li>For <code>OrbitCalc</code>: Extract times from <code>spacecraft.history</code></li><li>For <code>BodyCalc</code>: Use provided time range or match other plots</li><li>For <code>ManeuverCalc</code>: Extract from maneuver and spacecraft context</li></ul><hr/><h2 id="Use-Cases-and-Examples"><a class="docs-heading-anchor" href="#Use-Cases-and-Examples">Use Cases &amp; Examples</a><a id="Use-Cases-and-Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Cases-and-Examples" title="Permalink"></a></h2><h3 id="Use-Case-0:-Minimal-MVP-Single-Spacecraft-(V1.0)"><a class="docs-heading-anchor" href="#Use-Case-0:-Minimal-MVP-Single-Spacecraft-(V1.0)">Use Case 0: Minimal MVP - Single Spacecraft (V1.0)</a><a id="Use-Case-0:-Minimal-MVP-Single-Spacecraft-(V1.0)-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Case-0:-Minimal-MVP-Single-Spacecraft-(V1.0)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># V1.0 MVP: Minimal viable visualization
+# Shows single spacecraft orbit around Earth with stars
+# All visual elements always on, no customization
+
+using GLMakie
+using EpicycleGraphics
+
+# Spacecraft must be in GCRF (validated, errors otherwise)
+# Spacecraft must have history for trajectory display
+view = View3D(universe)
+add_spacecraft!(view, mission_sat)  # Adds Earth automatically
+
+# Simple display - uses all defaults
+# - Stars: always visible
+# - Equatorial plane: always visible
+# - Earth texture: always visible (if available)
+# - Spacecraft model: visible if spacecraft.model exists
+# - Spacecraft marker: always visible
+# - Spacecraft label: always visible (shows mission_sat.name)
+display(view)
+
+# That&#39;s it for V1.0 MVP!
+# No customization options in this release
+# Coordinate system assumed/validated as Earth GCRF</code></pre><h3 id="Use-Case-1:-Simple-Mission-Visualization-(V1.1)"><a class="docs-heading-anchor" href="#Use-Case-1:-Simple-Mission-Visualization-(V1.1)">Use Case 1: Simple Mission Visualization (V1.1+)</a><a id="Use-Case-1:-Simple-Mission-Visualization-(V1.1)-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Case-1:-Simple-Mission-Visualization-(V1.1)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Just works - zero configuration, smart defaults
+view = View3D(universe)
+add_spacecraft!(view, mission_sat)  # Auto: cyan color, linewidth=2.0, shows model if present
+add_bodies!(view, earth)             # Auto: shows texture if present
+display(view)
+
+# Or with minimal customization
+view = View3D(universe)
+add_spacecraft!(view, mission_sat; show_label = true)  # Shows mission_sat.name, other defaults apply
+add_bodies!(view, earth)
+display(view)</code></pre><h3 id="Use-Case-2:-Scene-Attributes-(Stars,-Planes,-Camera)-(V1.1)"><a class="docs-heading-anchor" href="#Use-Case-2:-Scene-Attributes-(Stars,-Planes,-Camera)-(V1.1)">Use Case 2: Scene Attributes (Stars, Planes, Camera) (V1.1+)</a><a id="Use-Case-2:-Scene-Attributes-(Stars,-Planes,-Camera)-(V1.1)-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Case-2:-Scene-Attributes-(Stars,-Planes,-Camera)-(V1.1)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Control scene-level display options
+view = View3D(universe)
+add_spacecraft!(view, sat)
+add_bodies!(view, earth, moon)
+add_planes!(view, (:equatorial, earth))
+
+# Scene attributes set at construction or via setters
+view.show_stars = true  # or set in View3D constructor
+view.coordinate_system = earth_icrf  # Earth-Centered Inertial (default)
+view.show_plane = true
+
+# Display with camera and rendering options
+display(view; 
+    background = :black,
+    size = (1200, 800),
+    camera_position = Vec3f(50000, 0, 20000),  # Custom view position
+    camera_lookat = Vec3f(0, 0, 0),            # Look at origin
+    camera_up = Vec3f(0, 0, 1)                 # Z-up orientation
+)
+
+# Or use predefined camera views
+display(view; camera_position = :earth_centered)
+display(view; camera_position = :spacecraft_following)</code></pre><h3 id="Use-Case-3:-Overlays-(Vectors,-Axes,-Planes)-(V1.1)"><a class="docs-heading-anchor" href="#Use-Case-3:-Overlays-(Vectors,-Axes,-Planes)-(V1.1)">Use Case 3: Overlays (Vectors, Axes, Planes) (V1.1+)</a><a id="Use-Case-3:-Overlays-(Vectors,-Axes,-Planes)-(V1.1)-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Case-3:-Overlays-(Vectors,-Axes,-Planes)-(V1.1)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Add various overlay elements
+view = View3D(universe)
+add_spacecraft!(view, sat)
+add_bodies!(view, earth)
+
+# Add reference planes
+add_planes!(view, (:equatorial, earth), (:ecliptic, sun))
+
+# Add vectors
+add_vectors!(view, (sat, :velocity), (sat, :sun))
+
+# Add coordinate axes
+add_axes!(view, (sat, :body), (earth, :inertial))
+
+display(view)</code></pre><h3 id="Use-Case-4:-Models-and-Textures-(V1.1)"><a class="docs-heading-anchor" href="#Use-Case-4:-Models-and-Textures-(V1.1)">Use Case 4: Models and Textures (V1.1+)</a><a id="Use-Case-4:-Models-and-Textures-(V1.1)-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Case-4:-Models-and-Textures-(V1.1)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Spacecraft models are defined on the Spacecraft struct in AstroModels
+# Model is automatically displayed if present
+sc_with_model = Spacecraft(
+    # ... spacecraft parameters ...
+    model = SpacecraftModel(
+        mesh_path = &quot;path/to/spacecraft.obj&quot;,
+        scale = 1000.0,  # Scale factor for model size
+        offset = Vec3f(0, 0, 0),
+        rotation = Quaternion(1, 0, 0, 0)  # Identity rotation
+    )
+)
+
+view = View3D(universe)
+add_spacecraft!(view, sc_with_model)
+add_bodies!(view, earth)
+
+# Model is shown by default, can be controlled via attributes
+set_attribute!(view, sc_with_model, :show_model, true)
+set_attribute!(view, sc_with_model, :model_scale, 2000.0)  # Override scale
+set_attribute!(view, sc_with_model, :show_label, true)     # Show spacecraft name
+
+# Celestial body textures are defined in AstroUniverse
+# Earth texture is automatically applied if texture_path is set
+earth = CelestialBody(
+    # ... body parameters ...
+    texture_path = &quot;path/to/earth_texture.jpg&quot;
+)
+
+# Texture is shown by default
+add_bodies!(view, earth)
+
+# Can control texture display
+set_attribute!(view, earth, :show_texture, true)
+set_attribute!(view, earth, :show_axes, false)
+
+display(view)</code></pre><h3 id="Use-Case-5:-Custom-Colors-and-Attributes-(V1.1)"><a class="docs-heading-anchor" href="#Use-Case-5:-Custom-Colors-and-Attributes-(V1.1)">Use Case 5: Custom Colors and Attributes (V1.1+)</a><a id="Use-Case-5:-Custom-Colors-and-Attributes-(V1.1)-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Case-5:-Custom-Colors-and-Attributes-(V1.1)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Customize trajectory colors and visual attributes
+view = View3D(universe)
+add_bodies!(view, earth)
+add_planes!(view, (:equatorial, earth))
+
+# Single spacecraft - simple uniform attributes
+add_spacecraft!(view, sat1;
+    color = :white,
+    linewidth = 3.0,
+    alpha = 0.8,
+    show_label = true)  # Shows sat1.name
+
+# Single spacecraft - per-segment attributes (multi-phase mission)
+add_spacecraft!(view, sat2;
+    color = [:red, :orange, :yellow, :green],    # Launch, transfer, approach, orbit
+    linewidth = [3.0, 2.0, 2.0, 2.5],            # Thicker during burns
+    alpha = [1.0, 0.9, 0.8, 0.7],                # Slight fade over time
+    show_model = true,
+    model_scale = 1500.0,
+    show_label = true,                           # Shows sat2.name
+    label_color = :cyan,
+    label_size = 12.0)
+
+# Multiple spacecraft - mix of default and custom
+add_spacecraft!(view, 
+    sat3,  # Default: auto color from palette, standard linewidth
+    sat4;  # Default: next color from palette
+    show_model = false)  # Both don&#39;t show models
+
+add_spacecraft!(view, sat5;
+    color = RGBColor(255, 128, 0),  # Custom RGB
+    linewidth = 4.0,
+    marker = :diamond,              # Different marker shape
+    marker_size = 12.0,             # Larger marker
+    show_label = true)              # Shows sat5.name
+
+display(view)
+
+# Later: change attributes using setters (e.g., during solver iteration)
+set_color!(view, sat2, :gray)  # Dim previous solution
+set_attribute!(view, sat2, :alpha, 0.3)
+update_display!(view)</code></pre><h3 id="Use-Case-6:-Solver/Optimization-Workflow-(V1.2)"><a class="docs-heading-anchor" href="#Use-Case-6:-Solver/Optimization-Workflow-(V1.2)">Use Case 6: Solver/Optimization Workflow (V1.2+)</a><a id="Use-Case-6:-Solver/Optimization-Workflow-(V1.2)-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Case-6:-Solver/Optimization-Workflow-(V1.2)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># TBD - Showing solver iterations in real-time
+# - Display current iteration with subdued color
+# - Update display as solver progresses
+# - Replace with final solution in bright color
+# Details to be refined based on solver integration needs</code></pre><h3 id="Use-Case-7:-2D-Data-Plots-(V1.1)"><a class="docs-heading-anchor" href="#Use-Case-7:-2D-Data-Plots-(V1.1)">Use Case 7: 2D Data Plots (V1.1+)</a><a id="Use-Case-7:-2D-Data-Plots-(V1.1)-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Case-7:-2D-Data-Plots-(V1.1)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Plot time-series data from spacecraft history using AstroCallbacks
+# Use Makie&#39;s Figure/Axis directly for standard plotting features
+# Use Epicycle&#39;s plot_timeseries! for domain-specific data extraction with Calc framework
+# ColorLike system works seamlessly with Makie
+# Note: GLMakie handles both 3D and 2D plotting
+
+using GLMakie
+using AstroCallbacks
+
+view = View3D(universe)
+add_spacecraft!(view, sat1, sat2, sat3)
+add_bodies!(view, earth, moon)
+
+# Create Makie figure and axis directly - no wrappers needed
+fig = Figure(size=(1000, 600))
+ax = Axis(fig[1, 1],
+    xlabel = &quot;Time (MJD)&quot;,
+    ylabel = &quot;Velocity (km/s)&quot;,
+    title = &quot;Velocity Comparison&quot;)
+
+# PRIMARY API: Full Calc struct (supports all Calc types and optional kwargs)
+# OrbitCalc with simple variable tag
+plot_timeseries!(ax, OrbitCalc(sat1, VelMag()); 
+    color = :cyan,
+    label = &quot;Sat 1&quot;)
+
+# OrbitCalc with dependency (for relative calculations)
+plot_timeseries!(ax, OrbitCalc(sat2, OutgoingRLA(); dependency=sat1);
+    color = RGBColor(255, 0, 255),   # RGB integer
+    label = &quot;Sat 2 relative to Sat 1&quot;)
+
+# OrbitCalc with coordinate system (future feature)
+# plot_timeseries!(ax, OrbitCalc(sat3, SMA(); coordinate_system=earth_itrf);
+#     color = HexColor(&quot;#FFFF00&quot;),
+#     label = &quot;Sat 3 SMA in ITRF&quot;)
+
+# BodyCalc for celestial body properties
+plot_timeseries!(ax, BodyCalc(earth, GravParam());
+    color = :green,
+    label = &quot;Earth μ&quot;)
+
+# CONVENIENCE DISPATCH: Simple OrbitCalc cases (no optional kwargs)
+# Automatically constructs OrbitCalc(spacecraft, var_tag)
+plot_timeseries!(ax, sat1, VelMag();
+    color = :cyan,
+    label = &quot;Sat 1 (convenience)&quot;)
+
+plot_timeseries!(ax, sat2, SMA();
+    color = :magenta,
+    label = &quot;Sat 2 SMA&quot;)
+
+# ManeuverCalc requires full struct (no convenience dispatch)
+plot_timeseries!(ax, ManeuverCalc(toi_maneuver, sat3, DeltaVMag());
+    color = :orange,
+    label = &quot;TOI ΔV magnitude&quot;)
+
+# Makie API: standard plotting features
+axislegend(ax; position=:rt)
+ax.xgridvisible = true
+ax.ygridvisible = true
+
+display(fig)
+
+# Or display 3D view and 2D plot side-by-side using Makie&#39;s layout
+fig2 = Figure(size=(1600, 600))
+# 3D view in left panel (Epicycle renders into Makie axis)
+display(view; figure=fig2[1, 1])
+# 2D plot in right panel
+ax2 = Axis(fig2[1, 2], 
+    xlabel = &quot;Time (MJD)&quot;, 
+    ylabel = &quot;Semi-Major Axis (km)&quot;)
+
+# Mix of full Calc and convenience dispatch
+plot_timeseries!(ax2, OrbitCalc(sat1, SMA()); color=:cyan, label=&quot;Sat 1&quot;)
+plot_timeseries!(ax2, sat2, SMA(); color=:magenta, label=&quot;Sat 2&quot;)  # Convenience
+
+axislegend(ax2)
+display(fig2)
+
+# ColorLike system is consistent across 3D and 2D
+# All accept: Symbol, RGBA, RGBColor(), HexColor(), NamedColor()
+# Makie handles these natively or via simple conversion</code></pre><h3 id="Use-Case-8:-Animation-(V1.2)"><a class="docs-heading-anchor" href="#Use-Case-8:-Animation-(V1.2)">Use Case 8: Animation (V1.2+)</a><a id="Use-Case-8:-Animation-(V1.2)-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Case-8:-Animation-(V1.2)" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Animate trajectory over time
+view = View3D(universe)
+add_spacecraft!(view, probe)
+add_bodies!(view, earth, mars)
+add_planes!(view, (:ecliptic, sun))
+
+# Playback controls
+animate(view;
+    speed = 10.0,        # 10x real-time
+    show_time = true,    # Display time overlay
+    fps = 30,
+    start_time = nothing,  # Auto from history
+    end_time = nothing
+)
+
+# Future: Interactive controls
+# - play/pause/stop/step
+# - time scrubbing
+# - speed adjustment during playback</code></pre><hr/><h2 id="Implementation-Notes"><a class="docs-heading-anchor" href="#Implementation-Notes">Implementation Notes</a><a id="Implementation-Notes-1"></a><a class="docs-heading-anchor-permalink" href="#Implementation-Notes" title="Permalink"></a></h2><h3 id="Rendering-Pipeline"><a class="docs-heading-anchor" href="#Rendering-Pipeline">Rendering Pipeline</a><a id="Rendering-Pipeline-1"></a><a class="docs-heading-anchor-permalink" href="#Rendering-Pipeline" title="Permalink"></a></h3><ol><li><strong>Scene setup</strong>: Create Makie scene with background</li><li><strong>Add celestial bodies</strong>: Textured spheres from Universe (always rendered)</li><li><strong>Add stars</strong>: Scatter plot from Universe.stars (always rendered)</li><li><strong>Add trajectories</strong>: Multi-segment lines with per-segment colors</li><li><strong>Add spacecraft models</strong>: Load and transform meshes at specified time</li><li><strong>Add overlays</strong>: Planes, vectors, axes</li><li><strong>Camera setup</strong>: Auto-scale or user-specified</li><li><strong>For animation</strong>: Update time, interpolate spacecraft states, refresh<ul><li>If time outside history range, spacecraft not rendered for that frame</li><li>Celestial bodies and static elements remain visible</li></ul></li></ol><h3 id="Multi-Segment-Trajectory-Rendering"><a class="docs-heading-anchor" href="#Multi-Segment-Trajectory-Rendering">Multi-Segment Trajectory Rendering</a><a id="Multi-Segment-Trajectory-Rendering-1"></a><a class="docs-heading-anchor-permalink" href="#Multi-Segment-Trajectory-Rendering" title="Permalink"></a></h3><pre><code class="language-julia hljs">function render_trajectory!(scene, view, sc)
+    segments = extract_trajectory_segments(sc)
+    segment_colors = get_attribute(view, sc, :trajectory_colors)
+    
+    if segment_colors !== nothing
+        # Per-segment colors
+        for (i, (x, y, z)) in enumerate(segments)
+            color = i &lt;= length(segment_colors) ? segment_colors[i] : segment_colors[end]
+            lines!(scene, x, y, z, color=color, linewidth=...)
+        end
+    else
+        # Single color
+        color = get_attribute(view, sc, :trajectory_color)
+        for (x, y, z) in segments
+            lines!(scene, x, y, z, color=color, linewidth=...)
+        end
+    end
+end</code></pre><h3 id="Camera-Control"><a class="docs-heading-anchor" href="#Camera-Control">Camera Control</a><a id="Camera-Control-1"></a><a class="docs-heading-anchor-permalink" href="#Camera-Control" title="Permalink"></a></h3><ul><li>Free rotation (default from prototype)</li><li>Predefined views: <code>:earth_centered</code>, <code>:spacecraft_following</code>, <code>:inertial</code></li><li>Manual position: <code>Vec3f(x, y, z)</code></li><li>Zoom control without shifting lookat point</li></ul><hr/><h2 id="Open-Questions-for-Review"><a class="docs-heading-anchor" href="#Open-Questions-for-Review">Open Questions for Review</a><a id="Open-Questions-for-Review-1"></a><a class="docs-heading-anchor-permalink" href="#Open-Questions-for-Review" title="Permalink"></a></h2><ol><li><strong>Animation in V1?</strong> Currently stretch goal - should it be core?</li><li><strong>Ground stations in V1?</strong> Or defer to V1.1?</li><li><strong>Color specification</strong>: RGBA only, or allow named colors that convert?</li><li><strong>Plane grid auto-sizing</strong>: Algorithm for determining good grid spacing?</li><li><strong>Multiple viewports</strong>: Single scene only for V1?</li><li><strong>Export capabilities</strong>: Save images/videos in V1 or later?</li><li><strong>Interactive controls</strong>: Mouse picking objects, interactive time scrubbing?</li></ol><hr/><h2 id="Version-Roadmap"><a class="docs-heading-anchor" href="#Version-Roadmap">Version Roadmap</a><a id="Version-Roadmap-1"></a><a class="docs-heading-anchor-permalink" href="#Version-Roadmap" title="Permalink"></a></h2><h3 id="V1.0-Minimal-MVP-(Current-Focus-Business-Launch)"><a class="docs-heading-anchor" href="#V1.0-Minimal-MVP-(Current-Focus-Business-Launch)">V1.0 - Minimal MVP (Current Focus - Business Launch)</a><a id="V1.0-Minimal-MVP-(Current-Focus-Business-Launch)-1"></a><a class="docs-heading-anchor-permalink" href="#V1.0-Minimal-MVP-(Current-Focus-Business-Launch)" title="Permalink"></a></h3><p><strong>Goal: Ship fast, get market feedback, create &quot;wow factor&quot;</strong></p><ul><li>Single spacecraft visualization (Use Case 0)</li><li>Earth with texture (always on)</li><li>Star field (always on)</li><li>Equatorial plane (always on)</li><li>Spacecraft model, marker, label (always on)</li><li>GCRF coordinate system only</li><li>No customization options</li><li>No animation</li><li>Static display only</li></ul><p><strong>Implementation Priority:</strong></p><ol><li>Basic View3D struct</li><li>Single spacecraft trajectory rendering</li><li>Earth sphere with texture</li><li>Star field scatter plot</li><li>Equatorial plane grid</li><li>Simple display() function</li></ol><h3 id="V1.1-Customization-and-Multi-Object"><a class="docs-heading-anchor" href="#V1.1-Customization-and-Multi-Object">V1.1 - Customization &amp; Multi-Object</a><a id="V1.1-Customization-and-Multi-Object-1"></a><a class="docs-heading-anchor-permalink" href="#V1.1-Customization-and-Multi-Object" title="Permalink"></a></h3><p><strong>Goal: Production-ready with flexibility</strong></p><ul><li>Multiple spacecraft (Use Case 1)</li><li>Attribute customization (colors, sizes, visibility) (Use Cases 2, 5)</li><li>Multiple celestial bodies</li><li>Multiple reference planes</li><li>User control of stars/plane visibility</li><li>Builder API with kwargs</li><li>Setter functions for updates</li><li>2D plotting integration (Use Case 7)</li><li>Multi-segment trajectory colors</li><li>Coordinate system selection (GCRF, ITRF, etc.)</li></ul><h3 id="V1.2-Overlays-and-Interaction"><a class="docs-heading-anchor" href="#V1.2-Overlays-and-Interaction">V1.2 - Overlays &amp; Interaction</a><a id="V1.2-Overlays-and-Interaction-1"></a><a class="docs-heading-anchor-permalink" href="#V1.2-Overlays-and-Interaction" title="Permalink"></a></h3><p><strong>Goal: Advanced visualization</strong></p><ul><li>Vectors and axes overlays (Use Case 3)</li><li>Ground stations</li><li>Sensor cones (FOV)</li><li>Animation controls (Use Case 8)</li><li>Time scrubbing</li><li>Interactive camera presets</li><li>Solver/optimization integration (Use Case 6)</li><li>Object picking</li></ul><h3 id="V2.0-Advanced-Features"><a class="docs-heading-anchor" href="#V2.0-Advanced-Features">V2.0 - Advanced Features</a><a id="V2.0-Advanced-Features-1"></a><a class="docs-heading-anchor-permalink" href="#V2.0-Advanced-Features" title="Permalink"></a></h3><p><strong>Goal: Professional grade</strong></p><ul><li>Multiple viewports</li><li>Video export</li><li>Real-time updates</li><li>Custom shaders</li><li>VR support (?)</li><li>Performance optimization</li></ul><h1 id="Uitlities"><a class="docs-heading-anchor" href="#Uitlities">Uitlities</a><a id="Uitlities-1"></a><a class="docs-heading-anchor-permalink" href="#Uitlities" title="Permalink"></a></h1><h2 id="Color"><a class="docs-heading-anchor" href="#Color">Color</a><a id="Color-1"></a><a class="docs-heading-anchor-permalink" href="#Color" title="Permalink"></a></h2><pre><code class="language-julia hljs">module EpicycleColor
+
+using ColorTypes
+using Colors
+
+export ColorLike, RGBColor, HexColor, NamedColor
+
+&quot;Types accepted as colors across Epicycle graphics.&quot;
+const ColorLike = Union{Symbol, Colorant}
+
+&quot;0–1 float RGB(A).&quot;
+RGBColor(r::Real, g::Real, b::Real; a::Real = 1.0) =
+    RGBA{Float32}(r, g, b, a)
+
+&quot;0–255 integer RGB(A).&quot;
+RGBColor(r::Integer, g::Integer, b::Integer; a::Integer = 255) =
+    RGBA{Float32}(r/255, g/255, b/255, a/255)
+
+&quot;Hex string &#39;#RRGGBB&#39; or &#39;#RRGGBBAA&#39; (with or without leading &#39;#&#39;).&quot;
+function HexColor(s::AbstractString)::Colorant
+    s = strip(s)
+    s = startswith(s, &quot;#&quot;) ? s : &quot;#&quot; * s
+    parse(Colorant, s)   # Colors.jl
+end
+
+&quot;Semantic or named color symbol (Makie-compatible).&quot;
+NamedColor(name::Symbol) = name
+NamedColor(name::AbstractString) = Symbol(name)
+
+end # module</code></pre></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Friday 9 January 2026 16:14">Friday 9 January 2026</span>. Using Julia version 1.12.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

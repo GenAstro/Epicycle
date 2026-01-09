@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>For basic language usage style use the idiomatic julia style guidelines here · Epicycle.jl</title><meta name="title" content="For basic language usage style use the idiomatic julia style guidelines here · Epicycle.jl"/><meta property="og:title" content="For basic language usage style use the idiomatic julia style guidelines here · Epicycle.jl"/><meta property="twitter:title" content="For basic language usage style use the idiomatic julia style guidelines here · Epicycle.jl"/><meta name="description" content="Documentation for Epicycle.jl."/><meta property="og:description" content="Documentation for Epicycle.jl."/><meta property="twitter:description" content="Documentation for Epicycle.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/styleguide/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/styleguide/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/styleguide/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../getting_started/">Getting Started</a></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox"/><label class="tocitem" for="menuitem-3"><span class="docs-label">Tutorials</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../unit_examples/">Component Cheat Sheets</a></li><li><a class="tocitem" href="../complete_examples/">End-to-End Examples</a></li></ul></li><li><a class="tocitem" href="../graphics/">Graphics</a></li><li><a class="tocitem" href="../components/">Components</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>For basic language usage style use the idiomatic julia style guidelines here</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>For basic language usage style use the idiomatic julia style guidelines here</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/docs/src/styleguide.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="For-basic-language-usage-style-use-the-idiomatic-julia-style-guidelines-here"><a class="docs-heading-anchor" href="#For-basic-language-usage-style-use-the-idiomatic-julia-style-guidelines-here">For basic language usage style use the idiomatic julia style guidelines here</a><a id="For-basic-language-usage-style-use-the-idiomatic-julia-style-guidelines-here-1"></a><a class="docs-heading-anchor-permalink" href="#For-basic-language-usage-style-use-the-idiomatic-julia-style-guidelines-here" title="Permalink"></a></h1><p>https://docs.julialang.org/en/v1/manual/style-guide/</p><p>julia/base/rational.jl at 788b2c77c10c2160f4794a4d4b6b81a95a90940c · JuliaLang/julia</p><p>Some important ones  make low level model code look like a math spec (see cart<em>to</em>kep.jl) Avoid writing overly-specific types Append ! to names of functions that modify their arguments Avoid confusion about whether something is an instance or a type</p><h1 id="Function-Style-Guide-and-Example"><a class="docs-heading-anchor" href="#Function-Style-Guide-and-Example">Function Style Guide and Example</a><a id="Function-Style-Guide-and-Example-1"></a><a class="docs-heading-anchor-permalink" href="#Function-Style-Guide-and-Example" title="Permalink"></a></h1><ul><li><p>https://docs.julialang.org/en/v1/manual/style-guide/</p></li><li><p>use mathematical symbols as appropriate inside functions, but not in the interface </p></li><li><p>For inputs that must be differentiable, annotate them using a derived type from Real.  For example state::Vector{&lt;:Real} so ForwardDiff (and other AD tools) can supply Vector{Dual&lt;:Real} seamlessly. Avoid types that are too specific in specific in function interfaces unless they will never change.  The use of Real ensures some type checking, but uses dispatch for fast execution.  </p></li></ul><pre><code class="language-julia hljs">
+&quot;&quot;&quot;
+    kep_to_cart(state::Vector{&lt;:Real}, μ::Real; tol::Float64=1e-12)
+
+Convert a Keplerian state vector to a Cartesian state vector.
+
+# Arguments
+- `state::Vector{&lt;:Real}`: Keplerian elements `[a, e, i, Ω, ω, ν]`
+- `μ`: Gravitational parameter
+- `tol`: Tolerance for singularities like p ≈ 0 (default: 1e-12)
+- `a`: semi-major axis
+- `e`: eccentricity
+- `i`: inclination
+- `Ω`: right ascension of ascending node
+- `ω`: argument of periapsis
+- `ν`: true anomaly
+
+# Returns
+A 6-element vector `[x, y, z, vx, vy, vz]` representing Cartesian position and velocity.
+
+# Example
+cart = kep_to_cart([7000.0, 0.01, pi/4,0.0,0.0,pi/3], 398600.4418)
+
+# Notes
+- Angles must be in radians.
+- Dimensional quantities must be consistent units with μ.
+- Returns a vector of `NaN`s if conversion is undefined.
+&quot;&quot;&quot;
+function kep_to_cart(state::Vector{&lt;:Real}, μ::Real; tol::Float64=1e-12)
+    if length(state) != 6
+        error(&quot;Input vector must have exactly six elements: a, e, i, Ω, ω, ν.&quot;)
+    end
+
+    if μ &lt; tol
+        @warn &quot;Conversion Failed: μ &lt; tolerance.&quot;
+        return fill(NaN, 6)
+    end
+
+    # Unpack the elements
+    a, e, i, Ω, ω, ν = state
+
+    # Compute semi-latus rectum: p = a * (1 - e²)
+    p = a * (1.0 - e^2)
+
+    # Check for degenerate orbit (e.g., parabolic or collapsed)
+    if p &lt; tol || abs(1-e) &lt; tol
+        @warn &quot;Conversion Failed: Orbit is parabolic or singular.&quot;
+        return fill(NaN, 6)
+    end
+
+    # Compute radial distance: r = p / (1 + e * cos(ν))
+    r = p / (1.0 + e * cos(ν))
+
+    # Position and velocity in perifocal frame 
+    factor = sqrt(μ / p)
+    r̄ₚ = [r * cos(ν), r * sin(ν), 0.0]
+    v̄ₚ = [-factor * sin(ν), factor * (e + cos(ν)), 0.0]
+
+    # Precompute sines and cosines for rotation matrix
+    cos_Ω, sin_Ω = cos(Ω), sin(Ω)
+    cos_ω, sin_ω = cos(ω), sin(ω)
+    cos_i, sin_i = cos(i), sin(i)
+
+    # Rotation matrix from perifocal to inertial
+    R = [
+        cos_ω * cos_Ω - sin_ω * cos_i * sin_Ω   -sin_ω * cos_Ω - cos_ω * cos_i * sin_Ω   sin_i * sin_Ω;
+        cos_ω * sin_Ω + sin_ω * cos_i * cos_Ω   -sin_ω * sin_Ω + cos_ω * cos_i * cos_Ω  -sin_i * cos_Ω;
+        sin_ω * sin_i                                    cos_ω * sin_i                   cos_i
+    ]
+
+    # Rotate position and velocity from perifocal to inertial frame
+    pos = R * r̄ₚ
+    vel = R * v̄ₚ 
+
+    return vcat(pos, vel)
+end
+
+</code></pre><p>Note that the type definition state::Vector{&lt;:Real} is what allows the use of forward mode differentiation here. </p><pre><code class="language-julia hljs">using LinearAlgebra
+using ForwardDiff
+using FiniteDiff
+using AstroStates  # adjust if module name differs
+
+μ = 398600.4418  # km^3/s^2 (example Earth μ)
+deg2rad(θ) = θ * (pi / 180)
+
+# Keplerian test vector: [a, e, i, Ω, ω, ν]
+# Moderate inclination, small eccentricity, all angles away from singularities
+kep = [
+    7000.0,                 # a (km)
+    0.01,                   # e
+    deg2rad(28.0),          # i
+    deg2rad(40.0),          # Ω
+    deg2rad(15.0),          # ω
+    deg2rad(60.0)           # ν
+]
+
+# Function mapping Keplerian → Cartesian (6 → 6)
+f(x) = AstroStates.kep_to_cart(x, μ)
+
+# ForwardDiff Jacobian (6x6)
+J_ad = ForwardDiff.jacobian(f, kep)</code></pre><h1 id="Struct-and-API-Design-Principles-for-Julia-Scientific/Optimization-Code"><a class="docs-heading-anchor" href="#Struct-and-API-Design-Principles-for-Julia-Scientific/Optimization-Code">Struct and API Design Principles for Julia Scientific/Optimization Code</a><a id="Struct-and-API-Design-Principles-for-Julia-Scientific/Optimization-Code-1"></a><a class="docs-heading-anchor-permalink" href="#Struct-and-API-Design-Principles-for-Julia-Scientific/Optimization-Code" title="Permalink"></a></h1><h2 id="Summary-Table"><a class="docs-heading-anchor" href="#Summary-Table">Summary Table</a><a id="Summary-Table-1"></a><a class="docs-heading-anchor-permalink" href="#Summary-Table" title="Permalink"></a></h2><table><tr><th style="text-align: right">Principle</th><th style="text-align: right">Description</th></tr><tr><td style="text-align: right">Parametric types</td><td style="text-align: right">Use for performance, type stability, and AD support</td></tr><tr><td style="text-align: right">Generic numeric fields</td><td style="text-align: right">Use <code>F&lt;:Real</code> for AD compatibility</td></tr><tr><td style="text-align: right">Keyword constructors</td><td style="text-align: right">All fields as kwargs with defaults for user-facing structs</td></tr><tr><td style="text-align: right">Docstrings</td><td style="text-align: right">Describe all fields, kwargs, and provide examples</td></tr><tr><td style="text-align: right">Custom show methods</td><td style="text-align: right">Implement for clean REPL output</td></tr><tr><td style="text-align: right">Abstract/parametric fields</td><td style="text-align: right">Use for extensibility and flexibility</td></tr><tr><td style="text-align: right">Validation</td><td style="text-align: right">Check field values and</td></tr></table><h2 id="1.-Performance-and-Type-Stability"><a class="docs-heading-anchor" href="#1.-Performance-and-Type-Stability">1. Performance and Type Stability</a><a id="1.-Performance-and-Type-Stability-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Performance-and-Type-Stability" title="Permalink"></a></h2><ul><li>Use parametric types for numeric fields (e.g., <code>{F&lt;:Real}</code>) when performance, type stability, or AD support is important.</li><li>Ensure all related numeric fields use the same type parameter for consistency and efficiency.</li></ul><h2 id="2.-Automatic-Differentiation-(AD)-Compatibility"><a class="docs-heading-anchor" href="#2.-Automatic-Differentiation-(AD)-Compatibility">2. Automatic Differentiation (AD) Compatibility</a><a id="2.-Automatic-Differentiation-(AD)-Compatibility-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Automatic-Differentiation-(AD)-Compatibility" title="Permalink"></a></h2><ul><li>Use generic numeric types (<code>F&lt;:Real</code>) for fields that may participate in differentiation.</li><li>Avoid hardcoding types like <code>Float64</code> for fields that may be used with dual numbers or other AD types.</li></ul><h2 id="3.-User-Facing-Constructors"><a class="docs-heading-anchor" href="#3.-User-Facing-Constructors">3. User-Facing Constructors</a><a id="3.-User-Facing-Constructors-1"></a><a class="docs-heading-anchor-permalink" href="#3.-User-Facing-Constructors" title="Permalink"></a></h2><ul><li>Provide an outer constructor that accepts all fields as keyword arguments (<code>kwargs</code>), with sensible defaults for each user facing struct. </li><li>This enables expressive, order-independent struct creation and makes APIs easier to use and maintain.</li></ul><h2 id="4.-Documentation"><a class="docs-heading-anchor" href="#4.-Documentation">4. Documentation</a><a id="4.-Documentation-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Documentation" title="Permalink"></a></h2><ul><li>Write clear, idiomatic docstrings for all structs and constructors.<ul><li>List and describe all fields and keyword arguments.</li><li>Include at least one usage example.</li><li>All fields must have range spec or description</li></ul></li><li>Document which fields are required and which are optional (with defaults).</li><li>When constructors are overloaded, document the core constructor in full detail, then only document the difference in overloaded outer constructors</li></ul><h2 id="4.1-Validation"><a class="docs-heading-anchor" href="#4.1-Validation">4.1 Validation</a><a id="4.1-Validation-1"></a><a class="docs-heading-anchor-permalink" href="#4.1-Validation" title="Permalink"></a></h2><ul><li>Constructors must validate user inputs against the range spec in the doc string</li></ul><h2 id="5.-REPL-and-Display-Integration"><a class="docs-heading-anchor" href="#5.-REPL-and-Display-Integration">5. REPL and Display Integration</a><a id="5.-REPL-and-Display-Integration-1"></a><a class="docs-heading-anchor-permalink" href="#5.-REPL-and-Display-Integration" title="Permalink"></a></h2><ul><li>Implement <code>Base.show</code> methods for custom structs to provide concise, readable REPL output.</li><li>Optionally, provide a verbose <code>show(io, ::MIME&quot;text/plain&quot;, obj)</code> for detailed inspection.</li></ul><h2 id="6.-Extensibility-and-Flexibility"><a class="docs-heading-anchor" href="#6.-Extensibility-and-Flexibility">6. Extensibility and Flexibility</a><a id="6.-Extensibility-and-Flexibility-1"></a><a class="docs-heading-anchor-permalink" href="#6.-Extensibility-and-Flexibility" title="Permalink"></a></h2><ul><li>Use abstract types for fields that may be extended by users (e.g., <code>AbstractSRPModel</code>).</li><li>Prefer <code>AbstractVector{F}</code> or parametric vectors for fields that may hold different numeric types.</li></ul><h2 id="7.-Error-Checking-and-Validation"><a class="docs-heading-anchor" href="#7.-Error-Checking-and-Validation">7. Error Checking and Validation</a><a id="7.-Error-Checking-and-Validation-1"></a><a class="docs-heading-anchor-permalink" href="#7.-Error-Checking-and-Validation" title="Permalink"></a></h2><ul><li>Validate individual field constraints when fields are set (e.g., check for correct vector lengths, positive-definite parameters, etc.)</li><li>Validate field coupling and relationships at execution time (e.g., in <code>display()</code>, <code>propagate()</code>, <code>solve()</code>)</li><li>Provide informative error messages for invalid input</li></ul><h2 id="8.-Constructor-Patterns-for-Composition-Structs"><a class="docs-heading-anchor" href="#8.-Constructor-Patterns-for-Composition-Structs">8. Constructor Patterns for Composition Structs</a><a id="8.-Constructor-Patterns-for-Composition-Structs-1"></a><a class="docs-heading-anchor-permalink" href="#8.-Constructor-Patterns-for-Composition-Structs" title="Permalink"></a></h2><p>Different struct types require different constructor patterns based on their usage:</p><h3 id="Rule-1:-Required-Positional-Arguments"><a class="docs-heading-anchor" href="#Rule-1:-Required-Positional-Arguments">Rule 1: Required Positional Arguments</a><a id="Rule-1:-Required-Positional-Arguments-1"></a><a class="docs-heading-anchor-permalink" href="#Rule-1:-Required-Positional-Arguments" title="Permalink"></a></h3><p>Use positional constructors when all inputs are required and there are no reasonable defaults.</p><ul><li>All arguments are required for valid construction</li><li>No sensible default values exist</li><li>Optional: May provide keyword argument interface for UI consistency</li></ul><p><strong>Example:</strong></p><pre><code class="language-julia hljs"># Forces require specific configuration
+gravity = PointMassGravity(earth, (moon, sun))
+forces = ForceModel(gravity)
+integ = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9)
+prop = OrbitPropagator(forces, integ)</code></pre><h3 id="Rule-2:-Keyword-Arguments-with-Defaults"><a class="docs-heading-anchor" href="#Rule-2:-Keyword-Arguments-with-Defaults">Rule 2: Keyword Arguments with Defaults</a><a id="Rule-2:-Keyword-Arguments-with-Defaults-1"></a><a class="docs-heading-anchor-permalink" href="#Rule-2:-Keyword-Arguments-with-Defaults" title="Permalink"></a></h3><p>For structs with many fields that have reasonable defaults, provide defaults in the constructor to allow users to set only what they need.</p><ul><li>Most or all fields have sensible defaults</li><li>Users customize only what they need</li><li>Enables quick prototyping and clear intent</li></ul><p><strong>Example:</strong></p><pre><code class="language-julia hljs"># Most maneuver parameters have standard defaults
+man = ImpulsiveManeuver(; axes=VNB(), g0=9.81, Isp=300.0, element1=0.0, element2=0.0, element3=0.0)
+
+# User sets only what differs from defaults
+man = ImpulsiveManeuver(element1=1.3, axes=VNB())</code></pre><h3 id="Rule-3:-Defaults-with-Incremental-Composition-(add!-methods)"><a class="docs-heading-anchor" href="#Rule-3:-Defaults-with-Incremental-Composition-(add!-methods)">Rule 3: Defaults with Incremental Composition (add! methods)</a><a id="Rule-3:-Defaults-with-Incremental-Composition-(add!-methods)-1"></a><a class="docs-heading-anchor-permalink" href="#Rule-3:-Defaults-with-Incremental-Composition-(add!-methods)" title="Permalink"></a></h3><p>For user-composed structs, use a constructor with reasonable defaults (possibly with kwargs) to create the base struct, then use <code>add!</code> methods for users to incrementally compose the struct.</p><ul><li>Struct is built incrementally over multiple steps</li><li>All fields have reasonable defaults (like GUI-based tools: GMAT, STK, FreeFlyer)</li><li>Complex validation between parts happens at execution time</li><li>May have ordering or dependency requirements between composed elements</li></ul><p><strong>Example:</strong></p><pre><code class="language-julia hljs"># Sequence starts with reasonable defaults
+seq = Sequence()  
+add_events!(seq, event1, Event[])
+add_events!(seq, event2, [event1])
+
+# View3D provides default coordinate system
+view = View3D()  # Uses Earth GCRF by default
+# Or user can override
+view = View3D(coord_sys=moon_gcrf)
+# Then compose incrementally
+add_spacecraft!(view, sc)
+display(view)  # Final validation happens here</code></pre><p><strong>Key Principles:</strong></p><ul><li>Field-level validation in setters/add! methods (e.g., empty checks, bounds)</li><li>Coupling validation at execution time (e.g., coord_sys matching between view and spacecraft)</li><li>Mutable structs allow modification after construction</li></ul><hr/><h2 id="Example:-ImpulsiveManeuver-Struct"><a class="docs-heading-anchor" href="#Example:-ImpulsiveManeuver-Struct">Example: ImpulsiveManeuver Struct</a><a id="Example:-ImpulsiveManeuver-Struct-1"></a><a class="docs-heading-anchor-permalink" href="#Example:-ImpulsiveManeuver-Struct" title="Permalink"></a></h2><pre><code class="language-julia hljs">&quot;&quot;&quot;
+    ImpulsiveManeuver(; axes=:VNB, g0=9.81, Isp=300.0, element1=0.0, element2=0.0, element3=0.0)
+
+Represents an impulsive maneuver in a specified reference frame.
+
+# Keyword Arguments
+- `axes::Symbol = :VNB`: Reference frame for the maneuver (e.g., :VNB, :LVLH, :ICRF).
+- `g0::Real = 9.81`: Standard gravity [m/s²].
+- `Isp::Real = 300.0`: Specific impulse [s].
+- `element1::Real = 0.0`: First maneuver component (e.g., ΔV₁).
+- `element2::Real = 0.0`: Second maneuver component (e.g., ΔV₂).
+- `element3::Real = 0.0`: Third maneuver component (e.g., ΔV₃).
+
+# Example</code></pre><p>julia</p><p>mutable struct ImpulsiveManeuver{F&lt;:Real}     axes::Symbol     g0::F     Isp::F     element1::F     element2::F     element3::F</p><pre><code class="nohighlight hljs">function ImpulsiveManeuver(axes::Symbol, g0::F, Isp::F, element1::F, element2::F, element3::F) where {F&lt;:Real}
+    new{F}(axes, g0, Isp, element1, element2, element3)
+end</code></pre><p>end</p><p>function ImpulsiveManeuver(;     axes::Symbol = :VNB,     g0::Real = 9.81,     Isp::Real = 300.0,     element1::Real = 0.0,     element2::Real = 0.0,     element3::Real = 0.0 )     F = promote_type(typeof(g0), typeof(Isp), typeof(element1), typeof(element2), typeof(element3))     new{F}(axes, F(g0), F(Isp), F(element1), F(element2), F(element3)) end</p><p>function Base.show(io::IO, m::ImpulsiveManeuver)     println(io, &quot;ImpulsiveManeuver(&quot;)     println(io, &quot;  axes = &quot;, m.axes)     println(io, &quot;  g0 = &quot;, m.g0)     println(io, &quot;  Isp = &quot;, m.Isp)     println(io, &quot;  element1 = &quot;, m.element1)     println(io, &quot;  element2 = &quot;, m.element2)     println(io, &quot;  element3 = &quot;, m.element3, &quot;)&quot;) end</p><p>man = ImpulsiveManeuver(element1=1.3, axes=:VNB)</p><h2 id="Differentiable-Array-Constructors-in-Julia"><a class="docs-heading-anchor" href="#Differentiable-Array-Constructors-in-Julia">Differentiable Array Constructors in Julia</a><a id="Differentiable-Array-Constructors-in-Julia-1"></a><a class="docs-heading-anchor-permalink" href="#Differentiable-Array-Constructors-in-Julia" title="Permalink"></a></h2><p>When writing code that must be compatible with automatic differentiation (AD) in Julia (e.g., ForwardDiff), always construct arrays (such as identity matrices, zeros, or ones) using the element type of your input data. This ensures that arrays will work with dual numbers or other AD types.</p><hr/><h3 id="Identity-Matrix"><a class="docs-heading-anchor" href="#Identity-Matrix">Identity Matrix</a><a id="Identity-Matrix-1"></a><a class="docs-heading-anchor-permalink" href="#Identity-Matrix" title="Permalink"></a></h3><pre><code class="language-julia hljs">I3 = Matrix{eltype(x)}(I, 3, 3)
+z = zeros(eltype(x), n)
+o = ones(eltype(x), n)
+
+function foo(x)
+    I3 = Matrix{eltype(x)}(I, 3, 3)
+    z = zeros(eltype(x), 3)
+    o = ones(eltype(x), 3)
+    # ... use I3, z, o in AD-safe computations
+end
+---
+
+For generic numeric code: write formulas with plain literals (2π, 0.5, 3/2) and rely on promotion; only use zero(T) / one(T) to seed accumulators or typed containers, and allocate results as Vector{T}. Avoid wrapping every constant in T(...)—clarity beats ceremonial generality.
+
+Use state::Vector{&lt;:Real} and μ::Float64 for differentiable conversion/math functions (e.g., orbital element ↔ Cartesian) to keep the signature explicit, simple, and AD‑compatible (ForwardDiff supplies Vector{Dual&lt;:Real} which matches). Don’t generalize to AbstractVector or μ::Real until a concrete need (views, StaticArrays, μ differentiation) arises—add overloads later instead of widening the original. Preserve the element type in outputs by building a literal vector whose entries derive from the inputs. Treat physical degeneracies (parabolic/singular) with a warning and a NaN vector; treat shape/argument misuse with an error. Avoid unnecessary casts; plain literals (1.0, 2π) promote correctly with Duals and BigFloat. Only broaden the interface in response to an observed requirement, not preemptively.
+
+# Docstring format
+
+&quot;&quot;&quot;
+    FUNCTION SIGNATURE
+
+DECLARATIVE ON SENTENCE SUMMARY
+
+&quot;Arguments&quot; (for a function) or &quot;Fields&quot; for a struct
+- List of items
+
+# Notes:
+   # Do not include how, that may change, just document the contract. 
+# Returns (for a function)
+
+# Examples</code></pre><p>jldoctest Code here (no julia prompts, want to be able to copy and past the whole chunk!!)</p><h1 id="output"><a class="docs-heading-anchor" href="#output">output</a><a id="output-1"></a><a class="docs-heading-anchor-permalink" href="#output" title="Permalink"></a></h1><p>REPL output goes here</p><pre><code class="nohighlight hljs">&quot;&quot;&quot;
+
+# Show methods should overload to support future JSON, HTML etc. 
+
+function show(io::IO, ::MIME&quot;text/plain&quot;, body::CelestialBody)
+    println(io, &quot;CelestialBody: &quot;)
+    println(io, &quot;  name               = &quot;, body.name)
+    println(io, &quot;  μ                  = &quot;, body.mu)
+    println(io, &quot;  Equatorial Radius  = &quot;, body.equatorial_radius)
+    println(io, &quot;  Flattening         = &quot;, body.flattening)
+    println(io, &quot;  NAIF ID            = &quot;, body.naifid)
+end
+
+# Delegate the generic show to the text/plain variant for print/println.
+function show(io::IO, body::CelestialBody)
+    show(io, MIME&quot;text/plain&quot;(), body)
+end
+
+---
+
+# Struct Development Checklist
+
+Use this checklist when creating new structs to ensure production-ready, well-tested code. This assumes the struct has been prototyped and the design has been reviewed.
+
+## 1. Design Phase
+- [ ] **Struct name** - PascalCase, descriptive, follows Epicycle conventions (see Naming Conventions)
+- [ ] **Field names** - snake_case for multi-word, consistent with ecosystem patterns
+- [ ] **Field types** - Use parametric types (`F&lt;:Real`) for numeric fields that may be differentiated
+- [ ] **Constructor pattern** - Choose appropriate pattern (positional, kwargs with defaults, or incremental composition)
+- [ ] **Mutability** - Choose `struct` (immutable) or `mutable struct` based on usage pattern
+
+## 2. Documentation Phase
+- [ ] **Struct docstring** - Describes purpose and usage with signature showing constructor
+- [ ] **Field documentation** - Each field documented with type and valid range/constraints
+- [ ] **Examples** - At least one working example in docstring (use `jldoctest` when appropriate)
+- [ ] **Constructor variants** - Document all public constructor signatures
+- [ ] **Range specifications** - All numeric fields have documented valid ranges (e.g., &quot;must be positive&quot;, &quot;0.0 to 1.0&quot;)
+
+## 3. Implementation Phase
+- [ ] **Struct definition** - Inner constructor if needed for validation or type promotion
+- [ ] **Outer constructors** - Keyword constructor with defaults for user-facing structs
+- [ ] **Validation logic** - Constructor validates inputs against documented range specifications
+- [ ] **Error messages** - Clear, actionable `ArgumentError` messages cite field name and constraint
+- [ ] **Base.show method** - Implements clean REPL display (use `MIME&quot;text/plain&quot;` variant)
+- [ ] **Base.deepcopy** - Implement if struct contains mutable fields or is itself mutable
+- [ ] **Exports** - Add to package module exports list
+
+## 4. Testing Phase
+- [ ] **Happy path tests** - Verify default constructor and valid field combinations work
+- [ ] **Validation tests** - Test each constraint with `@test_throws ArgumentError`
+- [ ] **Edge cases** - Test boundary values (zero, negative, empty strings, etc.)
+- [ ] **Error messages** - Verify error messages contain expected substrings
+- [ ] **Type promotion** - Test with different numeric types if parametric (Float64, Int, ForwardDiff.Dual)
+- [ ] **Show method** - Test REPL output format matches expected structure
+- [ ] **Integration tests** - Test struct usage in broader package context (if applicable)
+
+## 5. Integration Phase
+- [ ] **Package documentation** - Add to package README or docs with system-level examples
+- [ ] **Epicycle docs** - Add examples to main Epicycle documentation if appropriate
+- [ ] **Update related code** - Modify dependent code that uses or composes this struct
+- [ ] **Update tests** - Update integration tests in dependent packages
+- [ ] **Code review** - Have design and implementation reviewed by another developer
+
+## 6. Quality Checks
+- [ ] **Naming consistency** - Compare field names with similar structs in ecosystem
+- [ ] **No typos** - Run spell check on docstrings and comments
+- [ ] **Type stability** - Verify `@code_warntype` shows no type instabilities (for performance-critical code)
+- [ ] **Test coverage** - All code paths exercised by tests
+- [ ] **Documentation builds** - Verify package docs build without warnings
+
+## Quick Reference: Constructor Patterns
+
+**Pattern 1 - Required Positional:**</code></pre><p>julia</p><h1 id="All-fields-required,-no-defaults"><a class="docs-heading-anchor" href="#All-fields-required,-no-defaults">All fields required, no defaults</a><a id="All-fields-required,-no-defaults-1"></a><a class="docs-heading-anchor-permalink" href="#All-fields-required,-no-defaults" title="Permalink"></a></h1><p>ForceModel(gravity::Gravity, drag::Drag)</p><pre><code class="nohighlight hljs">
+**Pattern 2 - Keyword with Defaults:**</code></pre><p>julia</p><h1 id="Most-fields-have-defaults,-users-customize-as-needed"><a class="docs-heading-anchor" href="#Most-fields-have-defaults,-users-customize-as-needed">Most fields have defaults, users customize as needed</a><a id="Most-fields-have-defaults,-users-customize-as-needed-1"></a><a class="docs-heading-anchor-permalink" href="#Most-fields-have-defaults,-users-customize-as-needed" title="Permalink"></a></h1><p>ImpulsiveManeuver(; axes=VNB(), g0=9.81, Isp=300.0, element1=0.0)</p><pre><code class="nohighlight hljs">
+**Pattern 3 - Defaults + Incremental Composition:**</code></pre><p>julia</p><h1 id="Start-with-defaults,-build-incrementally-with-add!-methods"><a class="docs-heading-anchor" href="#Start-with-defaults,-build-incrementally-with-add!-methods">Start with defaults, build incrementally with add! methods</a><a id="Start-with-defaults,-build-incrementally-with-add!-methods-1"></a><a class="docs-heading-anchor-permalink" href="#Start-with-defaults,-build-incrementally-with-add!-methods" title="Permalink"></a></h1><p>seq = Sequence() add_events!(seq, event1, Event[])</p><pre><code class="nohighlight hljs">
+See &quot;Constructor Patterns for Composition Structs&quot; section for detailed guidance.
+
+# Naming Conventions
+
+Consistent naming conventions improve code readability, maintainability, and reduce cognitive load across the Epicycle ecosystem.
+
+## General Principles
+
+1. **Clarity over brevity** - Use full words rather than abbreviations unless the abbreviation is universally understood in the domain (e.g., `mu` for gravitational parameter, `SRP` for solar radiation pressure)
+2. **snake_case for multi-word fields** - Use underscores to separate words in field names for readability
+3. **Lowercase for simple field names** - Single-word fields use lowercase (e.g., `state`, `time`, `mass`, `name`)
+4. **Consistent terminology** - Use the same term for the same concept across all structs
+
+## Field Naming Patterns
+
+### Multi-word Fields
+Use `snake_case` (underscores) to separate words:</code></pre><p>julia coord<em>sys          # Not coordSys or coordsys lower</em>bound        # Not lowerBound or lowerbound upper<em>bound        # Not upperBound or upperbound file</em>path          # Not filePath or filepath model_scale        # Not modelScale</p><pre><code class="nohighlight hljs">
+### Common Field Names
+Standardize on these names for consistency across structs:
+
+| Concept | Field Name | Example | Notes |
+|---------|-----------|---------|-------|
+| Name/identifier | `name` | `&quot;MySpacecraft&quot;` | String identifier for user reference |
+| File path | `file_path` | `&quot;assets/model.obj&quot;` | Full or relative path to a file |
+| Coordinate system | `coord_sys` | `CoordinateSystem(earth, ICRFAxes())` | Abbreviated but widely used |
+| Scale factor | `scale` | `1.0` | Dimensionless scaling parameter |
+| Visibility flag | `visible` | `true` | Boolean for display control |
+| Time/epoch | `time` | `Time(...)` | Temporal point or epoch |
+| State vector | `state` | `CartesianState(...)` | Orbital or physical state |
+| Mass | `mass` | `1000.0` | Total mass in kg |
+| Lower bound | `lower_bound` | `[-5.0, -2.0, 0.0]` | Optimization lower bounds |
+| Upper bound | `upper_bound` | `[5.0, 2.0, 0.0]` | Optimization upper bounds |
+
+### Boolean Fields
+- Prefer simple descriptive names: `visible`, `active`, `enabled`
+- Use `is_` prefix only when clarity requires it: `is_converged`, `is_valid`
+- Avoid negative booleans: use `enabled` not `disabled`
+
+Examples:</code></pre><p>julia visible::Bool      # Clear without prefix active::Bool       # Clear without prefix is_converged::Bool # Prefix adds clarity for state checks</p><pre><code class="nohighlight hljs">
+### Abbreviations
+Acceptable abbreviations (use sparingly and consistently):
+- `coord_sys` - coordinate system (widely used)
+- `mu` or `μ` - gravitational parameter (standard in astrodynamics)
+- `Isp` - specific impulse (standard)
+- `SRP` - solar radiation pressure (standard)
+- `num` prefix - for counts (e.g., `numvars`, but prefer `num_vars` for new code)
+
+Avoid abbreviations unless words have many characters:
+- `path` (not `pth`)
+- `model` (not `mdl`)
+- `scale` (not `scl`)
+- `visible` (not `vis`)
+
+Avoid: `file`, `filename`, `path` alone (ambiguous)
+
+### Numeric Suffixes
+When fields represent ordered elements or components:</code></pre><p>julia element1, element2, element3  # Maneuver components</p><pre><code class="nohighlight hljs">
+For multiple similar items, prefer vectors or collections:</code></pre><p>julia tanks::Vector{Tank}           # Not tank1, tank2, tank3 thrusters::Vector{Thruster}   # Not thruster1, thruster2</p><pre><code class="nohighlight hljs">
+## Struct Naming
+
+- Use **PascalCase** for struct names: `Spacecraft`, `ImpulsiveManeuver`, `CoordinateSystem`
+- Be descriptive: `CartesianState` not `CartState`, `OrbitPropagator` not `Propagator`
+- Use full words: `Integrator` not `Integ` (exceptions: widely understood abbreviations)
+
+## Function Naming
+
+Follow Julia conventions:
+- **lowercase with underscores**: `kep_to_cart`, `add_spacecraft!`, `to_posvel`
+- **Append `!` for mutating functions**: `set_posvel!`, `add_events!`, `push_segment!`
+- **Verb-noun order**: Use `verb_noun` pattern for clarity and consistency
+  - ✓ **Correct**: `solve_trajectory`, `display_view`, `propagate_orbit`, `compute_state`
+  - ✗ **Avoid**: `trajectory_solve`, `view_display`, `orbit_propagate`
+  - The action (verb) should come first, followed by the object (noun)
+  - Exception: conversion functions use `to_` prefix: `kep_to_cart`, `cart_to_kep`
+
+### Legacy Naming
+
+Some existing functions use noun_verb order and will be updated in future refactors:
+- `trajectory_solve` → should be `solve_trajectory` (TODO: refactor with alias for backward compatibility)
+
+## Internal/Private Fields
+
+Prefix with underscore to indicate internal use:</code></pre><p>julia _scene::Union{Nothing, Scene}  # Internal graphics state _cache::Dict                    # Internal cached data</p><pre><code class="nohighlight hljs">
+## Inspecting Existing Naming Patterns
+
+Before creating new structs or fields, review existing naming patterns for consistency. Use this snippet to inspect field names:
+</code></pre><p>julia using Epicycle</p><h1 id="Add-structs-you-want-to-inspect"><a class="docs-heading-anchor" href="#Add-structs-you-want-to-inspect">Add structs you want to inspect</a><a id="Add-structs-you-want-to-inspect-1"></a><a class="docs-heading-anchor-permalink" href="#Add-structs-you-want-to-inspect" title="Permalink"></a></h1><p>structs<em>to</em>inspect = [     Spacecraft, ImpulsiveManeuver, Event, SolverVariable,      Sequence, CoordinateSystem, CelestialBody, ForceModel ]</p><p>for T in structs<em>to</em>inspect     println(&quot;\n&quot;, T, &quot;:&quot;)     if !isabstracttype(T) &amp;&amp; fieldcount(T) &gt; 0         for fname in fieldnames(T)             println(&quot;  &quot;, fname)         end     end end</p><pre><code class="nohighlight hljs">
+This helps you identify existing patterns and maintain consistency across the codebase.
+
+## Migration Notes
+
+Existing inconsistencies to address in future refactors:
+- `numvars` → consider `num_vars` for consistency with `lower_bound`, `upper_bound`
+- Review any abbreviated field names against the clarity principle
+
+## Examples
+
+### Good Field Names</code></pre><p>julia struct Spacecraft     state::OrbitState     time::Time     mass::Float64     name::String     coord_sys::CoordinateSystem     history::Vector{Segment} end</p><p>struct CADModel     file_path::String     scale::Float64     visible::Bool end</p><p>struct SRPModel     area::Float64     reflectivity::Float64     file_path::String  # For plate model file end</p><pre><code class="nohighlight hljs">
+### Avoid</code></pre><p>julia struct BadExample     st::OrbitState          # Too abbreviated     coordSys::CoordSys      # camelCase inconsistent     fileName::String        # camelCase     vis::Bool               # Too abbreviated     lowerbound::Vector      # Missing underscore end ```</p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Friday 9 January 2026 16:14">Friday 9 January 2026</span>. Using Julia version 1.12.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
