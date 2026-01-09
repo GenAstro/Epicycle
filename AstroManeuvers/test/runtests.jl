@@ -73,8 +73,8 @@ end
 @testset "Spacecraft history update after maneuvers" begin
     # Expect two segments in history after the two maneuvers above
     @test length(sat1.history) == 2
-    @test length(sat1.history[1]) == 1
-    @test length(sat1.history[2]) == 1
+    @test length(sat1.history[1].times) == 1
+    @test length(sat1.history[2].times) == 1
 
     # Common initial position/velocity and applied Δv's
     pos0 = [7000.0, 300.0, 0.0]
@@ -88,16 +88,18 @@ end
     vel2 = vel1 .+ dv2_inertial
 
     # First history entry - now stored as Float64
-    t1, pv1 = sat1.history[1][1]
+    t1 = sat1.history[1].times[1]
+    state1 = sat1.history[1].states[1]
     @test t1 isa Time{Float64}  # History always uses Float64
-    @test pv1[1:3] == pos0
-    @test isapprox(pv1[4:6], vel1; rtol=1e-10, atol=1e-12)
+    @test state1.position == pos0
+    @test isapprox(state1.velocity, vel1; rtol=1e-10, atol=1e-12)
 
     # Second history entry - now stored as Float64
-    t2, pv2 = sat1.history[2][1]
+    t2 = sat1.history[2].times[1]
+    state2 = sat1.history[2].states[1]
     @test t2 isa Time{Float64}  # History always uses Float64
-    @test pv2[1:3] == pos0
-    @test isapprox(pv2[4:6], vel2; rtol=1e-10, atol=1e-12)
+    @test state2.position == pos0
+    @test isapprox(state2.velocity, vel2; rtol=1e-10, atol=1e-12)
 end
 
 @testset "ImpulsiveManeuver Show" begin

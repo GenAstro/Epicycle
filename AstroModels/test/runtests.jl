@@ -151,7 +151,8 @@ end
 
     # History independence
     @test length(sc1.history) == 0
-    push_history_segment!(sc0, [(t0, [1.0,2.0,3.0,4.0,5.0,6.0])])
+    seg = HistorySegment([t0], [CartesianState([1.0,2.0,3.0,4.0,5.0,6.0])], sc0.coord_sys)
+    push_segment!(sc0.history, seg)
     @test length(sc0.history) == 1
     @test length(sc1.history) == 0
 end
@@ -196,17 +197,13 @@ end
     # Time value preserved (do not assert on internal numeric type)
     @test sc.time == t
 
-    # History element type always Float64 regardless of spacecraft promotion
-    @test eltype(sc.history) == Vector{Tuple{Time{Float64}, Vector{Float64}}}
-
-    # Can push a correctly-typed history segment using the new API
-    # Let push_history_segment! handle the type conversion automatically
-    sample_segment = [(sc.time, zeros(6))]
-    push_history_segment!(sc, sample_segment)
+    # History always stores Float64 regardless of spacecraft promotion
+    seg = HistorySegment([sc.time], [CartesianState(zeros(6))], sc.coord_sys)
+    push_segment!(sc.history, seg)
     @test length(sc.history) == 1
-    @test sc.history[1][1][1] isa Time{Float64}
-    @test eltype(sc.history[1][1][2]) === Float64
-    @test length(sc.history[1][1][2]) == 6
+    @test length(sc.history.segments[1].times) == 1
+    @test sc.history.segments[1].times[1] isa Time{Float64}
+    @test sc.history.segments[1].states[1] isa CartesianState{Float64}
 end
 
 @testset "Spacecraft with Dual mass" begin
@@ -219,7 +216,7 @@ end
     @test sc.mass isa ForwardDiff.Dual
     @test sc.time.jd1 isa ForwardDiff.Dual
     @test sc.time.jd2 isa ForwardDiff.Dual
-    @test eltype(sc.history) == Vector{Tuple{Time{Float64}, Vector{Float64}}}
+    @test sc.history isa SpacecraftHistory
 end
 
 @testset "Spacecraft with Dual time" begin
@@ -234,7 +231,7 @@ end
     @test sc.mass isa ForwardDiff.Dual
     @test sc.time.jd1 isa ForwardDiff.Dual
     @test sc.time.jd2 isa ForwardDiff.Dual
-    @test sc.history isa Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}
+    @test sc.history isa SpacecraftHistory
 end
 
 @testset "Spacecraft with Dual state" begin
@@ -247,7 +244,7 @@ end
     @test sc.mass isa ForwardDiff.Dual
     @test sc.time.jd1 isa ForwardDiff.Dual
     @test sc.time.jd2 isa ForwardDiff.Dual
-    @test sc.history isa Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}
+    @test sc.history isa SpacecraftHistory
 end
 
 @testset "gaps" begin
@@ -260,19 +257,19 @@ end
   # Test get pos_vel function (fast path for Cartesian)
   @test AstroModels.to_posvel(sc_cart) == to_vector(state_cart)
 
-  # Hit line 222: error path for to_posvel (non-Cartesian not implemented)
-  sc_kep_for_to = Spacecraft(state=OrbitState([1.0,2.0,3.0,4.0,5.0,6.0], Keplerian()),
+  # Test that to_posvel now works with non-Cartesian states (previously threw error)
+  sc_kep_for_to = Spacecraft(state=KeplerianState(7000.0, 0.01, 0.1, 0.2, 0.3, 0.4),
                             time=t_tt, mass=1.0, coord_sys=cs_icrf)
-  @test_throws ArgumentError AstroModels.to_posvel(sc_kep_for_to)
+  posvel = AstroModels.to_posvel(sc_kep_for_to)
+  @test length(posvel) == 6
+  @test posvel isa Vector
 
-  # Hit line 268: error path for set_posvel! (non-Cartesian not implemented)
-  sc_kep_for_set = Spacecraft(state=OrbitState([1.0,2.0,3.0,4.0,5.0,6.0], Keplerian()),
+  # Test that set_posvel! now works with non-Cartesian states (previously threw error)
+  sc_kep_for_set = Spacecraft(state=KeplerianState(7000.0, 0.01, 0.1, 0.2, 0.3, 0.4),
                               time=t_tt, mass=1.0, coord_sys=cs_icrf)
-  @test_throws ArgumentError AstroModels.set_posvel!(sc_kep_for_set, [7.0,8.0,9.0,1.0,2.0,3.0])
-
-  # Get state call test with type
-  #got_same = AstroModels.get_state(sc_cart, Cartesian())
-  #@test got_same === sc_cart.state
+  AstroModels.set_posvel!(sc_kep_for_set, [7100.0, 100.0, 200.0, 0.5, 7.5, 0.1])
+  @test sc_kep_for_set.state.statetype == Keplerian()  # State type preserved
+  @test length(AstroModels.to_posvel(sc_kep_for_set)) == 6
 
 end
 
@@ -313,11 +310,10 @@ end
     )
     
     # Add some history to verify it's preserved
-    test_segment = [
-        (Time("2015-09-21T12:23:12", TAI(), ISOT()), [7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
-        (Time("2015-09-21T12:24:12", TAI(), ISOT()), [7001.0, 301.0, 1.0, 0.1, 7.4, 0.04])
-    ]
-    push_history_segment!(sc, test_segment)
+    times = [Time("2015-09-21T12:23:12", TAI(), ISOT()), Time("2015-09-21T12:24:12", TAI(), ISOT())]
+    states = [CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]), CartesianState([7001.0, 301.0, 1.0, 0.1, 7.4, 0.04])]
+    seg = HistorySegment(times, states, sc.coord_sys)
+    push_segment!(sc.history, seg)
     
     # Promote to ForwardDiff.Dual type
     DualType = ForwardDiff.Dual{Nothing,Float64,3}
@@ -338,10 +334,10 @@ end
     @test ForwardDiff.value(sc_dual.mass) ≈ sc.mass
     
     # Verify history remains Float64 (efficient storage)
-    @test eltype(sc_dual.history) == Vector{Tuple{Time{Float64}, Vector{Float64}}}
+    @test sc_dual.history isa SpacecraftHistory
     @test length(sc_dual.history) == length(sc.history)
-    @test sc_dual.history[1][1][1] isa Time{Float64}
-    @test sc_dual.history[1][1][2] isa Vector{Float64}
+    @test sc_dual.history.segments[1].times[1] isa Time{Float64}
+    @test sc_dual.history.segments[1].states[1] isa CartesianState{Float64}
     
     # Verify non-numeric fields preserved
     @test sc_dual.name == sc.name
@@ -353,5 +349,8 @@ end
 end
 
 include("runtests_cadmodel.jl")
+include("runtests_spacecraft_historysegment.jl")
+include("runtests_spacecraft_history.jl")
+include("runtests_morestatetests.jl")
 
 nothing

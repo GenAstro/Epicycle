@@ -18,7 +18,6 @@ using AstroFrames: ICRFAxes, CoordinateSystem
 using AstroUniverse: earth
 
 export Spacecraft, get_state, to_posvel, set_posvel!
-export push_history_segment!
 export CADModel
 export HistorySegment, SpacecraftHistory
 export push_state!, push_segment!, new_segment!

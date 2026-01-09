@@ -21,32 +21,51 @@ The example below uses AstroSolve's Event Sequence architecture to solve a simpl
 ```julia
 using Epicycle
 
+# ============================================================================
+# Shared Resources
+# ============================================================================
+
 # Create spacecraft with default orbital state
 sat = Spacecraft()
 
-# Create the propagator with point mass gravity model
+# Create force models, integrator, and propagator
 gravity = PointMassGravity(earth, (moon, sun))
 forces  = ForceModel(gravity)
 integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
 prop    = OrbitPropagator(forces, integ)
 
-# Create an impulsive maneuver (only V component will vary)
+# ============================================================================
+# Event 1: TOI - Transfer Orbit Insertion
+# ============================================================================
+
+# Define TOI maneuver
 toi = ImpulsiveManeuver(
     axes = VNB(),
     element1 = 0.1,
 )
 
-# Define DeltaVVector of toi as a solver variable
-# V component allowed to vary, N and B components constrained to zero
-var_toi = SolverVariable(
+# Define solver variable for TOI delta-V
+toi_var = SolverVariable(
     calc = ManeuverCalc(toi, sat, DeltaVVector()),
     name = "toi",
     lower_bound = [-10.0, 0.0, 0.0],
     upper_bound = [10.0, 0.0, 0.0],
 )
 
-# Define a constraint on position magnitude of spacecraft
-# Target apoapsis altitude of 55000 km
+# Define TOI event struct with event function, solver variables, and constraints
+toi_fun() = maneuver(sat, toi) 
+toi_event = Event(
+    name = "TOI Maneuver", 
+    event = toi_fun,
+    vars = [toi_var],
+    funcs = []
+)
+
+# ============================================================================
+# Event 2: Propagate to Apoapsis
+# ============================================================================
+
+# Define constraint on position magnitude at apoapsis
 pos_target = 55000.0
 pos_con = Constraint(
     calc = OrbitCalc(sat, PosMag()),
@@ -55,22 +74,21 @@ pos_con = Constraint(
     scale = [1.0],
 )
 
-# Create an event that applies the maneuver with toi as optimization variable
-fun_toi() = maneuver(sat, toi) 
-toi_event = Event(name = "TOI Maneuver", 
-                  event = fun_toi,
-                  vars = [var_toi],
-                  funcs = [])
+# Define propagation event to apoapsis with position constraint
+prop_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+prop_event = Event(
+    name = "Propagate to Apoapsis", 
+    event = prop_fun,
+    funcs = [pos_con]
+)
 
-# Create propagation event to apoapsis with position constraint
-fun_prop_apo() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
-prop_event = Event(name = "Propagate to Apoapsis", 
-                   event = fun_prop_apo,
-                   funcs = [pos_con])
+# ============================================================================
+# Trajectory Optimization
+# ============================================================================
 
-# Build sequence: maneuver first, then propagate to apoapsis
+# Create sequence and add events
 seq = Sequence()
-add_events!(seq, prop_event, [toi_event]) 
+add_sequence!(seq, toi_event, prop_event) 
 
 # Solve trajectory optimization using default settings (finite differences, IPOPT)
 result = trajectory_solve(seq)
@@ -107,72 +125,73 @@ Order = [:type, :function, :macro, :constant]
 
 ## A More Complex Example
 
+This example demonstrates GEO orbit insertion including plane change, using 8 sequential events (3 maneuvers, 5 propagations) with constraints applied at multiple trajectory points.  The solution employes a bi-elliptic transfer. 
+
 ```julia
 
 using Epicycle
 
-# ========== Create Models =================================================================
+# ============================================================================
+# Shared Resources
+# ============================================================================
+
 # Create spacecraft
 sat = Spacecraft(
     state = CartesianState([3737.792, -4607.692, -2845.644, 5.411, 5.367, -1.566]),
-    time = Time("2000-01-01T11:59:28.000", UTC(), ISOT())  # J2000 epoch from GMAT
+    time = Time("2000-01-01T11:59:28.000", UTC(), ISOT()), 
+    name = "GeoSat-1"
 )
 
-# Create simple Earth point mass dynamics (no third bodies for now)
+# Create force models, integrator, and propagator
 gravity = PointMassGravity(earth, ())  # Only Earth gravity
 forces  = ForceModel(gravity)
 integ   = IntegratorConfig(DP8(); abstol=1e-12, reltol=1e-12, dt=60.0)
 prop    = OrbitPropagator(forces, integ)
 
-# Define maneuver models
+# ============================================================================
+# Event 1: Propagate to Equatorial Plane Crossing
+# ============================================================================
+
+# Define propagation event to equatorial plane crossing
+prop_to_z_crossing_1_fun() = propagate(prop, sat, StopAt(sat, PosZ(), 0.0))
+prop_to_z_crossing_1_event = Event(
+    name = "Prop to Z 1",
+    event = prop_to_z_crossing_1_fun,
+)
+
+# ============================================================================
+# Event 2: TOI - Transfer Orbit Insertion
+# ============================================================================
+
+# Define TOI maneuver
 toi = ImpulsiveManeuver(
     axes = VNB(),
-    element1 = 1.518,
+    element1 = 2.518,
     element2 = 0.0,
     element3 = 0.0,
 )
 
-mcc = ImpulsiveManeuver(
-    axes = VNB(),
-    element1 = 0.559,
-    element2 = 0.588,
-    element3 = 0.0,
-)
-
-moi = ImpulsiveManeuver(
-    axes = VNB(),
-    element1 = -0.282,
-    element2 = 0.0,
-    element3 = 0.0,
-)
-
-# ========== Define Solver Variables ======================================================
-# TOI: Only vary V component (Element1)
-var_toi_v = SolverVariable(
+# Define solver variable for TOI delta-V
+toi_var = SolverVariable(
     calc = ManeuverCalc(toi, sat, DeltaVVector()),
     name = "toi_v",
-    lower_bound = [-5.0, 0.0, 0.0],  # Only V component varies significantly
-    upper_bound = [5.0, 0.0, 0.0],
+    lower_bound = [0.0, 0.0, 0.0],
+    upper_bound = [8.0, 0.0, 0.0],
 )
 
-# MCC: Vary V and N components (Element1 and Element2)
-var_mcc_vn = SolverVariable(
-    calc = ManeuverCalc(mcc, sat, DeltaVVector()),
-    name = "mcc_vn",
-    lower_bound = [-2.0, -2.0, -0.001],   # V and N components vary
-    upper_bound = [2.0, 2.0, 0.001],
+# Define TOI event struct with event function, solver variables, and constraints
+toi_fun() = maneuver(sat, toi)
+toi_event = Event(
+    name = "TOI",
+    event = toi_fun,
+    vars = [toi_var],
 )
 
-# MOI: Only vary V component (Element1)
-var_moi_v = SolverVariable(
-    calc = ManeuverCalc(moi, sat, DeltaVVector()),
-    name = "moi_v",
-    lower_bound = [-2.0, -0.001, -0.001],  # Only V component varies significantly
-    upper_bound = [2.0, 0.001, 0.001],
-)
+# ============================================================================
+# Event 3: Propagate to Apoapsis
+# ============================================================================
 
-# ========== Define Constraints ===========================================================
-# Constraint: Apoapsis radius = 85,000 km after TOI
+# Define constraint on radius at apoapsis
 apogee_radius_con = Constraint(
     calc = OrbitCalc(sat, PosMag()),
     lower_bounds = [85000.0],
@@ -180,47 +199,7 @@ apogee_radius_con = Constraint(
     scale = [1.0],
 )
 
-# Constraint: Inclination = 2° after MCC
-inclination_con = Constraint(
-    calc = OrbitCalc(sat, Inc()),
-    lower_bounds = [deg2rad(2.0)],
-    upper_bounds = [deg2rad(2.0)],
-    scale = [1.0],
-)
-
-# Constraint: Perigee radius = 42,195 km after MCC
-perigee_radius_con = Constraint(
-    calc = OrbitCalc(sat, PosMag()),
-    lower_bounds = [42195.0],
-    upper_bounds = [42195.0],
-    scale = [1.0],
-)
-
-# Constraint: Final SMA = 42,166.90 km (GEO) after MOI
-final_sma_con = Constraint(
-    calc = OrbitCalc(sat, SMA()),
-    lower_bounds = [42166.90],
-    upper_bounds = [42166.90],
-    scale = [1.0],
-)
-
-# ========== Define events (variables, constraints, actions) ==============================
-# Event 1: Propagate to Z=0 crossing (equatorial plane)
-prop_to_z_crossing_1_fun() = propagate(prop, sat, StopAt(sat, PosZ(), 0.0))
-prop_to_z_crossing_1_event = Event(
-    name = "Prop to Z 1",
-    event = prop_to_z_crossing_1_fun,
-)
-
-# Event 2: Apply TOI maneuver
-toi_fun() = maneuver(sat, toi)
-toi_event = Event(
-    name = "TOI",
-    event = toi_fun,
-    vars = [var_toi_v],
-)
-
-# Event 3: Propagate to apoapsis and check radius constraint
+# Define propagation event to apoapsis with radius constraint
 prop_to_apogee_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
 prop_to_apogee_event = Event(
     name = "Prop to Apoapsis",
@@ -228,29 +207,74 @@ prop_to_apogee_event = Event(
     funcs = [apogee_radius_con],
 )
 
-# Event 4: Propagate to perigee
+# ============================================================================
+# Event 4: Propagate to Perigee
+# ============================================================================
+
 prop_to_perigee_1_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
 prop_to_perigee_1_event = Event(
     name = "Prop to Perigee 1",
     event = prop_to_perigee_1_fun,
 )
 
-# Event 5: Propagate to Z=0 crossing again
+# ============================================================================
+# Event 5: Propagate to Equatorial Plane Crossing Again
+# ============================================================================
+
 prop_to_z_crossing_2_fun() = propagate(prop, sat, StopAt(sat, PosZ(), 0.0))
 prop_to_z_crossing_2_event = Event(
     name = "Prop to Z 2",
     event = prop_to_z_crossing_2_fun,
 )
 
-# Event 6: Apply MCC maneuver
+# ============================================================================
+# Event 6: MCC - Mid-Course Correction
+# ============================================================================
+
+# Define MCC maneuver
+mcc = ImpulsiveManeuver(
+    axes = VNB(),
+    element1 = 0.559,
+    element2 = 0.588,
+    element3 = 0.0,
+)
+
+# Define solver variable for MCC delta-V
+mcc_var = SolverVariable(
+    calc = ManeuverCalc(mcc, sat, DeltaVVector()),
+    name = "mcc_vn",
+    lower_bound = [-1.0, -1.0, -0.001],
+    upper_bound = [4.0, 1.0, 0.001],
+)
+
+# Define MCC event struct with event function and solver variables
 mcc_fun() = maneuver(sat, mcc)
 mcc_event = Event(
     name = "MCC",
     event = mcc_fun,
-    vars = [var_mcc_vn],
+    vars = [mcc_var],
 )
 
-# Event 7: Propagate to perigee and check constraints
+# ============================================================================
+# Event 7: Propagate to Perigee and Check Constraints
+# ============================================================================
+
+# Define constraints on inclination and perigee radius
+inclination_con = Constraint(
+    calc = OrbitCalc(sat, Inc()),
+    lower_bounds = [deg2rad(2.0)],
+    upper_bounds = [deg2rad(2.0)],
+    scale = [1.0],
+)
+
+perigee_radius_con = Constraint(
+    calc = OrbitCalc(sat, PosMag()),
+    lower_bounds = [42195.0],
+    upper_bounds = [42195.0],
+    scale = [1.0],
+)
+
+# Define propagation event to perigee with inclination and perigee radius constraints
 prop_to_perigee_2_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
 prop_to_perigee_2_event = Event(
     name = "Prop to Perigee 2",
@@ -258,24 +282,51 @@ prop_to_perigee_2_event = Event(
     funcs = [inclination_con, perigee_radius_con],
 )
 
-# Event 8: Apply MOI maneuver and check final SMA
+# ============================================================================
+# Event 8: MOI - GEO Orbit Insertion
+# ============================================================================
+
+# Define MOI maneuver
+moi = ImpulsiveManeuver(
+    axes = VNB(),
+    element1 = 0.282,
+    element2 = 0.0,
+    element3 = 0.0,
+)
+
+# Define solver variable for MOI delta-V
+moi_var = SolverVariable(
+    calc = ManeuverCalc(moi, sat, DeltaVVector()),
+    name = "moi_v",
+    lower_bound = [-1.0, -0.001, -0.001],
+    upper_bound = [4.0, 0.001, 0.001],
+)
+
+# Define constraint on semi-major axis at GEO
+final_sma_con = Constraint(
+    calc = OrbitCalc(sat, SMA()),
+    lower_bounds = [42166.90],
+    upper_bounds = [42166.90],
+    scale = [1.0],
+)
+
+# Define MOI event struct with event function, solver variables, and constraints
 moi_fun() = maneuver(sat, moi)
 moi_event = Event(
     name = "MOI",
     event = moi_fun,
-    vars = [var_moi_v],
+    vars = [moi_var],
     funcs = [final_sma_con],
 )
 
-# ========== Build the Sequence and Solve =================================================
+# ============================================================================
+# Trajectory Optimization
+# ============================================================================
+
 seq = Sequence()
-add_events!(seq, toi_event, [prop_to_z_crossing_1_event])
-add_events!(seq, prop_to_apogee_event, [toi_event])
-add_events!(seq, prop_to_perigee_1_event, [prop_to_apogee_event])
-add_events!(seq, prop_to_z_crossing_2_event, [prop_to_perigee_1_event])
-add_events!(seq, mcc_event, [prop_to_z_crossing_2_event])
-add_events!(seq, prop_to_perigee_2_event, [mcc_event])
-add_events!(seq, moi_event, [prop_to_perigee_2_event])
+add_sequence!(seq, prop_to_z_crossing_1_event, toi_event, prop_to_apogee_event,
+              prop_to_perigee_1_event, prop_to_z_crossing_2_event, mcc_event,
+              prop_to_perigee_2_event, moi_event)
 
 # Set up IPOPT options
 ipopt_options = Dict(
@@ -287,7 +338,17 @@ ipopt_options = Dict(
 )
 snow_options = Options(derivatives=ForwardFD(), solver=IPOPT(ipopt_options))
 
-result = trajectory_solve(seq, snow_options)
+# Solve trajectory optimization with iteration recording enabled
+result = trajectory_solve(seq, snow_options; record_iterations=true)
 sequence_report(seq)
 solution_report(seq, result)
+
+# Propagate about one day to see final orbit
+propagate(prop, sat, StopAt(sat, PropDurationDays(), 1.1)) 
+
+# Visualize with iterations
+view = View3D()
+add_spacecraft!(view, sat; show_iterations=true)
+display_view(view)
+
 ```

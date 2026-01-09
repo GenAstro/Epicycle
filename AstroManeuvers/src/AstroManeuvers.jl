@@ -15,7 +15,7 @@ using AstroEpochs
 using AstroStates
 using AstroFrames
 using AstroModels: Spacecraft, to_posvel, set_posvel!
-import AstroModels: push_history_segment!
+using AstroModels: HistorySegment, SpacecraftHistory, push_segment!
 
 export ImpulsiveManeuver, maneuver
 import AstroFrames: AbstractAxes, VNB, Inertial
@@ -297,8 +297,11 @@ end
 Append a new segment with maneuver to spacecraft history.
 """
 function push_history_segment!(sc::Spacecraft, m::ImpulsiveManeuver)
-    new_segment = [(sc.time, to_posvel(sc))]
-    push_history_segment!(sc, new_segment)  # Use AstroModels version
+    # Create single-point history segment for maneuver
+    times = [sc.time]
+    states = [CartesianState(to_posvel(sc))]
+    segment = HistorySegment(times, states, sc.coord_sys, name="maneuver")
+    push_segment!(sc.history, segment)
     return sc
 end
 

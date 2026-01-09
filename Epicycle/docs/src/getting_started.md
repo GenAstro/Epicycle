@@ -12,9 +12,10 @@ using Epicycle
 
 # Spacecraft
 sat = Spacecraft(
-    state=CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
+    state=KeplerianState(8000.0,0.15,pi/4,pi/2,0.0,pi/2),
     time=Time("2015-09-21T12:23:12", TAI(), ISOT()),
     coord_sys=CoordinateSystem(earth, ICRFAxes()),
+    name = "sat",
 )
 
 # Forces + integrator
@@ -24,8 +25,12 @@ integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
 prop    = OrbitPropagator(forces, integ)
 
 # Propagate to periapsis
-propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
+propagate(prop, sat, StopAt(sat, PropDurationSeconds(), 5000.0))
 println(get_state(sat, Keplerian()))
+
+view = View3D()
+add_spacecraft!(view,sat)
+display_view(view)
 ```
 This example creates an orbit and propagates to periapis
 

@@ -23,4 +23,25 @@ using Reexport
 @reexport using NLsolve
 @reexport using SPICE
 
+# Graphics module (3D visualization)
+using GLMakie
+using FileIO
+using MeshIO
+using GeometryBasics
+using Random
+using LinearAlgebra
+using Colors: RGB, N0f8
+
+# Include graphics source files
+include("graphics/view3d.jl")
+include("graphics/trajectories.jl")
+include("graphics/bodies.jl")
+include("graphics/stars.jl")
+include("graphics/planes.jl")
+include("graphics/labels.jl")
+include("graphics/models.jl")
+
+# Export graphics API
+export View3D, add_spacecraft!, display_view
+
 end

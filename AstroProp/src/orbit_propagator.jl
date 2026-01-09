@@ -1,6 +1,57 @@
 # Copyright (C) 2025 Gen Astro LLC
 # SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
 
+# ============================================================================
+# Time-based stopping condition types
+# ============================================================================
+
+"""
+    IntegratorTimeCalc <: AbstractCalcVariable
+
+Base type for stopping conditions based on integrator time rather than spacecraft state.
+These are specific to propagation contexts and cannot be used as general calculation variables.
+
+# Subtypes
+- `PropDurationSeconds`: Stop after a specified number of seconds
+- `PropDurationDays`: Stop after a specified number of days
+
+# Notes
+These types are handled specially in `propagate()` by setting the integration time span
+directly rather than using callbacks. They derive from `AbstractCalcVariable` for type
+safety in `StopAt` but do not have corresponding `make_calc()` implementations.
+"""
+abstract type IntegratorTimeCalc <: AbstractCalcVariable end
+
+"""
+    PropDurationSeconds <: IntegratorTimeCalc
+
+Stopping condition based on elapsed time in seconds.
+
+# Usage
+```julia
+# Stop after 1 hour (3600 seconds)
+StopAt(sc, PropDurationSeconds(), 3600.0)
+```
+"""
+struct PropDurationSeconds <: IntegratorTimeCalc end
+
+"""
+    PropDurationDays <: IntegratorTimeCalc
+
+Stopping condition based on elapsed time in days.
+
+# Usage
+```julia
+# Stop after 2.5 days
+StopAt(sc, PropDurationDays(), 2.5)
+```
+"""
+struct PropDurationDays <: IntegratorTimeCalc end
+
+# ============================================================================
+# Propagator and Stopping Condition Definitions
+# ============================================================================
+
 """
     OrbitPropagator
 
@@ -24,18 +75,24 @@ struct OrbitPropagator
 end
 
 """
-    StopAt{S,V<:AbstractOrbitVar,T}
+    StopAt{S,V<:AbstractCalcVariable,T}
 
-Generic stopping condition for orbital propagation based on calculated quantities.
+Generic stopping condition for orbital propagation based on calculated quantities or time.
 
 # Fields
 - `subject::S`: The object to evaluate (e.g., `Spacecraft`, `Maneuver`, `CelestialBody`)
-- `var::V`: The calculation variable to monitor (must be <: AbstractOrbitVar, e.g., `PosX()`, `VelMag()`)
+- `var::V`: The calculation variable to monitor (e.g., `PosX()`, `VelMag()`, `PropDurationSeconds()`)
 - `target::T`: Target value to stop at (numeric value or vector matching calc output)
-- `direction::Int`: Crossing direction (-1: decreasing, 0: any, +1: increasing)
+- `direction::Int`: Event crossing direction for state-based stops (-1: decreasing, 0: any, +1: increasing)
+  * For time-based stops (PropDuration*), must be 0 (event crossing not applicable)
+  * For state-based stops, controls which direction of zero-crossing triggers the event
 
 # Constructor
     StopAt(subject, var, target; direction::Int=0)
+
+# Notes
+The `direction` field is for **event crossing direction** (state-based stops only).
+For **time integration direction** (forward/backward), use the `direction` keyword in `propagate()`.
 
 # Examples
 ```julia
@@ -45,9 +102,12 @@ stop_cond = StopAt(sc, PosZ(), 0.0; direction=+1)
 
 # Stop at apoapsis (position dot velocity = 0, decreasing)  
 stop_apo = StopAt(sc, PosDotVel(), 0.0; direction=-1)
+
+# Stop after 1 hour (time-based: direction must be 0)
+stop_time = StopAt(sc, PropDurationSeconds(), 3600.0)
 ```
 """
-struct StopAt{S,V<:AbstractOrbitVar,T}
+struct StopAt{S,V<:AbstractCalcVariable,T}
     subject::S                 
     var::V                     
     target::T                  
@@ -56,8 +116,61 @@ end
 
 # Positional target (required) with validation
 function StopAt(subject, var, target; direction::Int=0)
-    var isa AbstractOrbitVar || error("var must be <: AbstractOrbitVar, got $(typeof(var))")
+    var isa AbstractCalcVariable || error("var must be <: AbstractCalcVariable, got $(typeof(var))")
+    
+    # Time-based stops don't use event crossing direction
+    if var isa IntegratorTimeCalc && direction != 0
+        error("Time-based stopping conditions must use direction=0 (event crossing direction not applicable for time-based stops)")
+    end
+    
     StopAt(subject, var, target, direction)
+end
+
+# Convenience constructor for absolute time stopping
+"""
+    StopAt(subject::Spacecraft, target_time::Time; direction::Int=0)
+
+Convenience constructor to stop at an absolute time by converting to elapsed seconds.
+Supports both forward propagation (target after current) and backward propagation (target before current).
+
+# Arguments
+- `subject::Spacecraft`: The spacecraft being propagated
+- `target_time::Time`: The absolute time to stop at (can be past or future)
+- `direction::Int=0`: Event crossing direction (must be 0 for time-based stops)
+
+# Notes
+This `direction` parameter is for event crossing (not applicable to time stops, always use 0).
+For **time integration direction** (forward/backward in time), use the `direction` keyword
+in `propagate()` with values `:forward`, `:backward`, or `:infer`.
+
+# Example
+```julia
+using AstroEpochs
+
+# Forward to future time (default direction=:forward in propagate works)
+stop_future = StopAt(sc, Time("2025-12-26T12:00:00", UTC(), ISOT()))
+propagate(prop, sc, stop_future)  # Uses default direction=:forward
+
+# Backward to past time (use direction=:infer in propagate to auto-detect)
+stop_past = StopAt(sc, Time("2025-12-24T12:00:00", UTC(), ISOT()))
+propagate(prop, sc, stop_past; direction=:infer)  # Infers :backward from negative elapsed time
+# OR explicitly:
+propagate(prop, sc, stop_past; direction=:backward)
+```
+"""
+function StopAt(subject::Spacecraft, target_time::Time; direction::Int=0)
+    # Use TT for Earth-centered, TDB for others (matches propagation)
+    center_body = subject.coord_sys.origin
+    
+    # Convert both times to the appropriate dynamical time scale
+    target_dyn = (center_body === earth) ? target_time.tt : target_time.tdb
+    current_dyn = (center_body === earth) ? subject.time.tt : subject.time.tdb
+    
+    # Compute elapsed time in dynamical time seconds (can be negative for past times)
+    elapsed_sec = (target_dyn.jd - current_dyn.jd) * 86400.0
+    
+    # No error for negative - supports backward propagation with direction=:infer
+    return StopAt(subject, PropDurationSeconds(), elapsed_sec, direction)
 end
 
 """
@@ -208,8 +321,16 @@ until stopping conditions are met.
 - `stops...`: One or more `StopAt` stopping conditions
 
 # Keyword Arguments
-- `direction::Symbol=:forward`: Integration direction (`:forward` or `:backward`)
+- `direction::Symbol=:forward`: Time integration direction
+  * `:forward` - Integrate forward in time (default)
+  * `:backward` - Integrate backward in time
+  * `:infer` - Automatically determine from time-based stop conditions (duration sign or time comparison)
 - `kwargs...`: Additional arguments passed to the underlying ODE solver
+
+# Notes
+The `direction` keyword controls **time integration direction** (which way time moves).
+This is different from `StopAt`'s `direction` field, which controls **event crossing direction**
+for state-based stops (increasing/decreasing zero-crossing detection).
 
 # Returns
 `ODESolution` from DifferentialEquations.jl containing the complete trajectory solution.
@@ -252,11 +373,21 @@ function propagate(op::OrbitPropagator, sc_or_scs, stops...;
     scv = _as_scvec(sc_or_scs)
     dyn = DynSys(spacecraft=scv, forces=op.forces)
 
-    # Build callbacks (CallbackSet if multiple)
-    callbacks = map(s -> _build_callback(s, dyn), collect(stops))
+    # Separate time-based from state-based stopping conditions
+    # Time-based conditions will be handled by setting tspan in the main propagate()
+    time_conds = filter(_is_time_condition, stops)
+    state_conds = filter(!_is_time_condition, stops)
+
+    # Build callbacks only from state-based conditions
+    callbacks = map(s -> _build_callback(s, dyn), collect(state_conds))
     cbset = isempty(callbacks) ? nothing :
             length(callbacks) == 1 ? callbacks[1] : CallbackSet(callbacks...)
 
-    # Delegate to existing DynSys-based propagate (reuses your ODE assembly and updates)
-    return propagate(dyn, op.integ, cbset; direction=direction, kwargs...)
+    # Delegate to existing DynSys-based propagate with both callbacks and time conditions
+    # Note: We pass time_conds separately, not as callbacks
+    return propagate(dyn, op.integ, cbset, time_conds...; direction=direction, kwargs...)
 end
+
+# Helper: detect time-based stopping conditions
+_is_time_condition(::StopAt{<:Any, <:IntegratorTimeCalc}) = true
+_is_time_condition(::Any) = false

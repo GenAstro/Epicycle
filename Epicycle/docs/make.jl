@@ -21,6 +21,7 @@ makedocs(;
             "Component Cheat Sheets" => "unit_examples.md",
             "End-to-End Examples" => "complete_examples.md",
         ],
+        "Graphics" => "graphics.md",
         "Components" => "components.md",
     ],
     warnonly=true,         # Just warn, don't error

@@ -24,7 +24,7 @@ to organize mission events (e.g., propagation phases).
 
 # Examples
 ```julia
-using AstroModels, AstroEpochs, AstroFrames, AstroStates
+using AstroModels, AstroUniverse, AstroEpochs, AstroFrames, AstroStates
 
 # Create empty segment
 coord_sys = CoordinateSystem(earth, ICRFAxes())
@@ -72,14 +72,15 @@ end
 
 Create a history segment from existing time and state data.
 """
-function HistorySegment(times::Vector{<:Time},
-                       states::Vector{CartesianState{Float64}},
+function HistorySegment(times::Vector{T},
+                       states::Vector{S},
                        coord_system::CoordinateSystem;
                        name::String="",
-                       metadata::Dict{String,Any}=Dict{String,Any}())
+                       metadata::Dict{String,Any}=Dict{String,Any}()) where {T<:Time, S<:CartesianState}
     @assert length(times) == length(states) "times and states must have equal length"
     times_f64 = [to_float64(t) for t in times]
-    HistorySegment(times_f64, states, coord_system, name, metadata)
+    states_f64 = [to_float64(s) for s in states]
+    HistorySegment(times_f64, states_f64, coord_system, name, metadata)
 end
 
 # Base interface methods
@@ -88,6 +89,24 @@ Base.isempty(segment::HistorySegment) = isempty(segment.times)
 # =============================================================================
 # Utility Functions
 # =============================================================================
+
+"""
+    _value_to_float64(x::Real)
+
+Helper to safely convert any Real to Float64, handling Dual numbers from AD.
+"""
+function _value_to_float64(x::Real)
+    # For regular numbers
+    if x isa AbstractFloat || x isa Integer
+        return Float64(x)
+    # For ForwardDiff.Dual and other AD types with .value field
+    elseif hasfield(typeof(x), :value)
+        return Float64(x.value)
+    else
+        # Fallback: try to convert directly
+        return Float64(x)
+    end
+end
 
 """
     to_float64(time::Time{Float64})
@@ -120,7 +139,7 @@ same_time = to_float64(time)  # Returns input unchanged
 ```
 """
 to_float64(t::Time{Float64}) = t  # No-op for Float64
-to_float64(t::Time) = Time(Float64(t.jd1), Float64(t.jd2), getfield(t, :scale), getfield(t, :format))
+to_float64(t::Time) = Time(_value_to_float64(t.jd1), _value_to_float64(t.jd2), getfield(t, :scale), getfield(t, :format))
 
 """
     to_float64(state::CartesianState{Float64})
@@ -157,7 +176,7 @@ same_state = to_float64(state)
 ```
 """
 to_float64(state::CartesianState{Float64}) = state  
-to_float64(state::CartesianState) = CartesianState(Float64.(to_vector(state)))
+to_float64(state::CartesianState) = CartesianState(_value_to_float64.(to_vector(state)))
 
 # =============================================================================
 # Display Methods
@@ -187,7 +206,7 @@ function Base.show(io::IO, segment::HistorySegment)
         start_io = IOBuffer()
         print(start_io, start_time)
         start_lines = split(String(take!(start_io)), '\n')
-        start_value = strip(split(start_lines[2], '=')[2])  # "value = 2024-01-01..." -> "2024-01-01..."
+        start_value = strip(split(start_lines[2], '=')[2])  
         
         end_io = IOBuffer()
         print(end_io, end_time)
@@ -225,54 +244,94 @@ end
 Container for spacecraft trajectory history, organized into segments.
 
 A SpacecraftHistory stores the complete trajectory of a spacecraft as a collection 
-of time-ordered segments. Each segment represents a continuous portion of the 
+of segments. Each segment represents a continuous portion of the 
 trajectory, with segments typically separated by discontinuities (e.g., maneuvers) 
 or mission phase boundaries.
 
 # Fields
-- `segments::Vector{HistorySegment}`: Ordered list of trajectory segments
+- `segments::Vector{HistorySegment}`: Solution trajectory segments
+- `iterations::Vector{HistorySegment}`: Solver iteration segments (diagnostic data)
+- `record_segments::Bool`: Enable solution segment recording (default: true)
+- `record_iterations::Bool`: Enable iteration segment recording (default: false)
 
 # Notes
-- Immutable struct, but segments vector can be mutated via push_segment!
+- Mutable struct to allow solver to control recording flags
 - Empty history is valid (zero segments)
 - Provides iteration, indexing, and standard collection interfaces
+- Iteration and indexing operate on `segments` only (solution trajectory)
+- Access `iterations` directly for diagnostic data: `history.iterations`
 
 # Examples
 ```julia
-using AstroModels, AstroEpochs, AstroFrames
+using AstroModels, AstroEpochs, AstroUniverse, AstroFrames
 
-# Create empty history
+# Basic usage - record solution trajectory (default)
 history = SpacecraftHistory()
-
-# Add segments during propagation
 coord_sys = CoordinateSystem(earth, ICRFAxes())
+
 segment1 = HistorySegment(coord_sys, name="orbit_1")
 push_segment!(history, segment1)
 
-# Iterate over segments
+# Iterate over solution segments
 for (i, segment) in enumerate(history)
     println("Segment ", i, ": ", segment.name, " (", length(segment.times), " points)")
 end
 
-# Access by index
+# Access by index (operates on solution segments only)
 first_segment = history[1]
+println("History contains ", length(history), " solution segments")
 
-# Check if empty
-if !isempty(history)
-    println("History contains ", length(history), " segments")
+# Advanced: Solver iteration recording for diagnostics
+# Disable solution recording, enable iteration recording
+history.record_segments = false
+history.record_iterations = true
+
+# During optimization, segments go to iterations vector
+for iter in 1:10
+    segment = HistorySegment(coord_sys, name="iteration_\$iter")
+    push_segment!(history, segment)  # Routes to history.iterations
 end
+
+# Switch back for final solution
+history.record_segments = true
+history.record_iterations = false
+final_segment = HistorySegment(coord_sys, name="solution")
+push_segment!(history, final_segment)  # Routes to history.segments
+
+# Result: 1 solution segment, 10 diagnostic iterations
+println(length(history))             # 1 (solution only)
+println(length(history.iterations))  # 10 (diagnostic data)
 ```
 """
-struct SpacecraftHistory
+mutable struct SpacecraftHistory
     segments::Vector{HistorySegment}
+    iterations::Vector{HistorySegment}
+    record_segments::Bool
+    record_iterations::Bool
 end
 
 """
     SpacecraftHistory()
 
-Create an empty SpacecraftHistory with no segments.
+Create an empty SpacecraftHistory with default settings.
+
+# Defaults
+- `record_segments = true`: Solution trajectory recording enabled
+- `record_iterations = false`: Iteration recording disabled (diagnostic mode off)
 """
-SpacecraftHistory() = SpacecraftHistory(Vector{HistorySegment}())
+SpacecraftHistory() = SpacecraftHistory(Vector{HistorySegment}(), Vector{HistorySegment}(), true, false)
+
+"""
+    SpacecraftHistory(segments::Vector{HistorySegment})
+
+Create a SpacecraftHistory from an existing vector of segments with default recording settings.
+
+# Defaults
+- `iterations`: Empty vector (no iteration data)
+- `record_segments = true`: Solution trajectory recording enabled
+- `record_iterations = false`: Iteration recording disabled
+"""
+SpacecraftHistory(segments::Vector{HistorySegment}) = SpacecraftHistory(segments, Vector{HistorySegment}(), true, false)
 
 # Base interface methods
 Base.length(h::SpacecraftHistory) = length(h.segments)
@@ -285,12 +344,51 @@ Base.firstindex(h::SpacecraftHistory) = 1
 Base.lastindex(h::SpacecraftHistory) = length(h.segments)
 
 """
+    Base.copy(history::SpacecraftHistory)
+
+Create a deep copy of a SpacecraftHistory, copying all segments and iterations.
+"""
+function Base.copy(history::SpacecraftHistory)
+    SpacecraftHistory(copy(history.segments), copy(history.iterations), 
+                     history.record_segments, history.record_iterations)
+end
+
+"""
+    Base.deepcopy_internal(history::SpacecraftHistory, dict::IdDict)
+
+Deep copy implementation for SpacecraftHistory to ensure proper copying of mutable fields.
+"""
+function Base.deepcopy_internal(history::SpacecraftHistory, dict::IdDict)
+    SpacecraftHistory(
+        Base.deepcopy_internal(history.segments, dict),
+        Base.deepcopy_internal(history.iterations, dict),
+        history.record_segments,
+        history.record_iterations
+    )
+end
+
+"""
     push_segment!(history::SpacecraftHistory, segment::HistorySegment)
 
-Add a segment to the history.
+Add a segment to the history, routing based on recording flags.
+
+# Routing Logic
+- If `record_iterations=true`: adds to `history.iterations` (diagnostic data)
+- Else if `record_segments=true`: adds to `history.segments` (solution trajectory)
+- Else: no-op (segment not recorded)
+
+# Notes
+This routing is controlled by the solver during trajectory optimization:
+- During optimization iterations: `record_iterations=true, record_segments=false`
+- Final solution run: `record_iterations=false, record_segments=true`
 """
 function push_segment!(history::SpacecraftHistory, segment::HistorySegment)
-    push!(history.segments, segment)
+    if history.record_iterations
+        push!(history.iterations, segment)
+    elseif history.record_segments
+        push!(history.segments, segment)
+    end
+    # If both false: no-op (segment not recorded)
     return nothing
 end
 
@@ -306,6 +404,15 @@ function Base.show(io::IO, history::SpacecraftHistory)
     println(io, "SpacecraftHistory with ", n_segments, 
             n_segments == 1 ? " segment" : " segments", 
             " (", n_points, " total points)")
+    
+    # Show iteration count if present
+    n_iterations = length(history.iterations)
+    if n_iterations > 0
+        n_iter_points = sum(length(seg.times) for seg in history.iterations; init=0)
+        println(io, "  Iterations: ", n_iterations, 
+               n_iterations == 1 ? " segment" : " segments",
+               " (", n_iter_points, " points, diagnostic data)")
+    end
     
     if n_segments > 0
         for (i, segment) in enumerate(history)

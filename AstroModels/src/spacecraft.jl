@@ -8,14 +8,14 @@ Fields
 - time::TT — epoch as a Time struct
 - mass::T — total mass 
 - name::String — user label.
-- history::Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}} — time-tagged history (e.g., [(time, posvel)]) grouped in segments.
+- history::SpacecraftHistory — trajectory history organized into segments
 - coord_sys::CS — coordinate system (origin and axes) associated with the spacecraft.
 - cad_model::CADModel — 3D model for visualization
 
 # Notes:
 - Use the keyword constructor to create spacecraft and only define the fields you want to change from the defaults.
 - State can be provided two ways as shown in the example below
-- history is an internal structure to store ephemeris during integration.  It will be hidden in future releases.
+- history stores trajectory data in segments; use `history.segments` to access individual HistorySegments
 - Numeric parameter T is chosen by promotion: T = promote_type(eltype(state), typeof(time.jd1), typeof(mass)).
 
 # Examples
@@ -38,7 +38,7 @@ mutable struct Spacecraft{S<:OrbitState, TT<:Time, CS<:AbstractCoordinateSystem,
     time::TT
     mass::T
     name::String
-    history::Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}
+    history::SpacecraftHistory
     coord_sys::CS
     cad_model::CADModel
 end
@@ -59,7 +59,7 @@ Outer positional constructor for Spacecraft that promotes numeric types as neede
 function Spacecraft(state::Union{AbstractState,OrbitState}, time::TT;
     mass::Real = 1000.0,
     name::AbstractString = "unnamed",
-    history::Union{Nothing,AbstractVector} = nothing,
+    history::Union{Nothing,SpacecraftHistory} = nothing,
     coord_sys::CS = CoordinateSystem(earth, ICRFAxes()),
     cad_model::CADModel = CADModel()
     ) where {TT<:Time, CS<:AbstractCoordinateSystem}
@@ -90,10 +90,8 @@ function Spacecraft(state::Union{AbstractState,OrbitState}, time::TT;
                getfield(time, :scale), getfield(time, :format))
     TTIME = typeof(t_T)
 
-    # History default with Float64 types (always, regardless of T)
-    hist_T = history === nothing ?
-        Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}() :
-        convert(Vector{Vector{Tuple{Time{Float64}, Vector{Float64}}}}, history)
+    # History default: empty SpacecraftHistory
+    hist_T = history === nothing ? SpacecraftHistory() : history
 
     return Spacecraft{typeof(os_T), TTIME, CS, Tnum}(os_T, t_T, mass_T, String(name), hist_T, coord_sys, cad_model)
 end
@@ -104,8 +102,7 @@ end
                       mass = 1000.0,
                       name = "unnamed",
                       history = nothing,
-                      coord_sys = CoordinateSystem(earth, ICRFAxes()),
-                      cad_model = CADModel())
+                      coord_sys = CoordinateSystem(earth, ICRFAxes()))
 
 Kwarg outer constructor for Spacecraft with defaults for all fields.
 """
@@ -259,8 +256,10 @@ function to_posvel(sc::Spacecraft)
         return copy(sc.state.state)
     end
 
-    # TODO. Generalize this function, possibly replacing it.
-    throw(ArgumentError("Conversion not implemented yet to convert state. TODO."))
+    # For any other state type, convert to Cartesian using get_state
+    # (which handles μ extraction from coord_sys.origin when needed)
+    cart_state = get_state(sc, Cartesian())
+    return cart_state.posvel
 end
 
 """
@@ -311,50 +310,27 @@ function set_posvel!(sc::Spacecraft, x::AbstractVector{<:Real})
         return
     end
 
-    # TODO. Generalize this function, possibly replacing it.
-    throw(ArgumentError("Conversion not implemented yet to convert state. TODO."))
-
-end
-
-"""
-    push_history_segment!(sc::Spacecraft, segment::Vector{<:Tuple})
-
-Append a new history segment to the spacecraft.
-Always stores data as Float64 regardless of input numeric types.
-
-# Arguments
-- sc::Spacecraft: The spacecraft to update
-- segment::Vector{Tuple{Time, Vector}}: Complete segment with time-state pairs
-
-# Returns
-- sc::Spacecraft: The same spacecraft instance (for chaining)
-
-# Notes
-- Converts all times and position/velocity vectors to Float64 for efficient storage
-- History is for ephemeris logging, not differentiation
-- Works for single-point segments (maneuvers) or multi-point segments (propagation)
-"""
-function push_history_segment!(sc::Spacecraft, segment::Vector{<:Tuple})
-    # Helper function to safely convert any Real to Float64 (handles Dual numbers)
-    function to_float64(x::Real)
-        # For regular numbers
-        if x isa AbstractFloat || x isa Integer
-            return Float64(x)
-        # For ForwardDiff.Dual and other AD types with .value field
-        elseif hasfield(typeof(x), :value)
-            return Float64(x.value)
+    # For other state types, convert the Cartesian vector to the current state type
+    cart_state = CartesianState(x)
+    TargetType = state_tag_to_type(sc.state.statetype)
+    
+    # Try conversion without μ first; if that fails, use μ from coord system
+    try
+        target_state = TargetType(cart_state)
+        T = typeof(sc.mass)
+        sc.state = OrbitState(T.(to_vector(target_state)), sc.state.statetype)
+    catch
+        origin = sc.coord_sys.origin
+        if hasfield(typeof(origin), :mu)
+            target_state = TargetType(cart_state, getfield(origin, :mu))
+            T = typeof(sc.mass)
+            sc.state = OrbitState(T.(to_vector(target_state)), sc.state.statetype)
         else
-            # Fallback: try to convert directly
-            return Float64(x)
+            error("set_posvel!: μ is required to convert from Cartesian to $(sc.state.statetype) but the coordinate system does not have a celestial body (with μ) as its origin.")
         end
     end
     
-    # Convert entire segment to Float64 types for efficient storage
-    segment_f64 = [(Time(to_float64(t.jd1), to_float64(t.jd2), t.scale, t.format), 
-                    map(to_float64, pv)) 
-                   for (t, pv) in segment]
-    push!(sc.history, segment_f64)
-    return sc
+    return
 end
 
 """

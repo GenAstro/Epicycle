@@ -18,7 +18,7 @@ using AstroEpochs
 using AstroUniverse
 using AstroFrames
 using AstroModels: Spacecraft, to_posvel, set_posvel!
-import AstroModels: push_history_segment!
+using AstroModels: HistorySegment, SpacecraftHistory, push_segment!
 using AstroCallbacks: OrbitCalc, get_calc
 
 import AstroCallbacks: AbstractFun, AbstractCalcVariable, AbstractOrbitVar
@@ -34,6 +34,7 @@ export PointMassGravity, compute_point_mass_gravity!, evaluate, accel_eval!
 export OrbitODE
 export IntegratorConfig
 export OrbitPropagator, StopAt
+export PropDurationSeconds, PropDurationDays
 
 """
     PosVel <: AbstractState
@@ -251,18 +252,24 @@ function _update_structs!(forces::ForceModel, sol_u::Vector{<:Real}, odereg::Dic
         end
 
         # Append to history
-        initialtime = sc.time.jd  # This returns Float64 (days)
+        # Use TT for Earth-centered, TDB for others (matches propagation time scale)
+        center_body = forces.center
+        time_scale = (center_body === earth) ? TT() : TDB()
+        initialtime = (center_body === earth) ? sc.time.tt.jd : sc.time.tdb.jd
+        
         if full_sol !== nothing
-            new_segment = [
-                (Time(initialtime+ t / 86400.0, TDB(), JD()), copy(u[idx_map[:posvel]]))
-                for (t, u) in zip(full_sol.t, full_sol.u)
-            ]
-            push_history_segment!(sc, new_segment)
+            # Extract times and states from solution
+            times = [Time(initialtime + t / 86400.0, time_scale, JD()) for t in full_sol.t]
+            states = [CartesianState(copy(u[idx_map[:posvel]])) for u in full_sol.u]
+            
+            # Create HistorySegment and add to spacecraft history
+            segment = HistorySegment(times, states, sc.coord_sys, name="propagate")
+            push_segment!(sc.history, segment)
         end
 
-        # Update current time (TAI)
+        # Update current time using appropriate scale
         finaltime = initialtime + sol_t/86400.0
-        sc.time = Time(finaltime, TDB(), JD())
+        sc.time = Time(finaltime, time_scale, JD())
     end
 end
 
@@ -279,18 +286,65 @@ function propagate(model::DynSys, config::IntegratorConfig,
     direction::Symbol = :forward, prop_stm::Bool = false,
     kwargs...)
 
-    callbackset = isempty(stop_conditions) ? nothing :
-       length(stop_conditions) == 1 ? stop_conditions[1] :
-       CallbackSet(stop_conditions...)
+    # Validate direction keyword
+    direction in (:forward, :backward, :infer) ||
+        error("Invalid direction: $direction. Must be :forward, :backward, or :infer.")
+
+    # Separate time-based from state-based stopping conditions
+    time_conds = filter(_is_time_condition, stop_conditions)
+    state_conds = filter(!_is_time_condition, stop_conditions)
+
+    # Validate at most one time-based condition
+    if length(time_conds) > 1
+        error("Multiple time-based stopping conditions not allowed. Found $(length(time_conds)) conditions.")
+    end
+
+    # Infer direction if requested
+    actual_direction = if direction == :infer
+        if isempty(time_conds)
+            :forward  # Default for state-based or no conditions
+        else
+            _infer_direction(time_conds[1])
+        end
+    else
+        direction
+    end
+
+    # Validate explicit direction matches duration sign
+    # Duration sign is semantically meaningful: positive = forward, negative = backward
+    if direction != :infer && !isempty(time_conds)
+        target = time_conds[1].target
+        # Check for contradictions between sign and explicit direction
+        if target >= 0 && actual_direction == :backward
+            error("Duration is positive (forward) but explicit direction is :backward. Use negative duration or direction=:infer.")
+        elseif target < 0 && actual_direction == :forward
+            error("Duration is negative (backward) but explicit direction is :forward. Use positive duration or direction=:infer.")
+        end
+    end
+
+    # Compute tspan from time condition or use default
+    tf = if isempty(time_conds)
+        actual_direction == :forward ? 1.0e12 : -1.0e12
+    else
+        _compute_tf(time_conds[1], actual_direction)
+    end
+    tspan = (0.0, tf)
+
+    # Build callbacks only from state-based conditions
+    callbackset = isempty(state_conds) ? nothing :
+       length(state_conds) == 1 ? state_conds[1] :
+       CallbackSet(state_conds...)
 
     odereg = _build_odereg(model.spacecraft)
     params = (forces = model.forces, odereg = odereg)
     state0 = _build_state(model.forces, model.spacecraft, odereg)
-    start_epoch = model.spacecraft[1].time.tai
+    
+    # Use TT for Earth-centered dynamics, TDB for others
+    center_body = model.forces.center
+    start_epoch = (center_body === earth) ? model.spacecraft[1].time.tt : model.spacecraft[1].time.tdb
 
-    tspan = direction == :forward ? (0.0, 1.0e12) :
-    direction == :backward ? (0.0, -1.0e12) :
-    error("Unknown direction: $direction. Use :forward or :backward.")
+    actual_direction == :forward || actual_direction == :backward ||
+        error("Unknown direction: $actual_direction. Use :forward or :backward.")
 
     prob = ODEProblem((du, u, p, t) -> _build_odes!(model.forces, start_epoch,
          du, u, p, t, model.spacecraft), state0, tspan, params)
@@ -305,6 +359,46 @@ function propagate(model::DynSys, config::IntegratorConfig,
     _update_structs!(model.forces, sol.u[end], odereg, sol.t[end], sol)
 
     return sol
+end
+
+# Helper: infer propagation direction from time-based stop condition
+function _infer_direction(stop::StopAt{<:Any, <:IntegratorTimeCalc})
+    # Infer from sign of duration
+    target = stop.target
+    return target >= 0 ? :forward : :backward
+end
+
+# Helper: compute final time from time-based stopping condition
+function _compute_tf(stop::StopAt{<:Any, <:IntegratorTimeCalc}, direction::Symbol)
+    var = stop.var
+    target = stop.target
+    stop_dir = stop.direction
+    
+    # Compute elapsed time in seconds (magnitude)
+    tf_magnitude = if var isa PropDurationSeconds
+        abs(Float64(target))
+    elseif var isa PropDurationDays
+        abs(Float64(target)) * 86400.0
+    else
+        error("Unknown IntegratorTimeCalc type: $(typeof(var))")
+    end
+    
+    # Validate target is non-zero
+    if tf_magnitude == 0.0
+        error("Time-based stopping condition duration must be non-zero")
+    end
+    
+    # Validate direction compatibility with stop_dir parameter (if specified)
+    if stop_dir != 0
+        if stop_dir > 0 && direction == :backward
+            error("StopAt direction parameter is positive (increasing) but propagation direction is :backward")
+        elseif stop_dir < 0 && direction == :forward
+            error("StopAt direction parameter is negative (decreasing) but propagation direction is :forward")
+        end
+    end
+    
+    # Apply sign based on propagation direction
+    return direction == :backward ? -tf_magnitude : tf_magnitude
 end
 
 end

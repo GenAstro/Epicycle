@@ -17,6 +17,7 @@ using AstroProp
 earth.mu = 398600.4415
 sun.mu =132712440017.99
 moon.mu = 4902.8005821478
+mars.mu = 42828.375214
 
 function percent_error(x, y)
     if x isa Number && y isa Number
@@ -54,6 +55,27 @@ acc = zeros(6)
     @test isapprox(acc, acc_expected; rtol=1e-12)
 
 end
+
+@testset "Point Mass Grav - Total accel (mars)" begin
+    t_mars = Time("2015-09-21T12:23:12", TDB(), ISOT())
+    posvel_mars = [7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]
+    acc_mars = zeros(6)
+    compute_point_mass_gravity!(t_mars, posvel_mars, acc_mars, mars, ())
+
+    # Verify velocity part is copied correctly
+    @test acc_mars[1:3] == posvel_mars[4:6]
+    
+    # Verify acceleration is computed (non-zero for mars gravity)
+    @test norm(acc_mars[4:6]) > 0.0
+    
+    # Manual calculation: a = -mu * r / r^3
+    r_vec = posvel_mars[1:3]
+    r_mag = norm(r_vec)
+    expected_acc = -mars.mu * r_vec / r_mag^3
+    
+    @test isapprox(acc_mars[4:6], expected_acc; rtol=1e-12)
+end
+
 
 @testset "Point Mass Grav - Pert accel" begin
     acc = zeros(6)
@@ -269,24 +291,24 @@ end
     @test !isempty(segment)
 
     # Verify all entries have correct types
-    for (time_entry, state_entry) in segment
-        @test time_entry isa AstroEpochs.Time{Float64}
-        @test state_entry isa Vector{Float64}
-        @test length(state_entry) == 6  # Position and velocity
+    for i in 1:length(segment.times)
+        @test segment.times[i] isa AstroEpochs.Time{Float64}
+        @test segment.states[i] isa CartesianState{Float64}
     end
 
     # Verify chronological ordering
-    times = [entry[1].jd for entry in segment]
-    @test issorted(times)
+    times_jd = [t.jd for t in segment.times]
+    @test issorted(times_jd)
 
     # Test that we can access the history without type issues
-    first_time = segment[1][1]
-    last_time = segment[end][1]
+    first_time = segment.times[1]
+    last_time = segment.times[end]
     @test last_time.jd > first_time.jd
 
     # Verify the state values are reasonable (not NaN or Inf)
-    for (_, state) in segment
-        @test all(isfinite.(state))
+    for state in segment.states
+        @test all(isfinite.(state.position))
+        @test all(isfinite.(state.velocity))
     end
 end
 

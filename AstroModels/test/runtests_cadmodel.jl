@@ -1,6 +1,8 @@
 using Test
 using AstroModels
 
+@testset "Spacecraft CAD Tests" begin
+
 @testset "CADModel default constructor" begin
     model = CADModel()
     
@@ -94,6 +96,8 @@ end
     output2 = repr(MIME"text/plain"(), model2)
     
     @test occursin("visible   = false", output2)
+end
+
 end
 
 nothing

@@ -12,6 +12,7 @@ using AstroUniverse
 # HistorySegment - Empty Constructor
 # =============================================================================
 
+@testset "SpacecraftHistory Tests" begin
 @testset "HistorySegment - empty constructor basic" begin
     coord_sys = CoordinateSystem(earth, ICRFAxes())
     segment = HistorySegment(coord_sys)
@@ -425,4 +426,5 @@ end
     @test contains(output, "Metadata: 1 entry")
 end
 
+end
 

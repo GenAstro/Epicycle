@@ -65,7 +65,10 @@ end
 Container for spacecraft trajectory history, organized into segments.
 """
 struct SpacecraftHistory
-    segments::Vector{HistorySegment}         # Ordered list of trajectory segments
+    segments::Vector{HistorySegment}         # Solution trajectory segments
+    iterations::Vector{HistorySegment}       # Solver iteration segments (diagnostic)
+    record_segments::Bool                    # Enable solution segment recording
+    record_iterations::Bool                  # Enable iteration segment recording
 end
 ```
 
@@ -84,9 +87,10 @@ end
 - `metadata` Dict provides extensibility without modifying struct
 
 **SpacecraftHistory:**
-- Simple container wrapping segments vector
+- Separates solution trajectory (`segments`) from diagnostic data (`iterations`)
+- Recording flags control which segments are populated during propagation
+- Default behavior: record solution only, skip iterations for efficiency
 - Thin abstraction layer to hide implementation
-- Room to add top-level metadata or methods later
 
 #### Alternative Considerations
 
@@ -99,7 +103,7 @@ end
 
 #### Constructors
 
-```julia
+```julia (default: record solutions, not iterations)
 # Create empty history
 SpacecraftHistory()
 
@@ -123,7 +127,10 @@ HistorySegment(times::Vector{Time},
 # Automatically converts Dual/BigFloat to Float64
 push_state!(segment::HistorySegment, time::Time, state::CartesianState)
 
-# Add a new segment to history (mutates history's segments vector)
+# Add a new segment to history (routes based on history.record_segments and history.record_iterations flags)
+# - If record_iterations=true: adds to history.iterations
+# - If record_segments=true and record_iterations=false: adds to history.segments
+# - Otherwise: no-op (segment not recorded)
 push_segment!(history::SpacecraftHistory, segment::HistorySegment)
 
 # Start a new segment (convenience for propagation - creates and adds empty segment)
@@ -133,50 +140,38 @@ new_segment!(history::SpacecraftHistory,
              metadata::Dict{String,Any}=Dict{String,Any}())
 ```
 
-#### Query/Retrieval Methods
+#### Query/Access Methods
 
 ```julia
-# Get number of segments
-nsegments(history::SpacecraftHistory) -> Int
+# Direct field access (no getters needed)
+segment.times                    # Vector{Time{Float64}}
+segment.states                   # Vector{CartesianState{Float64}}
+segment.coordinate_system        # CoordinateSystem
+segment.name                     # String
+segment.metadata                 # Dict{String,Any}
 
-# Get specific segment
-get_segment(history::SpacecraftHistory, index::Int) -> HistorySegment
-get_segment(history::SpacecraftHistory, name::String) -> HistorySegment  # Phase 2
+history.segments                 # Vector{HistorySegment} - solution trajectory
+history.iterations               # Vector{HistorySegment} - solver iterations (if recorded)
+history.record_segments          # Bool - is solution recording enabled?
+history.record_iterations        # Bool - is iteration recording enabled?
+history.record_iterations        # Bool - is iteration recording enabled?
+history[i]                       # Get segment by index from solution trajectory
+length(history)                  # Number of solution segments
+isempty(history)                 # Check if solution trajectory empty
+isempty(segment)                 # Check if segment empty
 
-# Get all times/states (flattened across segments)
-get_times(history::SpacecraftHistory) -> Vector{Time}
-get_states(history::SpacecraftHistory) -> Vector{CartesianState{Float64}}
+# Iteration (iterates over solution segments only)tory)                 # Check if empty
+isempty(segment)                 # Check if segment empty
 
-# Get data from specific segment
-get_times(segment::HistorySegment) -> Vector{Time}
-get_states(segment::HistorySegment) -> Vector{CartesianState{Float64}}
-
-# Get segment metadata
-get_coordinate_system(segment::HistorySegment) -> CoordinateSystem
-get_name(segment::HistorySegment) -> String
-get_metadata(segment::HistorySegment) -> Dict{String,Any}
-
-# Check if empty
-isempty(history::SpacecraftHistory) -> Bool
-isempty(segment::HistorySegment) -> Bool
+# Iteration
+for segment in history
+    # Process each segment
+end
 ```
 
 #### Export/Conversion
 
-```julia
-# Export to matrices for plotting
-to_matrix(history::SpacecraftHistory) -> Matrix{Float64}  # [t, x, y, z, vx, vy, vz] rows
-to_matrix(segment::HistorySegment) -> Matrix{Float64}
-
-# Export positions only
-get_positions(history::SpacecraftHistory) -> Matrix{Float64}  # Nx3 matrix
-get_positions(segment::HistorySegment) -> Matrix{Float64}
-
-# Iterate over time-state pairs
-for (time, state) in zip(get_times(segment), get_states(segment))
-    # Process each point
-end
-```
+Export functions TBD when integrating with plotting/reporting systems
 
 #### Integration Points
 
@@ -190,13 +185,13 @@ end
 
 # For propagate() - start new segment
 function propagate!(sc::Spacecraft, ...)
-    new_segment!(sc.history, sc.coordinate_system, name="propagate_$(timestamp)")
+    new_segment!(sc.history, sc.coordinate_system, name="propagate_\$(timestamp)")
     # ... propagation loop calls record_history!
 end
 
 # For maneuver() - mark discontinuity with new segment  
 function maneuver!(sc::Spacecraft, ...)
-    new_segment!(sc.history, sc.coordinate_system, name="maneuver_$(timestamp)")
+    new_segment!(sc.history, sc.coordinate_system, name="maneuver_\$(timestamp)")
     # ... maneuver updates state
 end
 ```
@@ -204,10 +199,10 @@ end
 #### Design Notes
 
 - **Immutability compromise:** While structs are immutable, the vectors they contain can be mutated for efficiency during propagation. `push_state!` modifies the underlying vector.
-- **Naming convention:** `get_*` for queries, `push_*!` for mutations
+- **Naming convention:** `push_*!` for mutations, direct field access for data retrieval
 - **Type inference:** Return types preserve `T` parameter for type stability
-- **Segment access:** Index-based in Phase 1, name-based access added in Phase 2
-- **Flattening operations:** Methods like `get_times(history)` concatenate across all segments for convenience
+- **Segment access:** Direct indexing `history[i]` in Phase 1, name-based lookup in Phase 2
+- **No getter functions:** Fields are public, use direct access (e.g., `segment.times` not `get_times(segment)`)
 
 ### 5. Usage Examples
 
@@ -341,16 +336,16 @@ maneuver!(sat, dv=[0.1, 0, 0])
 propagate!(sat, duration=1day)
 
 # User wants to see each phase
-for (i, segment) in enumerate(sat.history.segments)
-    println("Segment $i: $(segment.name), $(length(segment.times)) points")
+for (i, segment) in enumerate(history.segments)
+    println("Segment \$i: \$(segment.name), \$(length(segment.times)) points")
 end
 ```
 
 **Workflow 3: Custom analysis (full API access)**
 ```julia
-# User has specific needs
-segment1_times = sat.history.segments[1].times
-segment1_states = sat.history.segments[1].states
+# User has direct field access
+segment1_times = history.segments[1].times
+segment1_states = history.segments[1].states
 # Custom processing...
 ```
 
@@ -365,13 +360,17 @@ segment1_states = sat.history.segments[1].states
 ### 6. Implementation Details
 
 #### Storage Format
-
-**SpacecraftHistory struct:**
-```julia
-struct SpacecraftHistory
+mutable struct SpacecraftHistory
     segments::Vector{HistorySegment}
+    iterations::Vector{HistorySegment}
+    record_segments::Bool
+    record_iterations::Bool
 end
 ```
+- Mutable to allow flag modification by solver
+- Separate vectors for solution vs iteration segments
+- No type parameters - history always stores Float64
+- Internal vectors
 - Simple wrapper around vector of segments
 - No type parameters - history always stores Float64
 - Immutable struct, but internal vector can grow via `push!`
@@ -518,10 +517,80 @@ stored_state = segment.states[1]  # CartesianState{Float64}
 - metadata Dict is type-unstable by design (flexibility > performance here)
 - Use getfield() in hot loops to avoid getproperty overhead
 
-**Performance validation:**
+**P# Solver Iteration Recording (Optional Feature)
+
+**Requirement:** Support recording solver iterations for trajectory optimization diagnostics.
+
+**Use Case:** During trajectory optimization, the solver may evaluate thousands of candidate trajectories. By default, only the final converged solution is recorded in history. For debugging convergence issues or visualizing the optimization process, users can opt to record all iterations.
+
+**Design:**
+- Separate storage: `iterations` vector contains iteration segments, `segments` contains solution
+- Two independent flags control recording:
+  - `record_segments::Bool = true` - Controls solution segment recording
+  - `record_iterations::Bool = false` - Controls iteration segment recording
+- Routing logic in `push_segment!`:
+  ```julia
+  function push_segment!(history, segment)
+      if history.record_iterations
+          push!(history.iterations, segment)
+      elseif history.record_segments
+          push!(history.segments, segment)
+      end
+      # If both false: segment not recorded (no-op)
+  end
+  ```
+
+**Solver Integration (AstroSolve):**
+```julia
+# In trajectory_solve(seq, options; record_iterations=false)
+
+# Default mode: record_iterations=false
+sc.history.record_segments = false      # Don't record during optimization
+sc.history.record_iterations = false
+# ... optimizer runs, history not populated ...
+sc.history.record_segments = true       # Record final solution only
+# ... execute sequence one final time ...
+
+# Diagnostic mode: record_iterations=true  
+sc.history.record_segments = false      # Don't record in segments
+sc.history.record_iterations = true     # Do record in iterations
+# ... optimizer runs, all iterations stored in history.iterations ...
+sc.history.record_iterations = false    # Switch to solution mode
+sc.history.record_segments = true
+# ... execute sequence final time, solution in history.segments ...
+```
+
+**Benefits:**
+- Clean separation: solution data vs diagnostic data
+- Memory efficient default: iterations not recorded unless requested
+- Opt-in diagnostics: power users can visualize convergence behavior
+- Natural access: `history.segments` always contains solution trajectory
+
+**Rationale:**
+- Alternative considered: Single `segments` vector with `is_iteration::Bool` field per segment
+  - Rejected: Mixing solution and diagnostic data complicates filtering for ephemeris, plots
+  - Rejected: Requires checking metadata/field for every operation
+- Separate vectors make intent clear: iterations are purely diagnostic, segments are mission data
+
+**Example Usage:**
+```julia
+# Debug mode - see all optimization iterations
+result = trajectory_solve(seq, options; record_iterations=true)
+view = View3D()
+add_spacecraft!(view, sat)
+# Visualize shows all iteration trajectories overlaid (diagnostic view)
+
+# Production mode - clean final solution only (default)
+result = trajectory_solve(seq, options)  # record_iterations=false
+view = View3D()  
+add_spacecraft!(view, sat)
+# Visualize shows only final converged trajectory
+```
+
+###erformance validation:**
 ```julia
 # Should show no allocations in steady state
-@btime push_state!($segment, $time, $state)
+@btime push_state!(\$segment, \$time, \$state)
 ```
 
 ### 7. Migration Strategy
@@ -550,10 +619,10 @@ stored_state = segment.states[1]  # CartesianState{Float64}
 - Ensure coordinate system passed to segment constructor
 
 **4. Epicycle (Visualization - View3D)**
-- Update history access: `sc.history[seg][i][2]` → `get_states(sc.history)`
-- Use `get_positions()` for 3D rendering
+- Update history access to iterate over segments
+- Use `get_positions()` for 3D rendering per segment
 - Iterate over segments if rendering with different styles
-- May use `to_matrix()` for batch position extraction
+- Handle coordinate system transformations for multi-frame histories
 
 **5. Examples & Tests**
 - Update all example scripts using history
@@ -618,6 +687,8 @@ function record_callback(time, state, ...)
     segment = last(sc.history.segments)
     push_state!(segment, time, CartesianState(state))
 end
+- ✓ Solver iteration history: Separate `iterations` vector with opt-in recording (Section 6.5)
+- ✓ History recording control: `enabled` and `record_iterations` flags on SpacecraftHistory (Section 6.5)
 ```
 
 **AstroProp propagation start:**
@@ -631,7 +702,7 @@ end
 # NEW
 propagate!(sc, ...) = begin
     new_segment!(sc.history, sc.coordinate_system, 
-                 name="propagate_$(now())")
+                 name="propagate_\$(now())")
     # ...
 end
 ```
@@ -642,7 +713,11 @@ end
 positions = [hist[2] for seg in sc.history for hist in seg]
 
 # NEW  
-positions = get_positions(sc.history)  # Returns Nx3 matrix
+# Iterate per segment, handle coordinate systems
+for segment in sc.history.segments
+    positions = get_positions(segment)  # Nx3 matrix per segment
+    # ... render with segment's coordinate system
+end
 ```
 
 #### File Locations
@@ -662,16 +737,16 @@ Implement code, tests, and docs simultaneously as we go.
 1) Update AstroModels first, then address modules that integrate with AstroModels 
 in this order AstroProp, Epicycle(View3D), AstroCallbacks
 
-- [ ] Implement HistorySegment, unit test, doc strings
-- [ ] Implement SpacecraftHistory, unit test, and docstrings
-- [ ] Implement all API functions with tests
-- [ ] Update Spacecraft type definition and update AstroModels test and docs
-- [ ] Update AstroCallbacks recording logic
-- [ ] Update AstroProp segment creation
-- [ ] Update Epicycle View3D access patterns
-- [ ] Update/add examples
+- [x] Implement HistorySegment, unit test, doc strings 
+- [x] Implement SpacecraftHistory, unit test, and docstrings
+- [x] Update Spacecraft type definition and update AstroModels test and docs
+- [x] AstroProp integration
+- [x] AstroManeuvers integration
+- [x] AstroCallbacks integration (no changes needed)
+- [x] Update Epicycle View3D access patterns
+- [x] Update/add examples
+- [ ] Write Spacecraft user guide (quick reference?, other user material)
 - [ ] Run full test suite across all packages
-- [ ] Update documentation and docstrings
 - [ ] Remove old commented code
 
 ### 8. Testing Plan
@@ -688,6 +763,8 @@ See Migration Checklist for test coverage strategy.
 
 **Resolved:**
 - ✓ Dual → Float64 conversion: Use `Float64.(to_vector(state))` via `to_float64()` helper (Section 6)
+- ✓ Solver iteration history: Separate `iterations` vector with opt-in recording (Section 6.5)
+- ✓ History recording control: `record_segments` and `record_iterations` flags on SpacecraftHistory (Section 6.5)
 
 **To be addressed during implementation:**
 - Error handling strategy (throw vs return codes)

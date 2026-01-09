@@ -11,11 +11,20 @@ makedocs(;
         canonical="https://GenAstro.github.io/Epicycle/AstroModels/",
         edit_link="main",
         assets=String[],
-        collapselevel=1,
         sidebar_sitename=false,
     ),
     pages=[
-        "index.md",
+        "QuickStart" => "index.md",
+        "Spacecraft" => [
+            "Overview" => "spacecraft.md",
+            "Time" => "spacecraft_time.md",
+            "State" => "spacecraft_state.md",
+            "Coordinate System" => "spacecraft_coord_sys.md",
+            "Mass" => "spacecraft_mass.md",
+            "CAD Model" => "spacecraft_cad_model.md",
+            "History" => "history.md",
+        ],
+        "Reference" => "reference.md",
     ],
     warnonly=true,         # Just warn, don't error
     checkdocs=:none,       # Skip docstring completeness checks

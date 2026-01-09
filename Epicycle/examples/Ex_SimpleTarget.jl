@@ -1,31 +1,50 @@
 using Epicycle
 
+# ============================================================================
+# Shared Resources
+# ============================================================================
+
 # Create spacecraft with default orbital state
 sat = Spacecraft()
 
-# Create the propagator with point mass gravity model
+# Create force models, integrator, and propagator
 gravity = PointMassGravity(earth, (moon, sun))
 forces  = ForceModel(gravity)
 integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
 prop    = OrbitPropagator(forces, integ)
 
-# Create an impulsive maneuver (only V component will vary)
+# ============================================================================
+# Event 1: TOI - Transfer Orbit Insertion
+# ============================================================================
+
+# Define TOI maneuver
 toi = ImpulsiveManeuver(
     axes = VNB(),
     element1 = 0.1,
 )
 
-# Define DeltaVVector of toi as a solver variable
-# V component allowed to vary, N and B components constrained to zero
-var_toi = SolverVariable(
+# Define solver variable for TOI delta-V
+toi_var = SolverVariable(
     calc = ManeuverCalc(toi, sat, DeltaVVector()),
     name = "toi",
     lower_bound = [-10.0, 0.0, 0.0],
     upper_bound = [10.0, 0.0, 0.0],
 )
 
-# Define a constraint on position magnitude of spacecraft
-# Target apoapsis altitude of 55000 km
+# Define TOI event struct with event function, solver variables, and constraints
+toi_fun() = maneuver(sat, toi) 
+toi_event = Event(
+    name = "TOI Maneuver", 
+    event = toi_fun,
+    vars = [toi_var],
+    funcs = []
+)
+
+# ============================================================================
+# Event 2: Propagate to Apoapsis
+# ============================================================================
+
+# Define constraint on position magnitude at apoapsis
 pos_target = 55000.0
 pos_con = Constraint(
     calc = OrbitCalc(sat, PosMag()),
@@ -34,22 +53,21 @@ pos_con = Constraint(
     scale = [1.0],
 )
 
-# Create an event that applies the maneuver with toi as optimization variable
-fun_toi() = maneuver(sat, toi) 
-toi_event = Event(name = "TOI Maneuver", 
-                  event = fun_toi,
-                  vars = [var_toi],
-                  funcs = [])
+# Define propagation event to apoapsis with position constraint
+prop_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+prop_event = Event(
+    name = "Propagate to Apoapsis", 
+    event = prop_fun,
+    funcs = [pos_con]
+)
 
-# Create propagation event to apoapsis with position constraint
-fun_prop_apo() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
-prop_event = Event(name = "Propagate to Apoapsis", 
-                   event = fun_prop_apo,
-                   funcs = [pos_con])
+# ============================================================================
+# Trajectory Optimization
+# ============================================================================
 
-# Build sequence: maneuver first, then propagate to apoapsis
+# Create sequence and add events
 seq = Sequence()
-add_events!(seq, prop_event, [toi_event]) 
+add_sequence!(seq, toi_event, prop_event) 
 
 # Solve trajectory optimization using default settings (finite differences, IPOPT)
 result = trajectory_solve(seq)

@@ -24,7 +24,7 @@ using AstroModels: Spacecraft, to_posvel, set_posvel!
 export SolverVariable, Event, Sequence, SequenceManager 
 
 export set_sol_var, get_sol_var
-export add_events!, topo_sort
+export add_events!, add_sequence!, topo_sort
 export order_unique_vars, apply_event
 export get_var_values, get_var_shifts, get_var_scales
 export set_var_values, get_var_lower_bounds, get_var_upper_bounds 

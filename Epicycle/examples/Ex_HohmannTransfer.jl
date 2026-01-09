@@ -1,24 +1,28 @@
 
 using Epicycle
 
+# ============================================================================
+# Shared Resources
+# ============================================================================
+
 # Create spacecraft
 sat = Spacecraft(
-            state = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 1.0]), 
-            time = Time("2020-09-21T12:23:12", TAI(), ISOT())
+            state = KeplerianState(7000.0, 0.001, 0.0, 0.0, 7.5, 1.0), 
+            time = Time("2020-09-21T12:23:12", TAI(), ISOT()),
+            name = "Sat",
             )
 
 # Create force models, integrator, and dynamics system
-pm_grav = PointMassGravity(earth,(moon,sun))
-forces = ForceModel(pm_grav)
-integ = IntegratorConfig(DP8(); abstol = 1e-11, reltol = 1e-11, dt = 4000)
+gravity = PointMassGravity(earth, (moon,sun))  
+forces  = ForceModel(gravity)
+integ   = IntegratorConfig(DP8(); abstol=1e-9, reltol=1e-9, dt=300.0)
+prop    = OrbitPropagator(forces, integ)
 
-# Define which spacecraft to propagate and which force model to use
-dynsys = DynSys(
-          forces = forces, 
-          spacecraft = [sat]
-          )
+# ============================================================================
+# TOI Event - Transfer Orbit Insertion
+# ============================================================================
 
-# Create maneuver models for the hohmann transfer
+# Define TOI maneuver
 toi = ImpulsiveManeuver(
     axes = VNB(),
     element1 = 0.1,
@@ -26,6 +30,38 @@ toi = ImpulsiveManeuver(
     element3 = 0.3
 )
 
+# Define solver variable for TOI delta-V
+toi_var = SolverVariable(
+    calc = ManeuverCalc(toi, sat, DeltaVVector()),
+    name = "toi",
+    lower_bound = [0.0, 0.0, 0.0],
+    upper_bound = [2.5, 0.0, 0.0],
+)
+
+# Define TOI event struct with event function, solver variables, and constraints
+toi_fun() = maneuver(sat, toi) 
+toi_event = Event(
+    name = "TOI", 
+    event = toi_fun, 
+    vars = [toi_var],
+    funcs = []
+)
+
+# ============================================================================
+# Propagation Event - Coast to Apoapsis
+# ============================================================================
+
+prop_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+prop_event = Event(
+    name = "Prop to Apoapsis", 
+    event = prop_fun
+)
+
+# ============================================================================
+# MOI Event - Mars Orbit Insertion
+# ============================================================================
+
+# Define MOI maneuver 
 moi = ImpulsiveManeuver(
     axes = VNB(),
     element1 = 0.4,
@@ -33,22 +69,15 @@ moi = ImpulsiveManeuver(
     element3 = 0.6
 )
 
-# Define toi as a solver variable
-var_toi = SolverVariable(
-    calc = ManeuverCalc(toi, sat, DeltaVVector()),
-    name = "toi",
-    lower_bound = [-10.0, 0.0, 0.0],
-    upper_bound = [10.0, 0.0, 0.0],
-)
-
-# Define moi as a solver variable
-var_moi = SolverVariable(
+# Define solver variable for MOI delta-V
+moi_var = SolverVariable(
     calc = ManeuverCalc(moi, sat, DeltaVVector()),
     name = "moi",
-    lower_bound = [-10.0, 0.0, 0.0],
-    upper_bound = [10.0, 0.0, 0.0]
+    lower_bound = [0.0, 0.0, 0.0],
+    upper_bound = [3.0, 0.0, 0.0]
 )
 
+# Define constraints for MOI event
 pos_target = 45000.0
 pos_con = Constraint(
     calc = OrbitCalc(sat, PosMag()),
@@ -64,30 +93,29 @@ ecc_con = Constraint(
     scale = [1.0],
 )
 
-# Create the TOI Event
-toi_fun() = maneuver(sat, toi) 
-toi_event = Event(name = "TOI", 
-                  event = toi_fun, 
-                  vars = [var_toi],
-                  funcs = [])
-
-# Create the prop to apopasis event
-
-prop_apo_fun() = propagate(dynsys, integ, StopAtApoapsis(sat))
-prop_event = Event(name = "Prop to Apoapsis", event = prop_apo_fun)
-
-# Create the TOI event. 
+# Define MOI event struct with event function, solver variables, and constraints
 moi_fun() = maneuver(sat, moi)
-moi_event = Event(name = "MOI", 
-                  event = moi_fun,
-                  vars = [var_moi],
-                  funcs = [pos_con, ecc_con])
+moi_event = Event(
+    name = "MOI", 
+    event = moi_fun,
+    vars = [moi_var],
+    funcs = [pos_con, ecc_con]
+)
+
+# ============================================================================
+# Trajectory Optimization
+# ============================================================================
 
 # Build sequence and solve
 seq = Sequence()
-add_events!(seq, prop_event, [toi_event]) 
-add_events!(seq, moi_event, [prop_event])
+add_sequence!(seq, toi_event, prop_event, moi_event)
 
-result = trajectory_solve(seq)
+# Solve the sequence and report the solution
+result = trajectory_solve(seq; record_iterations=true)
 sequence_report(seq)
 solution_report(seq, result)
+
+# Plot the trajectory 3D
+view = View3D()
+add_spacecraft!(view, sat; show_iterations=true)
+display_view(view)

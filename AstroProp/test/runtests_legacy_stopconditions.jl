@@ -49,19 +49,19 @@ const Z_ATOL        = 1e-6     # km
 @testset "Legacy StopAt* interface works" begin
     @testset "StopAtSeconds(3600) advances ~1 hour" begin
         sat = make_sat_cart()
-        t0 = sat.time.jd
+        t0 = sat.time.tt.jd  # Use TT (propagation uses TT for Earth)
         sol = propagate(DynSys(spacecraft=[sat], forces=forces), integ, StopAtSeconds(3600.0))
         @test ok_ret(sol.retcode)
-        Δt_sec = (sat.time.jd - t0) * 86400.0
+        Δt_sec = (sat.time.tt.jd - t0) * 86400.0
         @test isapprox(Δt_sec, 3600.0; atol = TIME_SEC_ATOL)
     end
 
     @testset "StopAtDays(10) advances ~10 days" begin
         sat = make_sat_orbit()
-        t0 = sat.time.jd
+        t0 = sat.time.tt.jd  # Use TT (propagation uses TT for Earth)
         sol = propagate(DynSys(spacecraft=[sat], forces=forces), integ, StopAtDays(10.0))
         @test ok_ret(sol.retcode)
-        Δt_days = (sat.time.jd - t0)
+        Δt_days = (sat.time.tt.jd - t0)
         @test isapprox(Δt_days, 10.0; atol = TIME_DAY_ATOL)
     end
 
