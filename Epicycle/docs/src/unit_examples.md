@@ -119,7 +119,7 @@ m = ImpulsiveManeuver(axes=Inertial(),
                       element3=0.0)
 
 sc = Spacecraft()
-maneuver(sc, m)
+maneuver!(sc, m)
 ```
 
 See the full [Reference Material](https://genastro.github.io/Epicycle/AstroManeuvers/dev/) for more details.

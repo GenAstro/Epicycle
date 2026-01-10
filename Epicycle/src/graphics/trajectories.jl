@@ -25,7 +25,7 @@ function render_trajectory!(lscene::LScene, view::View3D, sc::Spacecraft)
     # Warn if user requested iterations but none exist
     if show_iters && isempty(sc.history.iterations)
         @warn "show_iterations=true for spacecraft '$(sc.name)', but spacecraft history does not contain iterations. " *
-              "Use trajectory_solve(...; record_iterations=true) to capture solver iterations."
+              "Use solve_trajectory!(...; record_iterations=true) to capture solver iterations."
     end
     
     if show_iters && !isempty(sc.history.iterations)

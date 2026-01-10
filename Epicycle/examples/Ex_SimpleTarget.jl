@@ -32,7 +32,7 @@ toi_var = SolverVariable(
 )
 
 # Define TOI event struct with event function, solver variables, and constraints
-toi_fun() = maneuver(sat, toi) 
+toi_fun() = maneuver!(sat, toi) 
 toi_event = Event(
     name = "TOI Maneuver", 
     event = toi_fun,
@@ -54,7 +54,7 @@ pos_con = Constraint(
 )
 
 # Define propagation event to apoapsis with position constraint
-prop_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+prop_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
 prop_event = Event(
     name = "Propagate to Apoapsis", 
     event = prop_fun,
@@ -70,8 +70,8 @@ seq = Sequence()
 add_sequence!(seq, toi_event, prop_event) 
 
 # Solve trajectory optimization using default settings (finite differences, IPOPT)
-result = trajectory_solve(seq)
+result = solve_trajectory!(seq)
 
 # Write a report documenting sequence and solution
-sequence_report(seq)
-solution_report(seq, result)
+report_sequence(seq)
+report_solution(seq, result)

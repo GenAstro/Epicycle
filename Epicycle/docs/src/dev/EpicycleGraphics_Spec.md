@@ -340,7 +340,7 @@ add_spacecraft!(view, mission_sat;
 
 ### Iteration Display
 
-**Purpose**: Visualize solver convergence by showing iteration history from `trajectory_solve(...; record_iterations=true)`
+**Purpose**: Visualize solver convergence by showing iteration history from `solve_trajectory!(...; record_iterations=true)`
 
 ```julia
 # Default: show only final trajectory (from spacecraft.history.segments)
@@ -355,8 +355,8 @@ add_spacecraft!(view, sat;
     show_iterations = true)  # Shows solver iterations behind final trajectory
 
 # Typical diagnostic workflow:
-# 1. Run trajectory_solve with record_iterations=true
-result = trajectory_solve(seq, options; record_iterations=true)
+# 1. Run solve_trajectory! with record_iterations=true
+result = solve_trajectory!(seq, options; record_iterations=true)
 
 # 2. Visualize convergence
 view = View3D(universe)

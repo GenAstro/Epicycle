@@ -33,13 +33,13 @@ dynsys = DynSys(
                 )
 
 # Propagate to apoapsis of mms1
-propagate(dynsys, integ, StopAtApoapsis(mms1))
+propagate!(dynsys, integ, StopAtApoapsis(mms1))
 println(KeplerianState(mms1.state,earth.mu))
 
 # Propagate backwards for an hour
 println((mms1.time.tai).isot)
 t1 = mms1.time.jd;
-propagate(dynsys, integ, StopAtSeconds(-3600.0); direction = :backward);
+propagate!(dynsys, integ, StopAtSeconds(-3600.0); direction = :backward);
 t2 = mms2.time.jd;
 (t2 - t1)*86400
 println((mms1.time.tai).isot)

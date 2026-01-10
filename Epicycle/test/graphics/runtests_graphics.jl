@@ -188,7 +188,7 @@ using LinearAlgebra
         forces = ForceModel(gravity)
         integ = IntegratorConfig(DP8(); abstol=1e-12, reltol=1e-12, dt=60.0)
         prop = OrbitPropagator(forces, integ)
-        propagate(prop, sat, StopAt(sat, PropDurationSeconds(), 100.0))
+        propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), 100.0))
         
         # Should warn but not error - falls back to marker
         view = View3D()

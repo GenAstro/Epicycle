@@ -36,10 +36,10 @@ function sim_maneuver_full(input_vec)
     prop    = OrbitPropagator(forces, integ)
 
     # Apply the maneuver to the spacecraft
-    maneuver(sat, deltav)
+    maneuver!(sat, deltav)
 
     # Propagate to periapsis
-    propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
+    propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
     
     # Return final position
     return sat.state.state[1:3]

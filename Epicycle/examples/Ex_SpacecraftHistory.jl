@@ -27,11 +27,11 @@ toi = ImpulsiveManeuver(
 # (History segments are created automatically)
 ==============================================================================#
 
-propagate(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
+propagate!(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
 
-maneuver(sat, toi)
+maneuver!(sat, toi)
 
-propagate(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
+propagate!(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
 
 #==============================================================================
 # History Container Basics

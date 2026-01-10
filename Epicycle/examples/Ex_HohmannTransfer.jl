@@ -39,7 +39,7 @@ toi_var = SolverVariable(
 )
 
 # Define TOI event struct with event function, solver variables, and constraints
-toi_fun() = maneuver(sat, toi) 
+toi_fun() = maneuver!(sat, toi) 
 toi_event = Event(
     name = "TOI", 
     event = toi_fun, 
@@ -51,14 +51,14 @@ toi_event = Event(
 # Propagation Event - Coast to Apoapsis
 # ============================================================================
 
-prop_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+prop_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
 prop_event = Event(
     name = "Prop to Apoapsis", 
     event = prop_fun
 )
 
 # ============================================================================
-# MOI Event - Mars Orbit Insertion
+# MOI Event - Mission Orbit Insertion
 # ============================================================================
 
 # Define MOI maneuver 
@@ -94,7 +94,7 @@ ecc_con = Constraint(
 )
 
 # Define MOI event struct with event function, solver variables, and constraints
-moi_fun() = maneuver(sat, moi)
+moi_fun() = maneuver!(sat, moi)
 moi_event = Event(
     name = "MOI", 
     event = moi_fun,
@@ -111,9 +111,9 @@ seq = Sequence()
 add_sequence!(seq, toi_event, prop_event, moi_event)
 
 # Solve the sequence and report the solution
-result = trajectory_solve(seq; record_iterations=true)
-sequence_report(seq)
-solution_report(seq, result)
+result = solve_trajectory!(seq; record_iterations=true)
+report_sequence(seq)
+report_solution(seq, result)
 
 # Plot the trajectory 3D
 view = View3D()

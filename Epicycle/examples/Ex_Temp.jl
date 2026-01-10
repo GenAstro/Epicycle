@@ -37,14 +37,14 @@ pos_con = Constraint(
 )
 
 # Create an event that applies the maneuver with toi as optimization variable
-fun_toi() = maneuver(sat, toi) 
+fun_toi() = maneuver!(sat, toi) 
 toi_event = Event(name = "TOI Maneuver", 
                   event = fun_toi,
                   vars = [var_toi],
                   funcs = [])
 
 # Create propagation event to apoapsis with position constraint
-fun_prop_apo() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+fun_prop_apo() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
 prop_event = Event(name = "Propagate to Apoapsis", 
                    event = fun_prop_apo,
                    funcs = [pos_con])
@@ -54,8 +54,8 @@ seq = Sequence()
 add_events!(seq, prop_event, [toi_event]) 
 
 # Solve trajectory optimization using default settings (finite differences, IPOPT)
-result = trajectory_solve(seq)
+result = solve_trajectory!(seq)
 
 # Write a report documenting sequence and solution
-sequence_report(seq)
-solution_report(seq, result)
+report_sequence(seq)
+report_solution(seq, result)

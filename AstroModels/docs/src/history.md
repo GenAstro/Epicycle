@@ -70,9 +70,9 @@ toi = ImpulsiveManeuver(
 )
 
 # Propagate and maneuver - this populates history
-propagate(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
-maneuver(sat, toi)
-propagate(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
+propagate!(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
+maneuver!(sat, toi)
+propagate!(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
 
 # sat.history now contains 3 segments
 ```
@@ -174,7 +174,7 @@ Iterations are **opt-in** and used for:
 - Visualizing optimization process
 - Performance analysis
 
-See [AstroSolve documentation](https://genastro.github.io/Epicycle/AstroSolve/dev/) for `trajectory_solve(...; record_iterations=true)`.
+See [AstroSolve documentation](https://genastro.github.io/Epicycle/AstroSolve/dev/) for `solve_trajectory!(...; record_iterations=true)`.
 
 ## Recording Control
 
@@ -212,9 +212,9 @@ end
 
 ```julia
 # After multi-phase mission
-propagate(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
-maneuver(sat, toi)
-propagate(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
+propagate!(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
+maneuver!(sat, toi)
+propagate!(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
 
 # Inspect phases
 for (i, segment) in enumerate(sat.history)
@@ -242,15 +242,15 @@ end
 
 History is populated automatically:
 
-**AstroProp**: Creates new segment when `propagate()` is called
+**AstroProp**: Creates new segment when `propagate!()` is called
 ```julia
-propagate(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
+propagate!(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
 # sat.history now contains propagation data
 ```
 
 **AstroManeuvers**: Creates new segment at maneuver application
 ```julia
-maneuver(sat, toi)
+maneuver!(sat, toi)
 # New segment created for post-maneuver trajectory
 ```
 

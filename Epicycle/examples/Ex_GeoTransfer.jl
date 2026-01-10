@@ -22,7 +22,7 @@ prop    = OrbitPropagator(forces, integ)
 # ============================================================================
 
 # Define propagation event to equatorial plane crossing
-prop_to_z_crossing_1_fun() = propagate(prop, sat, StopAt(sat, PosZ(), 0.0))
+prop_to_z_crossing_1_fun() = propagate!(prop, sat, StopAt(sat, PosZ(), 0.0))
 prop_to_z_crossing_1_event = Event(
     name = "Prop to Z 1",
     event = prop_to_z_crossing_1_fun,
@@ -49,7 +49,7 @@ toi_var = SolverVariable(
 )
 
 # Define TOI event struct with event function, solver variables, and constraints
-toi_fun() = maneuver(sat, toi)
+toi_fun() = maneuver!(sat, toi)
 toi_event = Event(
     name = "TOI",
     event = toi_fun,
@@ -69,7 +69,7 @@ apogee_radius_con = Constraint(
 )
 
 # Define propagation event to apoapsis with radius constraint
-prop_to_apogee_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+prop_to_apogee_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
 prop_to_apogee_event = Event(
     name = "Prop to Apoapsis",
     event = prop_to_apogee_fun,
@@ -80,7 +80,7 @@ prop_to_apogee_event = Event(
 # Event 4: Propagate to Perigee
 # ============================================================================
 
-prop_to_perigee_1_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
+prop_to_perigee_1_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
 prop_to_perigee_1_event = Event(
     name = "Prop to Perigee 1",
     event = prop_to_perigee_1_fun,
@@ -90,7 +90,7 @@ prop_to_perigee_1_event = Event(
 # Event 5: Propagate to Equatorial Plane Crossing Again
 # ============================================================================
 
-prop_to_z_crossing_2_fun() = propagate(prop, sat, StopAt(sat, PosZ(), 0.0))
+prop_to_z_crossing_2_fun() = propagate!(prop, sat, StopAt(sat, PosZ(), 0.0))
 prop_to_z_crossing_2_event = Event(
     name = "Prop to Z 2",
     event = prop_to_z_crossing_2_fun,
@@ -117,7 +117,7 @@ mcc_var = SolverVariable(
 )
 
 # Define MCC event struct with event function and solver variables
-mcc_fun() = maneuver(sat, mcc)
+mcc_fun() = maneuver!(sat, mcc)
 mcc_event = Event(
     name = "MCC",
     event = mcc_fun,
@@ -144,7 +144,7 @@ perigee_radius_con = Constraint(
 )
 
 # Define propagation event to perigee with inclination and perigee radius constraints
-prop_to_perigee_2_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
+prop_to_perigee_2_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
 prop_to_perigee_2_event = Event(
     name = "Prop to Perigee 2",
     event = prop_to_perigee_2_fun,
@@ -180,7 +180,7 @@ final_sma_con = Constraint(
 )
 
 # Define MOI event struct with event function, solver variables, and constraints
-moi_fun() = maneuver(sat, moi)
+moi_fun() = maneuver!(sat, moi)
 moi_event = Event(
     name = "MOI",
     event = moi_fun,
@@ -208,12 +208,12 @@ ipopt_options = Dict(
 snow_options = Options(derivatives=ForwardFD(), solver=IPOPT(ipopt_options))
 
 # Solve trajectory optimization with iteration recording enabled
-result = trajectory_solve(seq, snow_options; record_iterations=true)
-sequence_report(seq)
-solution_report(seq, result)
+result = solve_trajectory!(seq, snow_options; record_iterations=true)
+report_sequence(seq)
+report_solution(seq, result)
 
 # Propagate about one day to see final orbit
-propagate(prop, sat, StopAt(sat, PropDurationDays(), 1.1)) 
+propagate!(prop, sat, StopAt(sat, PropDurationDays(), 1.1)) 
 
 # Visualize with iterations
 view = View3D()

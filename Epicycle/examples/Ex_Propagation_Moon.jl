@@ -22,7 +22,7 @@ integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
 prop    = OrbitPropagator(forces, integ)
 
 # Propagate to periapsis
-propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
+propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
 
 # Create 3D view and display
 view = View3D(coord_sys = moon_icrf)

@@ -66,14 +66,14 @@ pos_con = Constraint(
 
 # Create the TOI Event that applies the maneuver.
 # The event is a maneuver and the variable is the toi variable
-fun_toi() = maneuver(sat, toi) 
+fun_toi() = maneuver!(sat, toi) 
 toi_event = Event(name = "toi", 
                   event = fun_toi,
                   vars = [var_toi],
                   funcs = [])
 
 # Create the prop to apopasis event
-fun_prop_apo() = propagate(prop, sat, StopAt(sat, PosX(), 0.0; direction=-1))
+fun_prop_apo() = propagate!(prop, sat, StopAt(sat, PosX(), 0.0; direction=-1))
 prop_event = Event(name = "prop_apo", 
                    event = fun_prop_apo,
                    funcs = [pos_con])
