@@ -4,6 +4,13 @@ Epicycle is a Julia package ecosystem for astrodynamics and space mission design
 
 The ecosystem consists of eleven specialized packages organized in architectural layers, from core abstractions (EpicycleBase) through utilities (AstroEpochs, AstroStates, and AstroUniverse) to  integrated workflows (AstroManeuvers, AstroProp, and AstroSolve). The structure enables users to use low level utilities independently of the full system, or compose mission-specific analyses using interfaces designed to solve complex design problems, fast. The architecture in the first release is well tested and documented, and provides a clear pathway for extending capabilities toward high-fidelity force modeling, advanced optimization algorithms, and operational navigation applications as the framework matures.
 
+```@raw html
+<div style="text-align: center;">
+  <img src="assets/GEOTransfer.png" width="50%" alt="GEO Transfer Trajectory">
+  <p><em>Example: GEO transfer trajectory with plane change correction, showing 8-event optimization sequence.</em></p>
+</div>
+```
+
 ## Architecture and Components
 
 ### Development Environment
