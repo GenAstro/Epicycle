@@ -326,13 +326,13 @@ using Epicycle
         
         event1 = Event(
             name = "Multi Event 1",
-            event = () -> maneuver(sat1, man1),
+            event = () -> maneuver!(sat1, man1),
             vars = [var1]
         )
         
         event2 = Event(
             name = "Multi Event 2", 
-            event = () -> maneuver(sat2, man2),
+            event = () -> maneuver!(sat2, man2),
             vars = [var2]
         )
         
