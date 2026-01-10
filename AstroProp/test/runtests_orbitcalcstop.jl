@@ -28,7 +28,7 @@ const ANG_TOL = 1e-6      # rad
     @testset "Stop at radius magnitude target (any direction)" begin
         sat = make_sat()
         target_r = 7000.0
-        sol = propagate(prop, sat, StopAt(sat, PosMag(), target_r; direction = 0))
+        sol = propagate!(prop, sat, StopAt(sat, PosMag(), target_r; direction = 0))
         @test sol.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.Terminated)
 
         rmag = norm(to_posvel(sat)[1:3])
@@ -38,7 +38,7 @@ const ANG_TOL = 1e-6      # rad
     @testset "Stop at x-position crossing (increasing)" begin
         sat = make_sat()
         target_x = 7.5
-        sol = propagate(prop, sat, StopAt(sat, PosX(), target_x; direction = +1))
+        sol = propagate!(prop, sat, StopAt(sat, PosX(), target_x; direction = +1))
         @test sol.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.Terminated)
 
         posvel = to_posvel(sat)
@@ -60,7 +60,7 @@ const ANG_TOL = 1e-6      # rad
         
         # Propagate for 3600 seconds (1 hour)
         duration_sec = 3600.0
-        sol = propagate(prop, sat, StopAt(sat, PropDurationSeconds(), duration_sec))
+        sol = propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), duration_sec))
         @test sol.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.Terminated)
         
         # Check elapsed time in TT (Earth-centered)
@@ -75,7 +75,7 @@ const ANG_TOL = 1e-6      # rad
         
         # Propagate for 2.5 days
         duration_days = 2.5
-        sol = propagate(prop, sat, StopAt(sat, PropDurationDays(), duration_days))
+        sol = propagate!(prop, sat, StopAt(sat, PropDurationDays(), duration_days))
         @test sol.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.Terminated)
         
         # Check elapsed time in TT (Earth-centered)
@@ -86,7 +86,7 @@ const ANG_TOL = 1e-6      # rad
 
     @testset "PropDurationDays - zero duration throws error" begin
         sat = make_sat()
-        @test_throws ErrorException propagate(prop, sat, StopAt(sat, PropDurationDays(), 0.0))
+        @test_throws ErrorException propagate!(prop, sat, StopAt(sat, PropDurationDays(), 0.0))
     end
 
     @testset "PropDurationSeconds - backward with :infer" begin
@@ -95,7 +95,7 @@ const ANG_TOL = 1e-6      # rad
         
         # Propagate backward using negative duration + :infer
         duration_sec = -7200.0  # Negative = backward
-        sol = propagate(prop, sat, StopAt(sat, PropDurationSeconds(), duration_sec); direction=:infer)
+        sol = propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), duration_sec); direction=:infer)
         @test sol.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.Terminated)
         
         # Check elapsed time is negative (went backward in TT)
@@ -111,7 +111,7 @@ const ANG_TOL = 1e-6      # rad
         
         # Propagate backward using negative duration + :infer
         duration_days = -1.5  # Negative = backward
-        sol = propagate(prop, sat, StopAt(sat, PropDurationDays(), duration_days); direction=:infer)
+        sol = propagate!(prop, sat, StopAt(sat, PropDurationDays(), duration_days); direction=:infer)
         @test sol.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.Terminated)
         
         # Check elapsed time is negative (went backward in TT)
@@ -127,7 +127,7 @@ const ANG_TOL = 1e-6      # rad
         
         # Propagate backward with explicit direction and negative duration (both agree)
         duration_sec = -3600.0  # Negative = backward
-        sol = propagate(prop, sat, StopAt(sat, PropDurationSeconds(), duration_sec); direction=:backward)
+        sol = propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), duration_sec); direction=:backward)
         @test sol.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.Terminated)
         
         # Check elapsed time is negative (went backward in TT)
@@ -141,10 +141,10 @@ const ANG_TOL = 1e-6      # rad
         sat = make_sat()
         
         # Negative duration with explicit :forward should error
-        @test_throws ErrorException propagate(prop, sat, StopAt(sat, PropDurationSeconds(), -100.0); direction=:forward)
+        @test_throws ErrorException propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), -100.0); direction=:forward)
         
         # Positive duration with explicit :backward should error  
-        @test_throws ErrorException propagate(prop, sat, StopAt(sat, PropDurationDays(), 1.0); direction=:backward)
+        @test_throws ErrorException propagate!(prop, sat, StopAt(sat, PropDurationDays(), 1.0); direction=:backward)
     end
 
     @testset "Time-based stops must have direction=0" begin
@@ -159,34 +159,34 @@ const ANG_TOL = 1e-6      # rad
         sat = make_sat()
         
         # Two PropDurationSeconds
-        @test_throws ErrorException propagate(prop, sat, 
+        @test_throws ErrorException propagate!(prop, sat, 
             StopAt(sat, PropDurationSeconds(), 100.0),
             StopAt(sat, PropDurationSeconds(), 200.0))
         
         # Two PropDurationDays
-        @test_throws ErrorException propagate(prop, sat,
+        @test_throws ErrorException propagate!(prop, sat,
             StopAt(sat, PropDurationDays(), 1.0),
             StopAt(sat, PropDurationDays(), 2.0))
         
         # Mixed PropDuration types
-        @test_throws ErrorException propagate(prop, sat,
+        @test_throws ErrorException propagate!(prop, sat,
             StopAt(sat, PropDurationSeconds(), 100.0),
             StopAt(sat, PropDurationDays(), 1.0))
         
         # Two absolute time stops
         time1 = Time(sat.time.tt.jd + 1.0, TT(), JD())
         time2 = Time(sat.time.tt.jd + 2.0, TT(), JD())
-        @test_throws ErrorException propagate(prop, sat,
+        @test_throws ErrorException propagate!(prop, sat,
             StopAt(sat, time1),
             StopAt(sat, time2))
         
         # PropDuration + absolute time
-        @test_throws ErrorException propagate(prop, sat,
+        @test_throws ErrorException propagate!(prop, sat,
             StopAt(sat, PropDurationSeconds(), 3600.0),
             StopAt(sat, time1))
         
         # Forward and backward durations (still errors - ambiguous)
-        @test_throws ErrorException propagate(prop, sat,
+        @test_throws ErrorException propagate!(prop, sat,
             StopAt(sat, PropDurationSeconds(), 100.0),
             StopAt(sat, PropDurationSeconds(), -100.0))
     end
@@ -200,7 +200,7 @@ end
         # Target time 1 day in the future
         target_time = Time(t_start.tt.jd + 1.0, TT(), JD())
         
-        sol = propagate(prop, sat, StopAt(sat, target_time))
+        sol = propagate!(prop, sat, StopAt(sat, target_time))
         @test sol.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.Terminated)
         
         # Check we stopped at target time (within tolerance)
@@ -215,7 +215,7 @@ end
         
         # Target time in the past - works with :infer
         past_time = Time(sat.time.tt.jd - 1.0, TT(), JD())
-        sol = propagate(prop, sat, StopAt(sat, past_time); direction=:infer)
+        sol = propagate!(prop, sat, StopAt(sat, past_time); direction=:infer)
         @test sol.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.Terminated)
         
         # Check we went backward
@@ -229,7 +229,7 @@ end
         sat = make_sat()
         # Target time in the past with default :forward should error
         past_time = Time(sat.time.tt.jd - 1.0, TT(), JD())
-        @test_throws ErrorException propagate(prop, sat, StopAt(sat, past_time); direction=:forward)
+        @test_throws ErrorException propagate!(prop, sat, StopAt(sat, past_time); direction=:forward)
     end
 
     @testset "StopAt(Time) - handles time scale conversion" begin
@@ -239,7 +239,7 @@ end
         # Target specified in UTC, propagation uses TT
         target_utc = Time("2015-09-22T12:00:00", UTC(), ISOT())
         
-        sol = propagate(prop, sat, StopAt(sat, target_utc))
+        sol = propagate!(prop, sat, StopAt(sat, target_utc))
         @test sol.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.Terminated)
         
         # Verify we stopped at the right time (compare in TT)
@@ -260,7 +260,7 @@ end
         
         # Propagate and verify TT is used
         duration_sec = 1000.0
-        sol = propagate(prop, sat_earth, StopAt(sat_earth, PropDurationSeconds(), duration_sec))
+        sol = propagate!(prop, sat_earth, StopAt(sat_earth, PropDurationSeconds(), duration_sec))
         
         elapsed_tt = (sat_earth.time.tt.jd - t_start.tt.jd) * 86400.0
         @test isapprox(elapsed_tt, duration_sec; atol = 1e-4)
@@ -281,7 +281,7 @@ end
         
         # Propagate and verify TDB is used
         duration_sec = 1000.0
-        sol = propagate(prop_mars, sat_mars, StopAt(sat_mars, PropDurationSeconds(), duration_sec))
+        sol = propagate!(prop_mars, sat_mars, StopAt(sat_mars, PropDurationSeconds(), duration_sec))
         
         elapsed_tdb = (sat_mars.time.tdb.jd - t_start.tdb.jd) * 86400.0
         @test isapprox(elapsed_tdb, duration_sec; atol = 1e-4)
@@ -292,7 +292,7 @@ end
         
         # StopAt(Time) should convert to TT for Earth
         target_time = Time("2015-09-22T00:00:00", UTC(), ISOT())
-        sol = propagate(prop, sat, StopAt(sat, target_time))
+        sol = propagate!(prop, sat, StopAt(sat, target_time))
         
         # Implementation uses TT internally for Earth-centered
         # Verify by checking the constructor converts correctly

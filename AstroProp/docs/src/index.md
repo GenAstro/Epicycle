@@ -13,7 +13,8 @@ numerical integration libraries in Julia's OrdinaryDiffEq.jl.  AstroProp is test
 The example below shows how to propagate a spacecraft using various stopping conditions:
 
 ```julia
-using Epicycle
+using AstroEpochs, AstroStates, AstroFrames, AstroUniverse 
+using AstroModels, AstroCallbacks, AstroProp, OrdinaryDiffEq
 
 # Spacecraft
 sat = Spacecraft(
@@ -29,28 +30,28 @@ integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
 prop    = OrbitPropagator(forces, integ)
 
 # Propagate for 1 hour (3600 seconds)
-propagate(prop, sat, StopAt(sat, PropDurationSeconds(), 3600.0))
+propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), 3600.0))
 
 # Propagate to an absolute time
 target_time = Time("2015-09-22T12:00:00", TDB(), ISOT())
-propagate(prop, sat, StopAt(sat, target_time))
+propagate!(prop, sat, StopAt(sat, target_time))
 
 # Propagate to periapsis (r·v = 0, increasing crossing)
-propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
+propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
 println(get_state(sat, Keplerian()))
 
 # Propagate backward for 2 hours using negative duration
-propagate(prop, sat, StopAt(sat, PropDurationSeconds(), -7200.0); direction=:infer)
+propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), -7200.0); direction=:infer)
 
 # Stop when |r| reaches 7000 km 
-propagate(prop, sat, StopAt(sat, PosMag(), 7000.0))
+propagate!(prop, sat, StopAt(sat, PosMag(), 7000.0))
 println(get_state(sat, SphericalRADEC()))       
 
 # Propagate multiple spacecraft with multiple stopping conditions
 sc1 = Spacecraft(); sc2 = Spacecraft() 
 stop_sc1_node = StopAt(sc1, PosZ(), 0.0)
 stop_sc2_periapsis = StopAt(sc2, PosDotVel(), 0.0; direction=+1)
-propagate(prop, [sc1, sc2], stop_sc1_node, stop_sc2_periapsis)
+propagate!(prop, [sc1, sc2], stop_sc1_node, stop_sc2_periapsis)
 ```
 
 ## Function Syntax
@@ -62,7 +63,7 @@ Propagates one or more spacecraft under specified forces to one or more stopping
 **Syntax:**
 
 ```julia
-sol = propagate(propagator, spacecraft, stops...; direction=:forward, kwargs...)
+sol = propagate!(propagator, spacecraft, stops...; direction=:forward, kwargs...)
 ```
 
 **Parameters:**
@@ -80,16 +81,16 @@ sol = propagate(propagator, spacecraft, stops...; direction=:forward, kwargs...)
 
 ```julia
 # Single spacecraft, single stop
-propagate(prop, sat, stop)
+propagate!(prop, sat, stop)
 
 # Single spacecraft, multiple stops
-propagate(prop, sat, stop1, stop2, stop3)
+propagate!(prop, sat, stop1, stop2, stop3)
 
 # Multiple spacecraft, multiple stops
-propagate(prop, [sat1, sat2], stop1, stop2)
+propagate!(prop, [sat1, sat2], stop1, stop2)
 
 # With direction keyword
-propagate(prop, sat, stop; direction=:backward)
+propagate!(prop, sat, stop; direction=:backward)
 ```
 
 See the following sections for detailed configuration:
@@ -222,7 +223,7 @@ The `direction` parameter specifies which zero-crossing triggers the stop:
 - `0`: Trigger on any crossing (default)
 
 !!! note "Event Crossing Direction"
-    The `direction` parameter on `StopAt` for state-based stops controls which side of the zero-crossing triggers the callback. This is different from the `direction` keyword on `propagate()` which controls the time integration direction.
+    The `direction` parameter on `StopAt` for state-based stops controls which side of the zero-crossing triggers the callback. This is different from the `direction` keyword on `propagate!()` which controls the time integration direction.
 
 ### Time-Based Stopping Conditions
 
@@ -232,13 +233,13 @@ Time-based stops allow propagation for a specified duration or until an absolute
 
 ```julia
 # Propagate forward for 3600 seconds
-propagate(prop, sat, StopAt(sat, PropDurationSeconds(), 3600.0))
+propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), 3600.0))
 
 # Propagate forward for 2.5 days
-propagate(prop, sat, StopAt(sat, PropDurationDays(), 2.5))
+propagate!(prop, sat, StopAt(sat, PropDurationDays(), 2.5))
 
 # Propagate backward for 1 hour (negative duration)
-propagate(prop, sat, StopAt(sat, PropDurationSeconds(), -3600.0); direction=:infer)
+propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), -3600.0); direction=:infer)
 ```
 
 **Absolute Time Stops:**
@@ -250,19 +251,19 @@ sat = Spacecraft(
     time=Time("2015-09-21T12:23:12", TAI(), ISOT()),
 )
 target = Time("2015-09-22T12:00:00", UTC(), ISOT())
-propagate(prop, sat, StopAt(sat, target))
+propagate!(prop, sat, StopAt(sat, target))
 
 # Propagate backward to a past epoch
 past = Time("2015-09-20T12:00:00", UTC(), ISOT())
-propagate(prop, sat, StopAt(sat, past); direction=:infer)
+propagate!(prop, sat, StopAt(sat, past); direction=:infer)
 ```
 
 !!! warning "Time-Based Direction Parameter"
-    Time-based stopping conditions must use `direction=0` (the default). The event crossing direction concept does not apply to time-based stops. Use the `direction` keyword on `propagate()` to control backward vs forward propagation.
+    Time-based stopping conditions must use `direction=0` (the default). The event crossing direction concept does not apply to time-based stops. Use the `direction` keyword on `propagate!()` to control backward vs forward propagation.
 
 ## Direction Keywords
 
-The `propagate()` function accepts a `direction` keyword to control time integration:
+The `propagate!()` function accepts a `direction` keyword to control time integration:
 
 - **`:forward`** (default): Integrate forward in time. This is the most common case.
 - **`:backward`**: Integrate backward in time explicitly.
@@ -277,7 +278,7 @@ The `:infer` keyword is particularly useful in optimization and when the propaga
 duration = optimize_parameter  # Could be -1000.0 or +1000.0
 
 # Using :infer allows the sign to determine direction automatically
-propagate(prop, sat, StopAt(sat, PropDurationSeconds(), duration); direction=:infer)
+propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), duration); direction=:infer)
 ```
 
 **Direction Sign Semantics:**
@@ -297,13 +298,13 @@ AstroProp validates that explicit directions don't contradict duration signs:
 
 ```julia
 # These cause errors:
-propagate(prop, sat, StopAt(sat, PropDurationSeconds(), -100.0); direction=:forward)  # Error!
-propagate(prop, sat, StopAt(sat, PropDurationDays(), 2.0); direction=:backward)      # Error!
+propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), -100.0); direction=:forward)  # Error!
+propagate!(prop, sat, StopAt(sat, PropDurationDays(), 2.0); direction=:backward)      # Error!
 
 # These are valid:
-propagate(prop, sat, StopAt(sat, PropDurationSeconds(), -100.0); direction=:backward) # ✓
-propagate(prop, sat, StopAt(sat, PropDurationSeconds(), -100.0); direction=:infer)    # ✓
-propagate(prop, sat, StopAt(sat, PropDurationSeconds(), 100.0); direction=:forward)   # ✓
+propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), -100.0); direction=:backward) # ✓
+propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), -100.0); direction=:infer)    # ✓
+propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), 100.0); direction=:forward)   # ✓
 ```
 
 ## Time Scale Handling
@@ -326,7 +327,7 @@ This ensures the correct dynamical time scale is used in the integration of the 
 ```@docs
 OrbitPropagator
 IntegratorConfig
-propagate
+propagate!
 StopAt
 ```
 

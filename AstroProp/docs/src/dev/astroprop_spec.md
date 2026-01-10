@@ -62,7 +62,7 @@ Stopping conditions enable termination of orbital propagation when specific even
   
 - `IntegratorTimeCalc <: AbstractCalcVariable` - Abstract base for time-based stops
   - Marker type distinguishing time-based from state-based
-  - Handled specially by propagate() (no callback, sets time span)
+  - Handled specially by propagate!() (no callback, sets time span)
   - **Not general-purpose calcs** - propagation-specific only
   
 - `PropDurationSeconds <: IntegratorTimeCalc` - Elapsed time in seconds
@@ -84,7 +84,7 @@ Stopping conditions enable termination of orbital propagation when specific even
   - Uses TT for Earth-centered, TDB otherwise (based on force model central body)
   - Supports past times with direction=:infer, errors with direction=:forward
   
-- `propagate(prop, spacecraft, stop_condition; direction=:forward)` - Integration driver
+- `propagate!(propagator, spacecraft, stops...; direction=:forward, kwargs...)` - Integration driver
   - `direction` keyword: `:forward` (default), `:backward`, or `:infer` (analyze stop condition)
   - `:infer` determines direction from stop condition (duration sign, time comparison)
   - Explicit `:forward`/`:backward` can validate agreement with stop condition
@@ -109,15 +109,15 @@ Stop when spacecraft crosses specific position/velocity threshold.
 ```julia
 # Stop at periapsis (r·v = 0, increasing)
 stop_peri = StopAt(sat, PosDotVel(), 0.0; direction=+1)
-propagate(prop, sat, stop_peri)
+propagate!(prop, sat, stop_peri)
 
 # Stop at radius = 7000 km (any crossing)
 stop_radius = StopAt(sat, PosMag(), 7000.0)
-propagate(prop, sat, stop_radius)
+propagate!(prop, sat, stop_radius)
 
 # Stop at x = 500 km (decreasing)
 stop_x = StopAt(sat, PosX(), 500.0; direction=-1)
-propagate(prop, sat, stop_x)
+propagate!(prop, sat, stop_x)
 ```
 
 **Key Points:**
@@ -134,14 +134,14 @@ Propagate forward for specified duration.
 ```julia
 # Propagate for 3600 seconds (1 hour) - default :forward works
 stop_1hr = StopAt(sat, PropDurationSeconds(), 3600.0)
-propagate(prop, sat, stop_1hr)  # direction=:forward (default)
+propagate!(prop, sat, stop_1hr)  # direction=:forward (default)
 
 # Propagate for 2.5 days
 stop_days = StopAt(sat, PropDurationDays(), 2.5)
-propagate(prop, sat, stop_days)  # Default :forward matches positive duration
+propagate!(prop, sat, stop_days)  # Default :forward matches positive duration
 
 # Can explicitly validate if desired
-propagate(prop, sat, stop_days; direction=:forward)
+propagate!(prop, sat, stop_days; direction=:forward)
 ```
 
 **Key Points:**
@@ -159,13 +159,13 @@ Propagate backward for specified duration.
 ```julia
 # Propagate backward for 7200 seconds (2 hours) - use :infer or :backward
 stop_back = StopAt(sat, PropDurationSeconds(), -7200.0)
-propagate(prop, sat, stop_back; direction=:infer)  # Infers :backward from negative
+propagate!(prop, sat, stop_back; direction=:infer)  # Infers :backward from negative
 # OR
-propagate(prop, sat, stop_back; direction=:backward)  # Explicit backward
+propagate!(prop, sat, stop_back; direction=:backward)  # Explicit backward
 
 # Propagate backward for 1.5 days
 stop_back_days = StopAt(sat, PropDurationDays(), -1.5)
-propagate(prop, sat, stop_back_days; direction=:infer)  # Infers from sign
+propagate!(prop, sat, stop_back_days; direction=:infer)  # Infers from sign
 ```
 
 **Key Points:**
@@ -191,7 +191,7 @@ function propagate_and_evaluate(duration_calc)
     stop = StopAt(sat, PropDurationDays(), dur_val)
     
     # direction=:infer handles positive or negative duration automatically
-    propagate(prop, sat, stop; direction=:infer)
+    propagate!(prop, sat, stop; direction=:infer)
     
     # Evaluate cost/constraint...
 end
@@ -212,13 +212,13 @@ Stop at specific epoch (past or future).
 ```julia
 # Target time 1 day in the future - default :forward works
 target_future = Time("2015-09-22T12:00:00", UTC(), ISOT())
-propagate(prop, sat, StopAt(sat, target_future))  # direction=:forward (default)
+propagate!(prop, sat, StopAt(sat, target_future))  # direction=:forward (default)
 
 # Target time in the past - use :infer or explicit :backward
 target_past = Time("2015-09-20T12:00:00", UTC(), ISOT())
-propagate(prop, sat, StopAt(sat, target_past); direction=:infer)  # Infers :backward
+propagate!(prop, sat, StopAt(sat, target_past); direction=:infer)  # Infers :backward
 # OR
-propagate(prop, sat, StopAt(sat, target_past); direction=:backward)  # Explicit
+propagate!(prop, sat, StopAt(sat, target_past); direction=:backward)  # Explicit
 
 # Internally converts to elapsed seconds in correct time scale
 # For Earth: uses TT
@@ -242,28 +242,28 @@ Invalid configurations are rejected.
 ```julia
 # Error: invalid direction value
 stop = StopAt(sat, PropDurationDays(), 1.5)
-propagate(prop, sat, stop; direction=:invalid)
+propagate!(prop, sat, stop; direction=:invalid)
 # ERROR: Invalid direction :invalid, must be :infer, :forward, or :backward
 
 # Error: explicit direction conflicts with inferred
 stop = StopAt(sat, PropDurationDays(), -1.5)  # Negative → infers :backward
-propagate(prop, sat, stop; direction=:forward)  # But user says :forward
+propagate!(prop, sat, stop; direction=:forward)  # But user says :forward
 # ERROR: Inferred direction is :backward (negative duration) but explicit direction is :forward
 
 # Error: zero duration
 stop = StopAt(sat, PropDurationDays(), 0.0)
-propagate(prop, sat, stop)
+propagate!(prop, sat, stop)
 # ERROR: Duration must be non-zero
 
 # Error: multiple time-based stops
 stop1 = StopAt(sat, PropDurationSeconds(), 3600.0)
 stop2 = StopAt(sat, PropDurationDays(), 1.0)
-propagate(prop, sat, stop1, stop2)
+propagate!(prop, sat, stop1, stop2)
 # ERROR: Multiple time-based stopping conditions not allowed
 
 # Error: positive duration with :backward
 stop = StopAt(sat, PropDurationDays(), 1.5)  # Positive → infers :forward
-propagate(prop, sat, stop; direction=:backward)  # But user says :backward
+propagate!(prop, sat, stop; direction=:backward)  # But user says :backward
 # ERROR: Duration is positive (forward) but explicit direction is :backward
 ```
 
@@ -281,7 +281,7 @@ propagate(prop, sat, stop; direction=:backward)  # But user says :backward
 - Problem: Elapsed time requires anchor point, unclear who owns it
 - Tried: RelativeTimeCalc(sat, ElapsedDays()) with anchor-at-construction
 - Issue: Inline construction in loops creates new anchor each iteration
-- Solution: PropDuration* are propagation-specific, anchor managed by propagate()
+- Solution: PropDuration* are propagation-specific, anchor managed by propagate!()
 - Future: May add general RelativeTimeCalc later with explicit anchor management
 
 **Why duration sign encodes direction with :infer?**
@@ -307,8 +307,8 @@ propagate(prop, sat, stop; direction=:backward)  # But user says :backward
 - Earth-based missions: TT (Terrestrial Time) is standard dynamical time
 - Solar system missions: TDB (Barycentric Dynamical Time) is standard
 - Consistency: Matches how integrator time is managed internally
-- Detection: Based on force model central body (forces.center), not coordinate system
-- Reason: Propagation dynamics are governed by the central gravitational body
+- Detection: Based on force model central body (forces.center)
+
 
 ### Conventions & Constraints
 
@@ -325,7 +325,7 @@ propagate(prop, sat, stop; direction=:backward)  # But user says :backward
 
 **Mutability:**
 - StopAt struct is immutable (just configuration)
-- Spacecraft is mutated in-place by propagate()
+- Spacecraft is mutated in-place by propagate!()
 - Propagation history updated during integration
 
 **Error Handling:**
@@ -372,7 +372,7 @@ using AstroCallbacks: PosMag, PosDotVel, PosX
 
 # AstroProp provides StopAt and propagate
 stop_condition = StopAt(sat, PosMag(), 7000.0)
-propagate(prop, sat, stop_condition)
+propagate!(prop, sat, stop_condition)
 
 # AstroSolve uses duration as optimization variable
 duration_var = VariableCalc(2.0)

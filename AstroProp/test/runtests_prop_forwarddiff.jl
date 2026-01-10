@@ -55,7 +55,7 @@ function propagate_final_x(x0_vec)
     forces = ForceModel(pm_grav)
     integ = IntegratorConfig(DP8(); abstol = 1e-11, reltol = 1e-11, dt = 200)
     dynsys = DynSys(forces = forces, spacecraft = [sat])
-    result = propagate(dynsys, integ, StopAtSeconds(3600.0))
+    result = propagate!(dynsys, integ, StopAtSeconds(3600.0))
     # Return the final x position (or any scalar you want to differentiate)
     return result.u[end][1]
 end

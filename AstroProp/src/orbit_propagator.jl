@@ -16,7 +16,7 @@ These are specific to propagation contexts and cannot be used as general calcula
 - `PropDurationDays`: Stop after a specified number of days
 
 # Notes
-These types are handled specially in `propagate()` by setting the integration time span
+These types are handled specially in `propagate!()` by setting the integration time span
 directly rather than using callbacks. They derive from `AbstractCalcVariable` for type
 safety in `StopAt` but do not have corresponding `make_calc()` implementations.
 """
@@ -92,7 +92,7 @@ Generic stopping condition for orbital propagation based on calculated quantitie
 
 # Notes
 The `direction` field is for **event crossing direction** (state-based stops only).
-For **time integration direction** (forward/backward), use the `direction` keyword in `propagate()`.
+For **time integration direction** (forward/backward), use the `direction` keyword in `propagate!()`.
 
 # Examples
 ```julia
@@ -141,21 +141,24 @@ Supports both forward propagation (target after current) and backward propagatio
 # Notes
 This `direction` parameter is for event crossing (not applicable to time stops, always use 0).
 For **time integration direction** (forward/backward in time), use the `direction` keyword
-in `propagate()` with values `:forward`, `:backward`, or `:infer`.
+in `propagate!()` with values `:forward`, `:backward`, or `:infer`.
 
 # Example
 ```julia
 using AstroEpochs
 
-# Forward to future time (default direction=:forward in propagate works)
-stop_future = StopAt(sc, Time("2025-12-26T12:00:00", UTC(), ISOT()))
-propagate(prop, sc, stop_future)  # Uses default direction=:forward
+sat = Spacecraft(
+    time=Time("2025-12-25T11:00:00", UTC(), ISOT()),
+)
+# Forward to future time (default direction=:forward in propagate! works)
+stop_future = StopAt(sat, Time("2025-12-26T12:00:00", UTC(), ISOT()))
+propagate!(prop, sat, stop_future)  # Uses default direction=:forward
 
-# Backward to past time (use direction=:infer in propagate to auto-detect)
-stop_past = StopAt(sc, Time("2025-12-24T12:00:00", UTC(), ISOT()))
-propagate(prop, sc, stop_past; direction=:infer)  # Infers :backward from negative elapsed time
+# Backward to past time (use direction=:infer in propagate! to auto-detect)
+stop_past = StopAt(sat, Time("2025-12-24T12:00:00", UTC(), ISOT()))
+propagate!(prop, sat, stop_past; direction=:infer)  # Infers :backward from negative elapsed time
 # OR explicitly:
-propagate(prop, sc, stop_past; direction=:backward)
+propagate!(prop, sat, stop_past; direction=:backward)
 ```
 """
 function StopAt(subject::Spacecraft, target_time::Time; direction::Int=0)
@@ -310,7 +313,7 @@ function _build_callback(cond::StopAt, dynsys)
 end
 
 """
-    propagate(op::OrbitPropagator, sc_or_scs, stops...; direction=:forward, kwargs...)
+    propagate!(op::OrbitPropagator, sc_or_scs, stops...; direction=:forward, kwargs...)
 
 Numerically integrate spacecraft equations of motion using propagator 
 until stopping conditions are met.
@@ -338,7 +341,8 @@ Access final states via `sol.u[end]`, times via `sol.t`, or interpolate at any t
 
 # Examples
 ```julia
-using Epicycle
+using AstroEpochs, AstroStates, AstroFrames, AstroUniverse 
+using AstroModels, AstroCallbacks, AstroProp, OrdinaryDiffEq
 
 # Spacecraft
 sat = Spacecraft(
@@ -355,26 +359,26 @@ integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
 prop    = OrbitPropagator(forces, integ)
 
 # Propagate to periapsis
-propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
+propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
 
 # Propagate backwards to node
-propagate(prop, sat, StopAt(sat, PosX(), 0.0); direction=:backward)
+propagate!(prop, sat, StopAt(sat, PosX(), 0.0); direction=:backward)
 
 # Propagate multiple spacecraft with multiple stopping conditions
 sc1 = Spacecraft(); sc2 = Spacecraft() 
 stop_sc1_node = StopAt(sc1, PosZ(), 0.0)
 stop_sc2_periapsis = StopAt(sc2, PosDotVel(), 0.0; direction=+1)
-propagate(prop, [sc1,sc2], stop_sc1_node, stop_sc2_periapsis)
+propagate!(prop, [sc1,sc2], stop_sc1_node, stop_sc2_periapsis)
 
 ```
 """
-function propagate(op::OrbitPropagator, sc_or_scs, stops...;
+function propagate!(op::OrbitPropagator, sc_or_scs, stops...;
                    direction::Symbol = :forward, kwargs...)
     scv = _as_scvec(sc_or_scs)
     dyn = DynSys(spacecraft=scv, forces=op.forces)
 
     # Separate time-based from state-based stopping conditions
-    # Time-based conditions will be handled by setting tspan in the main propagate()
+    # Time-based conditions will be handled by setting tspan in the main propagate!()
     time_conds = filter(_is_time_condition, stops)
     state_conds = filter(!_is_time_condition, stops)
 
@@ -383,9 +387,9 @@ function propagate(op::OrbitPropagator, sc_or_scs, stops...;
     cbset = isempty(callbacks) ? nothing :
             length(callbacks) == 1 ? callbacks[1] : CallbackSet(callbacks...)
 
-    # Delegate to existing DynSys-based propagate with both callbacks and time conditions
+    # Delegate to existing DynSys-based propagate! with both callbacks and time conditions
     # Note: We pass time_conds separately, not as callbacks
-    return propagate(dyn, op.integ, cbset, time_conds...; direction=direction, kwargs...)
+    return propagate!(dyn, op.integ, cbset, time_conds...; direction=direction, kwargs...)
 end
 
 # Helper: detect time-based stopping conditions

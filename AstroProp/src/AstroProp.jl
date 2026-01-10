@@ -24,7 +24,7 @@ using AstroCallbacks: OrbitCalc, get_calc
 import AstroCallbacks: AbstractFun, AbstractCalcVariable, AbstractOrbitVar
 import AstroUniverse: translate
 export TwoBodyGravity, ExponentialAtmosphere, CartesianODE, IntegratorConfig
-export DynamicsSystem, propagate, DynSys, ForceModel
+export DynamicsSystem, propagate!, DynSys, ForceModel
 export StopAtApoapsis, StopAtAscendingNode, StopAtPeriapsis, StopAtDays
 export PosVel
 export StopAtSeconds, StopAtRadius
@@ -276,12 +276,12 @@ end
 """
     This interface will be deprecated in future releases.
 
-    propagate(model::DynSys, config::IntegratorConfig, stop_conditions...; 
+    propagate!(model::DynSys, config::IntegratorConfig, stop_conditions...; 
               direction=:forward, prop_stm=false, kwargs...)
 
 Propagate spacecraft orbital states using numerical integration.
 """
-function propagate(model::DynSys, config::IntegratorConfig,
+function propagate!(model::DynSys, config::IntegratorConfig,
     stop_conditions...;
     direction::Symbol = :forward, prop_stm::Bool = false,
     kwargs...)

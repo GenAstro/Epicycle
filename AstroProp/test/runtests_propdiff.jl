@@ -22,7 +22,7 @@ function propagate2_state(posvel, spacecraft, forces, integ, stopcond)
     println("set state to dual")
 
     dynsys = DynSys(forces = forces, spacecraft = [sc])
-    propagate(dynsys, integ, stopcond)
+    propagate!(dynsys, integ, stopcond)
     final_state = to_posvel(sc)
     return final_state
 end

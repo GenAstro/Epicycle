@@ -42,13 +42,13 @@ end
     prop_forces = forces_earth_only()
     integ = integ_fast()
 
-    sol1 = propagate(DynSys(spacecraft=[sat1], forces=prop_forces), integ, StopAtSeconds(-10.0); direction = :backward)
+    sol1 = propagate!(DynSys(spacecraft=[sat1], forces=prop_forces), integ, StopAtSeconds(-10.0); direction = :backward)
     @test sol1.retcode in (ReturnCode.Success, ReturnCode.Terminated)
 
-    sol2 = propagate(DynSys(spacecraft=[sat2], forces=prop_forces), integ, StopAtDays(-1/86400); direction = :backward)
+    sol2 = propagate!(DynSys(spacecraft=[sat2], forces=prop_forces), integ, StopAtDays(-1/86400); direction = :backward)
     @test sol2.retcode in (ReturnCode.Success, ReturnCode.Terminated)
 
-    sol3 = propagate(DynSys(spacecraft=[sat3], forces=prop_forces), integ, StopAtRadius(sat3, 7100.0); direction = :backward)
+    sol3 = propagate!(DynSys(spacecraft=[sat3], forces=prop_forces), integ, StopAtRadius(sat3, 7100.0); direction = :backward)
     @test sol3.retcode in (ReturnCode.Success, ReturnCode.Terminated)
 end
 

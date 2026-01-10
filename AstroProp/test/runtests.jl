@@ -168,7 +168,7 @@ end
         spacecraft = [sat])
 
     # Propagate for 10 days
-    propagate(dynsys, integ, StopAtDays(10.0))
+    propagate!(dynsys, integ, StopAtDays(10.0))
     expect_vec = [ -6767.7365586489, -733.99885811324, -1.6788146940718, 1.1437377582848, -7.6333483270125, -0.0307369480771];
     result_vec = to_posvel(sat);
     dx = abs.(expect_vec - result_vec)
@@ -222,7 +222,7 @@ end
         spacecraft = [sat])
 
     # Propagate for 10 day
-    propagate(dynsys, integ, StopAtDays(5.0))
+    propagate!(dynsys, integ, StopAtDays(5.0))
     expect_vec = [-15192.169060110,  9323.5690156746,  6396.2477992693,  -0.5245710649352, -0.2561104305432,  0.0426186946048 ];
     result_vec = to_posvel(sat);
     dx = abs.(expect_vec - result_vec)
@@ -280,7 +280,7 @@ end
     prop    = OrbitPropagator(forces, integ)
 
     # Propagate to apoapsis
-    propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+    propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
 
     # Verify history was populated
     @test !isempty(sat.history)
@@ -337,9 +337,9 @@ end
     initial_state2 = to_posvel(sat2)
 
     # Propagate both spacecraft until sat2 reaches periapsis
-    sol = propagate(prop, [sat1, sat2], StopAt(sat2, PosDotVel(), 0.0; direction=+1))
+    sol = propagate!(prop, [sat1, sat2], StopAt(sat2, PosDotVel(), 0.0; direction=+1))
 
-    propagate(prop, sat3, StopAt(sat3, PosDotVel(), 0.0; direction=+1))
+    propagate!(prop, sat3, StopAt(sat3, PosDotVel(), 0.0; direction=+1))
 
     # Verify sat2 and sat3 reach the same final state
     final_state2 = to_posvel(sat2)
@@ -396,7 +396,7 @@ end
     stop_z = StopAt(sat, PosZ(), 0.0)  # Cross Z=0 plane (equatorial)
 
     # Propagate with multiple stops - should stop at whichever occurs first
-    sol = propagate(prop, sat, stop_x, stop_z)
+    sol = propagate!(prop, sat, stop_x, stop_z)
 
     # Verify spacecraft state has changed
     final_state = to_posvel(sat)
