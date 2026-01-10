@@ -425,7 +425,7 @@ Arguments
 
 # Returns
 - Returns nothing. Performs inplace update of Maneuver.
-- Spacecraft state is not modified.  Use maneuver() to apply maneuver effects.
+- Spacecraft state is not modified.  Use maneuver!() to apply maneuver effects.
 
 # Examples
 ```julia

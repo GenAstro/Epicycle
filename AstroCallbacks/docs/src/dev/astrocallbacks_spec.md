@@ -347,7 +347,7 @@ var_radius = SolverVariable(calc=stop_radius, lower=8000.0, upper=12000.0)
 var_gains = SolverVariable(calc=gains, lower=[0.0, 0.0, 0.0], upper=[1.0, 1.0, 1.0])
 
 # Use in functions (accepts calc or literal)
-propagate(prop, sat, StopAt(sat, PosMag(), stop_radius))
+propagate!(prop, sat, StopAt(sat, PosMag(), stop_radius))
 # StopAt evaluates: get_calc(stop_radius) during propagation
 
 # Pattern: Any function accepting numeric values can accept calc
@@ -420,7 +420,7 @@ elapsed_sec = RelativeTimeCalc(sat, ElapsedSeconds())
 elapsed_hr = RelativeTimeCalc(sat, ElapsedHours())
 
 # Use in propagation stopping conditions
-propagate(prop, sat, StopAt(sat, elapsed_calc, 3.0))  # Stop after 3 days from anchor
+propagate!(prop, sat, StopAt(sat, elapsed_calc, 3.0))  # Stop after 3 days from anchor
 
 # Use in optimization (anchor remains fixed across iterations)
 var_time = SolverVariable(calc=elapsed_calc, lower=0.0, upper=10.0)
