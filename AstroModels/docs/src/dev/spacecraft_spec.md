@@ -4,7 +4,7 @@
 
 ### 1. Overview & Motivation
 
-The history field of Spacecraft stores propagated orbit state data for use in creating ephemeris files, 3D plots, reports etc. History segments are used to delineate discontinuities, and for separate mission events such as maneuver(), and propagate().
+The history field of Spacecraft stores propagated orbit state data for use in creating ephemeris files, 3D plots, reports etc. History segments are used to delineate discontinuities, and for separate mission events such as maneuver!(), and propagate!().
 
 - History is stored as a vector of Time and matrix of cartesian state numbers but does not use the CartesianState struct. It does not scale well with new data like CoordinateSystem, segment name etc. Users access history data directly and the interface does not hide implementation so it is brittle.
 
@@ -183,13 +183,13 @@ function record_history!(history::SpacecraftHistory, time::Time, state::Cartesia
     push_state!(current_segment, time, state)
 end
 
-# For propagate() - start new segment
+# For propagate!() - start new segment
 function propagate!(sc::Spacecraft, ...)
     new_segment!(sc.history, sc.coordinate_system, name="propagate_\$(timestamp)")
     # ... propagation loop calls record_history!
 end
 
-# For maneuver() - mark discontinuity with new segment  
+# For maneuver!() - mark discontinuity with new segment  
 function maneuver!(sc::Spacecraft, ...)
     new_segment!(sc.history, sc.coordinate_system, name="maneuver_\$(timestamp)")
     # ... maneuver updates state
@@ -236,7 +236,7 @@ propagate!(sat, duration=1day)
 **Requirements from History:**
 - Fast append operations (`push_state!`) called frequently during integration
 - Access to current segment for appending
-- Automatic segment creation when propagate() or maneuver() is called
+- Automatic segment creation when propagate!() or maneuver!() is called
 
 **Internal Implementation Note:**
 History recording is handled internally by the propagation system via callbacks. Users don't need to configure history recording - it just works.
@@ -542,7 +542,7 @@ stored_state = segment.states[1]  # CartesianState{Float64}
 
 **Solver Integration (AstroSolve):**
 ```julia
-# In trajectory_solve(seq, options; record_iterations=false)
+# In solve_trajectory!(seq, options; record_iterations=false)
 
 # Default mode: record_iterations=false
 sc.history.record_segments = false      # Don't record during optimization
@@ -575,13 +575,13 @@ sc.history.record_segments = true
 **Example Usage:**
 ```julia
 # Debug mode - see all optimization iterations
-result = trajectory_solve(seq, options; record_iterations=true)
+result = solve_trajectory!(seq, options; record_iterations=true)
 view = View3D()
 add_spacecraft!(view, sat)
 # Visualize shows all iteration trajectories overlaid (diagnostic view)
 
 # Production mode - clean final solution only (default)
-result = trajectory_solve(seq, options)  # record_iterations=false
+result = solve_trajectory!(seq, options)  # record_iterations=false
 view = View3D()  
 add_spacecraft!(view, sat)
 # Visualize shows only final converged trajectory
