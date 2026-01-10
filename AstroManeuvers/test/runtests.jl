@@ -31,7 +31,7 @@ sat1 = Spacecraft(
         element2 = 0.2,
         element3 = 0.3
     )
-    maneuver(sat1, deltav1)
+    maneuver!(sat1, deltav1)
 
     # Extract updated velocity
     state = to_posvel(sat1)
@@ -54,7 +54,7 @@ end
         element2 = 0.5,
         element3 = 0.6
     )
-    maneuver(sat1, deltav2)
+    maneuver!(sat1, deltav2)
 
     # Extract updated velocity
     state = to_posvel(sat1)
@@ -167,7 +167,7 @@ end
     )
 
     # Apply maneuver: state and mass remain Dual-typed
-    maneuver(sc, m)
+    maneuver!(sc, m)
     @test eltype(to_posvel(sc)) <: ForwardDiff.Dual
     @test sc.mass isa ForwardDiff.Dual
 
