@@ -1,5 +1,5 @@
 """
-    sequence_report(seq::Sequence)
+    report_sequence(seq::Sequence)
 
 Generate a comprehensive report summarizing the trajectory sequence configuration.
 
@@ -15,7 +15,7 @@ This function creates a human-readable summary of the sequence structure showing
 # Returns
 - Nothing (prints directly to stdout for better formatting)
 """
-function sequence_report(seq::Sequence)
+function report_sequence(seq::Sequence)
     # Create sequence manager to get ordered information
     sm = SequenceManager(seq)
     
@@ -298,7 +298,7 @@ function get_simplified_type_name(obj)
 end
 
 """
-    solution_report(seq::Sequence, result)
+    report_solution(seq::Sequence, result)
 
 Generate a comprehensive report showing the optimized trajectory solution.
 
@@ -313,7 +313,7 @@ from `solve_trajectory!()`.
 # Returns
 - Nothing (prints directly to stdout for better formatting)
 """
-function solution_report(seq::Sequence, result)
+function report_solution(seq::Sequence, result)
     # Create sequence manager to get ordered information
     sm = SequenceManager(seq)
     

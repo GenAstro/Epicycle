@@ -94,8 +94,8 @@ add_sequence!(seq, toi_event, prop_event)
 result = solve_trajectory!(seq)
 
 # Write a report documenting sequence and solution
-sequence_report(seq)
-solution_report(seq, result)
+report_sequence(seq)
+report_solution(seq, result)
 ```
 
 ## Core Functions
@@ -108,8 +108,8 @@ Event
 Sequence
 add_events!
 solve_trajectory!
-sequence_report
-solution_report
+report_sequence
+report_solution
 ```
 ## API Reference
 
@@ -340,8 +340,8 @@ snow_options = Options(derivatives=ForwardFD(), solver=IPOPT(ipopt_options))
 
 # Solve trajectory optimization with iteration recording enabled
 result = solve_trajectory!(seq, snow_options; record_iterations=true)
-sequence_report(seq)
-solution_report(seq, result)
+report_sequence(seq)
+report_solution(seq, result)
 
 # Propagate about one day to see final orbit
 propagate!(prop, sat, StopAt(sat, PropDurationDays(), 1.1)) 

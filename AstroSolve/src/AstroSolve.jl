@@ -30,7 +30,7 @@ export get_var_values, get_var_shifts, get_var_scales
 export set_var_values, get_var_lower_bounds, get_var_upper_bounds 
 export solver_fun!, is_astrosolve_stateful, reset_stateful_structs!, solve_trajectory!
 export get_fun_values, get_fun_upper_bounds, get_fun_lower_bounds
-export sequence_report, solution_report
+export report_sequence, report_solution
 
 # if stateful, struct must be reset after each solve iteration.
 is_astrosolve_stateful(::Type) = false 

@@ -50,7 +50,7 @@ using Epicycle
         add_events!(seq, test_event, Event[])
         
         # Test that functions don't crash
-        @test_nowarn sequence_report(seq)
+        @test_nowarn report_sequence(seq)
         
         # Test solution report
         mock_result = (
@@ -59,7 +59,7 @@ using Epicycle
             constraints = [42001.5],
             info = true
         )
-        @test_nowarn solution_report(seq, mock_result)
+        @test_nowarn report_solution(seq, mock_result)
     end
     
     @testset "Output Content Validation" begin
@@ -97,7 +97,7 @@ using Epicycle
         add_events!(seq, test_event, Event[])
         
         # Test sequence report content
-        output = capture_output(sequence_report, seq)
+        output = capture_output(report_sequence, seq)
         @test occursin("TRAJECTORY SEQUENCE SUMMARY", output)
         @test occursin("Total Events: 1", output)
         @test occursin("Variable Objects: 1 (3 optimization variables)", output)
@@ -113,7 +113,7 @@ using Epicycle
             info = true
         )
         
-        sol_output = capture_output(solution_report, seq, mock_result)
+        sol_output = capture_output(report_solution, seq, mock_result)
         @test occursin("TRAJECTORY SOLUTION REPORT", sol_output)
         @test occursin("Converged: true", sol_output)
         @test occursin("test_var (DeltaVVector() (ManeuverCalc)):", sol_output)
@@ -160,7 +160,7 @@ using Epicycle
         seq = Sequence()
         add_events!(seq, toi_event, [prop_event])
         
-        output = capture_output(sequence_report, seq)
+        output = capture_output(report_sequence, seq)
         @test occursin("Total Events: 2", output)
         @test occursin("Variable Objects: 1 (3 optimization variables)", output)
         @test occursin("Event 1: \"Propagation\"", output)
@@ -197,9 +197,9 @@ using Epicycle
     
     @testset "Empty Sequence Test" begin
         empty_seq = Sequence()
-        @test_nowarn sequence_report(empty_seq)
-        
-        output = capture_output(sequence_report, empty_seq)
+        @test_nowarn report_sequence(empty_seq)
+
+        output = capture_output(report_sequence, empty_seq)
         @test occursin("Total Events: 0", output)
         @test occursin("Variable Objects: 0 (0 optimization variables)", output)
         @test occursin("Constraint Objects: 0 (0 constraint functions)", output)
@@ -228,7 +228,7 @@ using Epicycle
             add_events!(seq, events[i], [events[i-1]])
         end
         
-        output = capture_output(sequence_report, seq)
+        output = capture_output(report_sequence, seq)
         @test occursin("Total Events: 5", output)
         # Should show truncated execution order: Event_1 → Event_2 → ... → Event_5
         @test occursin("Event_1\" → \"Event_2\" → ... → \"Event_5", output)
@@ -259,7 +259,7 @@ using Epicycle
         seq = Sequence()
         add_events!(seq, test_event, Event[])
         
-        output = capture_output(sequence_report, seq)
+        output = capture_output(report_sequence, seq)
         @test occursin("sma_var: SMA() (OrbitCalc) ∈ [40000.0, 45000.0]", output)
     end
 
@@ -286,7 +286,7 @@ using Epicycle
         seq = Sequence()
         add_events!(seq, test_event, Event[])
         
-        output = capture_output(sequence_report, seq)
+        output = capture_output(report_sequence, seq)
         @test occursin("≥ 40000.0", output)
         @test occursin("≤ 50000.0", output)
     end
@@ -340,7 +340,7 @@ using Epicycle
         add_events!(seq, event1, Event[])
         add_events!(seq, event2, [event1])
         
-        output = capture_output(sequence_report, seq)
+        output = capture_output(report_sequence, seq)
         # Should show multiple stateful objects with counts
         @test occursin("STATEFUL OBJECTS:", output)
         # Should have multiple spacecraft and maneuvers, some with counts >1
@@ -379,7 +379,7 @@ using Epicycle
             info = true
         )
         
-        sol_output = capture_output(solution_report, seq, mock_result)
+        sol_output = capture_output(report_solution, seq, mock_result)
         @test occursin("(fixed at 42000.0)", sol_output)
     end
 
@@ -412,9 +412,9 @@ using Epicycle
             info = false
         )
         
-        @test_nowarn solution_report(seq, old_result)
-        
-        sol_output = capture_output(solution_report, seq, old_result)
+        @test_nowarn report_solution(seq, old_result)
+
+        sol_output = capture_output(report_solution, seq, old_result)
         @test occursin("Converged: false", sol_output)
     end
 
@@ -440,7 +440,7 @@ using Epicycle
         add_events!(seq, test_event, Event[])
         
         # Test sequence report shows multi-component constraint
-        output = capture_output(sequence_report, seq)
+        output = capture_output(report_sequence, seq)
         @test occursin("PositionVector() (OrbitCalc) (3 components)", output)
         
         # Test solution report with multi-component constraint values
@@ -450,7 +450,7 @@ using Epicycle
             info = true
         )
         
-        sol_output = capture_output(solution_report, seq, mock_result)
+        sol_output = capture_output(report_solution, seq, mock_result)
         @test occursin("PositionVector() (OrbitCalc) (3 components):", sol_output)
         @test occursin("Component 1: -55000.1", sol_output)
         @test occursin("Component 2: 0.51", sol_output) 
