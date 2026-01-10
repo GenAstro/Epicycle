@@ -691,7 +691,7 @@ function solver_fun!(F::AbstractVector, x::AbstractVector, sm::SequenceManager)
 end
 
 """
-    trajectory_solve(seq::Sequence; record_iterations::Bool=false)
+    solve_trajectory!(seq::Sequence; record_iterations::Bool=false)
 
 Solve trajectory sequence using default SNOW/IPOPT configuration.
 
@@ -705,14 +705,12 @@ Solve trajectory sequence using default SNOW/IPOPT configuration.
 - Original flag values are restored after optimization completes
 - Final solution respects original recording settings (no forced recording)
 """
-# TODO: Refactor to solve_trajectory (verb_noun convention per style guide)
-#       Keep trajectory_solve as deprecated alias for backward compatibility
-function trajectory_solve(seq::Sequence; record_iterations::Bool=false)
-    trajectory_solve(seq, default_snow_options(); record_iterations=record_iterations)
+function solve_trajectory!(seq::Sequence; record_iterations::Bool=false)
+    solve_trajectory!(seq, default_snow_options(); record_iterations=record_iterations)
 end
 
 """
-    trajectory_solve(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
+    solve_trajectory!(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
 
 Solve trajectory sequence using specified SNOW optimization options.
 
@@ -738,9 +736,7 @@ Named tuple with:
 - After convergence: restores original flags and records final solution to `segments`
 - Original flag values are preserved and restored after optimization
 """
-# TODO: Refactor to solve_trajectory (verb_noun convention per style guide)
-#       Keep trajectory_solve as deprecated alias for backward compatibility
-function trajectory_solve(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
+function solve_trajectory!(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
     # Get all spacecraft from the sequence
     sm = SequenceManager(seq)
     spacecraft = [obj for obj in sm.stateful_structs if obj isa Spacecraft]

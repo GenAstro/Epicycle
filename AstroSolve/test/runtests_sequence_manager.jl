@@ -61,15 +61,15 @@ var_moi = SolverVariable(
 )
 
 # Create the MOI Event
-toi_fun() = maneuver(sat1, toi) 
+toi_fun() = maneuver!(sat1, toi) 
 toi_event = Event(name = "toi", event = toi_fun, vars = [var_toi])
 
 # Create the prop to apopasis event
-prop_apo_fun() = propagate(dynsys, integ, StopAtApoapsis(sat1))
+prop_apo_fun() = propagate!(dynsys, integ, StopAtApoapsis(sat1))
 prop_event = Event(name = "prop_apo", event = prop_apo_fun)
 
 # Create the TOI event. 
-moi_fun() = maneuver(sat1, moi)
+moi_fun() = maneuver!(sat1, moi)
 moi_event = Event(event = moi_fun, vars = [var_moi])
 
 # Build sequence and solve
@@ -126,18 +126,18 @@ vel_con = Constraint(
 )
 
 # Create the MOI Event
-toi_fun() = maneuver(sat1, toi) 
+toi_fun() = maneuver!(sat1, toi) 
 toi_event = Event(name = "toi", 
                   event = toi_fun, 
                   vars = [var_toi],
                   funcs = [])
 
 # Create the prop to apopasis event
-prop_apo_fun() = propagate(dynsys, integ, StopAtApoapsis(sat1))
+prop_apo_fun() = propagate!(dynsys, integ, StopAtApoapsis(sat1))
 prop_event = Event(name = "prop_apo", event = prop_apo_fun)
 
 # Create the TOI event. 
-moi_fun() = maneuver(sat1, moi)
+moi_fun() = maneuver!(sat1, moi)
 
 moi_event = Event(event = moi_fun, vars = [var_moi],
                   funcs = [pos_con, vel_con])
@@ -201,9 +201,9 @@ moi2 = ImpulsiveManeuver(
     state_after = to_posvel(sat1)
 
     # Now apply the same sequence to sat2 directly
-    maneuver(sat2, toi2)
-    propagate(dynsys2, integ, StopAtApoapsis(sat2))
-    maneuver(sat2, moi2)
+    maneuver!(sat2, toi2)
+    propagate!(dynsys2, integ, StopAtApoapsis(sat2))
+    maneuver!(sat2, moi2)
     state_sat2 = to_posvel(sat2)
 
     # The states should match after both sequences

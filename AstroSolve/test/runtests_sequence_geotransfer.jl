@@ -102,14 +102,14 @@ final_sma_con = Constraint(
 )
 
 # Event 1: Propagate to Z=0 crossing (equatorial plane)
-prop_to_z_crossing_1_fun() = propagate(prop, sat, StopAt(sat, PosZ(), 0.0))
+prop_to_z_crossing_1_fun() = propagate!(prop, sat, StopAt(sat, PosZ(), 0.0))
 prop_to_z_crossing_1_event = Event(
     name = "prop_to_z_crossing_1",
     event = prop_to_z_crossing_1_fun,
 )
 
 # Event 2: Apply TOI maneuver 
-toi_fun() = maneuver(sat, toi)
+toi_fun() = maneuver!(sat, toi)
 toi_event = Event(
     name = "toi",
     event = toi_fun,
@@ -117,7 +117,7 @@ toi_event = Event(
 )
 
 # Event 3: Propagate to apoapsis and check radius constraint
-prop_to_apogee_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+prop_to_apogee_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
 prop_to_apogee_event = Event(
     name = "prop_to_apogee", 
     event = prop_to_apogee_fun,
@@ -125,21 +125,21 @@ prop_to_apogee_event = Event(
 )
 
 # Event 4: Propagate to perigee
-prop_to_perigee_1_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
+prop_to_perigee_1_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
 prop_to_perigee_1_event = Event(
     name = "prop_to_perigee_1",
     event = prop_to_perigee_1_fun,
 )
 
 # Event 5: Propagate to Z=0 crossing again
-prop_to_z_crossing_2_fun() = propagate(prop, sat, StopAt(sat, PosZ(), 0.0))
+prop_to_z_crossing_2_fun() = propagate!(prop, sat, StopAt(sat, PosZ(), 0.0))
 prop_to_z_crossing_2_event = Event(
     name = "prop_to_z_crossing_2", 
     event = prop_to_z_crossing_2_fun,
 )
 
 # Event 6: Apply MCC maneuver
-mcc_fun() = maneuver(sat, mcc)
+mcc_fun() = maneuver!(sat, mcc)
 mcc_event = Event(
     name = "mcc",
     event = mcc_fun,
@@ -147,7 +147,7 @@ mcc_event = Event(
 )
 
 # Event 7: Propagate to perigee and check constraints
-prop_to_perigee_2_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
+prop_to_perigee_2_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
 prop_to_perigee_2_event = Event(
     name = "prop_to_perigee_2",
     event = prop_to_perigee_2_fun,
@@ -155,7 +155,7 @@ prop_to_perigee_2_event = Event(
 )
 
 # Event 8: Apply MOI maneuver and check final SMA
-moi_fun() = maneuver(sat, moi)
+moi_fun() = maneuver!(sat, moi)
 moi_event = Event(
     name = "moi",
     event = moi_fun,

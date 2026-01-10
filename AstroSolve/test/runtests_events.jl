@@ -60,9 +60,9 @@ var_moi = SolverVariable(
 @testset "Event Propagation Test" begin
 
     # === Define propagation function ===
-    prop_to_moi() = propagate(dynsys, integ, StopAtApoapsis(sat1))
+    prop_to_moi() = propagate!(dynsys, integ, StopAtApoapsis(sat1))
 
-    propagate(dynsys2, integ, StopAtApoapsis(sat2))
+    propagate!(dynsys2, integ, StopAtApoapsis(sat2))
 
     # === Create the Event ===
     prop_moi = Event(event = prop_to_moi)

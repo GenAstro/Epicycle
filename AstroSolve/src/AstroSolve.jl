@@ -28,9 +28,9 @@ export add_events!, add_sequence!, topo_sort
 export order_unique_vars, apply_event
 export get_var_values, get_var_shifts, get_var_scales
 export set_var_values, get_var_lower_bounds, get_var_upper_bounds 
-export solver_fun!, is_astrosolve_stateful, reset_stateful_structs!, trajectory_solve!
+export solver_fun!, is_astrosolve_stateful, reset_stateful_structs!, solve_trajectory!
 export get_fun_values, get_fun_upper_bounds, get_fun_lower_bounds
-export trajectory_solve, sequence_report, solution_report
+export sequence_report, solution_report
 
 # if stateful, struct must be reset after each solve iteration.
 is_astrosolve_stateful(::Type) = false 
@@ -58,7 +58,7 @@ associated with that action.
 # Simple propagation event
 prop_event = Event(
     name = "Propagate to Apoapsis",
-    event = () -> propagate(dynsys, integ, StopAtApoapsis(sat)),
+    event = () -> propagate!(dynsys, integ, StopAtApoapsis(sat)),
 )
 
 # Event with solver variables and constraints

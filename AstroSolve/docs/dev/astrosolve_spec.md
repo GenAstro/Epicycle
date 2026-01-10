@@ -26,7 +26,7 @@
 
 4. **API Design**
    ```julia
-   trajectory_solve(seq::Sequence; record_iterations::Bool=false)
+   solve_trajectory!(seq::Sequence; record_iterations::Bool=false)
    ```
    - Kwarg default: `false` (most users want solution only)
    - Non-breaking change (existing code works)
@@ -44,7 +44,7 @@ is_astrosolve_stateful(::Type{T}) where {T<:Spacecraft} = true
 This means:
 1. `find_all_stateful_structs()` already finds all spacecraft in the sequence
 2. They're stored in `sm.stateful_structs` (and `sm.initial_stateful_structs`)
-3. `sm` is available throughout `trajectory_solve` - no closure problem!
+3. `sm` is available throughout `solve_trajectory!` - no closure problem!
 4. We can filter `sm.stateful_structs` to get all `Spacecraft` instances
 
 **Solution:** Access spacecraft through `sm.stateful_structs`, manipulate their flags directly
@@ -52,7 +52,7 @@ This means:
 ### Proposed Solution
 
 ```julia
-function trajectory_solve(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
+function solve_trajectory!(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
     # Get all spacecraft from the sequence (filter stateful structs)
     sm = SequenceManager(seq)
     spacecraft = [obj for obj in sm.stateful_structs if obj isa Spacecraft]
@@ -107,7 +107,7 @@ end
 
 ### Implementation Checklist
 
-- [ ] Update both `trajectory_solve` signatures with `record_iterations::Bool=false` kwarg
+- [ ] Update both `solve_trajectory!` signatures with `record_iterations::Bool=false` kwarg
 - [ ] Implement spacecraft filtering: `[obj for obj in sm.stateful_structs if obj isa Spacecraft]`
 - [ ] Implement flag save/restore logic
 - [ ] Recreate SequenceManager after flag changes (ensures initial_stateful_structs has correct flags)

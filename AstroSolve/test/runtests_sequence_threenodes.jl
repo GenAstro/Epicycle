@@ -68,27 +68,27 @@ pos_con_2 = Constraint(
 
 # Create Events
 # Event 1: Apply TOI maneuver
-fun_toi() = maneuver(sat, toi) 
+fun_toi() = maneuver!(sat, toi) 
 toi_event = Event(name = "toi", 
                   event = fun_toi,
                   vars = [var_toi],
                   funcs = [])
 
 # Event 2: Propagate to apoapsis and check first constraint
-fun_prop_apo_1() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+fun_prop_apo_1() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
 prop_event_1 = Event(name = "prop_apo_1", 
                      event = fun_prop_apo_1,
                      funcs = [pos_con_1])
 
 # Event 3: Apply MOI maneuver  
-fun_moi() = maneuver(sat, moi)
+fun_moi() = maneuver!(sat, moi)
 moi_event = Event(name = "moi",
                   event = fun_moi,
                   vars = [var_moi],
                   funcs = [pos_con_2])
 
 # Event 4: Propagate to apoapsis again and check second constraint
-fun_prop_apo_2() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+fun_prop_apo_2() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
 prop_event_2 = Event(name = "prop_apo_2",
                      event = fun_prop_apo_2, 
                      funcs = [pos_con_2])

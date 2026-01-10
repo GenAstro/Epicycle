@@ -304,11 +304,11 @@ Generate a comprehensive report showing the optimized trajectory solution.
 
 This function displays the optimization results including variable values,
 constraint satisfaction, and solution summary. It works with the result
-from `trajectory_solve()`.
+from `solve_trajectory!()`.
 
 # Arguments
 - `seq::Sequence`: Original trajectory sequence
-- `result`: Result tuple from trajectory_solve with (variables, objective, info)
+- `result`: Result tuple from solve_trajectory! with (variables, objective, info)
 
 # Returns
 - Nothing (prints directly to stdout for better formatting)

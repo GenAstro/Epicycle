@@ -49,7 +49,7 @@ function setup_simple_target()
     )
     
     # Create an event that applies the maneuver with toi as optimization variable
-    fun_toi() = maneuver(sat, toi)
+    fun_toi() = maneuver!(sat, toi)
     toi_event = Event(
         name = "TOI Maneuver",
         event = fun_toi,
@@ -58,7 +58,7 @@ function setup_simple_target()
     )
     
     # Create propagation event to apoapsis with position constraint
-    fun_prop_apo() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+    fun_prop_apo() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
     prop_event = Event(
         name = "Propagate to Apoapsis",
         event = fun_prop_apo,
@@ -83,7 +83,7 @@ end
         @test isempty(sat.history.iterations)
         
         # Solve with default settings (record_iterations=false)
-        result = trajectory_solve(seq)
+        result = solve_trajectory!(seq)
         
         # Verify no iterations recorded
         @test isempty(sat.history.iterations)
@@ -105,7 +105,7 @@ end
                 ", record_iterations=", sat.history.record_iterations)
         
         # Solve with iteration recording enabled
-        result = trajectory_solve(seq; record_iterations=true)
+        result = solve_trajectory!(seq; record_iterations=true)
         
         println("Spacecraft object_id after solve: ", objectid(sat))
         println("Flags after solve: record_segments=", sat.history.record_segments,
@@ -137,7 +137,7 @@ end
         original_iter_flag = sat.history.record_iterations
         
         # Solve with iteration recording
-        result = trajectory_solve(seq; record_iterations=true)
+        result = solve_trajectory!(seq; record_iterations=true)
         
         # Verify flags were restored to original values
         @test sat.history.record_segments == original_seg_flag
@@ -152,7 +152,7 @@ end
         sat.history.record_iterations = true
         
         # Solve
-        result = trajectory_solve(seq; record_iterations=false)
+        result = solve_trajectory!(seq; record_iterations=false)
         
         # Verify flags restored
         @test sat.history.record_segments == true
@@ -167,7 +167,7 @@ end
         sat.history.record_iterations = false
         
         # Solve with iteration recording enabled
-        result = trajectory_solve(seq; record_iterations=true)
+        result = solve_trajectory!(seq; record_iterations=true)
         
         # Verify iterations were captured during solve
         @test length(sat.history.iterations) > 0
@@ -184,7 +184,7 @@ end
         seq, sat = setup_simple_target()
         
         # Solve with iteration recording
-        result = trajectory_solve(seq; record_iterations=true)
+        result = solve_trajectory!(seq; record_iterations=true)
         
         n_iterations = length(sat.history.iterations)
         
@@ -197,11 +197,11 @@ end
         seq, sat = setup_simple_target()
         
         # First solve
-        result1 = trajectory_solve(seq)
+        result1 = solve_trajectory!(seq)
         n_segments_1 = length(sat.history.segments)
         
         # Second solve (history accumulates)
-        result2 = trajectory_solve(seq)
+        result2 = solve_trajectory!(seq)
         n_segments_2 = length(sat.history.segments)
         
         # Verify history accumulated from both solves
@@ -213,7 +213,7 @@ end
         seq, sat = setup_simple_target()
         
         # Solve with iteration recording
-        result = trajectory_solve(seq; record_iterations=true)
+        result = solve_trajectory!(seq; record_iterations=true)
         
         # Verify both vectors populated
         @test length(sat.history.iterations) > 0
@@ -232,7 +232,7 @@ end
         seq, sat = setup_simple_target()
         
         # Solve
-        result = trajectory_solve(seq; record_iterations=true)
+        result = solve_trajectory!(seq; record_iterations=true)
         
         # Verify convergence info returned
         @test haskey(result, :info)

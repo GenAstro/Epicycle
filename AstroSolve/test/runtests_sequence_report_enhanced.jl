@@ -41,7 +41,7 @@ using Epicycle
         
         test_event = Event(
             name = "Test Event",
-            event = () -> maneuver(sat, toi),
+            event = () -> maneuver!(sat, toi),
             vars = [var_toi],
             funcs = [constraint_test]
         )
@@ -88,7 +88,7 @@ using Epicycle
         
         test_event = Event(
             name = "Test Maneuver",
-            event = () -> maneuver(sat, toi),
+            event = () -> maneuver!(sat, toi),
             vars = [var_toi],
             funcs = [sma_constraint]
         )
@@ -138,7 +138,7 @@ using Epicycle
         # Events
         prop_event = Event(
             name = "Propagation",
-            event = () -> propagate(prop, sat, StopAt(sat, PosZ(), 0.0)),
+            event = () -> propagate!(prop, sat, StopAt(sat, PosZ(), 0.0)),
         )
         
         toi = ImpulsiveManeuver(axes=VNB(), element1=1.0, element2=0.0, element3=0.0)
@@ -153,7 +153,7 @@ using Epicycle
         
         toi_event = Event(
             name = "TOI Maneuver",
-            event = () -> maneuver(sat, toi),
+            event = () -> maneuver!(sat, toi),
             vars = [var_toi]
         )
         
