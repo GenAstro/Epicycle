@@ -171,7 +171,7 @@ add_spacecraft!(view, mission_sat;
     # Advanced
     show_attitude = false,
     show_trajectory = true,
-    show_iterations = false)             # Solver iteration diagnostics</code></pre><h3 id="Iteration-Display"><a class="docs-heading-anchor" href="#Iteration-Display">Iteration Display</a><a id="Iteration-Display-1"></a><a class="docs-heading-anchor-permalink" href="#Iteration-Display" title="Permalink"></a></h3><p><strong>Purpose</strong>: Visualize solver convergence by showing iteration history from <code>trajectory_solve(...; record_iterations=true)</code></p><pre><code class="language-julia hljs"># Default: show only final trajectory (from spacecraft.history.segments)
+    show_iterations = false)             # Solver iteration diagnostics</code></pre><h3 id="Iteration-Display"><a class="docs-heading-anchor" href="#Iteration-Display">Iteration Display</a><a id="Iteration-Display-1"></a><a class="docs-heading-anchor-permalink" href="#Iteration-Display" title="Permalink"></a></h3><p><strong>Purpose</strong>: Visualize solver convergence by showing iteration history from <code>solve_trajectory!(...; record_iterations=true)</code></p><pre><code class="language-julia hljs"># Default: show only final trajectory (from spacecraft.history.segments)
 add_spacecraft!(view, sat;
     color = :cyan,
     linewidth = 2.5)
@@ -183,8 +183,8 @@ add_spacecraft!(view, sat;
     show_iterations = true)  # Shows solver iterations behind final trajectory
 
 # Typical diagnostic workflow:
-# 1. Run trajectory_solve with record_iterations=true
-result = trajectory_solve(seq, options; record_iterations=true)
+# 1. Run solve_trajectory! with record_iterations=true
+result = solve_trajectory!(seq, options; record_iterations=true)
 
 # 2. Visualize convergence
 view = View3D(universe)
@@ -549,4 +549,4 @@ end
 NamedColor(name::Symbol) = name
 NamedColor(name::AbstractString) = Symbol(name)
 
-end # module</code></pre></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Friday 9 January 2026 16:14">Friday 9 January 2026</span>. Using Julia version 1.12.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end # module</code></pre></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Saturday 10 January 2026 15:28">Saturday 10 January 2026</span>. Using Julia version 1.12.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

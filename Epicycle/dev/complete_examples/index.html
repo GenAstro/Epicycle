@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>End-to-End Examples · Epicycle.jl</title><meta name="title" content="End-to-End Examples · Epicycle.jl"/><meta property="og:title" content="End-to-End Examples · Epicycle.jl"/><meta property="twitter:title" content="End-to-End Examples · Epicycle.jl"/><meta name="description" content="Documentation for Epicycle.jl."/><meta property="og:description" content="Documentation for Epicycle.jl."/><meta property="twitter:description" content="Documentation for Epicycle.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/complete_examples/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/complete_examples/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/complete_examples/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../getting_started/">Getting Started</a></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox" checked/><label class="tocitem" for="menuitem-3"><span class="docs-label">Tutorials</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../unit_examples/">Component Cheat Sheets</a></li><li class="is-active"><a class="tocitem" href>End-to-End Examples</a><ul class="internal"><li><a class="tocitem" href="#Propagation-Basics"><span>Propagation Basics</span></a></li><li><a class="tocitem" href="#Impulsive-Maneuvers"><span>Impulsive Maneuvers</span></a></li><li><a class="tocitem" href="#Hohmann-Transfer"><span>Hohmann Transfer</span></a></li><li><a class="tocitem" href="#GEO-Transfer"><span>GEO Transfer</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../graphics/">Graphics</a></li><li><a class="tocitem" href="../components/">Components</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>End-to-End Examples</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>End-to-End Examples</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/docs/src/complete_examples.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Complete-Examples"><a class="docs-heading-anchor" href="#Complete-Examples">Complete Examples</a><a id="Complete-Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-Examples" title="Permalink"></a></h1><p><strong>Integrated mission simulations and workflows</strong></p><h2 id="Propagation-Basics"><a class="docs-heading-anchor" href="#Propagation-Basics">Propagation Basics</a><a id="Propagation-Basics-1"></a><a class="docs-heading-anchor-permalink" href="#Propagation-Basics" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Epicycle
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>End-to-End Examples · Epicycle.jl</title><meta name="title" content="End-to-End Examples · Epicycle.jl"/><meta property="og:title" content="End-to-End Examples · Epicycle.jl"/><meta property="twitter:title" content="End-to-End Examples · Epicycle.jl"/><meta name="description" content="Documentation for Epicycle.jl."/><meta property="og:description" content="Documentation for Epicycle.jl."/><meta property="twitter:description" content="Documentation for Epicycle.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/complete_examples/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/complete_examples/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/complete_examples/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../getting_started/">Getting Started</a></li><li><input class="collapse-toggle" id="menuitem-3" type="checkbox" checked/><label class="tocitem" for="menuitem-3"><span class="docs-label">Tutorials</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../unit_examples/">Component Cheat Sheets</a></li><li class="is-active"><a class="tocitem" href>End-to-End Examples</a><ul class="internal"><li><a class="tocitem" href="#Propagation-Basics"><span>Propagation Basics</span></a></li><li><a class="tocitem" href="#Impulsive-Maneuvers"><span>Impulsive Maneuvers</span></a></li><li><a class="tocitem" href="#Hohmann-Transfer"><span>Hohmann Transfer</span></a></li><li><a class="tocitem" href="#GEO-Transfer"><span>GEO Transfer</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../graphics/">Graphics</a></li><li><a class="tocitem" href="../components/">Components</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>End-to-End Examples</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>End-to-End Examples</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/docs/src/complete_examples.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Complete-Examples"><a class="docs-heading-anchor" href="#Complete-Examples">Complete Examples</a><a id="Complete-Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-Examples" title="Permalink"></a></h1><p>Representative examples are shown below. For the complete set of examples, see the <code>examples</code> folder in the Epicycle package directory.</p><p><strong>Integrated mission simulations and workflows</strong></p><h2 id="Propagation-Basics"><a class="docs-heading-anchor" href="#Propagation-Basics">Propagation Basics</a><a id="Propagation-Basics-1"></a><a class="docs-heading-anchor-permalink" href="#Propagation-Basics" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Epicycle
 
 # Spacecraft
 sat = Spacecraft(
@@ -16,26 +16,26 @@ integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
 prop    = OrbitPropagator(forces, integ)
 
 # Propagate to periapsis
-propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
+propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
 println(get_state(sat, Keplerian()))
 
 # Propagate to apoapsis
-propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
 println(get_state(sat, Keplerian()))
 
 # Stop when |r| reaches 7000 km 
-propagate(prop, sat, StopAt(sat, PosMag(), 7000.0))
+propagate!(prop, sat, StopAt(sat, PosMag(), 7000.0))
 println(get_state(sat, SphericalRADEC()))       
 
 # Propagate to x-position crossing (increasing)
-sol = propagate(prop, sat, StopAt(sat, PosX(), 7.5; direction=+1))
+sol = propagate!(prop, sat, StopAt(sat, PosX(), 7.5; direction=+1))
 println(get_state(sat, Cartesian()))
 
 # Propagate multiple spacecraft with multiple stopping conditions
 sc1 = Spacecraft(); sc2 = Spacecraft() 
 stop_sc1_node = StopAt(sc1, PosZ(), 0.0)
 stop_sc2_periapsis = StopAt(sc2, PosDotVel(), 0.0; direction=+1)
-propagate(prop, [sc1,sc2], stop_sc1_node, stop_sc2_periapsis)</code></pre><h2 id="Impulsive-Maneuvers"><a class="docs-heading-anchor" href="#Impulsive-Maneuvers">Impulsive Maneuvers</a><a id="Impulsive-Maneuvers-1"></a><a class="docs-heading-anchor-permalink" href="#Impulsive-Maneuvers" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Epicycle
+propagate!(prop, [sc1,sc2], stop_sc1_node, stop_sc2_periapsis)</code></pre><h2 id="Impulsive-Maneuvers"><a class="docs-heading-anchor" href="#Impulsive-Maneuvers">Impulsive Maneuvers</a><a id="Impulsive-Maneuvers-1"></a><a class="docs-heading-anchor-permalink" href="#Impulsive-Maneuvers" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Epicycle
 
 # Create a default spacecraft
 sat1 = Spacecraft()
@@ -52,7 +52,7 @@ deltav2 = ImpulsiveManeuver(
 
 # Apply the maneuver to the spacecraft
 println(&quot;Initial mass: &quot;, sat1.mass)
-maneuver(sat1, deltav2)
+maneuver!(sat1, deltav2)
 println(&quot;Mass after Inertial maneuver: &quot;, sat1.mass)
 println(&quot;State after Inertial maneuver: \n&quot;, get_state(sat1, Cartesian()))
 
@@ -67,30 +67,32 @@ deltav1 = ImpulsiveManeuver(
       )
 
 # Apply the maneuver to the spacecraft
-maneuver(sat1, deltav1)
+maneuver!(sat1, deltav1)
 println(&quot;Mass after VNB maneuver: &quot;, sat1.mass)
-println(&quot;State after VNB maneuver: \n&quot;, get_state(sat1, Cartesian()))</code></pre><h2 id="Hohmann-Transfer"><a class="docs-heading-anchor" href="#Hohmann-Transfer">Hohmann Transfer</a><a id="Hohmann-Transfer-1"></a><a class="docs-heading-anchor-permalink" href="#Hohmann-Transfer" title="Permalink"></a></h2><pre><code class="language-julia hljs">
+println(&quot;State after VNB maneuver: \n&quot;, get_state(sat1, Cartesian()))</code></pre><h2 id="Hohmann-Transfer"><a class="docs-heading-anchor" href="#Hohmann-Transfer">Hohmann Transfer</a><a id="Hohmann-Transfer-1"></a><a class="docs-heading-anchor-permalink" href="#Hohmann-Transfer" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Epicycle
 
-using Epicycle
+# ============================================================================
+# Shared Resources
+# ============================================================================
 
 # Create spacecraft
 sat = Spacecraft(
-            state = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 1.0]), 
-            time = Time(&quot;2020-09-21T12:23:12&quot;, TAI(), ISOT())
+            state = KeplerianState(7000.0, 0.001, 0.0, 0.0, 7.5, 1.0), 
+            time = Time(&quot;2020-09-21T12:23:12&quot;, TAI(), ISOT()),
+            name = &quot;Sat&quot;,
             )
 
 # Create force models, integrator, and dynamics system
-pm_grav = PointMassGravity(earth,(moon,sun))
-forces = ForceModel(pm_grav)
-integ = IntegratorConfig(DP8(); abstol = 1e-11, reltol = 1e-11, dt = 4000)
+gravity = PointMassGravity(earth, (moon,sun))  
+forces  = ForceModel(gravity)
+integ   = IntegratorConfig(DP8(); abstol=1e-9, reltol=1e-9, dt=300.0)
+prop    = OrbitPropagator(forces, integ)
 
-# Define which spacecraft to propagate and which force model to use
-dynsys = DynSys(
-          forces = forces, 
-          spacecraft = [sat]
-          )
+# ============================================================================
+# TOI Event - Transfer Orbit Insertion
+# ============================================================================
 
-# Create maneuver models for the hohmann transfer
+# Define TOI maneuver
 toi = ImpulsiveManeuver(
     axes = VNB(),
     element1 = 0.1,
@@ -98,6 +100,38 @@ toi = ImpulsiveManeuver(
     element3 = 0.3
 )
 
+# Define solver variable for TOI delta-V
+toi_var = SolverVariable(
+    calc = ManeuverCalc(toi, sat, DeltaVVector()),
+    name = &quot;toi&quot;,
+    lower_bound = [0.0, 0.0, 0.0],
+    upper_bound = [2.5, 0.0, 0.0],
+)
+
+# Define TOI event struct with event function, solver variables, and constraints
+toi_fun() = maneuver!(sat, toi) 
+toi_event = Event(
+    name = &quot;TOI&quot;, 
+    event = toi_fun, 
+    vars = [toi_var],
+    funcs = []
+)
+
+# ============================================================================
+# Propagation Event - Coast to Apoapsis
+# ============================================================================
+
+prop_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+prop_event = Event(
+    name = &quot;Prop to Apoapsis&quot;, 
+    event = prop_fun
+)
+
+# ============================================================================
+# MOI Event - Mission Orbit Insertion
+# ============================================================================
+
+# Define MOI maneuver 
 moi = ImpulsiveManeuver(
     axes = VNB(),
     element1 = 0.4,
@@ -105,22 +139,15 @@ moi = ImpulsiveManeuver(
     element3 = 0.6
 )
 
-# Define toi as a solver variable
-var_toi = SolverVariable(
-    calc = ManeuverCalc(toi, sat, DeltaVVector()),
-    name = &quot;toi&quot;,
-    lower_bound = [-10.0, 0.0, 0.0],
-    upper_bound = [10.0, 0.0, 0.0],
-)
-
-# Define moi as a solver variable
-var_moi = SolverVariable(
+# Define solver variable for MOI delta-V
+moi_var = SolverVariable(
     calc = ManeuverCalc(moi, sat, DeltaVVector()),
     name = &quot;moi&quot;,
-    lower_bound = [-10.0, 0.0, 0.0],
-    upper_bound = [10.0, 0.0, 0.0]
+    lower_bound = [0.0, 0.0, 0.0],
+    upper_bound = [3.0, 0.0, 0.0]
 )
 
+# Define constraints for MOI event
 pos_target = 45000.0
 pos_con = Constraint(
     calc = OrbitCalc(sat, PosMag()),
@@ -136,34 +163,32 @@ ecc_con = Constraint(
     scale = [1.0],
 )
 
-# Create the TOI Event
-toi_fun() = maneuver(sat, toi) 
-toi_event = Event(name = &quot;TOI&quot;, 
-                  event = toi_fun, 
-                  vars = [var_toi],
-                  funcs = [])
+# Define MOI event struct with event function, solver variables, and constraints
+moi_fun() = maneuver!(sat, moi)
+moi_event = Event(
+    name = &quot;MOI&quot;, 
+    event = moi_fun,
+    vars = [moi_var],
+    funcs = [pos_con, ecc_con]
+)
 
-# Create the prop to apopasis event
-
-prop_apo_fun() = propagate(dynsys, integ, StopAtApoapsis(sat))
-prop_event = Event(name = &quot;Prop to Apoapsis&quot;, event = prop_apo_fun)
-
-# Create the TOI event. 
-moi_fun() = maneuver(sat, moi)
-moi_event = Event(name = &quot;MOI&quot;, 
-                  event = moi_fun,
-                  vars = [var_moi],
-                  funcs = [pos_con, ecc_con])
+# ============================================================================
+# Trajectory Optimization
+# ============================================================================
 
 # Build sequence and solve
 seq = Sequence()
-add_events!(seq, prop_event, [toi_event]) 
-add_events!(seq, moi_event, [prop_event])
+add_sequence!(seq, toi_event, prop_event, moi_event)
 
-# Solve the trajectory and report results
-result = trajectory_solve(seq)
-sequence_report(seq)
-solution_report(seq, result)</code></pre><p>The output of this run:</p><pre><code class="language-output hljs">This is Ipopt version 3.14.19, running with linear solver MUMPS 5.8.1.
+# Solve the sequence and report the solution
+result = solve_trajectory!(seq; record_iterations=true)
+report_sequence(seq)
+report_solution(seq, result)
+
+# Plot the trajectory 3D
+view = View3D()
+add_spacecraft!(view, sat; show_iterations=true)
+display_view(view)</code></pre><p>The output of this run:</p><pre><code class="language-output hljs">This is Ipopt version 3.14.19, running with linear solver MUMPS 5.8.1.
 
 Number of nonzeros in equality constraint Jacobian...:        4
 Number of nonzeros in inequality constraint Jacobian.:        0
@@ -278,71 +303,69 @@ Event &quot;MOI&quot;:
   PosMag() (OrbitCalc): 45000.000024 (target: 45000.0)
   Ecc() (OrbitCalc): 0.0 (target: 0.0)
 
-==================================================</code></pre><h2 id="GEO-Transfer"><a class="docs-heading-anchor" href="#GEO-Transfer">GEO Transfer</a><a id="GEO-Transfer-1"></a><a class="docs-heading-anchor-permalink" href="#GEO-Transfer" title="Permalink"></a></h2><pre><code class="language-julia hljs">
-using Epicycle
+==================================================</code></pre><h2 id="GEO-Transfer"><a class="docs-heading-anchor" href="#GEO-Transfer">GEO Transfer</a><a id="GEO-Transfer-1"></a><a class="docs-heading-anchor-permalink" href="#GEO-Transfer" title="Permalink"></a></h2><pre><code class="language-julia hljs">using Epicycle
 
-# ========== Create Models =================================================================
+# ============================================================================
+# Shared Resources
+# ============================================================================
+
 # Create spacecraft
 sat = Spacecraft(
     state = CartesianState([3737.792, -4607.692, -2845.644, 5.411, 5.367, -1.566]),
-    time = Time(&quot;2000-01-01T11:59:28.000&quot;, UTC(), ISOT())  # J2000 epoch from GMAT
+    time = Time(&quot;2000-01-01T11:59:28.000&quot;, UTC(), ISOT()), 
+    name = &quot;GeoSat-1&quot;
 )
 
-# Create simple Earth point mass dynamics (no third bodies for now)
+# Create force models, integrator, and propagator
 gravity = PointMassGravity(earth, ())  # Only Earth gravity
 forces  = ForceModel(gravity)
 integ   = IntegratorConfig(DP8(); abstol=1e-12, reltol=1e-12, dt=60.0)
 prop    = OrbitPropagator(forces, integ)
 
-# Define maneuver models
+# ============================================================================
+# Event 1: Propagate to Equatorial Plane Crossing
+# ============================================================================
+
+# Define propagation event to equatorial plane crossing
+prop_to_z_crossing_1_fun() = propagate!(prop, sat, StopAt(sat, PosZ(), 0.0))
+prop_to_z_crossing_1_event = Event(
+    name = &quot;Prop to Z 1&quot;,
+    event = prop_to_z_crossing_1_fun,
+)
+
+# ============================================================================
+# Event 2: TOI - Transfer Orbit Insertion
+# ============================================================================
+
+# Define TOI maneuver
 toi = ImpulsiveManeuver(
     axes = VNB(),
-    element1 = 1.518,
+    element1 = 2.518,
     element2 = 0.0,
     element3 = 0.0,
 )
 
-mcc = ImpulsiveManeuver(
-    axes = VNB(),
-    element1 = 0.559,
-    element2 = 0.588,
-    element3 = 0.0,
-)
-
-moi = ImpulsiveManeuver(
-    axes = VNB(),
-    element1 = -0.282,
-    element2 = 0.0,
-    element3 = 0.0,
-)
-
-# ========== Define Solver Variables ======================================================
-# TOI: Only vary V component (Element1)
-var_toi_v = SolverVariable(
+# Define solver variable for TOI delta-V
+toi_var = SolverVariable(
     calc = ManeuverCalc(toi, sat, DeltaVVector()),
     name = &quot;toi_v&quot;,
-    lower_bound = [-5.0, 0.0, 0.0],  # Only V component varies significantly
-    upper_bound = [5.0, 0.0, 0.0],
+    lower_bound = [0.0, 0.0, 0.0],
+    upper_bound = [8.0, 0.0, 0.0],
 )
 
-# MCC: Vary V and N components (Element1 and Element2)
-var_mcc_vn = SolverVariable(
-    calc = ManeuverCalc(mcc, sat, DeltaVVector()),
-    name = &quot;mcc_vn&quot;,
-    lower_bound = [-2.0, -2.0, -0.001],   # V and N components vary
-    upper_bound = [2.0, 2.0, 0.001],
+# Define TOI event struct with event function, solver variables, and constraints
+toi_fun() = maneuver!(sat, toi)
+toi_event = Event(
+    name = &quot;TOI&quot;,
+    event = toi_fun,
+    vars = [toi_var],
 )
 
-# MOI: Only vary V component (Element1)
-var_moi_v = SolverVariable(
-    calc = ManeuverCalc(moi, sat, DeltaVVector()),
-    name = &quot;moi_v&quot;,
-    lower_bound = [-2.0, -0.001, -0.001],  # Only V component varies significantly
-    upper_bound = [2.0, 0.001, 0.001],
-)
+# ============================================================================
+# Event 3: Propagate to Apoapsis
+# ============================================================================
 
-# ========== Define Constraints ===========================================================
-# Constraint: Apoapsis radius = 85,000 km after TOI
+# Define constraint on radius at apoapsis
 apogee_radius_con = Constraint(
     calc = OrbitCalc(sat, PosMag()),
     lower_bounds = [85000.0],
@@ -350,7 +373,67 @@ apogee_radius_con = Constraint(
     scale = [1.0],
 )
 
-# Constraint: Inclination = 2° after MCC
+# Define propagation event to apoapsis with radius constraint
+prop_to_apogee_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+prop_to_apogee_event = Event(
+    name = &quot;Prop to Apoapsis&quot;,
+    event = prop_to_apogee_fun,
+    funcs = [apogee_radius_con],
+)
+
+# ============================================================================
+# Event 4: Propagate to Perigee
+# ============================================================================
+
+prop_to_perigee_1_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
+prop_to_perigee_1_event = Event(
+    name = &quot;Prop to Perigee 1&quot;,
+    event = prop_to_perigee_1_fun,
+)
+
+# ============================================================================
+# Event 5: Propagate to Equatorial Plane Crossing Again
+# ============================================================================
+
+prop_to_z_crossing_2_fun() = propagate!(prop, sat, StopAt(sat, PosZ(), 0.0))
+prop_to_z_crossing_2_event = Event(
+    name = &quot;Prop to Z 2&quot;,
+    event = prop_to_z_crossing_2_fun,
+)
+
+# ============================================================================
+# Event 6: MCC - Mid-Course Correction
+# ============================================================================
+
+# Define MCC maneuver
+mcc = ImpulsiveManeuver(
+    axes = VNB(),
+    element1 = 0.559,
+    element2 = 0.588,
+    element3 = 0.0,
+)
+
+# Define solver variable for MCC delta-V
+mcc_var = SolverVariable(
+    calc = ManeuverCalc(mcc, sat, DeltaVVector()),
+    name = &quot;mcc_vn&quot;,
+    lower_bound = [-1.0, -1.0, -0.001],
+    upper_bound = [4.0, 1.0, 0.001],
+)
+
+# Define MCC event struct with event function and solver variables
+mcc_fun() = maneuver!(sat, mcc)
+mcc_event = Event(
+    name = &quot;MCC&quot;,
+    event = mcc_fun,
+    vars = [mcc_var],
+)
+
+# ============================================================================
+# Event 7: Propagate to Perigee and Check Constraints
+# ============================================================================
+
+# Define constraints on inclination and perigee radius
 inclination_con = Constraint(
     calc = OrbitCalc(sat, Inc()),
     lower_bounds = [deg2rad(2.0)],
@@ -358,7 +441,6 @@ inclination_con = Constraint(
     scale = [1.0],
 )
 
-# Constraint: Perigee radius = 42,195 km after MCC
 perigee_radius_con = Constraint(
     calc = OrbitCalc(sat, PosMag()),
     lower_bounds = [42195.0],
@@ -366,7 +448,35 @@ perigee_radius_con = Constraint(
     scale = [1.0],
 )
 
-# Constraint: Final SMA = 42,166.90 km (GEO) after MOI
+# Define propagation event to perigee with inclination and perigee radius constraints
+prop_to_perigee_2_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
+prop_to_perigee_2_event = Event(
+    name = &quot;Prop to Perigee 2&quot;,
+    event = prop_to_perigee_2_fun,
+    funcs = [inclination_con, perigee_radius_con],
+)
+
+# ============================================================================
+# Event 8: MOI - GEO Orbit Insertion
+# ============================================================================
+
+# Define MOI maneuver
+moi = ImpulsiveManeuver(
+    axes = VNB(),
+    element1 = 0.282,
+    element2 = 0.0,
+    element3 = 0.0,
+)
+
+# Define solver variable for MOI delta-V
+moi_var = SolverVariable(
+    calc = ManeuverCalc(moi, sat, DeltaVVector()),
+    name = &quot;moi_v&quot;,
+    lower_bound = [-1.0, -0.001, -0.001],
+    upper_bound = [4.0, 0.001, 0.001],
+)
+
+# Define constraint on semi-major axis at GEO
 final_sma_con = Constraint(
     calc = OrbitCalc(sat, SMA()),
     lower_bounds = [42166.90],
@@ -374,78 +484,23 @@ final_sma_con = Constraint(
     scale = [1.0],
 )
 
-# ========== Define events (variables, constraints, actions) ==============================
-# Event 1: Propagate to Z=0 crossing (equatorial plane)
-prop_to_z_crossing_1_fun() = propagate(prop, sat, StopAt(sat, PosZ(), 0.0))
-prop_to_z_crossing_1_event = Event(
-    name = &quot;Prop to Z 1&quot;,
-    event = prop_to_z_crossing_1_fun,
-)
-
-# Event 2: Apply TOI maneuver
-toi_fun() = maneuver(sat, toi)
-toi_event = Event(
-    name = &quot;TOI&quot;,
-    event = toi_fun,
-    vars = [var_toi_v],
-)
-
-# Event 3: Propagate to apoapsis and check radius constraint
-prop_to_apogee_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
-prop_to_apogee_event = Event(
-    name = &quot;Prop to Apoapsis&quot;,
-    event = prop_to_apogee_fun,
-    funcs = [apogee_radius_con],
-)
-
-# Event 4: Propagate to perigee
-prop_to_perigee_1_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
-prop_to_perigee_1_event = Event(
-    name = &quot;Prop to Perigee 1&quot;,
-    event = prop_to_perigee_1_fun,
-)
-
-# Event 5: Propagate to Z=0 crossing again
-prop_to_z_crossing_2_fun() = propagate(prop, sat, StopAt(sat, PosZ(), 0.0))
-prop_to_z_crossing_2_event = Event(
-    name = &quot;Prop to Z 2&quot;,
-    event = prop_to_z_crossing_2_fun,
-)
-
-# Event 6: Apply MCC maneuver
-mcc_fun() = maneuver(sat, mcc)
-mcc_event = Event(
-    name = &quot;MCC&quot;,
-    event = mcc_fun,
-    vars = [var_mcc_vn],
-)
-
-# Event 7: Propagate to perigee and check constraints
-prop_to_perigee_2_fun() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
-prop_to_perigee_2_event = Event(
-    name = &quot;Prop to Perigee 2&quot;,
-    event = prop_to_perigee_2_fun,
-    funcs = [inclination_con, perigee_radius_con],
-)
-
-# Event 8: Apply MOI maneuver and check final SMA
-moi_fun() = maneuver(sat, moi)
+# Define MOI event struct with event function, solver variables, and constraints
+moi_fun() = maneuver!(sat, moi)
 moi_event = Event(
     name = &quot;MOI&quot;,
     event = moi_fun,
-    vars = [var_moi_v],
+    vars = [moi_var],
     funcs = [final_sma_con],
 )
 
-# ========== Build the Sequence and Solve =================================================
+# ============================================================================
+# Trajectory Optimization
+# ============================================================================
+
 seq = Sequence()
-add_events!(seq, toi_event, [prop_to_z_crossing_1_event])
-add_events!(seq, prop_to_apogee_event, [toi_event])
-add_events!(seq, prop_to_perigee_1_event, [prop_to_apogee_event])
-add_events!(seq, prop_to_z_crossing_2_event, [prop_to_perigee_1_event])
-add_events!(seq, mcc_event, [prop_to_z_crossing_2_event])
-add_events!(seq, prop_to_perigee_2_event, [mcc_event])
-add_events!(seq, moi_event, [prop_to_perigee_2_event])
+add_sequence!(seq, prop_to_z_crossing_1_event, toi_event, prop_to_apogee_event,
+              prop_to_perigee_1_event, prop_to_z_crossing_2_event, mcc_event,
+              prop_to_perigee_2_event, moi_event)
 
 # Set up IPOPT options
 ipopt_options = Dict(
@@ -457,9 +512,18 @@ ipopt_options = Dict(
 )
 snow_options = Options(derivatives=ForwardFD(), solver=IPOPT(ipopt_options))
 
-result = trajectory_solve(seq, snow_options)
-sequence_report(seq)
-solution_report(seq, result)</code></pre><p>The output for this configuration is</p><pre><code class="language-output hljs">This is Ipopt version 3.14.19, running with linear solver MUMPS 5.8.1.
+# Solve trajectory optimization with iteration recording enabled
+result = solve_trajectory!(seq, snow_options; record_iterations=true)
+report_sequence(seq)
+report_solution(seq, result)
+
+# Propagate about one day to see final orbit
+propagate!(prop, sat, StopAt(sat, PropDurationDays(), 1.1)) 
+
+# Visualize with iterations
+view = View3D()
+add_spacecraft!(view, sat; show_iterations=true)
+display_view(view)</code></pre><p>The output for this configuration is</p><pre><code class="language-output hljs">This is Ipopt version 3.14.19, running with linear solver MUMPS 5.8.1.
 
 Number of nonzeros in equality constraint Jacobian...:       28
 Number of nonzeros in inequality constraint Jacobian.:        0
@@ -615,4 +679,4 @@ Event &quot;Prop to Perigee 2&quot;:
 Event &quot;MOI&quot;:
   SMA() (OrbitCalc): 42166.9 (target: 42166.9)
 
-==================================================</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../unit_examples/">« Component Cheat Sheets</a><a class="docs-footer-nextpage" href="../graphics/">Graphics »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Friday 9 January 2026 16:14">Friday 9 January 2026</span>. Using Julia version 1.12.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+==================================================</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../unit_examples/">« Component Cheat Sheets</a><a class="docs-footer-nextpage" href="../graphics/">Graphics »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Saturday 10 January 2026 15:28">Saturday 10 January 2026</span>. Using Julia version 1.12.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
