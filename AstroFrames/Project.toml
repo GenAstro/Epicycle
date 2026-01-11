@@ -9,7 +9,7 @@ AstroUniverse = "4bd44dca-1e45-43d2-b940-3f88da59ea6f"
 
 [compat]
 EpicycleBase = "0.1.0"
-AstroUniverse = "0.1.0"
+AstroUniverse = "0.2.0"
 julia = "1.10"
 
 [extras]
