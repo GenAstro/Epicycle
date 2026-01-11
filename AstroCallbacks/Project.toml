@@ -1,7 +1,7 @@
 name = "AstroCallbacks"
 uuid = "4e6d50a3-795a-40f7-bdce-bebb06c496f9"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "0.3.0"
+version = "0.4.0"
 
 [deps]
 EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"

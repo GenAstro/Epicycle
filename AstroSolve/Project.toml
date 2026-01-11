@@ -1,7 +1,7 @@
 name = "AstroSolve"
 uuid = "d5c6b872-c897-4dc3-b364-70bab4e75788"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "0.3.1"
+version = "0.4.0"
 
 [deps]
 EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"

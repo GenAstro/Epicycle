@@ -1,7 +1,7 @@
 name = "AstroStates"
 uuid = "e8875680-ece1-4c6e-865d-f99ee1f9f9b4"
 authors = ["Steve Hughes <steven.hughes@genastro.com>"]
-version = "0.9.0"
+version = "0.10.0"
 
 [deps]
 EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"

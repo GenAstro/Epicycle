@@ -1,7 +1,7 @@
 name = "AstroFrames"
 uuid = "7b16edaa-6936-47b4-b191-819abb0f77bd"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
