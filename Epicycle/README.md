@@ -6,6 +6,7 @@ Epicycle is a Julia package ecosystem for astrodynamics and space mission design
 
 The ecosystem consists of eleven specialized packages organized in architectural layers, from core abstractions (EpicycleBase) through utilities (AstroEpochs, AstroStates, and AstroUniverse) to  integrated workflows (AstroManeuvers, AstroProp, and AstroSolve). The structure enables users to use low level utilities independently of the full system, or compose mission-specific analyses using interfaces designed to solve complex design problems, fast. The architecture in the first release is well tested and documented, and provides a clear pathway for extending capabilities toward high-fidelity force modeling, advanced optimization algorithms, and operational navigation applications as the framework matures.
 
+
 ## Package Architecture
 
 The Epicycle ecosystem implements a layered architecture where each package provides focused functionality while maintaining clean interfaces for composition in workflows. Users can access the complete system through `using Epicycle` in Julia, or leverage individual components independently for specialized applications.
@@ -61,6 +62,14 @@ users to choose between the following three options:
 
 See LICENSE.txt for terms each license option.  For commercial licensing, 
 email licensing at genastro.org.
+
+## Epicycle in the Julia Ecosystem
+
+Epicycle complements existing Julia space packages by providing an integrated application layer for mission design workflows. [Julia Space Mission Design](https://github.com/JuliaSpaceMissionDesign) offers foundational libraries for astrodynamics computations—Epicycle uses JSMD's TEMPO.jl and is designed to incorporate additional JSMD components for high-fidelity modeling. [JuliaAstro](https://juliaastro.org/home/) focuses on observational astronomy and astrophysics, while Epicycle targets spacecraft mission design and navigation.
+
+Where these ecosystems provide libraries and tools for specific domains, Epicycle delivers a complete workflow-oriented system architected around trajectory optimization, targeting, and constraint solving—validated against aerospace industry tools like GMAT.
+
+See the [documentation](https://genastro.github.io/Epicycle/Epicycle/dev/) for a detailed comparison and positioning within the Julia ecosystem.
 
 ## Notes
 Claude Sonnet and ChatGPT are used in the development of Epicycle.
