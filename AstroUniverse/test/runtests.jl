@@ -186,5 +186,6 @@ end
 end
 
 include("runtests_texture_file.jl")
+include("runtests_spice.jl")
 
 nothing

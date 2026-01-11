@@ -21,35 +21,350 @@ export sun, mercury, venus, earth, moon, mars, jupiter
 export saturn, uranus, neptune, pluto
 
 export get_gravparam, set_gravparam!
+export download_spice_kernel, load_spice_kernel, unload_spice_kernel, unload_all_spice_kernels
+export get_spice_directory, list_cached_spice_kernels, list_downloaded_spice_kernels
 
 """
-    function __init__()
+    ensure_kernel_download(cache_dir, filename, url)
 
-Load SPICE kernels from managed scratch space on module initialization.
+Download SPICE kernel if it doesn't exist. Does not furnish/load the kernel.
 """
-function __init__()
-    # Get managed cache directory for SPICE kernels
-    kernel_cache = @get_scratch!("spice_kernels")
-    
-    # Download and load kernels
-    ensure_kernel(kernel_cache, "naif0012.tls", 
-    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls")
-    ensure_kernel(kernel_cache, "de440.bsp", 
-    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440.bsp")
-end
-
-"""
-    ensure_kernel(cache_dir, filename, url)
-
-Download SPICE kernel if it doesn't exist and load it.
-"""
-function ensure_kernel(cache_dir, filename, url)
+function ensure_kernel_download(cache_dir, filename, url)
     kernel_path = joinpath(cache_dir, filename)
     if !isfile(kernel_path)
         @info "Downloading SPICE kernel: $filename"
         Downloads.download(url, kernel_path)
     end
+    return kernel_path
+end
+
+"""  
+    download_spice_kernel(filename::AbstractString, url::AbstractString)
+
+Download a SPICE kernel from the given URL to the cache directory.
+
+The kernel is cached in the AstroUniverse managed scratch directory, so it will only be
+downloaded once and persist across Julia sessions. This function does NOT load the kernel
+into SPICE - use [`load_spice_kernel`](@ref) after downloading.
+
+# Arguments
+- `filename`: Name of the kernel file (e.g., "de441.bsp")
+- `url`: Full URL to download the kernel from
+
+# Examples
+```julia
+using AstroUniverse
+
+# Download Mars satellite ephemeris (Phobos, Deimos)
+download_spice_kernel("mar099.bsp",
+    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/mar099.bsp")
+
+# Then load it
+load_spice_kernel("mar099.bsp")
+```
+
+All kernels available at: https://naif.jpl.nasa.gov/pub/naif/generic_kernels/
+
+See also: [`load_spice_kernel`](@ref), [`get_spice_directory`](@ref)
+"""
+function download_spice_kernel(filename::AbstractString, url::AbstractString)
+    cache_dir = @get_scratch!("spice_kernels")
+    ensure_kernel_download(cache_dir, String(filename), String(url))
+    return nothing
+end
+
+"""  
+    load_spice_kernel(filename::AbstractString)
+
+Load a SPICE kernel from the cache directory into the SPICE system.
+
+The kernel file must already exist in the cache (use [`download_spice_kernel`](@ref) first
+if needed). This calls SPICE.furnsh() to register the kernel.
+
+# Arguments
+- `filename`: Name of the kernel file in the cache (e.g., "de441.bsp")
+
+# Examples
+```julia
+using AstroUniverse
+
+# Download then load
+download_spice_kernel("de440.bsp",
+    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440.bsp")
+load_spice_kernel("de440.bsp")
+
+# Or just load if already downloaded
+load_spice_kernel("naif0012.tls")  # Default kernel
+```
+
+See also: [`download_spice_kernel`](@ref), [`unload_spice_kernel`](@ref), [`unload_all_spice_kernels`](@ref)
+"""
+function load_spice_kernel(filename::AbstractString)
+    cache_dir = @get_scratch!("spice_kernels")
+    kernel_path = joinpath(cache_dir, String(filename))
+    
+    if !isfile(kernel_path)
+        error("Kernel file not found in cache: $filename. Use download_spice_kernel() first.")
+    end
+    
+    # Check if already loaded (SPICE uses 1-based indexing)
+    count = ktotal("ALL")
+    for i in 1:count
+        result = kdata(i, "ALL")
+        if result !== nothing
+            file, filtyp, source, handle = result
+            if basename(file) == filename
+                @warn "Kernel '$filename' is already loaded. Skipping duplicate load."
+                return nothing
+            end
+        end
+    end
+    
     furnsh(kernel_path)
+    return nothing
+end
+
+"""  
+    unload_spice_kernel(filename::AbstractString)
+
+Unload a specific SPICE kernel from the SPICE system.
+
+This calls SPICE.unload() to remove the kernel from memory. The file remains in the cache.
+
+# Arguments
+- `filename`: Name of the kernel file to unload (e.g., "de440.bsp")
+
+# Examples
+```julia
+using AstroUniverse
+
+# Swap planetary ephemeris versions
+unload_spice_kernel("de440.bsp")
+load_spice_kernel("de440.bsp")
+```
+
+See also: [`load_spice_kernel`](@ref), [`unload_all_spice_kernels`](@ref)
+"""
+function unload_spice_kernel(filename::AbstractString)
+    cache_dir = @get_scratch!("spice_kernels")
+    kernel_path = joinpath(cache_dir, String(filename))
+    
+    if !isfile(kernel_path)
+        error("Kernel file not found in cache: $filename. Cannot unload.")
+    end
+    
+    # Check if kernel is actually loaded (SPICE uses 1-based indexing)
+    is_loaded = false
+    count = ktotal("ALL")
+    for i in 1:count
+        result = kdata(i, "ALL")
+        if result !== nothing
+            file, filtyp, source, handle = result
+            if basename(file) == filename
+                is_loaded = true
+                break
+            end
+        end
+    end
+    
+    if !is_loaded
+        @warn "Kernel '$filename' is not currently loaded. Nothing to unload."
+        return nothing
+    end
+    
+    # Unload all instances of this kernel
+    unload_count = 0
+    while true
+        # Check if still loaded (SPICE uses 1-based indexing)
+        still_loaded = false
+        count = ktotal("ALL")
+        for i in 1:count
+            result = kdata(i, "ALL")
+            if result !== nothing
+                file, filtyp, source, handle = result
+                if basename(file) == filename
+                    still_loaded = true
+                    break
+                end
+            end
+        end
+        
+        if !still_loaded
+            break
+        end
+        
+        unload(kernel_path)
+        unload_count += 1
+    end
+    
+    if unload_count > 1
+        @warn "Kernel '$filename' was loaded $unload_count times. All instances have been unloaded."
+    end
+    
+    return nothing
+end
+
+"""  
+    unload_all_spice_kernels()
+
+Unload all SPICE kernels from memory.
+
+This calls SPICE.kclear() to remove all loaded kernels. Useful for creating custom kernel
+configurations. The files remain in the storage directory.
+
+# Examples
+```julia
+using AstroUniverse
+
+# Create custom configuration
+unload_all_spice_kernels()
+list_cached_spice_kernels()  # Shows none loaded
+```
+
+See also: [`load_spice_kernel`](@ref), [`unload_spice_kernel`](@ref)
+"""
+function unload_all_spice_kernels()
+    kclear()
+    return nothing
+end
+
+"""  
+    get_spice_directory()
+
+Return the path to the AstroUniverse SPICE kernel cache directory.
+
+This directory persists across Julia sessions and is managed by Scratch.jl.
+You can manually place kernel files here to avoid downloading them.
+
+# Examples
+```julia
+using AstroUniverse
+
+dir = get_spice_directory()
+println("SPICE kernels cached at: ", dir)
+
+# Manually copy a kernel file to the cache
+# cp("my_kernel.bsp", joinpath(dir, "my_kernel.bsp"))
+# Then load it
+# load_spice_kernel("my_kernel.bsp")
+```
+
+See also: [`download_spice_kernel`](@ref), [`list_downloaded_spice_kernels`](@ref)
+"""
+get_spice_directory() = @get_scratch!("spice_kernels")
+
+"""
+    list_downloaded_spice_kernels()
+
+List all SPICE kernel files (.bsp and .tls) downloaded to the persistent storage directory.
+
+Displays kernel filenames with their file sizes in a formatted table. These are files available
+for loading, not necessarily currently loaded in SPICE memory. Use [`list_cached_spice_kernels`](@ref)
+to see which kernels are currently loaded.
+
+# Examples
+```julia
+using AstroUniverse
+
+list_downloaded_spice_kernels()
+
+# output
+Downloaded SPICE Kernels:
+  naif0012.tls              (5.3 KB)
+  de440.bsp                 (114.0 MB)
+  mar099.bsp                (2.1 MB)
+
+Storage location: /path/to/scratch/spice_kernels
+```
+
+See also: [`download_spice_kernel`](@ref), [`list_cached_spice_kernels`](@ref), [`get_spice_directory`](@ref)
+"""
+function list_downloaded_spice_kernels()
+    cache_dir = get_spice_directory()
+    
+    # Find all .bsp and .tls files
+    kernel_files = filter(readdir(cache_dir)) do f
+        endswith(lowercase(f), ".bsp") || endswith(lowercase(f), ".tls")
+    end
+    
+    if isempty(kernel_files)
+        println("No SPICE kernels found in storage directory.")
+        println("Storage location: ", cache_dir)
+        return
+    end
+    
+    println("Downloaded SPICE Kernels:")
+    
+    # Sort files: .tls first, then .bsp alphabetically
+    sort!(kernel_files, by = f -> (!endswith(lowercase(f), ".tls"), lowercase(f)))
+    
+    for file in kernel_files
+        filepath = joinpath(cache_dir, file)
+        size_bytes = filesize(filepath)
+        
+        # Format file size nicely
+        if size_bytes < 1024
+            size_str = string(size_bytes, " B")
+        elseif size_bytes < 1024^2
+            size_str = string(round(size_bytes / 1024, digits=1), " KB")
+        elseif size_bytes < 1024^3
+            size_str = string(round(size_bytes / 1024^2, digits=1), " MB")
+        else
+            size_str = string(round(size_bytes / 1024^3, digits=1), " GB")
+        end
+        
+        println("  ", rpad(file, 25), " (", size_str, ")")
+    end
+    
+    println("\nStorage location: ", cache_dir)
+end
+
+"""
+    list_cached_spice_kernels()
+
+List all SPICE kernels currently loaded in memory.
+
+Displays the filenames of kernels that have been furnished to SPICE and are actively being used.
+This shows what's actually in the SPICE kernel pool, not what's downloaded to disk.
+
+# Examples
+```julia
+using AstroUniverse
+
+list_cached_spice_kernels()
+
+# output
+Cached SPICE Kernels (2 loaded):
+  naif0012.tls
+  de440.bsp
+```
+
+See also: [`load_spice_kernel`](@ref), [`unload_spice_kernel`](@ref), [`list_downloaded_spice_kernels`](@ref)
+"""
+function list_cached_spice_kernels()
+    count = ktotal("ALL")
+    
+    if count == 0
+        println("No SPICE kernels currently loaded.")
+        return
+    end
+    
+    # Collect kernel names (SPICE uses 1-based indexing like Fortran)
+    kernel_names = String[]
+    for i in 1:count
+        result = kdata(i, "ALL")
+        if result !== nothing
+            file, filtyp, source, handle = result
+            push!(kernel_names, basename(file))
+        end
+    end
+    
+    println("Cached SPICE Kernels ($(length(kernel_names)) loaded):")
+    
+    # Display kernel names
+    for name in kernel_names
+        println("  ", name)
+    end
 end
 
 """ 
@@ -326,6 +641,58 @@ function set_gravparam!(body::CelestialBody, newmu::Real)
     # Preserve numeric/AD type of the field
     setfield!(body, :mu, oftype(getfield(body, :mu), newmu))
     return body
+end
+
+"""
+    function __init__()
+
+Load SPICE kernels from managed scratch space on module initialization.
+"""
+function __init__()
+    # Get managed cache directory for SPICE kernels
+    kernel_cache = @get_scratch!("spice_kernels")
+    
+    # Download default kernels if needed
+    ensure_kernel_download(kernel_cache, "naif0012.tls", 
+        "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls")
+    ensure_kernel_download(kernel_cache, "de440.bsp", 
+        "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440.bsp")
+    
+    # Helper function to check if a kernel is already loaded
+    function is_kernel_loaded(filename)
+        count = ktotal("ALL")
+        for i in 1:count
+            result = kdata(i, "ALL")
+            if result !== nothing
+                file, filtyp, source, handle = result
+                if basename(file) == filename
+                    return true
+                end
+            end
+        end
+        return false
+    end
+    
+    # Load default kernels only if not already loaded
+    bsp_path = joinpath(kernel_cache, "de440.bsp")
+    if isfile(bsp_path) && !is_kernel_loaded("de440.bsp")
+        try
+            furnsh(bsp_path)
+            @debug "Loaded de440.bsp"
+        catch e
+            @warn "Failed to load de440.bsp: $e"
+        end
+    end
+    
+    tls_path = joinpath(kernel_cache, "naif0012.tls")
+    if isfile(tls_path) && !is_kernel_loaded("naif0012.tls")
+        try
+            furnsh(tls_path)
+            @debug "Loaded naif0012.tls"
+        catch e
+            @warn "Failed to load naif0012.tls: $e"
+        end
+    end
 end
 
 end
