@@ -131,3 +131,11 @@ Epicycle takes a complementary approach by providing an integrated application b
 [JuliaAstro](https://juliaastro.org/home/) is a comprehensive ecosystem for astronomical computing, covering observational astronomy, telescope data processing, and astrophysical modeling.
 
 While there is some overlap—Epicycle's utility packages like AstroEpochs, AstroFrames, and AstroUniverse handle time systems, coordinate frames, and celestial bodies that are relevant to both domains—the ecosystems serve different purposes. JuliaAstro focuses on observing and understanding the universe and targets astronomy and astrophysics users, Epicycle focuses on space system design and analysis, and focuses on aerospace engineering users. The distinction is analogous to the difference between studying planetary motion and designing a mission to visit those planets. 
+
+## Epicycle vs Satellite Toolbox
+
+SatelliteToolbox.jl is a comprehensive library of satellite-focused models and utilities built from the ground up. Among other capabilities, it supports TLE propagation (SGP4/SDP4), gravity models, environmental models (atmospheric density, geomagnetic fields), and coordinate transformations and reference frames.
+
+Epicycle is an integrated application for mission design and trajectory optimization, built from the top down. It focuses on multi-event trajectory optimization and simulation, graph-based mission architecture (phase-to-phase workflows), and interactive visualization for design iteration. The first release of Epicycle is light on detailed physics models, and heavier on the system architecture and optimization workflows.
+
+These packages are complementary. SatelliteToolbox provides detailed models and transformations valuable for higher fidelity modelling and for various flight regimes. Epicycle provides the workflow architecture and optimization tools for designing missions. As Epicycle matures, we're considering integration with both SatelliteToolbox and Julia Space Mission Design to leverage their sophisticated models—similar to how we currently use TEMPO.jl and SPICE.jl for ephemeris and time systems.
