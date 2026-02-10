@@ -55,10 +55,10 @@ function extract_trajectory(sc)
     
     # Iterate through all history segments
     for segment in sc.history
-        for (time, posvel) in segment
-            push!(x_traj, posvel[1])
-            push!(y_traj, posvel[2])
-            push!(z_traj, posvel[3])
+        for state in segment.states
+            push!(x_traj, state.position[1])
+            push!(y_traj, state.position[2])
+            push!(z_traj, state.position[3])
         end
     end
     
@@ -90,10 +90,10 @@ function extract_trajectory_segments(sc)
         y_seg = Float64[]
         z_seg = Float64[]
         
-        for (time, posvel) in segment
-            push!(x_seg, posvel[1])
-            push!(y_seg, posvel[2])
-            push!(z_seg, posvel[3])
+        for state in segment.states
+            push!(x_seg, state.position[1])
+            push!(y_seg, state.position[2])
+            push!(z_seg, state.position[3])
         end
         
         push!(segments, (x_seg, y_seg, z_seg))
@@ -261,8 +261,11 @@ scatter!(lscene, x_stars, y_stars, z_stars,
 try
     spacecraft_model = FileIO.load(raw"C:\Users\steve\Dev\Epicycle\Epicycle\prototype\DeepSpace1.obj")
     
-    # Get a position along the first trajectory segment (e.g., midpoint)
-    seg_idx = 10
+    # Get a position along the trajectory segment (use last available segment)
+    seg_idx = min(10, length(segments))
+    if seg_idx == 0 || isempty(segments[seg_idx][1])
+        error("No trajectory data available for spacecraft model placement")
+    end
     pos_idx = length(segments[seg_idx][1]) ÷ 2
     
     x_pos = segments[seg_idx][1][end]
@@ -490,14 +493,14 @@ for (i, segment) in enumerate(sat.history[1:min(8, length(sat.history))])
     vz_vals = Float64[]
     vmag_vals = Float64[]
     
-    for entry in segment
-        time = entry[1]
-        state = entry[2]
+    for j in 1:length(segment.times)
+        time = segment.times[j]
+        state = segment.states[j]
         push!(times, time.mjd)  # Extract MJD from Time struct
-        push!(vx_vals, state[4])
-        push!(vy_vals, state[5])
-        push!(vz_vals, state[6])
-        push!(vmag_vals, sqrt(state[4]^2 + state[5]^2 + state[6]^2))
+        push!(vx_vals, state.velocity[1])
+        push!(vy_vals, state.velocity[2])
+        push!(vz_vals, state.velocity[3])
+        push!(vmag_vals, sqrt(state.velocity[1]^2 + state.velocity[2]^2 + state.velocity[3]^2))
     end
     
     # Plot velocity magnitude with better colors for white background
