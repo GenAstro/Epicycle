@@ -65,9 +65,9 @@ email licensing at genastro.org.
 
 ## Epicycle in the Julia Ecosystem
 
-Epicycle complements existing Julia space packages by providing an integrated application layer for mission design workflows. [Julia Space Mission Design](https://github.com/JuliaSpaceMissionDesign) offers foundational libraries for astrodynamics computations—Epicycle uses JSMD's TEMPO.jl and is designed to incorporate additional JSMD components for high-fidelity modeling. [JuliaAstro](https://juliaastro.org/home/) focuses on observational astronomy and astrophysics, while Epicycle targets spacecraft mission design and navigation.
+Epicycle complements existing Julia space packages by providing an integrated application for mission design workflows. [Julia Space Mission Design](https://github.com/JuliaSpaceMissionDesign) offers foundational libraries for astrodynamics computations—Epicycle uses JSMD's TEMPO.jl and is designed to incorporate additional JSMD components for high-fidelity modeling. [JuliaAstro](https://juliaastro.org/home/) focuses on libraries for observational astronomy and astrophysics, while Epicycle targets spacecraft mission design and navigation.
 
-Where these ecosystems provide libraries and tools for specific domains, Epicycle delivers a complete workflow-oriented system architected around trajectory optimization, targeting, and constraint solving—validated against aerospace industry tools like GMAT.
+Where these ecosystems provide libraries and tools for specific domains, Epicycle delivers a complete workflow-oriented system architected around trajectory design and optimization, visualization and eventually, navigation. 
 
 See the [documentation](https://genastro.github.io/Epicycle/Epicycle/dev/) for a detailed comparison and positioning within the Julia ecosystem.
 

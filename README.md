@@ -4,13 +4,14 @@
 [![codecov](https://codecov.io/gh/GenAstro/Epicycle/branch/main/graph/badge.svg?token=FNHOVC5O5N)](https://codecov.io/gh/GenAstro/Epicycle)
 [![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://genastro.github.io/Epicycle/)
 
-Epicycle is an application for space systems with a nod to the giants before us and to how far we've come.
+Epicycle is an application for space systems with a nod to the giants before us and to how far we've come. 
 
 ## Documentation
 
 ### The Epicycle Application
 
 - **[Epicycle Application](https://genastro.github.io/Epicycle/Epicycle/dev/)** - Complete application guide
+- **[Video Overview](https://www.youtube.com/watch?v=Ph51mj0SVP4)** - Video walkthrough of the application
 
 ### Component Documentation
 
