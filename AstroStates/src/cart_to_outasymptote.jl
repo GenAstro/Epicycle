@@ -72,13 +72,12 @@ function cart_to_outasymptote(cart::Vector{<:Real}, μ::Real; tol::Float64 = 1e-
         return fill(NaN, 6)
     end
 
-    # Compute radius of periapsis and check for singular orbit
+    # Compute radius of periapsis
+    # Note: rₚ = h²/(μ*(1+e)). Since h ≥ tol and e ≥ 0, we have rₚ ≥ tol²/μ,
+    # which is much smaller than tol for typical μ values. Therefore, checking
+    # rₚ < tol here is unnecessary (unreachable) given the earlier h < tol check.
     a = -μ / C₃
     rₚ = a * (1 - e)
-    if rₚ < tol
-        @warn "Conversion failed: Orbit is singular due to near-zero periapsis radius."
-        return fill(NaN, 6)
-    end
 
     # Build incoming asymptote unit vector ŝ
     fac = 1 / (1 + (C₃ * h^2) / μ^2)

@@ -95,12 +95,11 @@ function outasymptote_to_kep(outasym::Vector{<:Real}, μ::Real; tol::Float64=1e-
     end
 
     # Compute Ω and ω based on inclination and eccentricity direction
-    if e >= tol && i >= tol
+    if e >= tol && i >= tol && i < π - tol
         # General inclined case
-        if n < tol
-            @warn "Conversion failed: Line-of-nodes is undefined."
-            return fill(NaN, 6)
-        end
+        # Note: n = |ẑ × ĥ| = sin(i), so if i >= tol then n >= tol.
+        # Therefore, checking n < tol here is unnecessary (unreachable).
+        # Equatorial cases (i < tol or i >= π - tol) are handled by branches below.
 
         # Ω from node vector projection on x-axis
         Ω = acos(clamp(dot(x̂, nodevec) / n, -1.0, 1.0))

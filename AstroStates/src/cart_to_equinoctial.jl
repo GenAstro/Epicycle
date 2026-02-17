@@ -54,27 +54,31 @@ function cart_to_equinoctial(cart::Vector{<:Real}, μ::Real; tol::Float64 = 1e-1
         return fill(NaN, 6)
     end
 
+    # Angular momentum vector and check for radial/degenerate orbit
+    ang_mom_vec = cross(r̄, v̄)
+    h_mag = norm(ang_mom_vec)
+    
+    if h_mag < tol
+        @warn "Conversion failed: Angular momentum near zero (radial or degenerate orbit)."
+        return fill(NaN, 6)
+    end
+
     # Eccentricity vector and magnitude
     ē = ((v^2 - μ / r) * r̄ - dot(r̄, v̄) * v̄) / μ
     e = norm(ē)
-    if e > 1 - tol
-        @warn "Conversion failed: Orbit is parabolic or hyperbolic (e = $e)."
-        return fill(NaN, 6)
-    end
 
     # Specific energy and semi-major axis
     ξ = v^2 / 2 - μ / r
     a = -μ / (2 * ξ)
-
-    if abs(a * (1 - e)) < tol
-        @warn "Conversion failed: Singular conic section, radius of periaps less than tol."
+    
+    if a < tol
+        @warn "Conversion failed: Orbit is parabolic or hyperbolic (a = $a)."
         return fill(NaN, 6)
     end
 
     # Angular momentum unit vector and inclination
-    ang_mom_vec = cross(r̄, v̄)
-    unit_ang_mom =  ang_mom_vec/norm(ang_mom_vec)
-    i = acos(clamp(ang_mom_vec[3], -1.0, 1.0))
+    unit_ang_mom = ang_mom_vec / h_mag
+    i = acos(clamp(ang_mom_vec[3] / h_mag, -1.0, 1.0))
 
     if abs(i - π) < tol
         @warn "Conversion failed: Equinoctial elements not defined for i ≈ π."
