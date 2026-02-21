@@ -25,6 +25,7 @@ packages = [
     "AstroCallbacks",
     "AstroProp",
     "AstroSolve",
+    "Epicycle",
 ]
 
 #packages = ["AstroStates"]
