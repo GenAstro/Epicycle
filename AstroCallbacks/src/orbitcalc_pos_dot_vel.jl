@@ -18,6 +18,6 @@ struct PosDotVel <: AbstractOrbitVar end
 calc_input_statetag(::PosDotVel) = Cartesian()
 calc_is_settable(::PosDotVel) = false   # COV_EXCL_LINE (inlined)
 calc_numvars(::PosDotVel) = 1           # COV_EXCL_LINE (inlined)
-_evaluate(::PosDotVel, s::CartesianState) = dot(s.posvel[1:3], s.posvel[4:6])
+_evaluate(::PosDotVel, s::CartesianState) = dot(s.position, s.velocity)
 
 

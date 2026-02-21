@@ -11,7 +11,7 @@ The AstroManeuvers module provides utilities and functions for orbital maneuver 
 Apply an impulsive orbital maneuver:
 
 ```julia
-using Epicycle
+using AstroModels, AstroManeuvers
 m = ImpulsiveManeuver(axes=Inertial(), 
                       Isp=300.0, 
                       element1=0.01, 
@@ -19,7 +19,7 @@ m = ImpulsiveManeuver(axes=Inertial(),
                       element3=0.0)
 
 sc = Spacecraft()
-maneuver(sc, m)
+maneuver!(sc, m)
 ```
 
 ## Table of Contents

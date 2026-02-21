@@ -2,10 +2,9 @@
 projects = ["EpicycleBase", "AstroStates", "AstroEpochs", "AstroUniverse", "AstroFrames", "AstroModels", "AstroManeuvers", "AstroCallbacks", "AstroProp", "AstroSolve", "Epicycle"]
 
 [deps]
-EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
-AstroFrames = "7b16edaa-6936-47b4-b191-819abb0f77bd"
-AstroEpochs = "241dcde3-d7a4-450d-948f-15f2ea2ba1fa"
 AstroCallbacks = "4e6d50a3-795a-40f7-bdce-bebb06c496f9"
+AstroEpochs = "241dcde3-d7a4-450d-948f-15f2ea2ba1fa"
+AstroFrames = "7b16edaa-6936-47b4-b191-819abb0f77bd"
 AstroManeuvers = "7696fc14-2f3a-46f6-b942-ece41ce8abed"
 AstroModels = "ac4cc047-8a77-4e9e-bb46-f1584e9a10ee"
 AstroProp = "0e2365da-becf-4b4f-af1d-8bfff9db196c"
@@ -16,5 +15,9 @@ Coverage = "a2441757-f6aa-5fb2-8edb-039e3f45d037"
 CoverageTools = "c36e975a-824b-4404-a568-ef97ca766997"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 Epicycle = "83dc357c-0294-4c28-b122-f18155576d3d"
+EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
+MeshIO = "7269a6da-0436-5bbc-96c2-40638cbb6118"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"

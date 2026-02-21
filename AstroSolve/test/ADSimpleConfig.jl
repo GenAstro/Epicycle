@@ -57,14 +57,14 @@ pos_con = Constraint(
 )
 
 # Create the TOI Event
-toi_fun() = maneuver(sat, toi) 
+toi_fun() = maneuver!(sat, toi) 
 toi_event = Event(name = "toi", 
                   event = toi_fun, 
                   vars = [var_toi],
                   funcs = [])
 
 # Create the prop to apopasis event
-prop_apo_fun() = propagate(dynsys, integ, StopAtApoapsis(sat))
+prop_apo_fun() = propagate!(dynsys, integ, StopAtApoapsis(sat))
 prop_event = Event(name = "prop_apo", 
                    event = prop_apo_fun)
 

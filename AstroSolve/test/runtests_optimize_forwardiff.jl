@@ -94,18 +94,18 @@ vel_con = Constraint(
 )
 
 # Create the MOI Event
-toi_fun() = maneuver(sat1, toi) 
+toi_fun() = maneuver!(sat1, toi) 
 toi_event = Event(name = "toi", 
                   event = toi_fun, 
                   vars = [var_toi],
                   funcs = [])
 
 # Create the prop to apopasis event
-prop_apo_fun() = propagate(dynsys, integ, StopAtApoapsis(sat1))
+prop_apo_fun() = propagate!(dynsys, integ, StopAtApoapsis(sat1))
 prop_event = Event(name = "prop_apo", event = prop_apo_fun)
 
 # Create the TOI event. 
-moi_fun() = maneuver(sat1, moi)
+moi_fun() = maneuver!(sat1, moi)
 
 moi_event = Event(event = moi_fun, 
                   vars = [var_moi],

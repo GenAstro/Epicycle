@@ -1,7 +1,7 @@
 name = "AstroSolve"
 uuid = "d5c6b872-c897-4dc3-b364-70bab4e75788"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "0.3.0"
+version = "0.4.0"
 
 [deps]
 EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
@@ -20,6 +20,15 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 SNOW = "105f6ee8-0889-46b1-9d4b-65e03cbc8f13"
 
 [compat]
+EpicycleBase = "0.1.0"
+AstroEpochs = "0.5.0"
+AstroStates = "0.10.0"
+AstroUniverse = "0.2.0"
+AstroFrames = "0.2.0"
+AstroModels = "0.2.0"
+AstroManeuvers = "0.2.0"
+AstroCallbacks = "0.4.0"
+AstroProp = "0.4.0"
 NLsolve = "4.5"
 OrdinaryDiffEq = "6.101"
 SNOW = "0.3"

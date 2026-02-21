@@ -15,9 +15,9 @@ using AstroEpochs
 using AstroStates
 using AstroFrames
 using AstroModels: Spacecraft, to_posvel, set_posvel!
-import AstroModels: push_history_segment!
+using AstroModels: HistorySegment, SpacecraftHistory, push_segment!
 
-export ImpulsiveManeuver, maneuver
+export ImpulsiveManeuver, maneuver!
 import AstroFrames: AbstractAxes, VNB, Inertial
 
 """
@@ -232,7 +232,7 @@ function consume_fuel!(m::ImpulsiveManeuver, sc::Spacecraft)
 end
 
 """
-    maneuver(sc::Spacecraft, m::ImpulsiveManeuver) -> Spacecraft
+    maneuver!(sc::Spacecraft, m::ImpulsiveManeuver) -> Spacecraft
 
 Apply an impulsive delta-v maneuver to a spacecraft, updating velocity, mass, and history.
 
@@ -258,7 +258,7 @@ m = ImpulsiveManeuver(axes=Inertial(),
                       element3=0.0)
 
 sc = Spacecraft()
-maneuver(sc, m)
+maneuver!(sc, m)
 
 # output
 Spacecraft: unnamed
@@ -281,7 +281,7 @@ Spacecraft: unnamed
   Total Mass = 996.6078730003628 kg
 ```
 """
-function maneuver(sc::Spacecraft, m::ImpulsiveManeuver)
+function maneuver!(sc::Spacecraft, m::ImpulsiveManeuver)
     Δv_inertial = get_deltav_inertial(m, sc)
     state = to_posvel(sc)
     state[4:6] .+= Δv_inertial
@@ -297,8 +297,11 @@ end
 Append a new segment with maneuver to spacecraft history.
 """
 function push_history_segment!(sc::Spacecraft, m::ImpulsiveManeuver)
-    new_segment = [(sc.time, to_posvel(sc))]
-    push_history_segment!(sc, new_segment)  # Use AstroModels version
+    # Create single-point history segment for maneuver
+    times = [sc.time]
+    states = [CartesianState(to_posvel(sc))]
+    segment = HistorySegment(times, states, sc.coord_sys, name="maneuver")
+    push_segment!(sc.history, segment)
     return sc
 end
 

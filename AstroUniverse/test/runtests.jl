@@ -185,4 +185,7 @@ end
     @test_throws ArgumentError set_gravparam!(body, NaN)
 end
 
+include("runtests_texture_file.jl")
+include("runtests_spice.jl")
+
 nothing

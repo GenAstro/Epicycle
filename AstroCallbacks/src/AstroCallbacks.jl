@@ -22,6 +22,7 @@ using AstroUniverse
 using AstroFrames
 using AstroModels: Spacecraft, to_posvel, set_posvel!
 using AstroManeuvers
+using StaticArrays
 
 import AstroStates: state_tag_to_type, state_type_to_tag
 
@@ -424,7 +425,7 @@ Arguments
 
 # Returns
 - Returns nothing. Performs inplace update of Maneuver.
-- Spacecraft state is not modified.  Use maneuver() to apply maneuver effects.
+- Spacecraft state is not modified.  Use maneuver!() to apply maneuver effects.
 
 # Examples
 ```julia

@@ -36,8 +36,8 @@ using AstroSolve
         lower_bound = [-1.0, 0.0, 0.0], 
         upper_bound = [1.0, 0.0, 0.0])
 
-    apply_toi = Event(event = () -> maneuver(sat1_reset, toi_event), vars = [var_toi])
-    prop_to_moi() = propagate(dynsys1, integ, StopAtApoapsis(sat1_reset))
+    apply_toi = Event(event = () -> maneuver!(sat1_reset, toi_event), vars = [var_toi])
+    prop_to_moi() = propagate!(dynsys1, integ, StopAtApoapsis(sat1_reset))
     prop_moi = Event(event = prop_to_moi)
 
     # Apply maneuver and propagate using event infrastructure
@@ -47,8 +47,8 @@ using AstroSolve
     event_result = copy(to_posvel(sat1_reset))
 
     # --- Independent computation ---
-    maneuver(sat2_reset, toi_event)
-    propagate(dynsys2, integ, StopAtApoapsis(sat2_reset))
+    maneuver!(sat2_reset, toi_event)
+    propagate!(dynsys2, integ, StopAtApoapsis(sat2_reset))
     truth_result = copy(to_posvel(sat2_reset))
 
     # --- Compare results ---

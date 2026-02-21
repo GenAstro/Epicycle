@@ -1,7 +1,7 @@
 name = "AstroManeuvers"
 uuid = "7696fc14-2f3a-46f6-b942-ece41ce8abed"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
@@ -13,6 +13,12 @@ AstroUniverse = "4bd44dca-1e45-43d2-b940-3f88da59ea6f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [compat]
+EpicycleBase = "0.1.0"
+AstroEpochs = "0.5.0"
+AstroStates = "0.10.0"
+AstroUniverse = "0.2.0"
+AstroFrames = "0.2.0"
+AstroModels = "0.2.0"
 julia = "1.10"
 
 [extras]

@@ -6,7 +6,7 @@ on:
 jobs:
   ci-pipeline:
     name: CI Pipeline - All Phases
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       pages: write
@@ -30,13 +30,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-julia-cache-
 
+      - name: Install xvfb and OpenGL dependencies
+        run: sudo apt-get update && sudo apt-get install -y xorg-dev mesa-utils xvfb libgl1 freeglut3-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
+
       - name: Phase 1 - Setup Environment
         run: julia --project=. ci/setup_environment.jl
 
       - name: Phase 2 - Build Epicycle
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: julia --project=. ci/build_epicycle.jl
+        run: DISPLAY=:0 xvfb-run -s '-screen 0 1024x768x24' julia --project=. ci/build_epicycle.jl
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

@@ -1,8 +1,15 @@
-# Epicycle: An Application for Space Mission Design and Navigation
+# Epicycle: An Application for Space Mission Design and (eventually) Navigation
 
 Epicycle is a Julia package ecosystem for astrodynamics and space mission design, built with a modular architecture that spans mission analysis workflows from preliminary design through trajectory optimization. The current implementation - which is the initial release - focuses on establishing a robust architecture with key components—coordinate systems, time standards, spacecraft state representations, basic propagation, targeting and optimization—while providing extensible interfaces for systematic expansion toward operational mission design and navigation capabilities.
 
 The ecosystem consists of eleven specialized packages organized in architectural layers, from core abstractions (EpicycleBase) through utilities (AstroEpochs, AstroStates, and AstroUniverse) to  integrated workflows (AstroManeuvers, AstroProp, and AstroSolve). The structure enables users to use low level utilities independently of the full system, or compose mission-specific analyses using interfaces designed to solve complex design problems, fast. The architecture in the first release is well tested and documented, and provides a clear pathway for extending capabilities toward high-fidelity force modeling, advanced optimization algorithms, and operational navigation applications as the framework matures.
+
+```@raw html
+<div style="text-align: center;">
+  <img src="assets/GEOTransfer.png" width="50%" alt="GEO Transfer Trajectory">
+  <p><em>Example: GEO transfer trajectory with plane change correction, showing 8-event optimization sequence.</em></p>
+</div>
+```
 
 ## Architecture and Components
 
@@ -112,3 +119,23 @@ Humankind has been studying planetary motion for millennia. An epicycle is a geo
 We've come remarkably far in our understanding, yet fundamental questions remain. Either our theories of relativity, quantum mechanics, or both may be incomplete—reminding us that scientific discovery is an ongoing journey.
 
 The Epicycle software is a tribute to the brilliant minds who came before us, celebrating how far we've advanced while embracing the excitement of continuing to push the boundaries of knowledge and make new discoveries. 
+
+## Epicycle vs Julia Space Mission Design
+
+[Julia Space Mission Design](https://github.com/JuliaSpaceMissionDesign) (JSMD) provides a collection of high-quality foundational libraries for astrodynamics computations, including reference frames, ephemerides, time systems, and gravitational modeling. These packages serve as building blocks that can be composed into custom applications.
+
+Epicycle takes a complementary approach by providing an integrated application built specifically from the top down. Where JSMD offers libraries for constructing astrodynamics tools, Epicycle delivers an application architected around trajectory optimization, targeting, and visualization and mission design workflows. Indeed, Epicycle uses parts of JSMD (specifically Tempo.jl). The initial release of Epicycle focuses on establishing a robust architecture with academic-level force modeling and plans include integrating with additional JSMD components as the framework matures.
+
+## Epicycle vs JuliaAstro
+
+[JuliaAstro](https://juliaastro.org/home/) is a comprehensive ecosystem for astronomical computing, covering observational astronomy, telescope data processing, and astrophysical modeling.
+
+While there is some overlap—Epicycle's utility packages like AstroEpochs, AstroFrames, and AstroUniverse handle time systems, coordinate frames, and celestial bodies that are relevant to both domains—the ecosystems serve different purposes. JuliaAstro focuses on observing and understanding the universe and targets astronomy and astrophysics users, Epicycle focuses on space system design and analysis, and focuses on aerospace engineering users. The distinction is analogous to the difference between studying planetary motion and designing a mission to visit those planets. 
+
+## Epicycle vs Satellite Toolbox
+
+SatelliteToolbox.jl is a comprehensive library of satellite-focused models and utilities built from the ground up. Among other capabilities, it supports TLE propagation (SGP4/SDP4), gravity models, environmental models (atmospheric density, geomagnetic fields), and coordinate transformations and reference frames.
+
+Epicycle is an integrated application for mission design and trajectory optimization, built from the top down. It focuses on multi-event trajectory optimization and simulation, graph-based mission architecture (phase-to-phase workflows), and interactive visualization for design iteration. The first release of Epicycle is light on detailed physics models, and heavier on the system architecture and optimization workflows.
+
+These packages are complementary. SatelliteToolbox provides detailed models and transformations valuable for higher fidelity modelling and for various flight regimes. Epicycle provides the workflow architecture and optimization tools for designing missions. As Epicycle matures, we're considering integration with both SatelliteToolbox and Julia Space Mission Design to leverage their sophisticated models—similar to how we currently use TEMPO.jl and SPICE.jl for ephemeris and time systems.

@@ -15,7 +15,7 @@ deltav2 = ImpulsiveManeuver(
 
 # Apply the maneuver to the spacecraft
 println("Initial mass: ", sat1.mass)
-maneuver(sat1, deltav2)
+maneuver!(sat1, deltav2)
 println("Mass after Inertial maneuver: ", sat1.mass)
 println("State after Inertial maneuver: \n", get_state(sat1, Cartesian()))
 
@@ -30,7 +30,7 @@ deltav1 = ImpulsiveManeuver(
       )
 
 # Apply the maneuver to the spacecraft
-maneuver(sat1, deltav1)
+maneuver!(sat1, deltav1)
 println("Mass after VNB maneuver: ", sat1.mass)
 println("State after VNB maneuver: \n", get_state(sat1, Cartesian()))
 

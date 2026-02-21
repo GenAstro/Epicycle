@@ -27,7 +27,7 @@ dynsys = DynSys(
 # Loop with point mass gravity for 10 days in LEO
 for i in 1:10
     local val, elapsed_time, bytes, gctime2
-    val, elapsed_time, bytes, gctime2 = @timed propagate(dynsys, integ, StopAtSeconds(864000.0); prop_stm = true)
+    val, elapsed_time, bytes, gctime2 = @timed propagate!(dynsys, integ, StopAtSeconds(864000.0); prop_stm = true)
     println("Elapsed: $elapsed_time s, GC time: $gctime2 s, Allocated: $bytes bytes")
 end
 

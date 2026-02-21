@@ -49,8 +49,8 @@ AstroStates provides a library of state structs to create, store, and convert or
 ```julia
 using AstroStates
 
-# Create a Cartesian state from a vector
-c = CartesianState([7000.0, 0.0, 100.0, 0.0, 7.5, 2.5])
+# Create a Cartesian state from position and velocity vectors
+c = CartesianState([7000.0, 0.0, 100.0] , [0.0, 7.5, 2.5])
 
 # Create a Keplerian state from individual elements.
 k = KeplerianState(-98000.0, 2.6, pi/4, deg2rad(145), pi/8, 0.0 )
@@ -63,6 +63,8 @@ k2 = KeplerianState(c, mu)
 h = OutGoingAsymptoteState(k, mu)
 
 # Inspect elements of the states we just created.  Use "?" to see fields on a struct.
+c.position
+c.velocity
 k.sma
 c.posvel
 h.c3

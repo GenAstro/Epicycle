@@ -17,6 +17,7 @@ import EpicycleBase: AbstractOrbitStateType
 
 using LinearAlgebra
 using Printf
+using StaticArrays
 
 # Export public types 
 export AbstractState, AbstractOrbitState, AbstractOrbitStateType 
@@ -80,6 +81,7 @@ include("kep_to_modkep.jl")
 # =============================================================================
 """
     CartesianState(posvel)
+    CartesianState(pos, vel)
 
 Cartesian position and velocity state representation.
 
@@ -87,39 +89,103 @@ Cartesian position and velocity state representation.
 - Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
 
 # Fields
-- `posvel::Vector{T}`: 6-element position/velocity vector [x, y, z, vx, vy, vz]
-  * **Position components** (x, y, z): Cartesian coordinates of spacecraft.
-    - Range: Any real values. 
-  * **Velocity components** (vx, vy, vz): Cartesian velocity vector components.
-    - Range: Any real values. 
+- `position::SVector{3,T}`: Position vector [x, y, z]
+  * Range: Any real values.
+- `velocity::SVector{3,T}`: Velocity vector [vx, vy, vz]
+  * Range: Any real values.
+
+# Properties
+- `posvel`: Backward-compatible property returning combined state as Vector{Float64}
 
 # Notes
 - Parametric so automatic differentiation and high-precision types are supported.
+- Internal storage uses StaticArrays for efficient coordinate transformations.
+- The `posvel` property provides backward compatibility with code expecting a 6-element vector.
+- See docstrings for other constructor options for flexibility.
 
 # Examples
 ```julia
+# From 6-element vector
 cart = CartesianState([6778.0, 0.0, 0.0, 0.0, 7.66, 0.0])
+
+# From separate position and velocity
+using StaticArrays
+pos = SVector(6778.0, 0.0, 0.0)
+vel = SVector(0.0, 7.66, 0.0)
+cart = CartesianState(pos, vel)
+
+# Access fields
+x, y, z = cart.position
+vx, vy, vz = cart.velocity
+posvel_vec = cart.posvel  # Returns Vector{Float64}
 ```
 """
 mutable struct CartesianState{T} <: AbstractOrbitState
-    posvel::Vector{T}   
-    numvars::Int
+    position::SVector{3,T}
+    velocity::SVector{3,T}
+end
 
-    function CartesianState(state::Vector{T}) where {T<:Real}
-        @assert length(state) == 6 "CartesianState must be a 6-element vector"
-        new{T}(state, 6)
+# Constructors
+"""
+    CartesianState(data::AbstractVector)
+
+Construct CartesianState from 6-element vector [x, y, z, vx, vy, vz].
+"""
+function CartesianState(data::AbstractVector{T}) where {T<:Real}
+    @assert length(data) == 6 "CartesianState must be a 6-element vector"
+    CartesianState(SVector{3,T}(data[1], data[2], data[3]), 
+                   SVector{3,T}(data[4], data[5], data[6]))
+end
+
+"""
+    CartesianState(data::SVector{6})
+
+Construct CartesianState from 6-element static vector [x, y, z, vx, vy, vz].
+"""
+function CartesianState(data::SVector{6,T}) where {T<:Real}
+    CartesianState(SVector{3,T}(data[1], data[2], data[3]), 
+                   SVector{3,T}(data[4], data[5], data[6]))
+end
+
+"""
+    CartesianState(pos::SVector{3}, vel::SVector{3})
+
+Construct CartesianState from separate position and velocity static vectors.
+"""
+function CartesianState(pos::SVector{3,T}, vel::SVector{3,T}) where {T<:Real}
+    CartesianState{T}(pos, vel)
+end
+
+"""
+    CartesianState(pos::AbstractVector, vel::AbstractVector)
+
+Construct CartesianState from separate 3-element position and velocity vectors.
+"""
+function CartesianState(pos::AbstractVector{T}, vel::AbstractVector{T}) where {T<:Real}
+    @assert length(pos) == 3 "Position vector must have 3 elements"
+    @assert length(vel) == 3 "Velocity vector must have 3 elements"
+    CartesianState(SVector{3,T}(pos[1], pos[2], pos[3]),
+                   SVector{3,T}(vel[1], vel[2], vel[3]))
+end
+
+# Backward compatibility property accessor
+function Base.getproperty(s::CartesianState, sym::Symbol)
+    if sym === :posvel
+        return [getfield(s, :position)[1], getfield(s, :position)[2], getfield(s, :position)[3],
+                getfield(s, :velocity)[1], getfield(s, :velocity)[2], getfield(s, :velocity)[3]]
+    else
+        return getfield(s, sym)
     end
 end
 
 function show(io::IO, state::CartesianState)
-    posvel = state.posvel
     println(io, "CartesianState:")
-    println(io, @sprintf("  x   = %14.8f", posvel[1]))
-    println(io, @sprintf("  y   = %14.8f", posvel[2]))
-    println(io, @sprintf("  z   = %14.8f", posvel[3]))
-    println(io, @sprintf("  vx  = %14.8f", posvel[4]))
-    println(io, @sprintf("  vy  = %14.8f", posvel[5]))
-    println(io, @sprintf("  vz  = %14.8f", posvel[6]))
+    println(io, @sprintf("  x   = %14.8f", state.position[1]))
+    println(io, @sprintf("  y   = %14.8f", state.position[2]))
+    println(io, @sprintf("  z   = %14.8f", state.position[3]))
+    println(io, @sprintf("  vx  = %14.8f", state.velocity[1]))
+    println(io, @sprintf("  vy  = %14.8f", state.velocity[2]))
+    println(io, @sprintf("  vz  = %14.8f", state.velocity[3]))
 end
 
 """
@@ -652,7 +718,8 @@ include("orbit_state.jl")
 # =============================================================================
 
 function to_vector(state::CartesianState)
-    state.posvel
+    [state.position[1], state.position[2], state.position[3], 
+     state.velocity[1], state.velocity[2], state.velocity[3]]
 end
 function to_vector(state::KeplerianState)
     [state.sma, state.ecc, state.inc, state.raan, state.aop, state.ta]

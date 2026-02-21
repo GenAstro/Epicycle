@@ -17,6 +17,7 @@ using AstroProp
 earth.mu = 398600.4415
 sun.mu =132712440017.99
 moon.mu = 4902.8005821478
+mars.mu = 42828.375214
 
 function percent_error(x, y)
     if x isa Number && y isa Number
@@ -54,6 +55,27 @@ acc = zeros(6)
     @test isapprox(acc, acc_expected; rtol=1e-12)
 
 end
+
+@testset "Point Mass Grav - Total accel (mars)" begin
+    t_mars = Time("2015-09-21T12:23:12", TDB(), ISOT())
+    posvel_mars = [7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]
+    acc_mars = zeros(6)
+    compute_point_mass_gravity!(t_mars, posvel_mars, acc_mars, mars, ())
+
+    # Verify velocity part is copied correctly
+    @test acc_mars[1:3] == posvel_mars[4:6]
+    
+    # Verify acceleration is computed (non-zero for mars gravity)
+    @test norm(acc_mars[4:6]) > 0.0
+    
+    # Manual calculation: a = -mu * r / r^3
+    r_vec = posvel_mars[1:3]
+    r_mag = norm(r_vec)
+    expected_acc = -mars.mu * r_vec / r_mag^3
+    
+    @test isapprox(acc_mars[4:6], expected_acc; rtol=1e-12)
+end
+
 
 @testset "Point Mass Grav - Pert accel" begin
     acc = zeros(6)
@@ -146,7 +168,7 @@ end
         spacecraft = [sat])
 
     # Propagate for 10 days
-    propagate(dynsys, integ, StopAtDays(10.0))
+    propagate!(dynsys, integ, StopAtDays(10.0))
     expect_vec = [ -6767.7365586489, -733.99885811324, -1.6788146940718, 1.1437377582848, -7.6333483270125, -0.0307369480771];
     result_vec = to_posvel(sat);
     dx = abs.(expect_vec - result_vec)
@@ -200,7 +222,7 @@ end
         spacecraft = [sat])
 
     # Propagate for 10 day
-    propagate(dynsys, integ, StopAtDays(5.0))
+    propagate!(dynsys, integ, StopAtDays(5.0))
     expect_vec = [-15192.169060110,  9323.5690156746,  6396.2477992693,  -0.5245710649352, -0.2561104305432,  0.0426186946048 ];
     result_vec = to_posvel(sat);
     dx = abs.(expect_vec - result_vec)
@@ -258,7 +280,7 @@ end
     prop    = OrbitPropagator(forces, integ)
 
     # Propagate to apoapsis
-    propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+    propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
 
     # Verify history was populated
     @test !isempty(sat.history)
@@ -269,24 +291,24 @@ end
     @test !isempty(segment)
 
     # Verify all entries have correct types
-    for (time_entry, state_entry) in segment
-        @test time_entry isa AstroEpochs.Time{Float64}
-        @test state_entry isa Vector{Float64}
-        @test length(state_entry) == 6  # Position and velocity
+    for i in 1:length(segment.times)
+        @test segment.times[i] isa AstroEpochs.Time{Float64}
+        @test segment.states[i] isa CartesianState{Float64}
     end
 
     # Verify chronological ordering
-    times = [entry[1].jd for entry in segment]
-    @test issorted(times)
+    times_jd = [t.jd for t in segment.times]
+    @test issorted(times_jd)
 
     # Test that we can access the history without type issues
-    first_time = segment[1][1]
-    last_time = segment[end][1]
+    first_time = segment.times[1]
+    last_time = segment.times[end]
     @test last_time.jd > first_time.jd
 
     # Verify the state values are reasonable (not NaN or Inf)
-    for (_, state) in segment
-        @test all(isfinite.(state))
+    for state in segment.states
+        @test all(isfinite.(state.position))
+        @test all(isfinite.(state.velocity))
     end
 end
 
@@ -315,9 +337,9 @@ end
     initial_state2 = to_posvel(sat2)
 
     # Propagate both spacecraft until sat2 reaches periapsis
-    sol = propagate(prop, [sat1, sat2], StopAt(sat2, PosDotVel(), 0.0; direction=+1))
+    sol = propagate!(prop, [sat1, sat2], StopAt(sat2, PosDotVel(), 0.0; direction=+1))
 
-    propagate(prop, sat3, StopAt(sat3, PosDotVel(), 0.0; direction=+1))
+    propagate!(prop, sat3, StopAt(sat3, PosDotVel(), 0.0; direction=+1))
 
     # Verify sat2 and sat3 reach the same final state
     final_state2 = to_posvel(sat2)
@@ -374,7 +396,7 @@ end
     stop_z = StopAt(sat, PosZ(), 0.0)  # Cross Z=0 plane (equatorial)
 
     # Propagate with multiple stops - should stop at whichever occurs first
-    sol = propagate(prop, sat, stop_x, stop_z)
+    sol = propagate!(prop, sat, stop_x, stop_z)
 
     # Verify spacecraft state has changed
     final_state = to_posvel(sat)

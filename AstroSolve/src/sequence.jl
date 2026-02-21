@@ -100,7 +100,6 @@ function SequenceManager(seq::Sequence)
     ordered_vars = order_unique_vars(sorted_events)
     ordered_funcs = Constraint[]
     fun_sizes = Int[]
-    found = IdSet()
     for event in sorted_events
         for c in event.funcs
             push!(ordered_funcs, c)
@@ -121,7 +120,7 @@ function SequenceManager(seq::Sequence)
 end
 
 """
-    _push_stateful!(out::Vector{Any}, seen::IdSet, objs)
+    _push_stateful!(out::Vector{Any}, seen::Set{UInt}, objs)
 
 Push unique stateful objects to output vector, preserving discovery order.
 
@@ -130,17 +129,17 @@ already seen are added to the output collection.
 
 # Arguments
 - `out::Vector{Any}`: Output collection to append to
-- `seen::IdSet`: Set tracking already discovered objects
+- `seen::Set{UInt}`: Set tracking object IDs of already discovered objects
 - `objs`: Collection of objects to check and potentially add
 
 # Returns
 - `Vector{Any}`: The modified output vector (for chaining)
 """
-@inline function _push_stateful!(out::Vector{Any}, seen::IdSet, objs)
+@inline function _push_stateful!(out::Vector{Any}, seen::Set{UInt}, objs)
     for obj in objs
-        if is_astrosolve_stateful(typeof(obj)) && !(obj in seen)
+        if is_astrosolve_stateful(typeof(obj)) && !(objectid(obj) in seen)
             push!(out, obj)
-            push!(seen, obj)
+            push!(seen, objectid(obj))
         end
     end
     return out
@@ -163,7 +162,7 @@ objects referenced throughout the sequence.
 - `Vector{Any}`: Collection of unique stateful objects in discovery order
 """
 function find_all_stateful_structs(ordered_vars, sorted_events)
-    seen = IdSet()
+    seen = Set{UInt}()
     out  = Any[]
 
     # 1) From SolverVariables (via calc containers)
@@ -203,6 +202,11 @@ it recursively copies fields.
 function copy_struct_fields!(dest, src)
     @assert typeof(dest) == typeof(src)
     for field in fieldnames(typeof(dest))
+        # Skip history field for Spacecraft (preserves recording flags across resets)
+        if dest isa Spacecraft && field == :history
+            continue
+        end
+        
         val = getfield(src, field)
         if typeof(val) <: AbstractArray
             # Overwrite array contents
@@ -275,6 +279,41 @@ function add_events!(seq::Sequence, event::Event, dependencies::Vector{Event})
     # Ensure event is also a key (even if it has no dependents yet)
     if !haskey(seq.adj_map, event)
         seq.adj_map[event] = Event[]
+    end
+end
+
+"""
+    add_sequence!(seq::Sequence, events::Event...)
+
+Add a linear sequence of events where each event depends on the previous one.
+
+This is a convenience function for the common case of a linear event chain.
+Each event is added only with dependencies from the event immediately before it.
+
+# Arguments
+- `seq::Sequence`: Sequence to add events to
+- `events::Event...`: Events in execution order (first executes first)
+
+# Examples
+```julia
+seq = Sequence()
+# These two are equivalent:
+add_sequence!(seq, toi_event, prop_event, moi_event)
+
+# Equivalent to:
+add_events!(seq, toi_event, Event[])
+add_events!(seq, prop_event, [toi_event])
+add_events!(seq, moi_event, [prop_event])
+```
+"""
+function add_sequence!(seq::Sequence, events::Event...)
+    if isempty(events)
+        return
+    end
+    
+    # Each event depends on the previous (first event implicitly has no dependencies)
+    for i in 2:length(events)
+        add_events!(seq, events[i], [events[i-1]])
     end
 end
 
@@ -652,22 +691,71 @@ function solver_fun!(F::AbstractVector, x::AbstractVector, sm::SequenceManager)
 end
 
 """
-    trajectory_solve(seq::Sequence)
+    solve_trajectory!(seq::Sequence; record_iterations::Bool=false)
 
 Solve trajectory sequence using default SNOW/IPOPT configuration.
+
+# Keyword Arguments
+- `record_iterations::Bool=false`: Record solver iteration history for diagnostics.
+  When `true`, iteration segments are stored in `spacecraft.history.iterations`.
+  When `false` (default), only the final solution is recorded in `spacecraft.history.segments`.
+
+# Notes
+- Spacecraft history flags are automatically managed during optimization
+- Original flag values are restored after optimization completes
+- Final solution respects original recording settings (no forced recording)
 """
-function trajectory_solve(seq::Sequence)
-    trajectory_solve(seq, default_snow_options())
+function solve_trajectory!(seq::Sequence; record_iterations::Bool=false)
+    solve_trajectory!(seq, default_snow_options(); record_iterations=record_iterations)
 end
 
 """
-    trajectory_solve(seq::Sequence, options::SNOW.Options)
+    solve_trajectory!(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
 
 Solve trajectory sequence using specified SNOW optimization options.
+
+# Arguments
+- `seq::Sequence`: Event sequence defining the trajectory optimization problem
+- `options::SNOW.Options`: SNOW/IPOPT solver options
+
+# Keyword Arguments
+- `record_iterations::Bool=false`: Record solver iteration history for diagnostics.
+  When `true`, iteration segments are stored in `spacecraft.history.iterations`.
+  When `false` (default), only the final solution is recorded in `spacecraft.history.segments`.
+
+# Returns
+Named tuple with:
+- `variables`: Optimal variable values
+- `objective`: Optimal objective function value
+- `constraints`: Constraint values at optimal solution
+- `info`: Solver convergence information
+
+# Notes
+- Automatically manages spacecraft history recording flags during optimization
+- During iterations: records to `iterations` vector if `record_iterations=true`
+- After convergence: restores original flags and records final solution to `segments`
+- Original flag values are preserved and restored after optimization
 """
-function trajectory_solve(seq::Sequence, options::SNOW.Options)
-    # Hide all the optimization machinery
+function solve_trajectory!(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
+    # Get all spacecraft from the sequence
     sm = SequenceManager(seq)
+    spacecraft = [obj for obj in sm.stateful_structs if obj isa Spacecraft]
+    
+    # Save original history recording flags for all spacecraft
+    original_flags = [(sc.history.record_segments, sc.history.record_iterations) 
+                      for sc in spacecraft]
+    
+    # Configure flags for optimization iterations
+    for sc in spacecraft
+        sc.history.record_segments = false
+        sc.history.record_iterations = record_iterations
+    end
+    
+    # Recreate SequenceManager to capture new flag settings in initial_stateful_structs
+    # (reset_stateful_structs! copies from initial_stateful_structs on each iteration)
+    sm = SequenceManager(seq)
+    
+    # Setup optimization problem
     x0 = get_var_values(sm)
     lx = get_var_lower_bounds(sm)
     ux = get_var_upper_bounds(sm)
@@ -677,9 +765,27 @@ function trajectory_solve(seq::Sequence, options::SNOW.Options)
     
     # Create closure for SNOW interface
     snow_solver_fun!(F, x) = solver_fun!(F, x, sm)
+    
+    # Run optimization
     xopt, fopt, info = minimize(snow_solver_fun!, x0, ng, lx, ux, lg, ug, options)
     
-    # Evaluate constraints at the optimal solution to get constraint values
+    # Restore original flags before final evaluation
+    for (sc, (seg_flag, iter_flag)) in zip(spacecraft, original_flags)
+        sc.history.record_segments = seg_flag
+        sc.history.record_iterations = iter_flag
+    end
+    
+    # Update initial_stateful_structs with restored flags
+    # (Cannot recreate SequenceManager as it would capture post-optimization state)
+    for (obj, init) in zip(sm.stateful_structs, sm.initial_stateful_structs)
+        if obj isa Spacecraft
+            init.history.record_segments = obj.history.record_segments
+            init.history.record_iterations = obj.history.record_iterations
+        end
+    end
+    
+    # Evaluate constraints at optimal solution and record final trajectory
+    # (solver_fun! will reset to initial state with correct flags via reset_stateful_structs!)
     constraint_values = Vector{Float64}(undef, ng)
     snow_solver_fun!(constraint_values, xopt)
     

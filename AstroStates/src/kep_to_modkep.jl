@@ -59,11 +59,5 @@ function kep_to_modkep(kep::Vector{<:Real}; tol::Float64 = 1e-12)
     rₚ = a * (1 - e)
     rₐ = a * (1 + e)
 
-    # Reject nearly singular conics or tiny periapsis
-    if abs(rₚ) < tol
-        @warn "Conversion failed: Singular conic section."
-        return fill(NaN, 6)
-    end
-
     return [rₚ, rₐ, i, Ω, ω, ν]
 end

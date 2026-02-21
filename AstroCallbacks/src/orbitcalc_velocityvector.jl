@@ -22,12 +22,10 @@ struct VelocityVector <: AbstractOrbitVar end
 calc_input_statetag(::VelocityVector) = Cartesian()
 calc_is_settable(::VelocityVector) = true    # COV_EXCL_LINE (inlined)
 calc_numvars(::VelocityVector) = 3           # COV_EXCL_LINE (inlined)
-_evaluate(::VelocityVector, s::CartesianState) = s.posvel[4:6]
+_evaluate(::VelocityVector, s::CartesianState) = collect(s.velocity)
 
 function _set!(::VelocityVector, s::CartesianState, newvel::Vector{<:Real}) 
     length(newvel) == 3 || error("VelocityVector requires 3 elements.")
-    @inbounds begin
-        s.posvel[4:6] = newvel
-    end
+    s.velocity = SVector{3}(newvel[1], newvel[2], newvel[3])
     return s
 end

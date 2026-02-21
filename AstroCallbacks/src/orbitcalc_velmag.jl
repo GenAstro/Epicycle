@@ -21,12 +21,10 @@ struct VelMag <: AbstractOrbitVar end
 calc_input_statetag(::VelMag) = Cartesian()
 calc_is_settable(::VelMag) = true             # COV_EXCL_LINE (inlined)
 calc_numvars(::VelMag) = 1                    # COV_EXCL_LINE (inlined)
-_evaluate(::VelMag, s::CartesianState) = norm(s.posvel[4:6])
+_evaluate(::VelMag, s::CartesianState) = norm(s.velocity)
 
-function _set!(::VelMag, s::CartesianState, newpos::Vector{<:Real}) 
-    length(newpos) == 1 || error("VelMag requires 1 element.")
-    @inbounds begin
-        s.posvel[4:6] = s.posvel[4:6]/norm(s.posvel[4:6]) * newpos[1]
-    end
+function _set!(::VelMag, s::CartesianState, new_vel::Vector{<:Real}) 
+    length(new_vel) == 1 || error("VelMag requires 1 element.")
+    s.velocity = s.velocity / norm(s.velocity) * new_vel[1]
     return s
 end

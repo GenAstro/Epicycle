@@ -10,6 +10,8 @@ The ecosystem consists of 11 specialized packages that work together to provide 
 - **Mission Layer**: AstroMissions (mission design), AstroOptimization (trajectory optimization)
 - **Integration Layer**: Epicycle (unified interface and workflows)
 
+Check out the video overview [here!](https://www.youtube.com/watch?v=Ph51mj0SVP4)
+
 ## Why New Software?
 
 The astrodynamics field has historically relied on legacy Fortran codebases and proprietary tools that create barriers to innovation and collaboration. Existing open-source solutions often suffer from fragmentation, limited extensibility, or performance constraints.

@@ -22,6 +22,10 @@ Pkg.activate(".")
 println("📥 Installing dependencies...")
 Pkg.instantiate()
 
+# Resolve to ensure manifest is consistent
+println("🔄 Resolving manifest...")
+Pkg.resolve()
+
 # Develop all workspace packages
 packages = [
     "EpicycleBase",

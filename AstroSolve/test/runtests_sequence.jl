@@ -297,13 +297,13 @@ end
         )
         
         # Create events
-        fun_toi() = maneuver(sat, toi) 
+        fun_toi() = maneuver!(sat, toi) 
         toi_event = Event(name = "TOI Maneuver", 
                           event = fun_toi,
                           vars = [var_toi],
                           funcs = [])
         
-        fun_prop_apo() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+        fun_prop_apo() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
         prop_event = Event(name = "Propagate to Apoapsis", 
                            event = fun_prop_apo,
                            funcs = [pos_con])
@@ -312,9 +312,9 @@ end
         seq = Sequence()
         add_events!(seq, prop_event, [toi_event]) 
         
-        # Test default trajectory_solve(seq) - call only once
+        # Test default solve_trajectory!(seq) - call only once
         result = nothing
-        @test_nowarn result = trajectory_solve(seq)
+        @test_nowarn result = solve_trajectory!(seq)
         
         # Verify return structure
         @test haskey(result, :variables)
@@ -359,13 +359,13 @@ end
             scale = [1.0],
         )
         
-        fun_toi() = maneuver(sat, toi) 
+        fun_toi() = maneuver!(sat, toi) 
         toi_event = Event(name = "TOI Maneuver", 
                           event = fun_toi,
                           vars = [var_toi],
                           funcs = [])
         
-        fun_prop_apo() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+        fun_prop_apo() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
         prop_event = Event(name = "Propagate to Apoapsis", 
                            event = fun_prop_apo,
                            funcs = [pos_con])
@@ -382,9 +382,9 @@ end
         )
         custom_options = Options(derivatives=ForwardFD(), solver=IPOPT(custom_ip_options))
         
-        # Test custom trajectory_solve(seq, options) - call only once
+        # Test custom solve_trajectory!(seq, options) - call only once
         result = nothing
-        @test_nowarn result = trajectory_solve(seq, custom_options)
+        @test_nowarn result = solve_trajectory!(seq, custom_options)
         
         # Verify same return structure
         @test haskey(result, :variables)
@@ -408,7 +408,7 @@ end
         @test isa(options.derivatives, ForwardFD)
         @test isa(options.solver, IPOPT)
         
-        # Test that default options work with trajectory_solve using simple working config
+        # Test that default options work with solve_trajectory! using simple working config
         sat = Spacecraft()
         
         gravity = PointMassGravity(earth, (moon, sun))
@@ -436,13 +436,13 @@ end
             scale = [1.0],
         )
         
-        fun_toi() = maneuver(sat, toi) 
+        fun_toi() = maneuver!(sat, toi) 
         toi_event = Event(name = "TOI Maneuver", 
                           event = fun_toi,
                           vars = [var_toi],
                           funcs = [])
         
-        fun_prop_apo() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+        fun_prop_apo() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
         prop_event = Event(name = "Propagate to Apoapsis", 
                            event = fun_prop_apo,
                            funcs = [pos_con])
@@ -452,7 +452,7 @@ end
         
         # Use default options explicitly - call only once
         result = nothing
-        @test_nowarn result = trajectory_solve(seq, AstroSolve.default_snow_options())
+        @test_nowarn result = solve_trajectory!(seq, AstroSolve.default_snow_options())
         
         @test result.info isa Union{Bool, Symbol}
     end
@@ -495,13 +495,13 @@ end
             scale = [1.0],
         )
         
-        fun_toi() = maneuver(sat, toi) 
+        fun_toi() = maneuver!(sat, toi) 
         toi_event = Event(name = "TOI Maneuver", 
                           event = fun_toi,
                           vars = [var_toi],
                           funcs = [])
         
-        fun_prop_apo() = propagate(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+        fun_prop_apo() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
         prop_event = Event(name = "Propagate to Apoapsis", 
                            event = fun_prop_apo,
                            funcs = [pos_con, sma_con])
@@ -509,7 +509,7 @@ end
         seq = Sequence()
         add_events!(seq, prop_event, [toi_event]) 
         
-        result = trajectory_solve(seq)
+        result = solve_trajectory!(seq)
         
         # Verify constraint values are returned
         @test length(result.constraints) == 2  # 2 constraints
