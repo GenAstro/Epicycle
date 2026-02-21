@@ -44,9 +44,10 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          file: ./coverage.info
+          files: ./coverage.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
+          disable_search: true
 
       - name: Debug - Check docs build
         if: github.ref == 'refs/heads/main'
