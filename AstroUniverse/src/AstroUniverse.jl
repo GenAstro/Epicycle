@@ -24,6 +24,10 @@ export get_gravparam, set_gravparam!
 export download_spice_kernel, load_spice_kernel, unload_spice_kernel, unload_all_spice_kernels
 export get_spice_directory, list_cached_spice_kernels, list_downloaded_spice_kernels
 
+export Mu
+
+import EpicycleBase: AbstractParamTag, get_field, set_field!
+
 """
     ensure_kernel_download(cache_dir, filename, url)
 
@@ -694,5 +698,31 @@ function __init__()
         end
     end
 end
+
+# ---------------------------------------------------------------------------
+# Tag / Variable System — Mu
+# ---------------------------------------------------------------------------
+
+"""
+    Mu <: AbstractParamTag
+
+Tag identifying the gravitational parameter μ = GM on a `CelestialBody`.
+"""
+struct Mu <: AbstractParamTag end
+
+"""Return the gravitational parameter of `body` (km³/s²)."""
+get_field(body::CelestialBody, ::Mu) = body.mu
+
+"""Set the gravitational parameter of `body` to `v` (km³/s²)."""
+function set_field!(body::CelestialBody, ::Mu, v::Real)
+    body.mu = convert(typeof(body.mu), v)
+    return nothing
+end
+
+# ---------------------------------------------------------------------------
+# Earth Orientation Parameters (global service)
+# ---------------------------------------------------------------------------
+
+include("eop.jl")
 
 end

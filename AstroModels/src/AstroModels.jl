@@ -22,11 +22,13 @@ export CADModel
 export HistorySegment, SpacecraftHistory
 export push_state!, push_segment!, new_segment!
 export to_float64
+export Mass
 
-import EpicycleBase: AbstractPoint
+import EpicycleBase: AbstractPoint, AbstractParamTag, get_field, set_field!
 
 include("cadmodel.jl")
 include("spacecraft_history.jl")
 include("spacecraft.jl")
+include("tags.jl")
 
 end

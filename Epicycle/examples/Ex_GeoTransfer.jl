@@ -217,5 +217,5 @@ propagate!(prop, sat, StopAt(sat, PropDurationDays(), 1.1))
 
 # Visualize with iterations
 view = View3D()
-add_spacecraft!(view, sat; show_iterations=true)
+add_spacecraft!(view, sat; show_iterations=false)
 display_view(view)

@@ -13,6 +13,7 @@ module AstroFrames
 
 using EpicycleBase
 using AstroUniverse
+using StaticArrays
 
 export AbstractAxes
 export ICRFAxes, MJ2000Axes, VNB, Inertial

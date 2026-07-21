@@ -15,7 +15,7 @@ sat = Spacecraft(
 # Create force models, integrator, and dynamics system
 gravity = PointMassGravity(earth, (moon,sun))  
 forces  = ForceModel(gravity)
-integ   = IntegratorConfig(DP8(); abstol=1e-9, reltol=1e-9, dt=300.0)
+integ   = IntegratorConfig(DP8(); abstol=1e-11, reltol=1e-11, dt=300.0)
 prop    = OrbitPropagator(forces, integ)
 
 # ============================================================================
@@ -112,10 +112,13 @@ add_sequence!(seq, toi_event, prop_event, moi_event)
 
 # Solve the sequence and report the solution
 result = solve_trajectory!(seq; record_iterations=true)
+
+propagate!(prop, sat, StopAt(sat, PropDurationDays(), 1.5))
+
 report_sequence(seq)
 report_solution(seq, result)
 
 # Plot the trajectory 3D
 view = View3D()
-add_spacecraft!(view, sat; show_iterations=true)
+add_spacecraft!(view, sat; show_iterations=false)
 display_view(view)

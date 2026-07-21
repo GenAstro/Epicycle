@@ -1,0 +1,6 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "Get-Command": true
+    },
+    "julia.environmentPath": "\\Users\\steve\\Dev\\Epicycle\\EpicycleDev\\AstroRoutines"
+}

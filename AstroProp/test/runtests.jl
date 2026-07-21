@@ -89,14 +89,17 @@ end
 end
 
 @testset "Point Mass Grav - PosVel Jac" begin
-    # Compute PosVel Jacobian
-    acc = zeros(6)
-    jac_posvel = Dict(PosVel => zeros(6, 6))
-    compute_point_mass_gravity!(t,posvel,acc,earth,(moon,sun);jac = jac_posvel)
+    # Compute PosVel Jacobian via state_jac! accumulator
+    pm_grav = PointMassGravity(earth, (moon, sun))
+    sat = Spacecraft(
+        state = CartesianState(posvel),
+        time  = t,
+    )
+    A = zeros(6, 6)
+    AstroProp.state_jac!(A, pm_grav, t, posvel, sat)
     J = ForwardDiff.jacobian(gravity_wrapped, posvel)
-    jac_posvel[PosVel] - J
 
-    @test isapprox(jac_posvel[PosVel], J; rtol=1e-14)
+    @test isapprox(A, J; rtol=1e-14)
 end
 
 @testset "Point Mass Grav - error r = 0 " begin
@@ -244,23 +247,75 @@ end
 
 @testset "Point Mass Grav - PosVel Jac Accel Interface" begin
 
-    # Compute PosVel Jacobian
-    time=Time("2015-09-21T12:23:12", TAI(), ISOT())
+    # Compute PosVel Jacobian via state_jac! accumulator
+    time = Time("2015-09-21T12:23:12", TAI(), ISOT())
     posvel = [7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]
     sat = Spacecraft(
-        state=CartesianState(posvel), 
-        time=Time("2015-09-21T12:23:12", TAI(), ISOT())
-        )
+        state = CartesianState(posvel),
+        time  = Time("2015-09-21T12:23:12", TAI(), ISOT()),
+    )
 
-    pm_grav = PointMassGravity(earth,())
-    params = []
-    jacobian = Dict(PosVel => zeros(6, 6))
-    acc = zeros(eltype(posvel), 6)
-    accel_eval!(pm_grav, time, posvel, acc, sat, params; jac = jacobian)
+    pm_grav = PointMassGravity(earth, ())
+    A = zeros(6, 6)
+    AstroProp.state_jac!(A, pm_grav, time, posvel, sat)
 
-    J = ForwardDiff.jacobian(gravity_wrapped, posvel)
+    # ForwardDiff reference uses earth + (moon, sun); rebuild matching reference
+    pm_full = PointMassGravity(earth, (moon, sun))
+    A_full = zeros(6, 6)
+    AstroProp.state_jac!(A_full, pm_full, time, posvel, sat)
+    grav_full(x::Vector{T}) where {T} = begin
+        a = zeros(T, 6)
+        compute_point_mass_gravity!(time, x, a, earth, (moon, sun))
+        return a
+    end
+    J = ForwardDiff.jacobian(grav_full, posvel)
 
-    @test isapprox(jacobian[PosVel], J; rtol=1e-12)
+    @test isapprox(A_full, J; rtol=1e-12)
+end
+
+@testset "Step 1 — PosVel tag get/set round-trip" begin
+    posvel0 = [7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]
+    sat = Spacecraft(
+        state = CartesianState(posvel0),
+        time  = Time("2015-09-21T12:23:12", TAI(), ISOT()),
+    )
+
+    # PosVel tag identity
+    @test PosVel <: EpicycleBase.AbstractStateTag
+    @test PosVel <: EpicycleBase.AbstractVarTag
+    @test fieldcount(PosVel) == 0
+
+    # get_field returns [r..., v...]
+    x = get_field(sat, PosVel())
+    @test x == posvel0
+
+    # set_field! writes back through set_posvel!
+    new_pv = [7100.0, 1.0, 2.0, 0.1, 7.6, 0.2]
+    set_field!(sat, PosVel(), new_pv)
+    @test get_field(sat, PosVel()) == new_pv
+end
+
+@testset "Step 1 — Mu param_jac! vs central FD" begin
+    # Use a fresh CelestialBody so we don't perturb the shared `earth` global
+    earth_local = CelestialBody("Earth", 398600.4415, 6378.137, 1/298.257223563, 399)
+    t_pj   = Time("2015-09-21T12:23:12", TDB(), ISOT())
+    y_pj   = [7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]
+    sat_pj = Spacecraft(state=CartesianState(y_pj), time=t_pj)
+    pm     = PointMassGravity(earth_local, ())
+
+    # Analytic param_jac! (accumulator, 6-vector)
+    B = zeros(6)
+    AstroProp.param_jac!(B, pm, Mu(), t_pj, y_pj, sat_pj)
+
+    # Central-FD oracle: ∂(rhs)/∂μ via fd_differentiate_wrt
+    rhs_fn = () -> begin
+        a = zeros(6)
+        compute_point_mass_gravity!(t_pj, y_pj, a, earth_local, ())
+        return a
+    end
+    B_fd = fd_differentiate_wrt(rhs_fn, earth_local, Mu())
+
+    @test isapprox(B, B_fd; rtol=1e-8)
 end
 
 @testset "History Storage and Type Safety" begin

@@ -11,6 +11,7 @@ Propagation interfaces, stopping conditions, and interface to OrdinaryDiffEq.
 module AstroProp
 
 using OrdinaryDiffEq, LinearAlgebra
+using ForwardDiff
 
 using EpicycleBase
 using AstroStates
@@ -23,6 +24,12 @@ using AstroCallbacks: OrbitCalc, get_calc
 
 import AstroCallbacks: AbstractFun, AbstractCalcVariable, AbstractOrbitVar
 import AstroUniverse: translate
+import AstroUniverse: Mu                   # re-export below
+import AstroModels: Mass                   # re-export below
+import EpicycleBase: AbstractStateTag, AbstractParamTag, AbstractVarTag
+import EpicycleBase: ModelVariable, get_field, set_field!, fd_differentiate_wrt
+import OrdinaryDiffEq: solve               # extended below for OrbitODEProblem
+
 export TwoBodyGravity, ExponentialAtmosphere, CartesianODE, IntegratorConfig
 export DynamicsSystem, propagate!, DynSys, ForceModel
 export StopAtApoapsis, StopAtAscendingNode, StopAtPeriapsis, StopAtDays
@@ -30,32 +37,55 @@ export PosVel
 export StopAtSeconds, StopAtRadius
 export nbody_perts
 export PointMassGravity, compute_point_mass_gravity!, evaluate, accel_eval!
+# NOTE: HarmonicGravity / EGM96 exports temporarily withheld pending upstream
+# AstroForceModels / SatelliteToolboxGravityModels version alignment.
 
 export OrbitODE
 export IntegratorConfig
 export OrbitPropagator, StopAt
 export PropDurationSeconds, PropDurationDays
 
+export Mu, Mass                            # pass-through from AstroUniverse / AstroModels
+export Cd, Cr                              # defined in this package
+export SimpleDrag, SimpleSRP
+export JacobianConfig, JacobianResult
+export eval_jacobian!, eval_jacobian, state_jac!, param_jac!
+export fd_differentiate_wrt
+export STMConfig, OrbitODEProblem, PropagationResult, solve
+
 """
-    PosVel <: AbstractState
+    PosVel <: AbstractStateTag
 
-Position-velocity state representation for orbital propagation. This is a legacy 
-state type used internally by the propagation system.
+Tag singleton identifying the 6-element position–velocity state on a `Spacecraft`.
+Use with `get_field` / `set_field!` and as the `tag` for state-vector solve-fors
+and sensitivity blocks.
 
-# Fields
-- `numvars::Int`: Number of state variables (always 6 for position and velocity)
-
-# Notes
-This struct is marked for deprecation and should be replaced with new state 
-representations from AstroStates.
+# Identity
+`(sc, PosVel())` is the canonical `(obj, tag)` pair for the propagated
+spacecraft state.  `get_field(sc, PosVel())` returns `[r..., v...]` (length 6);
+`set_field!(sc, PosVel(), x)` writes back through `set_posvel!`.
 """
-struct PosVel <: AbstractState 
-    numvars::Int
-    PosVel() = new(6)
+struct PosVel <: AbstractStateTag end
+
+"""Return the position–velocity state of `sc` as a length-6 vector `[r..., v...]`."""
+get_field(sc::Spacecraft, ::PosVel) = to_posvel(sc)
+
+"""Write the position–velocity state of `sc` from a length-6 vector `[r..., v...]`."""
+function set_field!(sc::Spacecraft, ::PosVel, x::AbstractVector)
+    set_posvel!(sc, x)
+    return nothing
 end
 
 abstract type OrbitODE <: AbstractFun end
 
+# Common supertype for gravity force models recognised by `_find_center`.
+# Defined here so `PointMassGravity` can subtype it without pulling in the
+# (currently blocked) external-force adapter.
+abstract type AbstractGravityForce <: OrbitODE end
+
+# external_force.jl / harmonic_gravity.jl are intentionally NOT included
+# until the AstroForceModels <-> SatelliteToolboxGravityModels <-> ForwardDiff
+# version conflict is resolved upstream. Files remain in the source tree.
 include("point_mass_gravity.jl")
 include("stop_conditions.jl")
 
@@ -118,6 +148,10 @@ struct ForceModel{N} <: OrbitODE
 end
 
 include("orbit_propagator.jl")
+include("simple_drag.jl")
+include("simple_srp.jl")
+include("jacobian_config.jl")
+include("orbit_ode_problem.jl")
 
 """
     ForceModel(forces...)
@@ -141,17 +175,18 @@ gravity = PointMassGravity(earth)
 model = ForceModel(gravity)
 ```
 """
-function ForceModel(forces::Tuple{Vararg{T}}) where {T<:OrbitODE}
+function ForceModel(forces::Tuple{Vararg{<:OrbitODE}})
     center = _find_center(forces)
     return ForceModel{length(forces)}(forces, center)
 end
 
+ForceModel(forces::OrbitODE...) = ForceModel(forces)
 ForceModel(force::T) where {T<:OrbitODE} = ForceModel((force,))
 
 function _find_center(forces::Tuple)
     centers = CelestialBody[]
     for f in forces
-        if f isa PointMassGravity
+        if f isa AbstractGravityForce
             push!(centers, f.central_body)
         end
     end
