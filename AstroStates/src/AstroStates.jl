@@ -44,10 +44,16 @@ struct OutGoingAsymptote <: AbstractOrbitStateType end
 struct IncomingAsymptote <: AbstractOrbitStateType end
 struct ModifiedKeplerian <: AbstractOrbitStateType end
 struct AlternateEquinoctial <: AbstractOrbitStateType end
+struct BrouwerMeanLong <: AbstractOrbitStateType end
+struct BrouwerMeanShort <: AbstractOrbitStateType end
 
 export AbstractOrbitStateType, Cartesian, Keplerian, Equinoctial, SphericalRADEC, SphericalAZIFPA
 export ModifiedEquinoctial, OutGoingAsymptote, IncomingAsymptote,ModifiedKeplerian, AlternateEquinoctial
 export OrbitState, to_state
+export BrouwerMeanLongState, BrouwerMeanShortState
+export BrouwerMeanLong, BrouwerMeanShort
+export kep_to_brouwer_mean_long, brouwer_mean_long_to_kep
+export kep_to_brouwer_mean_short, brouwer_mean_short_to_kep
 
 include("cart_to_kep.jl")
 include("kep_to_cart.jl")
@@ -675,6 +681,112 @@ function show(io::IO, s::AlternateEquinoctialState)
     println(io, @sprintf("  mlong (deg.)  = %11.8f", rad2deg(s.mlong)))
 end
 
+"""
+    BrouwerMeanLongState(sma, ecc, inc, raan, aop, ma)
+
+Brouwer-Lyddane mean orbital elements with secular, long-period, and short-period zonal (J2–J5) effects.
+
+# Units
+- Distance units must be consistent with the gravitational parameter `μ` used in conversions. The mean-element theory is Earth-only, so distances are in km and `μ` is Earth's.
+- All angular quantities are in **radians**.
+
+# Fields (all `::T` where `T<:Real`)
+- `sma`: Mean semi-major axis. Defines orbit size and energy.
+  * Range: sma > 0 (elliptic). Mean periapsis radius `sma*(1-ecc)` must exceed 3000 km.
+- `ecc`: Mean eccentricity. Defines orbit shape.
+  * Range: [0, 0.99). Values ≥ 0.99 are outside the theory's validity.
+- `inc`: Mean inclination (rad). Angle between the orbit plane and the reference xy-plane.
+  * Range: [0, π]. Accuracy is degraded near the critical inclination (≈ 63.4°/116.6°).
+- `raan`: Mean right ascension of ascending node (rad). Orients the orbit plane.
+  * Range: [0, 2π).
+- `aop`: Mean argument of periapsis (rad). Orients the orbit within its plane.
+  * Range: [0, 2π).
+- `ma`: **Mean anomaly** (rad). Position angle proportional to time since periapsis.
+  * Range: [0, 2π). Unlike `KeplerianState` (true anomaly), Brouwer states carry mean anomaly.
+
+# Notes
+- Parametric so automatic differentiation and high-precision types are supported.
+- Mean elements average out the short- and long-period oscillations, leaving the slowly-varying secular orbit; convert to/from osculating `KeplerianState` with `kep_to_brouwer_mean_long` / `brouwer_mean_long_to_kep`.
+- Earth-only in this release; conversions error for a non-Earth `μ`.
+- Brouwer (1959) satellite theory with Lyddane (1963) small-eccentricity/inclination handling.
+
+# Examples
+```julia
+bl = BrouwerMeanLongState(7000.0, 0.01, π/6, 0.0, 0.0, π/3)
+```
+"""
+struct BrouwerMeanLongState{T<:Real} <: AbstractOrbitState
+    sma::T
+    ecc::T
+    inc::T
+    raan::T
+    aop::T
+    ma::T
+end
+
+function show(io::IO, state::BrouwerMeanLongState)
+    println(io, "BrouwerMeanLongState:")
+    println(io, @sprintf("  sma        = %14.6f", state.sma))
+    println(io, @sprintf("  ecc        = %14.8f", state.ecc))
+    println(io, @sprintf("  inc  (deg) = %14.6f", rad2deg(state.inc)))
+    println(io, @sprintf("  raan (deg) = %14.6f", rad2deg(state.raan)))
+    println(io, @sprintf("  aop  (deg) = %14.6f", rad2deg(state.aop)))
+    println(io, @sprintf("  ma   (deg) = %14.6f", rad2deg(state.ma)))
+end
+
+"""
+    BrouwerMeanShortState(sma, ecc, inc, raan, aop, ma)
+
+Brouwer mean orbital elements with only the first-order J2 short-period oscillation removed (long-period and secular terms retained).
+
+# Units
+- Distance units must be consistent with the gravitational parameter `μ` used in conversions. The mean-element theory is Earth-only, so distances are in km and `μ` is Earth's.
+- All angular quantities are in **radians**.
+
+# Fields (all `::T` where `T<:Real`)
+- `sma`: Mean semi-major axis. Defines orbit size and energy.
+  * Range: sma > 0 (elliptic). Mean periapsis radius `sma*(1-ecc)` must exceed 3000 km.
+- `ecc`: Mean eccentricity. Defines orbit shape.
+  * Range: [0, 0.99). Values ≥ 0.99 are outside the theory's validity.
+- `inc`: Mean inclination (rad). Angle between the orbit plane and the reference xy-plane.
+  * Range: [0, π].
+- `raan`: Mean right ascension of ascending node (rad). Orients the orbit plane.
+  * Range: [0, 2π).
+- `aop`: Mean argument of periapsis (rad). Orients the orbit within its plane.
+  * Range: [0, 2π).
+- `ma`: **Mean anomaly** (rad). Position angle proportional to time since periapsis.
+  * Range: [0, 2π). Unlike `KeplerianState` (true anomaly), Brouwer states carry mean anomaly.
+
+# Notes
+- Parametric so automatic differentiation and high-precision types are supported.
+- Removes only the once-per-orbit J2 short-period variation; use when long-period terms are to be retained. Convert to/from osculating `KeplerianState` with `kep_to_brouwer_mean_short` / `brouwer_mean_short_to_kep`.
+- Earth-only in this release; conversions error for a non-Earth `μ`.
+- Brouwer (1959) satellite theory (short-period J2 terms), following GMAT's BrouwerMeanShort.
+
+# Examples
+```julia
+bs = BrouwerMeanShortState(7000.0, 0.01, π/6, 0.0, 0.0, π/3)
+```
+"""
+struct BrouwerMeanShortState{T<:Real} <: AbstractOrbitState
+    sma::T
+    ecc::T
+    inc::T
+    raan::T
+    aop::T
+    ma::T
+end
+
+function show(io::IO, state::BrouwerMeanShortState)
+    println(io, "BrouwerMeanShortState:")
+    println(io, @sprintf("  sma        = %14.6f", state.sma))
+    println(io, @sprintf("  ecc        = %14.8f", state.ecc))
+    println(io, @sprintf("  inc  (deg) = %14.6f", rad2deg(state.inc)))
+    println(io, @sprintf("  raan (deg) = %14.6f", rad2deg(state.raan)))
+    println(io, @sprintf("  aop  (deg) = %14.6f", rad2deg(state.aop)))
+    println(io, @sprintf("  ma   (deg) = %14.6f", rad2deg(state.ma)))
+end
+
 @inline state_tag_to_type(::Cartesian)            = CartesianState            # COV_EXCL_LINE
 @inline state_tag_to_type(::Keplerian)            = KeplerianState            # COV_EXCL_LINE
 @inline state_tag_to_type(::ModifiedKeplerian)    = ModifiedKeplerianState    # COV_EXCL_LINE
@@ -708,7 +820,11 @@ end
 @inline state_type_to_tag(::Type{<:IncomingAsymptoteState})    = IncomingAsymptote()   
 @inline state_type_to_tag(::Type{<:ModifiedKeplerianState})    = ModifiedKeplerian()   
 @inline state_type_to_tag(::Type{<:AlternateEquinoctialState}) = AlternateEquinoctial()
-@inline state_type_to_tag(x::AbstractOrbitState) = state_type_to_tag(typeof(x))        
+@inline state_type_to_tag(x::AbstractOrbitState) = state_type_to_tag(typeof(x))
+@inline state_tag_to_type(::BrouwerMeanLong)  = BrouwerMeanLongState
+@inline state_tag_to_type(::BrouwerMeanShort) = BrouwerMeanShortState
+@inline state_type_to_tag(::Type{<:BrouwerMeanLongState})  = BrouwerMeanLong()
+@inline state_type_to_tag(::Type{<:BrouwerMeanShortState}) = BrouwerMeanShort()        
 
 # Bring in the OrbitState wrapper and helpers now that concrete types exist
 include("orbit_state.jl")
@@ -750,6 +866,12 @@ function to_vector(state::AlternateEquinoctialState)
 end
 function to_vector(state::OrbitState)
     state.state
+end
+function to_vector(state::BrouwerMeanLongState)
+    [state.sma, state.ecc, state.inc, state.raan, state.aop, state.ma]
+end
+function to_vector(state::BrouwerMeanShortState)
+    [state.sma, state.ecc, state.inc, state.raan, state.aop, state.ma]
 end
 function to_vector(v::Vector{<:Real})
     error("Cannot call `to_vector` on raw Vector — a state type was expected 
@@ -844,6 +966,9 @@ SphericalRADECState(outasymptote::OutGoingAsymptoteState, μ::Real) = SphericalR
 SphericalRADECState(inasymptote::IncomingAsymptoteState, μ::Real) = SphericalRADECState(
        cart_to_sphradec(kep_to_cart(inasymptote_to_kep(to_vector(inasymptote), μ),μ))...)
 
+SphericalRADECState(b::BrouwerMeanLongState, μ::Real)  = SphericalRADECState(KeplerianState(b, μ), μ)
+SphericalRADECState(b::BrouwerMeanShortState, μ::Real) = SphericalRADECState(KeplerianState(b, μ), μ)
+
 # Conversions to SphericalAZIFPAState
 #SphericalAZIFPAState(s::Vector{<:Real}, μ::Real) = SphericalAZIFPAState(s...)
 #SphericalAZIFPAState(s::Vector{<:Real}) = SphericalAZIFPAState(s...)
@@ -869,6 +994,9 @@ SphericalAZIFPAState(outasymptote::OutGoingAsymptoteState, μ::Real) = Spherical
 SphericalAZIFPAState(inasymptote::IncomingAsymptoteState, μ::Real) = SphericalAZIFPAState(
        cart_to_sphazfpa(kep_to_cart(inasymptote_to_kep(to_vector(inasymptote), μ),μ))...)
 
+SphericalAZIFPAState(b::BrouwerMeanLongState, μ::Real)  = SphericalAZIFPAState(KeplerianState(b, μ), μ)
+SphericalAZIFPAState(b::BrouwerMeanShortState, μ::Real) = SphericalAZIFPAState(KeplerianState(b, μ), μ)
+
 # Conversions to ModifiedEquinoctialState
 #ModifiedEquinoctialState(s::Vector{<:Real}, μ::Real) = ModifiedEquinoctialState(s...)
 #ModifiedEquinoctialState(s::Vector{<:Real}) = ModifiedEquinoctialState(s...)
@@ -892,6 +1020,9 @@ ModifiedEquinoctialState(outasymptote::OutGoingAsymptoteState, μ::Real) = Modif
        cart_to_mee(kep_to_cart(outasymptote_to_kep(to_vector(outasymptote), μ),μ),μ)...)
 ModifiedEquinoctialState(inasymptote::IncomingAsymptoteState, μ::Real) = ModifiedEquinoctialState(
        cart_to_mee(kep_to_cart(inasymptote_to_kep(to_vector(inasymptote), μ),μ),μ)...)
+
+ModifiedEquinoctialState(b::BrouwerMeanLongState, μ::Real)  = ModifiedEquinoctialState(KeplerianState(b, μ), μ)
+ModifiedEquinoctialState(b::BrouwerMeanShortState, μ::Real) = ModifiedEquinoctialState(KeplerianState(b, μ), μ)
 
 # Conversions to OutGoingAsymptoteState
 #OutGoingAsymptoteState(s::Vector{<:Real}, μ::Real) = OutGoingAsymptoteState(s...)
@@ -919,6 +1050,9 @@ OutGoingAsymptoteState(mee::ModifiedEquinoctialState, μ::Real) = OutGoingAsympt
        cart_to_outasymptote(mee_to_cart(to_vector(mee),μ),μ)...)
 OutGoingAsymptoteState(inasymptote::IncomingAsymptoteState, μ::Real) = OutGoingAsymptoteState(
        cart_to_outasymptote(kep_to_cart(inasymptote_to_kep(to_vector(inasymptote),μ),μ),μ)...)
+
+OutGoingAsymptoteState(b::BrouwerMeanLongState, μ::Real)  = OutGoingAsymptoteState(KeplerianState(b, μ), μ)
+OutGoingAsymptoteState(b::BrouwerMeanShortState, μ::Real) = OutGoingAsymptoteState(KeplerianState(b, μ), μ)
 
 # Conversions to IncomingAsymptoteState
 #IncomingAsymptoteState(s::Vector{<:Real}, μ::Real) = IncomingAsymptoteState(s...)
@@ -948,6 +1082,9 @@ IncomingAsymptoteState(mee::ModifiedEquinoctialState, μ::Real) = IncomingAsympt
 IncomingAsymptoteState(outasymptote::OutGoingAsymptoteState, μ::Real) = IncomingAsymptoteState(
        cart_to_inasymptote(kep_to_cart(outasymptote_to_kep(to_vector(outasymptote),μ),μ),μ)...)
 
+IncomingAsymptoteState(b::BrouwerMeanLongState, μ::Real)  = IncomingAsymptoteState(KeplerianState(b, μ), μ)
+IncomingAsymptoteState(b::BrouwerMeanShortState, μ::Real) = IncomingAsymptoteState(KeplerianState(b, μ), μ)
+
 # Conversions to Modified Keplerian State
 #ModifiedKeplerianState(s::Vector{<:Real}, μ::Real) = ModifiedKeplerianState(s...)
 #ModifiedKeplerianState(s::Vector{<:Real}) = ModifiedKeplerianState(s...)
@@ -969,6 +1106,9 @@ ModifiedKeplerianState(outasymptote::OutGoingAsymptoteState, μ::Real) = Modifie
                    kep_to_modkep(outasymptote_to_kep(to_vector(outasymptote), μ))...)
 ModifiedKeplerianState(inasymptote::IncomingAsymptoteState, μ::Real) = ModifiedKeplerianState(
                    kep_to_modkep(inasymptote_to_kep(to_vector(inasymptote), μ))...)
+
+ModifiedKeplerianState(b::BrouwerMeanLongState, μ::Real)  = ModifiedKeplerianState(KeplerianState(b, μ), μ)
+ModifiedKeplerianState(b::BrouwerMeanShortState, μ::Real) = ModifiedKeplerianState(KeplerianState(b, μ), μ)
 
 # Conversions to EquinoctialState
 #EquinoctialState(s::Vector{<:Real}, μ::Real) = EquinoctialState(s...)
@@ -992,6 +1132,9 @@ EquinoctialState(outasymptote::OutGoingAsymptoteState, μ::Real) = EquinoctialSt
        cart_to_equinoctial(kep_to_cart(outasymptote_to_kep(to_vector(outasymptote), μ),μ),μ)...)
 EquinoctialState(inasymptote::IncomingAsymptoteState, μ::Real) = EquinoctialState(
        cart_to_equinoctial(kep_to_cart(inasymptote_to_kep(to_vector(inasymptote), μ),μ),μ)...)
+
+EquinoctialState(b::BrouwerMeanLongState, μ::Real)  = EquinoctialState(KeplerianState(b, μ), μ)
+EquinoctialState(b::BrouwerMeanShortState, μ::Real) = EquinoctialState(KeplerianState(b, μ), μ)
 
 # Conversions to AlternateEquinoctialState
 #AlternateEquinoctialState(s::Vector{<:Real}, μ::Real) = AlternateEquinoctialState(s...)
@@ -1018,8 +1161,13 @@ AlternateEquinoctialState(inasymptote::IncomingAsymptoteState, μ::Real) = Alter
        equinoctial_to_alt_equinoctial(cart_to_equinoctial(kep_to_cart(inasymptote_to_kep(to_vector(inasymptote), μ),μ),μ))...)
 
 # =============================================================================
+AlternateEquinoctialState(b::BrouwerMeanLongState, μ::Real)  = AlternateEquinoctialState(KeplerianState(b, μ), μ)
+AlternateEquinoctialState(b::BrouwerMeanShortState, μ::Real) = AlternateEquinoctialState(KeplerianState(b, μ), μ)
+
 # Fallbacks for unsupported conversions
 # =============================================================================
+
+include("brouwer.jl")
 
 KeplerianState(state::AbstractOrbitState, μ::Real) = error("No conversion defined from $(typeof(state)) to KeplerianState")
 SphericalRADECState(state::AbstractOrbitState, μ::Real) = error("No conversion defined from $(typeof(state)) to SphericalRADECState")
