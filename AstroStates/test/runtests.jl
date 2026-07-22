@@ -265,6 +265,7 @@ include("runtests_cart_to_equinoctial.jl")
 include("runtests_equinoctial_to_cart.jl")
 include("runtests_inasymptote_to_kep.jl")
 include("runtests_outasymptote_to_kep.jl")
+include("runtests_brouwer.jl")
 
 println(" ")
 println(" Starting state differentation tests... precompile takes several minutes")

@@ -78,6 +78,13 @@ function _construct_state(vec, ::AlternateEquinoctial)
     AlternateEquinoctialState(vec...)
 end
 
+function _construct_state(vec, ::BrouwerMeanLong)
+    BrouwerMeanLongState(vec...)
+end
+function _construct_state(vec, ::BrouwerMeanShort)
+    BrouwerMeanShortState(vec...)
+end
+
 # Helper: get state vector from concrete state
 _state_to_vector(cs::CartesianState) = cs.posvel
 _state_to_vector(ks::KeplerianState) = [ks.sma, ks.ecc, ks.inc, ks.raan, ks.aop, ks.ta]
@@ -89,6 +96,8 @@ _state_to_vector(is::IncomingAsymptoteState) = [is.rp, is.c3, is.rla, is.dla, is
 _state_to_vector(ms::ModifiedKeplerianState) = [ms.rp, ms.ra, ms.inc, ms.raan, ms.aop, ms.ta]
 _state_to_vector(es::EquinoctialState) = [es.a, es.h, es.k, es.p, es.q, es.mlong]
 _state_to_vector(ae::AlternateEquinoctialState) = [ae.a, ae.h, ae.k, ae.altp, ae.altq, ae.mlong]
+_state_to_vector(b::BrouwerMeanLongState) = [b.sma, b.ecc, b.inc, b.raan, b.aop, b.ma]
+_state_to_vector(b::BrouwerMeanShortState) = [b.sma, b.ecc, b.inc, b.raan, b.aop, b.ma]
 
 """
     OrbitState(state_obj::AbstractState)
