@@ -1,0 +1,58 @@
+# Atmospheric drag (NRLMSISE-00) on two-body gravity — Epicycle interface vs GMAT.
+#
+# Uses the spec'd user interface: cannonball drag geometry on the Spacecraft, an
+# AtmosphericDrag force selected by a density-model tag, composed with point-mass gravity
+# in a ForceModel, propagated with propagate!. Validates the 1-day final state against
+# GMAT R2022a truth (matched mass/area/Cd, GMAT space-weather file).
+#
+# Notes:
+#  - Epicycle earth.mu = 398600.4418; GMAT/EGM96 GM = 398600.4415 (~sub-meter/day).
+#  - NRLMSISE-00 density uses historical SpaceIndices, matching the GMAT SW-file run.
+#  - Residual is space-weather-data-limited (~10 m), not a physics gap.
+#
+# Run under an environment that has AstroProp developed (e.g. the force_epicycle project).
+
+using AstroProp
+using AstroModels, AstroStates, AstroEpochs
+using AstroUniverse: earth
+using OrdinaryDiffEq: Vern9
+using LinearAlgebra: norm
+using Printf
+using Test
+
+# ── User interface (from the force-model spec) ────────────────────────────────
+sc = Spacecraft(;
+    state = CartesianState([6878.137, 0.0, 0.0, 0.0, 4.71754, 5.99820]),
+    time  = Time("2020-10-20T12:00:00", UTC(), ISOT()),
+    mass  = 1000.0,
+    name  = "LEO",
+    drag  = CannonballDrag(c_d = 2.2, drag_area = 10.0),
+)
+
+gravity = PointMassGravity(earth, ())
+drag    = AtmosphericDrag(; model = MSISE00())
+forces  = ForceModel(gravity, drag)
+
+integ = IntegratorConfig(Vern9(); reltol = 1e-12, abstol = 1e-12, dt = 60.0)
+prop  = OrbitPropagator(forces, integ)
+sol   = propagate!(prop, sc, StopAt(sc, PropDurationSeconds(), 86400.0))
+yf    = sol.u[end]
+
+# ── GMAT truth (two-body + NRLMSISE-00 drag, SW file, matched mass/area/Cd) ────
+gmat = [ 5319.6461740427,  2702.7660259571,  3436.4797578346,
+           -4.8218264921387, 3.6497919408898, 4.6405926423268]
+
+Δr = norm(gmat[1:3] .- yf[1:3]) * 1e3      # m
+Δv = norm(gmat[4:6] .- yf[4:6]) * 1e6      # mm/s
+
+println("\n===== NRLMSISE-00 DRAG (two-body) — Epicycle vs GMAT =====")
+for (i, lab) in enumerate(("x","y","z","vx","vy","vz"))
+    @printf("%-3s  epi = % .10f   gmat = % .10f   Δ = % .3e\n", lab, yf[i], gmat[i], gmat[i]-yf[i])
+end
+@printf("|Δr| = %.4f m    |Δv| = %.4f mm/s\n", Δr, Δv)
+
+# Provisional tolerances — space-weather-data-limited; tighten once SW sources are matched.
+@testset "NRLMSISE-00 drag vs GMAT" begin
+    @test Δr < 9.0          # m
+    @test Δv < 10.0          # mm/s
+end

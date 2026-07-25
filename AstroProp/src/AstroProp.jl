@@ -17,7 +17,7 @@ using AstroStates
 using AstroEpochs
 using AstroUniverse
 using AstroFrames
-using AstroModels: Spacecraft, to_posvel, set_posvel!
+using AstroModels: Spacecraft, to_posvel, set_posvel!, total_mass, CannonballDrag, AbstractDragGeometry, CannonballSRP, AbstractSRPGeometry
 using AstroModels: HistorySegment, SpacecraftHistory, push_segment!
 using AstroCallbacks: OrbitCalc, get_calc
 
@@ -30,6 +30,11 @@ export PosVel
 export StopAtSeconds, StopAtRadius
 export nbody_perts
 export PointMassGravity, compute_point_mass_gravity!, evaluate, accel_eval!
+export HarmonicGravity, AtmosphericDrag, SolarRadiationPressure
+export EGM96, EGM2008, Exponential, ConstantSpaceWeather
+export Cylindrical, DualCone, NoShadow
+export AbstractGeopotential, AbstractDensityModel, AbstractShadowModel, density
+export CannonballDrag, CannonballSRP, total_mass
 
 export OrbitODE
 export IntegratorConfig
@@ -57,6 +62,7 @@ end
 abstract type OrbitODE <: AbstractFun end
 
 include("point_mass_gravity.jl")
+include("force_models.jl")
 include("stop_conditions.jl")
 
 """
@@ -141,20 +147,35 @@ gravity = PointMassGravity(earth)
 model = ForceModel(gravity)
 ```
 """
-function ForceModel(forces::Tuple{Vararg{T}}) where {T<:OrbitODE}
+function ForceModel(forces::Tuple{Vararg{OrbitODE}})
     center = _find_center(forces)
     return ForceModel{length(forces)}(forces, center)
 end
 
 ForceModel(force::T) where {T<:OrbitODE} = ForceModel((force,))
 
+# Varargs form so heterogeneous forces compose as `ForceModel(gravity, drag, ...)`.
+ForceModel(forces::OrbitODE...) = ForceModel(forces)
+
 function _find_center(forces::Tuple)
-    centers = CelestialBody[]
+    pm_centers = CelestialBody[]
+    sh_centers = CelestialBody[]
     for f in forces
         if f isa PointMassGravity
-            push!(centers, f.central_body)
+            push!(pm_centers, f.central_body)
+        elseif f isa HarmonicGravity
+            push!(sh_centers, f.central_body)
         end
     end
+    # FR-FORCE-16: a point-mass and a spherical-harmonic model on the SAME central
+    # body double-count the central term — reject it loudly.
+    for c in pm_centers, h in sh_centers
+        if c === h
+            error("ForceModel: point-mass gravity and spherical-harmonic gravity both " *
+                  "specify central body '$(c.name)' — the central term would be counted twice.")
+        end
+    end
+    centers = vcat(pm_centers, sh_centers)
     if isempty(centers)
         return nothing
     elseif length(unique(centers)) == 1
@@ -219,12 +240,14 @@ function _build_odes!(model::ForceModel, start_epoch, du, u, p, t, spacecraft_li
 
         current_time = start_epoch + t/86400.0
         acc = zeros(eltype(posvel), 6)
-        acc_sum = zeros(eltype(posvel), 6);
+        a_sum = zeros(eltype(posvel), 3)
         for force in model.forces
             accel_eval!(force, current_time, posvel, acc, sc, p)
-            acc_sum .+= acc
+            # Superimpose acceleration contributions only; kinematics set once below.
+            a_sum[1] += acc[4]; a_sum[2] += acc[5]; a_sum[3] += acc[6]
         end
-        du[idxs[1:6]] .= acc
+        du[idxs[1]] = posvel[4]; du[idxs[2]] = posvel[5]; du[idxs[3]] = posvel[6]
+        du[idxs[4]] = a_sum[1];  du[idxs[5]] = a_sum[2];  du[idxs[6]] = a_sum[3]
     end
 end
 
