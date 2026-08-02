@@ -11,14 +11,14 @@ jobs:
       contents: write
       pages: write
       id-token: write
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1.12'
-          
+
       - name: Cache Julia artifacts and packages
         uses: actions/cache@v4
         with:
@@ -41,7 +41,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: DISPLAY=:0 xvfb-run -s '-screen 0 1024x768x24' julia --project=. ci/build_epicycle.jl
 
+      # if: always() ensures coverage uploads even when a later step (e.g. a docs
+      # build) fails. Previously an exit(1) in build_epicycle.jl skipped this step
+      # entirely, so Codecov never received data.
       - name: Upload coverage to Codecov
+        if: always()
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage.info
