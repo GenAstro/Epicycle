@@ -48,7 +48,6 @@ Zonal
 AtmosphericDrag
 AbstractDensityModel
 Exponential
-ConstantSpaceWeather
 ```
 
 !!! note "Enterprise — NRLMSISE-00 density"
@@ -57,8 +56,7 @@ ConstantSpaceWeather
 
     ```julia
     using EpicycleEnterprise
-    AtmosphericDrag(earth; model = MSISE00(),
-                     space_weather = ConstantSpaceWeather(f107 = 150, f107a = 150, magnetic_index = 3))
+    AtmosphericDrag(earth; model = MSISE00())
     ```
 
 ## Solar radiation pressure
@@ -72,8 +70,8 @@ Shadow (eclipse) models, all open: `NoShadow`, `Cylindrical`, and `DualCone` —
 
 ## Spacecraft geometry
 
-Drag and SRP read their geometry from the spacecraft, not from the force — switching cannonball to a
-higher-fidelity geometry is a type change on the spacecraft field, leaving the force untouched.
+Drag and SRP read their geometry from the spacecraft, not from the force — switching from a spherical
+to a higher-fidelity geometry is a type change on the spacecraft field, leaving the force untouched.
 
 ```@docs
 SphericalDrag

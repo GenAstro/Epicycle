@@ -23,12 +23,14 @@ sat = Spacecraft(
     coord_sys=CoordinateSystem(earth, ICRFAxes()),
     mass=1000.0,
     drag=SphericalDrag(c_d=2.2, drag_area=10.0),
+    srp=SphericalSRP(c_r=1.8, srp_area=10.0),
 )
 
 # Propagator - define forces, integrator, and propagator
 gravity = HarmonicGravity(earth; degree=4, order=0, model=Zonal())
 drag    = AtmosphericDrag(earth; model=Exponential())
-forces  = ForceModel(gravity, drag)
+srp     = SolarRadiationPressure(earth; shadow=DualCone())
+forces  = ForceModel(gravity, drag, srp)
 integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
 prop    = OrbitPropagator(forces, integ)
 
@@ -122,7 +124,7 @@ prop = OrbitPropagator(forces, integ)
 
 ### Force Model Configuration
 
-The force model defines the dynamics for propagation. Currently, AstroProp only supports point-mass gravity models through `PointMassGravity`.  
+The force model defines the dynamics for propagation. You build it by composing forces in a `ForceModel` — gravity, atmospheric drag, solar radiation pressure, and any others the sections below describe. Each force is configured independently and summed to give the total acceleration.  
 
 **Basic usage:**
 
@@ -208,9 +210,10 @@ open-source and Enterprise versions.
 
 ### Gravity
 
-Two gravity forces are available. `PointMassGravity` treats the central body and any additional
-bodies — the Moon, the Sun, the planets — as point masses. `HarmonicGravity` adds the central body's
-non-spherical gravity field, evaluated to the degree and order you specify.
+Gravity is provided by `PointMassGravity` and `HarmonicGravity`. `PointMassGravity` treats the
+central body and any additional bodies — the Moon, the Sun, the planets — as point masses.
+`HarmonicGravity` adds the central body's non-spherical gravity field, evaluated to the degree and
+order you specify.
 
 ```julia
 grav = PointMassGravity(earth, (moon, sun))                            # central body + third bodies
@@ -421,10 +424,19 @@ StopAt
 
 ## API Reference
 
+The core API is documented in the sections above; this reference sweeps up the remaining public
+symbols. The `Filter` excludes the symbols already given a dedicated `@docs` block (here and on the
+[Force Models](force_models.md) page) so nothing is documented twice.
+
 ```@autodocs
 Modules = [AstroProp]
 Order = [:type, :function, :macro, :constant]
 Public = true
+Filter = t -> !(t in (
+    PointMassGravity, HarmonicGravity, AbstractGeopotential, Zonal,
+    AtmosphericDrag, AbstractDensityModel, Exponential, SolarRadiationPressure,
+    OrbitPropagator, IntegratorConfig, propagate!, StopAt,
+))
 ```
 # Index
 
