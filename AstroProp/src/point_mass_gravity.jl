@@ -2,26 +2,38 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
 
 """
-    PointMassGravity
+    PointMassGravity(body, perturbers = (); include_center = true)
 
-Combined force model for central body gravity and N-body point-mass perturbations.
+Newtonian point-mass gravity from the central `body` and any perturbing bodies, each treated as a
+point mass.
 
-# Fields
-- `central_body::CelestialBody`: The central body about which dynamics are referenced.
-- `perturbers::Tuple{Vararg{CelestialBody}}`: Other celestial bodies treated as point-mass perturbers.
-- `dependencies::Vector{Type{<:AbstractVar}}`: Vector of variable dependencies (e.g., `PosVel`)
-- `num_funs::Int`: Number of functions in the ODE
+# Arguments
+- `body::CelestialBody`: the central body.
+- `perturbers`: a tuple of additional bodies — the Moon, the Sun, the planets — as point-mass
+  perturbers.
+- `include_center`: whether to add the central body's own gravity. Set it `false` to get *only* the
+  perturbing bodies, so you can add third bodies alongside a `HarmonicGravity` model of the same
+  central body without counting the central gravity twice.
+
+# Examples
+```julia
+grav  = PointMassGravity(earth, (moon, sun))                          # Earth + third bodies
+third = PointMassGravity(earth, (moon, sun); include_center = false)  # third bodies only
+```
 """
 struct PointMassGravity <: OrbitODE
     central_body::CelestialBody
     pert_bodies::Tuple{Vararg{CelestialBody}}
+    include_center::Bool
     dependencies::Vector{Type{<:AbstractVar}}
     num_funs::Int
 
-    function PointMassGravity(central_body::CelestialBody, perturbers::Tuple{Vararg{CelestialBody}})
+    function PointMassGravity(central_body::CelestialBody,
+                              perturbers::Tuple{Vararg{CelestialBody}} = ();
+                              include_center::Bool = true)
         all_bodies = (central_body, perturbers...)
         check_duplicates(all_bodies)
-        return new(central_body, perturbers, [PosVel], 6)
+        return new(central_body, perturbers, include_center, [PosVel], 6)
     end
 end
 
@@ -109,10 +121,11 @@ end
 
 Evaluate the acceleration due to point-mass gravity from central and perturbing bodies.
 """
-function accel_eval!(model::PointMassGravity, t::Time, x̄::Vector, 
+function accel_eval!(model::PointMassGravity, t::Time, x̄::Vector,
                         x̄̇::Vector, sc::Spacecraft, params; jac::Dict = Dict())
-    compute_point_mass_gravity!(t,x̄, x̄̇, model.central_body, model.pert_bodies; jac = jac) 
-    return x̄̇ 
+    compute_point_mass_gravity!(t, x̄, x̄̇, model.central_body, model.pert_bodies;
+                                jac = jac, include_center = model.include_center)
+    return x̄̇
 end
 
 """

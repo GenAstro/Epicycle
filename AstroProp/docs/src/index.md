@@ -16,16 +16,19 @@ The example below shows how to propagate a spacecraft using various stopping con
 using AstroEpochs, AstroStates, AstroFrames, AstroUniverse 
 using AstroModels, AstroCallbacks, AstroProp, OrdinaryDiffEq
 
-# Spacecraft
+# Spacecraft — define time, state, and physical properties
 sat = Spacecraft(
     state=CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
     time=Time("2015-09-21T12:23:12", TAI(), ISOT()),
     coord_sys=CoordinateSystem(earth, ICRFAxes()),
+    mass=1000.0,
+    drag=SphericalDrag(c_d=2.2, drag_area=10.0),
 )
 
-# Forces + integrator
-gravity = PointMassGravity(earth, (moon, sun))
-forces  = ForceModel(gravity)
+# Propagator - define forces, integrator, and propagator
+gravity = HarmonicGravity(earth; degree=4, order=0, model=Zonal())
+drag    = AtmosphericDrag(earth; model=Exponential())
+forces  = ForceModel(gravity, drag)
 integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
 prop    = OrbitPropagator(forces, integ)
 
@@ -48,7 +51,8 @@ propagate!(prop, sat, StopAt(sat, PosMag(), 7000.0))
 println(get_state(sat, SphericalRADEC()))       
 
 # Propagate multiple spacecraft with multiple stopping conditions
-sc1 = Spacecraft(); sc2 = Spacecraft() 
+sc1 = Spacecraft(mass=1000.0, drag=SphericalDrag(c_d=2.2, drag_area=10.0))
+sc2 = Spacecraft(mass=1000.0, drag=SphericalDrag(c_d=2.2, drag_area=10.0))
 stop_sc1_node = StopAt(sc1, PosZ(), 0.0)
 stop_sc2_periapsis = StopAt(sc2, PosDotVel(), 0.0; direction=+1)
 propagate!(prop, [sc1, sc2], stop_sc1_node, stop_sc2_periapsis)
@@ -194,6 +198,90 @@ integ_precise = IntegratorConfig(Vern9(); dt=10.0, reltol=1e-12, abstol=1e-12)
 
 !!! tip "Starting Point"
     If you're unsure, start with `Tsit5()` with `dt=10.0`, `reltol=1e-9`, and `abstol=1e-9`. Adjust based on your accuracy requirements and performance needs.
+
+## Force Models
+
+You build a force model by constructing individual forces and adding them to a `ForceModel`. The
+`ForceModel` sums the forces to apply the total acceleration during numerical integration. The
+sections below describe how to configure each force and which forces are available in the
+open-source and Enterprise versions.
+
+### Gravity
+
+Two gravity forces are available. `PointMassGravity` treats the central body and any additional
+bodies — the Moon, the Sun, the planets — as point masses. `HarmonicGravity` adds the central body's
+non-spherical gravity field, evaluated to the degree and order you specify.
+
+```julia
+grav = PointMassGravity(earth, (moon, sun))                            # central body + third bodies
+grav = HarmonicGravity(earth; degree = 5, order = 0, model = Zonal())  # zonal gravity field, J2–J5
+```
+
+You pick the gravity field with the `model` keyword. The open-source version includes `Zonal` — the
+J2 through J5 zonal harmonics, which capture the dominant flattening of the Earth and cover most
+low-Earth-orbit analysis.
+
+To add the Sun and Moon alongside a spherical-harmonic Earth field, use `PointMassGravity` with
+`include_center = false` so it contributes only those bodies — the Earth's gravity comes from
+`HarmonicGravity`, and isn't counted twice:
+
+```julia
+forces = ForceModel(
+    HarmonicGravity(earth; degree = 5, order = 0, model = Zonal()),
+    PointMassGravity(earth, (moon, sun); include_center = false),   # Sun & Moon only
+)
+```
+
+!!! note "Enterprise"
+    The Enterprise version adds the full gravity fields, `EGM96` and `EGM2008`, evaluated to high
+    degree and order for precision work. You select one the same way — just change `model`:
+
+    ```julia
+    using EpicycleEnterprise
+    grav = HarmonicGravity(earth; degree = 70, order = 70, model = EGM96())
+    ```
+
+### Atmospheric drag
+
+`AtmosphericDrag` computes drag from the spacecraft's velocity relative to the rotating atmosphere.
+It uses the drag coefficient and area you set on the spacecraft, and gets the local air density from
+the atmosphere model you pick.
+
+```julia
+sc.drag = SphericalDrag(; c_d = 2.2, drag_area = 10.0)    # drag properties, on the spacecraft
+drag    = AtmosphericDrag(earth; model = Exponential())    # atmosphere model, on the force
+```
+
+The open-source version includes the `Exponential` atmosphere — a smooth analytic density profile
+that's fast and works well for early analysis.
+
+!!! note "Enterprise"
+    The Enterprise version adds `MSISE00` (NRLMSISE-00), the empirical atmosphere used for
+    operational drag work. It responds to solar and geomagnetic activity, taken from
+    `SpaceIndices` tables:
+
+    ```julia
+    using EpicycleEnterprise
+    drag = AtmosphericDrag(mars; model = MSISE00())
+    ```
+
+### Solar radiation pressure
+
+`SolarRadiationPressure` computes the push of sunlight on the spacecraft. It uses the reflectivity
+and area you set on the spacecraft, and accounts for eclipses with the shadow model you pick:
+`NoShadow`, a simple `Cylindrical` shadow, or `DualCone` — a realistic shadow with both umbra and
+penumbra.
+
+```julia
+sc.srp = SphericalSRP(; c_r = 1.3, srp_area = 10.0)
+srp    = SolarRadiationPressure(earth; shadow = DualCone())
+```
+
+Once you've built the forces you want, add them to a `ForceModel`:
+
+```julia
+forces = ForceModel(grav, drag, srp)
+```
 
 ## Stopping Conditions
 

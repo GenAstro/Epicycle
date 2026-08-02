@@ -84,6 +84,8 @@ Spacecraft: SC-001
     origin = Earth
     axes   = ICRFAxes
   Total Mass = 1000.0 kg
+  Drag = none
+  SRP  = none
   CADModel: (no model)
 """
 

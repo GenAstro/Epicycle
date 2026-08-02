@@ -18,8 +18,8 @@ using AstroFrames: ICRFAxes, CoordinateSystem
 using AstroUniverse: earth
 
 export Spacecraft, get_state, to_posvel, set_posvel!, total_mass
-export AbstractDragGeometry, CannonballDrag
-export AbstractSRPGeometry, CannonballSRP
+export AbstractDragGeometry, SphericalDrag
+export AbstractSRPGeometry, SphericalSRP
 export CADModel
 export HistorySegment, SpacecraftHistory
 export push_state!, push_segment!, new_segment!

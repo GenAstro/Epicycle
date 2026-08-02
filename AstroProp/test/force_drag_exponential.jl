@@ -17,7 +17,6 @@ using AstroModels, AstroStates, AstroEpochs
 using AstroUniverse: earth
 using OrdinaryDiffEq: Vern9
 using LinearAlgebra: norm
-using Printf
 using Test
 
 # ── User interface (from the force-model spec) ────────────────────────────────
@@ -26,11 +25,11 @@ sc = Spacecraft(;
     time  = Time("2020-10-20T12:00:00", UTC(), ISOT()),
     mass  = 1000.0,
     name  = "LEO",
-    drag  = CannonballDrag(c_d = 2.2, drag_area = 10.0),
+    drag  = SphericalDrag(c_d = 2.2, drag_area = 10.0),
 )
 
 gravity = PointMassGravity(earth, ())
-drag    = AtmosphericDrag(; model = Exponential())
+drag    = AtmosphericDrag(earth; model = Exponential())
 forces  = ForceModel(gravity, drag)
 
 integ = IntegratorConfig(Vern9(); reltol = 1e-12, abstol = 1e-12, dt = 60.0)
@@ -45,14 +44,8 @@ gmat = [ 5318.2703125793,  2703.7861413888,  3437.7763438110,
 Δr = norm(gmat[1:3] .- yf[1:3]) * 1e3      # m
 Δv = norm(gmat[4:6] .- yf[4:6]) * 1e6      # mm/s
 
-println("\n===== NRLMSISE-00 DRAG (two-body) — Epicycle vs GMAT =====")
-for (i, lab) in enumerate(("x","y","z","vx","vy","vz"))
-    @printf("%-3s  epi = % .10f   gmat = % .10f   Δ = % .3e\n", lab, yf[i], gmat[i], gmat[i]-yf[i])
-end
-@printf("|Δr| = %.4f m    |Δv| = %.4f mm/s\n", Δr, Δv)
-
 # Provisional tolerances — space-weather-data-limited; tighten once SW sources are matched.
-@testset "NRLMSISE-00 drag vs GMAT" begin
+@testset "Exponential drag vs GMAT" begin
     @test Δr < 1.2          # m
     @test Δv < 1.5          # mm/s
 end

@@ -11,6 +11,8 @@ Fields
 - history::SpacecraftHistory — trajectory history organized into segments
 - coord_sys::CS — coordinate system (origin and axes) associated with the spacecraft.
 - cad_model::CADModel — 3D model for visualization
+- drag::Union{AbstractDragGeometry, Nothing} — drag geometry (e.g. `SphericalDrag`), or `nothing`
+- srp::Union{AbstractSRPGeometry, Nothing} — SRP geometry (e.g. `SphericalSRP`), or `nothing`
 
 # Notes:
 - Use the keyword constructor to create spacecraft and only define the fields you want to change from the defaults.
@@ -142,6 +144,8 @@ function Base.show(io::IO, sc::Spacecraft)
      _indent_and_print(io, sc.state, "  ")
      _indent_and_print(io, sc.coord_sys, "  ")
      println(io, "  Total Mass = ", sc.mass, " kg")
+     sc.drag === nothing ? println(io, "  Drag = none") : _indent_and_print(io, sc.drag, "  ")
+     sc.srp  === nothing ? println(io, "  SRP  = none") : _indent_and_print(io, sc.srp,  "  ")
      _indent_and_print(io, sc.cad_model, "  ")
  end
 
