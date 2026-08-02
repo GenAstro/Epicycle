@@ -14,6 +14,9 @@ AstroUniverse = "4bd44dca-1e45-43d2-b940-3f88da59ea6f"
 EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+SatelliteToolboxBase = "9e17983a-0463-41a7-9a16-1682db6d8b66"
+SatelliteToolboxTransformations = "6b019ec1-7a1e-4f04-96c7-a9db1ca5514d"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 AstroCallbacks = "0.4.0"
@@ -25,11 +28,15 @@ AstroStates = "0.10.0"
 AstroUniverse = "0.2.0"
 EpicycleBase = "0.1.0"
 OrdinaryDiffEq = "6.101"
+SatelliteToolboxBase = "~1.2"
+SatelliteToolboxTransformations = "~1.2"
+StaticArrays = "1"
 julia = "1.10"
 
 [extras]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "ForwardDiff"]
+test = ["Test", "ForwardDiff", "SciMLBase"]

@@ -17,9 +17,14 @@ using AstroStates
 using AstroEpochs
 using AstroUniverse
 using AstroFrames
-using AstroModels: Spacecraft, to_posvel, set_posvel!
+using AstroModels: Spacecraft, to_posvel, set_posvel!, total_mass, SphericalDrag, AbstractDragGeometry, SphericalSRP, AbstractSRPGeometry
 using AstroModels: HistorySegment, SpacecraftHistory, push_segment!
 using AstroCallbacks: OrbitCalc, get_calc
+
+using SatelliteToolboxTransformations: r_eci_to_ecef, ecef_to_geodetic, fetch_iers_eop,
+                                       J2000, ITRF, DCM
+import SatelliteToolboxBase: EARTH_ANGULAR_SPEED
+using StaticArrays: SVector
 
 import AstroCallbacks: AbstractFun, AbstractCalcVariable, AbstractOrbitVar
 import AstroUniverse: translate
@@ -30,6 +35,13 @@ export PosVel
 export StopAtSeconds, StopAtRadius
 export nbody_perts
 export PointMassGravity, compute_point_mass_gravity!, evaluate, accel_eval!
+export HarmonicGravity, AtmosphericDrag, SolarRadiationPressure
+export Zonal, Exponential
+export Cylindrical, DualCone, NoShadow
+export AbstractGeopotential, AbstractDensityModel, AbstractShadowModel, density
+export geopotential_accel, geopotential_data, max_degree, max_order
+export gravity_center, includes_central
+export SphericalDrag, SphericalSRP, total_mass
 
 export OrbitODE
 export IntegratorConfig
@@ -57,6 +69,11 @@ end
 abstract type OrbitODE <: AbstractFun end
 
 include("point_mass_gravity.jl")
+include("harmonic_gravity.jl")
+include("zonal_gravity.jl")
+include("atmospheric_drag.jl")
+include("exponential_atmosphere.jl")
+include("spherical_srp.jl")
 include("stop_conditions.jl")
 
 """
@@ -141,27 +158,59 @@ gravity = PointMassGravity(earth)
 model = ForceModel(gravity)
 ```
 """
-function ForceModel(forces::Tuple{Vararg{T}}) where {T<:OrbitODE}
+function ForceModel(forces::Tuple{Vararg{OrbitODE}})
     center = _find_center(forces)
     return ForceModel{length(forces)}(forces, center)
 end
 
 ForceModel(force::T) where {T<:OrbitODE} = ForceModel((force,))
 
+# Varargs form so heterogeneous forces compose as `ForceModel(gravity, drag, ...)`.
+ForceModel(forces::OrbitODE...) = ForceModel(forces)
+
+"""
+    gravity_center(force) -> Union{CelestialBody, Nothing}
+
+The central body a gravity force is referenced to, or `nothing` if the force is not central-body
+gravity (drag, SRP, …). Forces implement this so `ForceModel` can check that every gravity force
+agrees on one central body. A new gravity model participates in that check by adding a method here.
+"""
+gravity_center(::OrbitODE)             = nothing
+gravity_center(f::PointMassGravity)    = f.central_body
+gravity_center(f::HarmonicGravity)     = f.central_body
+gravity_center(f::AtmosphericDrag)     = f.central_body
+gravity_center(f::SolarRadiationPressure) = f.central_body
+
+"""
+    includes_central(force) -> Bool
+
+Whether a gravity force adds the central body's own gravity (the monopole term). `ForceModel` uses
+this to ensure exactly one model provides the central term for a given body. Defaults to `false`.
+"""
+includes_central(::OrbitODE)          = false
+includes_central(f::PointMassGravity) = f.include_center
+includes_central(f::HarmonicGravity)  = true
+
 function _find_center(forces::Tuple)
-    centers = CelestialBody[]
+    centers      = CelestialBody[]   # every gravity force's reference body
+    with_central = CelestialBody[]   # the forces that add the central monopole
     for f in forces
-        if f isa PointMassGravity
-            push!(centers, f.central_body)
-        end
+        c = gravity_center(f)
+        c === nothing && continue
+        push!(centers, c)
+        includes_central(f) && push!(with_central, c)
     end
-    if isempty(centers)
-        return nothing
-    elseif length(unique(centers)) == 1
-        return first(centers)
-    else
-        error("Multiple conflicting central bodies found in ForceModel.")
+    # FR-FORCE-16: only one force may add the central term for a given body.
+    for i in eachindex(with_central), j in (i + 1):lastindex(with_central)
+        with_central[i] === with_central[j] &&
+            error("ForceModel: two gravity forces both include the central term for " *
+                  "'$(with_central[i].name)'. Set `include_center = false` on the point-mass " *
+                  "force so only one model provides the central gravity for that body.")
     end
+    isempty(centers) && return nothing
+    all(c -> c === centers[1], centers) ||
+        error("ForceModel: the gravity forces reference different central bodies.")
+    return centers[1]
 end
 
 """
@@ -219,12 +268,14 @@ function _build_odes!(model::ForceModel, start_epoch, du, u, p, t, spacecraft_li
 
         current_time = start_epoch + t/86400.0
         acc = zeros(eltype(posvel), 6)
-        acc_sum = zeros(eltype(posvel), 6);
+        a_sum = zeros(eltype(posvel), 3)
         for force in model.forces
             accel_eval!(force, current_time, posvel, acc, sc, p)
-            acc_sum .+= acc
+            # Superimpose acceleration contributions only; kinematics set once below.
+            a_sum[1] += acc[4]; a_sum[2] += acc[5]; a_sum[3] += acc[6]
         end
-        du[idxs[1:6]] .= acc
+        du[idxs[1]] = posvel[4]; du[idxs[2]] = posvel[5]; du[idxs[3]] = posvel[6]
+        du[idxs[4]] = a_sum[1];  du[idxs[5]] = a_sum[2];  du[idxs[6]] = a_sum[3]
     end
 end
 

@@ -17,7 +17,9 @@ using AstroUniverse
 using AstroFrames: ICRFAxes, CoordinateSystem
 using AstroUniverse: earth
 
-export Spacecraft, get_state, to_posvel, set_posvel!
+export Spacecraft, get_state, to_posvel, set_posvel!, total_mass
+export AbstractDragGeometry, SphericalDrag
+export AbstractSRPGeometry, SphericalSRP
 export CADModel
 export HistorySegment, SpacecraftHistory
 export push_state!, push_segment!, new_segment!
@@ -27,6 +29,8 @@ import EpicycleBase: AbstractPoint
 
 include("cadmodel.jl")
 include("spacecraft_history.jl")
+include("drag_geometry.jl")
+include("srp_geometry.jl")
 include("spacecraft.jl")
 
 end

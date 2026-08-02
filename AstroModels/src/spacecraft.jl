@@ -11,6 +11,8 @@ Fields
 - history::SpacecraftHistory — trajectory history organized into segments
 - coord_sys::CS — coordinate system (origin and axes) associated with the spacecraft.
 - cad_model::CADModel — 3D model for visualization
+- drag::Union{AbstractDragGeometry, Nothing} — drag geometry (e.g. `SphericalDrag`), or `nothing`
+- srp::Union{AbstractSRPGeometry, Nothing} — SRP geometry (e.g. `SphericalSRP`), or `nothing`
 
 # Notes:
 - Use the keyword constructor to create spacecraft and only define the fields you want to change from the defaults.
@@ -41,7 +43,18 @@ mutable struct Spacecraft{S<:OrbitState, TT<:Time, CS<:AbstractCoordinateSystem,
     history::SpacecraftHistory
     coord_sys::CS
     cad_model::CADModel
+    drag::Union{AbstractDragGeometry, Nothing}
+    srp::Union{AbstractSRPGeometry, Nothing}
 end
+
+"""
+    total_mass(sc::Spacecraft) -> Real
+
+Total current spacecraft mass [kg]. Read mass through this accessor rather than the
+raw field: today it returns `sc.mass`; when consumable sub-masses (dry mass + fuel +
+payload) are added, this becomes their sum and callers are unchanged.
+"""
+total_mass(sc::Spacecraft) = sc.mass
 
 """
     state_eltype(os::OrbitState) = eltype(os.state)
@@ -61,7 +74,9 @@ function Spacecraft(state::Union{AbstractState,OrbitState}, time::TT;
     name::AbstractString = "unnamed",
     history::Union{Nothing,SpacecraftHistory} = nothing,
     coord_sys::CS = CoordinateSystem(earth, ICRFAxes()),
-    cad_model::CADModel = CADModel()
+    cad_model::CADModel = CADModel(),
+    drag::Union{AbstractDragGeometry, Nothing} = nothing,
+    srp::Union{AbstractSRPGeometry, Nothing} = nothing,
     ) where {TT<:Time, CS<:AbstractCoordinateSystem}
 
     # Normalize to OrbitState
@@ -93,7 +108,7 @@ function Spacecraft(state::Union{AbstractState,OrbitState}, time::TT;
     # History default: empty SpacecraftHistory
     hist_T = history === nothing ? SpacecraftHistory() : history
 
-    return Spacecraft{typeof(os_T), TTIME, CS, Tnum}(os_T, t_T, mass_T, String(name), hist_T, coord_sys, cad_model)
+    return Spacecraft{typeof(os_T), TTIME, CS, Tnum}(os_T, t_T, mass_T, String(name), hist_T, coord_sys, cad_model, drag, srp)
 end
 
 """
@@ -112,8 +127,10 @@ function Spacecraft(; state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
                       name = "unnamed",
                       history = nothing,
                       coord_sys = CoordinateSystem(earth, ICRFAxes()),
-                      cad_model = CADModel())
-    Spacecraft(state, time; mass=mass, name=name, history=history, coord_sys=coord_sys, cad_model=cad_model)
+                      cad_model = CADModel(),
+                      drag = nothing,
+                      srp = nothing)
+    Spacecraft(state, time; mass=mass, name=name, history=history, coord_sys=coord_sys, cad_model=cad_model, drag=drag, srp=srp)
 end
 
 """
@@ -127,6 +144,8 @@ function Base.show(io::IO, sc::Spacecraft)
      _indent_and_print(io, sc.state, "  ")
      _indent_and_print(io, sc.coord_sys, "  ")
      println(io, "  Total Mass = ", sc.mass, " kg")
+     sc.drag === nothing ? println(io, "  Drag = none") : _indent_and_print(io, sc.drag, "  ")
+     sc.srp  === nothing ? println(io, "  SRP  = none") : _indent_and_print(io, sc.srp,  "  ")
      _indent_and_print(io, sc.cad_model, "  ")
  end
 
@@ -158,6 +177,8 @@ function Base.deepcopy_internal(sc::Spacecraft, dict::IdDict)
         history   = Base.deepcopy_internal(getfield(sc, :history), dict),
         coord_sys = getfield(sc, :coord_sys),
         cad_model = getfield(sc, :cad_model),
+        drag      = getfield(sc, :drag),
+        srp       = getfield(sc, :srp),
     )
 end
 
@@ -374,12 +395,14 @@ function Base.promote(sc::Spacecraft{S,TT,CS,T}, ::Type{Tnew}) where {S,TT,CS,T,
     # Create new spacecraft with promoted types
     return Spacecraft{typeof(state_promoted), typeof(time_promoted), CS, Tnew}(
         state_promoted,
-        time_promoted, 
+        time_promoted,
         mass_promoted,
         sc.name,
         history_preserved,
         sc.coord_sys,
-        sc.cad_model
+        sc.cad_model,
+        getfield(sc, :drag),
+        getfield(sc, :srp)
     )
 end
 
