@@ -303,12 +303,18 @@ function _build_callback(cond::StopAt, dynsys)
 
     term!(integ) = terminate!(integ)
 
+    # interp_points=2: evaluate g only at the two accepted-step endpoints (no dense-interp
+    # sub-samples). Safe for slowly-varying signals used with tight-tol Vern9.
+    # save_positions=(false,false): don't re-save the ODE state at each condition eval.
     if dir == 0
-        return ContinuousCallback(g, term!; rootfind=true)
+        return ContinuousCallback(g, term!;
+            interp_points=2, save_positions=(false, false), rootfind=true)
     elseif dir > 0
-        return ContinuousCallback(g, term!; affect_neg! = (_integ)->nothing, rootfind=true)
+        return ContinuousCallback(g, term!; affect_neg! = (_integ)->nothing,
+            interp_points=2, save_positions=(false, false), rootfind=true)
     else
-        return ContinuousCallback(g, (_integ)->nothing; affect_neg! = term!, rootfind=true)
+        return ContinuousCallback(g, (_integ)->nothing; affect_neg! = term!,
+            interp_points=2, save_positions=(false, false), rootfind=true)
     end
 end
 

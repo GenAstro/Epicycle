@@ -308,7 +308,7 @@ function _update_structs!(forces::ForceModel, sol_u::Vector{<:Real}, odereg::Dic
         time_scale = (center_body === earth) ? TT() : TDB()
         initialtime = (center_body === earth) ? sc.time.tt.jd : sc.time.tdb.jd
         
-        if full_sol !== nothing
+        if full_sol !== nothing && sc.save_history
             # Extract times and states from solution
             times = [Time(initialtime + t / 86400.0, time_scale, JD()) for t in full_sol.t]
             states = [CartesianState(copy(u[idx_map[:posvel]])) for u in full_sol.u]
