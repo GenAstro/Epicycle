@@ -23,7 +23,7 @@ using StaticArrays
 export AbstractState, AbstractOrbitState, AbstractOrbitStateType 
 export CartesianState, KeplerianState, SphericalRADECState, ModifiedEquinoctialState
 export OutGoingAsymptoteState, IncomingAsymptoteState, ModifiedKeplerianState, SphericalAZIFPAState
-export EquinoctialState, AlternateEquinoctialState
+export EquinoctialState, AlternateEquinoctialState, BrouwerMeanLongState, BrouwerMeanShortState
 
 # Export conversion functions 
 export cart_to_kep, kep_to_cart, sphradec_to_cart, cart_to_sphradec, cart_to_mee, mee_to_cart
