@@ -86,6 +86,7 @@ Spacecraft: SC-001
   Total Mass = 1000.0 kg
   Drag = none
   SRP  = none
+  Save History = true
   CADModel: (no model)
 """
 
