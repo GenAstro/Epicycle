@@ -300,4 +300,89 @@ end
     end
 end
 
+# ============================================================================
+# Detection modes: :discrete (default hybrid) vs :continuous
+# ============================================================================
+
+@testset "StopAt detection modes" begin
+
+    @testset "Constructor: defaults and kwargs" begin
+        sat = make_sat()
+        # Default: :discrete, rootfind_tol = 1e-9
+        s_def = StopAt(sat, PosX(), 7.5; direction = +1)
+        @test s_def.detection === :discrete
+        @test s_def.rootfind_tol == 1e-9
+
+        # Explicit :continuous
+        s_c = StopAt(sat, PosX(), 7.5; direction = +1, detection = :continuous)
+        @test s_c.detection === :continuous
+
+        # Custom rootfind_tol
+        s_t = StopAt(sat, PosX(), 7.5; direction = +1, rootfind_tol = 1e-6)
+        @test s_t.rootfind_tol == 1e-6
+    end
+
+    @testset "Constructor: invalid kwargs throw" begin
+        sat = make_sat()
+        @test_throws ArgumentError StopAt(sat, PosX(), 0.0; detection = :oops)
+        @test_throws ArgumentError StopAt(sat, PosX(), 0.0; rootfind_tol = 0.0)
+        @test_throws ArgumentError StopAt(sat, PosX(), 0.0; rootfind_tol = -1e-6)
+    end
+
+    @testset ":discrete lands sc.state / sol.u[end] / history at root" begin
+        sat = make_sat()
+        sol = propagate!(prop, sat, StopAt(sat, PosMag(), 7000.0; direction = 0))
+        @test sol.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.Terminated)
+
+        # sc.state should match the terminal ODE state (updated by _update_structs!)
+        @test sat.state.state ≈ sol.u[end]
+
+        # Terminal state must satisfy the target within tol
+        rmag = norm(sol.u[end][1:3])
+        @test isapprox(rmag, 7000.0; atol = 1e-6)
+
+        # History last segment ends at the root (matches sol.u[end])
+        @test !isempty(sat.history)
+        seg = sat.history[end]
+        @test seg.states[end].posvel ≈ sol.u[end]
+    end
+
+    @testset ":continuous mode produces the same crossing within tol" begin
+        # Baseline (:discrete default)
+        sat_d = make_sat()
+        sol_d = propagate!(prop, sat_d, StopAt(sat_d, PosMag(), 7000.0; direction = 0))
+        # Escape hatch (:continuous)
+        sat_c = make_sat()
+        sol_c = propagate!(prop, sat_c, StopAt(sat_c, PosMag(), 7000.0; direction = 0,
+                                                detection = :continuous))
+        @test sol_c.retcode in (SciMLBase.ReturnCode.Success, SciMLBase.ReturnCode.Terminated)
+
+        # Both must satisfy the crossing to sub-mm precision
+        @test isapprox(norm(sol_d.u[end][1:3]), 7000.0; atol = 1e-6)
+        @test isapprox(norm(sol_c.u[end][1:3]), 7000.0; atol = 1e-3)
+
+        # Both modes should agree on the root state to well within the physical scale
+        # (positions in km; discrete uses tol=1e-9 on g, continuous uses solver default —
+        # positional agreement to ~micrometers is the expected outcome).
+        @test isapprox(sol_d.t[end], sol_c.t[end]; atol = 1e-3)         # ms of orbit time
+        @test isapprox(sol_d.u[end], sol_c.u[end]; atol = 1e-3)         # mm on state
+    end
+
+    @testset "rootfind_tol kwarg is honored (loose tol → looser crossing)" begin
+        # A very loose tol should still cross the target but the residual on g at the
+        # final state may be as large as ~rootfind_tol. We check that a tight tol gives
+        # a tighter residual than a loose one, on the same trajectory.
+        sat_tight = make_sat()
+        sat_loose = make_sat()
+        propagate!(prop, sat_tight, StopAt(sat_tight, PosMag(), 7000.0; direction = 0, rootfind_tol = 1e-9))
+        propagate!(prop, sat_loose, StopAt(sat_loose, PosMag(), 7000.0; direction = 0, rootfind_tol = 1e-3))
+        res_tight = abs(norm(sat_tight.state.state[1:3]) - 7000.0)
+        res_loose = abs(norm(sat_loose.state.state[1:3]) - 7000.0)
+        @test res_tight ≤ 1e-6
+        @test res_loose ≤ 1e-2       # loose tol should still land near target
+        @test res_tight ≤ res_loose  # tighter tol should not be worse than looser
+    end
+
+end
+
 nothing

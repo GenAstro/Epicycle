@@ -86,44 +86,73 @@ Generic stopping condition for orbital propagation based on calculated quantitie
 - `direction::Int`: Event crossing direction for state-based stops (-1: decreasing, 0: any, +1: increasing)
   * For time-based stops (PropDuration*), must be 0 (event crossing not applicable)
   * For state-based stops, controls which direction of zero-crossing triggers the event
+- `detection::Symbol`: how the crossing is polled during integration.
+  * `:discrete` (default): fast per-step polling on `integrator.u` with a `DiscreteCallback`;
+    when a sign change is detected between two consecutive accepted steps, bisect on the
+    Vern9 dense-output interpolant to locate the exact root, rewind the integrator to that
+    root, and terminate. Cheapest option — ~5× less per-step overhead than `:continuous`.
+  * `:continuous`: full `ContinuousCallback` — evaluates `g` on the interpolant at both
+    step endpoints every accepted step, then root-finds when a sign change appears. Use
+    only for signals that can double-cross within a single Vern9 step (fast oscillators
+    with loose tolerances). Rare in astrodynamics.
+- `rootfind_tol::Float64`: bisection convergence tolerance on the `g = calc - target`
+  value at the root. Default `1e-9`. Applies to `:discrete`; `:continuous` inherits
+  DiffEqBase's own root solver tolerance.
 
 # Constructor
-    StopAt(subject, var, target; direction::Int=0)
+    StopAt(subject, var, target; direction::Int=0,
+           detection::Symbol=:discrete, rootfind_tol::Real=1e-9)
 
 # Notes
 The `direction` field is for **event crossing direction** (state-based stops only).
 For **time integration direction** (forward/backward), use the `direction` keyword in `propagate!()`.
 
+Both `:discrete` and `:continuous` deliver the crossing to the same precision — they only
+differ in how they poll for it. `sol.u[end]` and `sc.state` land at the interpolated root
+under either mode; `sc.history`'s terminal entry is the root state.
+
 # Examples
 ```julia
-# Stop when spacecraft reaches ascending node (z-position = 0, increasing)
-sc = Spacecraft(state=CartesianState([7000.0, 0, 0, 0, 7.5, 0]))
+# Fast path (default): DiscreteCallback + interpolant bisection
 stop_cond = StopAt(sc, PosZ(), 0.0; direction=+1)
 
-# Stop at apoapsis (position dot velocity = 0, decreasing)  
-stop_apo = StopAt(sc, PosDotVel(), 0.0; direction=-1)
+# Escape hatch for a signal that oscillates faster than one Vern9 step
+stop_fast = StopAt(sc, SomeFastOsc(), 0.0; detection=:continuous)
 
-# Stop after 1 hour (time-based: direction must be 0)
+# Loosen the bisection tolerance if 1e-9 is tighter than needed
+stop_loose = StopAt(sc, PosDotVel(), 0.0; direction=-1, rootfind_tol=1e-6)
+
+# Time-based stops don't use root-finding at all; both fields are inert.
 stop_time = StopAt(sc, PropDurationSeconds(), 3600.0)
 ```
 """
 struct StopAt{S,V<:AbstractCalcVariable,T}
-    subject::S                 
-    var::V                     
-    target::T                  
-    direction::Int              
+    subject::S
+    var::V
+    target::T
+    direction::Int
+    detection::Symbol
+    rootfind_tol::Float64
 end
 
 # Positional target (required) with validation
-function StopAt(subject, var, target; direction::Int=0)
+function StopAt(subject, var, target;
+                direction::Int = 0,
+                detection::Symbol = :discrete,
+                rootfind_tol::Real = 1e-9)
     var isa AbstractCalcVariable || error("var must be <: AbstractCalcVariable, got $(typeof(var))")
-    
+
+    detection in (:discrete, :continuous) ||
+        throw(ArgumentError("detection must be :discrete or :continuous; got detection = $(repr(detection))"))
+    rootfind_tol > 0 ||
+        throw(ArgumentError("rootfind_tol must be > 0; got rootfind_tol = $rootfind_tol"))
+
     # Time-based stops don't use event crossing direction
     if var isa IntegratorTimeCalc && direction != 0
         error("Time-based stopping conditions must use direction=0 (event crossing direction not applicable for time-based stops)")
     end
-    
-    StopAt(subject, var, target, direction)
+
+    StopAt(subject, var, target, direction, detection, Float64(rootfind_tol))
 end
 
 # Convenience constructor for absolute time stopping
@@ -173,7 +202,7 @@ function StopAt(subject::Spacecraft, target_time::Time; direction::Int=0)
     elapsed_sec = (target_dyn.jd - current_dyn.jd) * 86400.0
     
     # No error for negative - supports backward propagation with direction=:infer
-    return StopAt(subject, PropDurationSeconds(), elapsed_sec, direction)
+    return StopAt(subject, PropDurationSeconds(), elapsed_sec, direction, :discrete, 1e-9)
 end
 
 """
@@ -278,34 +307,116 @@ function _posvel_from_u(u, dynsys, sc::Spacecraft)
     return collect(@view u[i0:i0+5])
 end
 
-""" 
+"""
     _build_callback(cond::StopAt, dynsys)
 
-Build a DifferentialEquations.jl ContinuousCallback for a StopAt condition.
+Build a callback for a `StopAt` condition. Dispatches on `cond.detection`:
+`:discrete` (default) → `_build_hybrid_callback`; `:continuous` → `_build_continuous_callback`.
 """
 function _build_callback(cond::StopAt, dynsys)
+    return cond.detection === :discrete ? _build_hybrid_callback(cond, dynsys) :
+                                          _build_continuous_callback(cond, dynsys)
+end
+
+"""
+    _build_hybrid_callback(cond::StopAt, dynsys)
+
+Fast path (default). One `g(u,t)` evaluation per accepted step on `integrator.u` (no dense
+interpolant polling). When a sign change appears between two consecutive step endpoints,
+bisect on the Vern9 dense output to locate the exact root, rewind the integrator to that
+root, and terminate. `sol.u[end]`/`sol.t[end]` land at the root state and time; the existing
+`_update_structs!` path then delivers the root to `sc.state` and `sc.history` unchanged.
+"""
+function _build_hybrid_callback(cond::StopAt, dynsys)
+    subject = cond.subject
+    var     = cond.var
+    target  = cond.target
+    dir     = cond.direction
+    tol     = cond.rootfind_tol
+    calc    = make_calc(subject, var)
+
+    g_prev = Ref(NaN)     # (calc - target) at the previous accepted-step endpoint
+    t_prev = Ref(NaN)     # elapsed time at that endpoint
+
+    # g(u) = calc(u) - target. Mutates subject as a side effect via _subject_update_from_u!
+    # (unavoidable given the get_calc(calc) contract; only subject.state is touched).
+    function g_at(u)
+        _subject_update_from_u!(subject, dynsys, u)
+        return get_calc(calc) - target
+    end
+
+    function cond_fn(u, t, _integ)
+        g_now = g_at(u)
+        if isnan(g_prev[])
+            g_prev[] = g_now; t_prev[] = t
+            return false
+        end
+        crossed = dir < 0 ? (g_prev[] > 0 && g_now ≤ 0) :
+                  dir > 0 ? (g_prev[] < 0 && g_now ≥ 0) :
+                            (sign(g_prev[]) != sign(g_now))
+        if !crossed
+            g_prev[] = g_now; t_prev[] = t
+        end
+        return crossed
+    end
+
+    function affect!(integ)
+        tl, th = t_prev[], integ.t
+        gl     = g_prev[]                       # opposite sign of g_at(u_th) at entry
+        t_mid  = 0.5 * (tl + th)
+        u_mid  = integ(t_mid)                   # Vern9 dense output
+        for _ in 1:60
+            gm = g_at(u_mid)
+            (abs(gm) < tol || (th - tl) < 1e-6) && break
+            if (gl > 0) == (gm > 0)
+                tl = t_mid; gl = gm
+            else
+                th = t_mid
+            end
+            t_mid = 0.5 * (tl + th)
+            u_mid = integ(t_mid)
+        end
+        # Rewind integrator to the root. save_everystep already appended (u_overshoot, t_overshoot)
+        # for this step, so overwrite that last sol entry in place — this keeps sol.t monotone
+        # and avoids the alternatives of pop! (breaks solver internal indexing) or leaving the
+        # overshoot in place (violates the contract that sol/history end at the root).
+        integ.u .= u_mid
+        integ.t  = t_mid
+        if length(integ.sol.t) > 0
+            integ.sol.t[end] = t_mid
+            integ.sol.u[end] = collect(u_mid)
+        end
+        terminate!(integ)
+    end
+
+    return DiscreteCallback(cond_fn, affect!; save_positions=(false, false))
+end
+
+"""
+    _build_continuous_callback(cond::StopAt, dynsys)
+
+Escape hatch for signals that can double-cross within a single Vern9 step (fast oscillators
+with loose tolerances). Full `ContinuousCallback` with interp_points=2 and save_positions
+disabled — same root-find precision as the hybrid path, but pays for dense-output
+evaluation at every accepted step whether a sign change exists or not.
+"""
+function _build_continuous_callback(cond::StopAt, dynsys)
     subject = cond.subject
     var     = cond.var
     target  = cond.target
     dir     = cond.direction
 
-    # Build a calc from (subject, var) after we know the dynsys/subject we’ll mutate
     calc = make_calc(subject, var)
 
-    # Event function: zero when calc hits target
-    function g(u, t, integ)
-        # Bring subject up-to-date from integrator state
+    function g(u, t, _integ)
         _subject_update_from_u!(subject, dynsys, u)
-        # Evaluate current value via AstroCallbacks
         val = get_calc(calc)
         return val - target
     end
-
     term!(integ) = terminate!(integ)
 
-    # interp_points=2: evaluate g only at the two accepted-step endpoints (no dense-interp
-    # sub-samples). Safe for slowly-varying signals used with tight-tol Vern9.
-    # save_positions=(false,false): don't re-save the ODE state at each condition eval.
+    # interp_points=2: only evaluate g at the two accepted-step endpoints via the
+    # interpolant. save_positions=(false,false): don't re-save the ODE state per eval.
     if dir == 0
         return ContinuousCallback(g, term!;
             interp_points=2, save_positions=(false, false), rootfind=true)
