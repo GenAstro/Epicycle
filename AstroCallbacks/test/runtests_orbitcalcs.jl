@@ -98,6 +98,26 @@ end
         @test calc_is_settable(calc.var) == true
     end
 
+    # MeanSMA (Brouwer-Lyddane mean-long semi-major axis)
+    @testset "MeanSMA" begin
+        sc = make_sc()
+        calc = OrbitCalc(sc, MeanSMA())
+        # Test calc matches BrouwerMeanLongState sma
+        sc_bml = get_state(sc, BrouwerMeanLong())
+        @test isapprox(scalarize(get_calc(calc)), sc_bml.sma; atol=1e-8)
+        # Update via set_calc! and verify spacecraft state updated.
+        # Round-trip through the Brouwer mean-element theory carries its own
+        # convergence tolerance; a 1e-4 km bound reflects that, not sloppiness here.
+        set_calc!(calc, 10000.0)
+        sc_bml = get_state(sc, BrouwerMeanLong())
+        @test isapprox(sc_bml.sma, 10000.0; atol=1e-4)
+        @test isapprox(scalarize(get_calc(calc)), 10000.0; atol=1e-4)
+        # Test trait methods
+        @test calc_numvars(calc.var) == 1
+        @test calc_is_settable(calc.var) == true
+        @test calc_input_statetag(calc.var) == BrouwerMeanLong()
+    end
+
     # Inc
     @testset "Inc" begin
         sc = make_sc()
