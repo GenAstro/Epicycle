@@ -10,6 +10,24 @@ AstroProp provides force models, orbital propagators, and stopping conditions fo
 
 The module supports various force models including point mass gravity, and flexible stopping conditions based on orbital elements, time, or custom calculations. AstroProp is tested against the General Mission Analysis Tool (GMAT).
 
+## What's New
+
+- **Zonal Earth gravity (J₂–J₅)** — `HarmonicGravity(earth; model = Zonal())`. 
+- **Exponential Earth atmosphere** — `Exponential()` density model for `AtmosphericDrag`.
+- **Spherical atmospheric drag** — `AtmosphericDrag` force, reading `SphericalDrag` geometry
+  from the spacecraft. Uses the drag-geometry type introduced in AstroModels; see the
+  [AstroModels What's New](../AstroModels/README.md#whats-new).
+- **Spherical solar radiation pressure** — `SolarRadiationPressure` force with a dual-cone
+  eclipse shadow, reading `SphericalSRP` geometry from the spacecraft. Uses the SRP-geometry
+  type introduced in AstroModels; see the
+  [AstroModels What's New](../AstroModels/README.md#whats-new).
+- **Faster and more flexible stopping conditions** — `StopAt` gains `detection` (`:discrete`
+  default, `:continuous` escape hatch) and `rootfind_tol` kwargs. The default `:discrete`
+  path polls the condition once per accepted step on `integrator.u` and, when a sign change
+  appears, bisects on the Vern9 dense-output interpolant to locate the exact root — same
+  root precision as before, ~2× faster on typical LEO drag workloads. Drop-in: existing
+  `StopAt(subject, var, target; direction=…)` calls need no change.
+
 ## Installation
 
 ```julia

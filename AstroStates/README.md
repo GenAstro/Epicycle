@@ -12,6 +12,12 @@ The module offers multiple interfaces for transforming and storing states. Low�
 
 AstroStates is tested against output from the General Mission Analysis Tool (GMAT) R2022a.
 
+## What's New
+
+- **Brouwer mean-element state types** — `BrouwerMeanShortState` and `BrouwerMeanLongState`.
+- **`MeanSMA` calc** (in `AstroCallbacks`) — target or report the Brouwer long-period mean
+  semi-major axis inside stopping conditions and constraints.
+
 ## Installation
 
 ```julia

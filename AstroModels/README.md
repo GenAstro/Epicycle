@@ -10,6 +10,20 @@ The AstroModels module provides physical models for astrodynamics applications, 
 
 The module supports multiple initialization patterns for spacecraft objects, allowing users to specify orbital states directly or construct them from component data. All models are designed for compatibility with automatic differentiation libraries.
 
+## What's New
+
+- **`SphericalDrag` spacecraft geometry** — isotropic (spherical-body) drag geometry
+  (`SphericalDrag(; c_d, drag_area)`), attached to `Spacecraft.drag`. Read by
+  `AstroProp.AtmosphericDrag` at each integration step.
+- **`SphericalSRP` spacecraft geometry** — isotropic (spherical-body) SRP geometry
+  (`SphericalSRP(; c_r, srp_area)`), attached to `Spacecraft.srp`. Read by
+  `AstroProp.SolarRadiationPressure` at each integration step.
+- **`Spacecraft.save_history`** — new field to opt out of trajectory-segment storage during
+  propagation. Default `true` (unchanged behavior). When `false`, `sc.state` and `sc.time`
+  still update at the end of `propagate!`; only the segment push into `sc.history` is
+  skipped. The returned `ODESolution` still carries the full trajectory. Useful for
+  benchmarking or when only the final state is needed.
+
 ## Installation
 
 ```julia

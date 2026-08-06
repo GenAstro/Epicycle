@@ -25,6 +25,15 @@ The Epicycle ecosystem implements a layered architecture where each package prov
 | `AstroProp` | Numerical integration and trajectory propagation methods | 
 | `AstroSolve` | Optimization algorithms and constraint solving capabilities |
 
+## What's New
+
+- **Earth station-keeping example** — `examples/Ex_StationKeeping.jl`. LEO satellite
+  maintained above a mean-SMA trigger with periodic Hohmann re-boosts; solver refines the
+  analytic ΔV guesses against a mean-SMA constraint at MOI. Demonstrates the full stack:
+  states, epochs, forces, propagation, maneuvers, and sequences composed via `using Epicycle`.
+
+See each subpackage's `README.md` for the What's New in that package.
+
 ## Installation
 
 ```julia
