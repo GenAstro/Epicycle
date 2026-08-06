@@ -27,6 +27,44 @@ Epicycle is an application for space systems with a nod to the giants before us 
 - **[AstroProp Documentation](https://genastro.github.io/Epicycle/AstroProp/dev/)** - Trajectory propagation algorithms
 - **[AstroSolve Documentation](https://genastro.github.io/Epicycle/AstroSolve/dev/)** - Optimization and constraint solving
 
+## What's New
+
+**AstroStates**
+- Brouwer mean-element state types (`BrouwerMeanShortState`, `BrouwerMeanLongState`).
+- `MeanSMA` calc (in `AstroCallbacks`) for targeting and reporting the Brouwer long-period
+  mean semi-major axis.
+
+**AstroProp**
+- Zonal Earth gravity (J₂–J₅) — `HarmonicGravity(earth; model = Zonal())`. Cross-validated
+  against GMAT EGM96 at degree 5.
+- Exponential Earth atmosphere — `Exponential()` density model for `AtmosphericDrag`.
+- Spherical atmospheric drag — `AtmosphericDrag` force, reading `SphericalDrag` geometry
+  from the spacecraft (see AstroModels).
+- Spherical solar radiation pressure — `SolarRadiationPressure` force with a dual-cone
+  eclipse shadow, reading `SphericalSRP` geometry from the spacecraft (see AstroModels).
+- Faster and more flexible stopping conditions — `StopAt` gains `detection` (`:discrete`
+  default, `:continuous` escape hatch) and `rootfind_tol` kwargs. Default `:discrete` polls
+  once per accepted step and bisects on the Vern9 interpolant when a sign change appears —
+  same root precision, ~2× faster on typical LEO drag workloads. Drop-in for existing calls.
+
+**Epicycle** (umbrella)
+- Earth station-keeping example — `Epicycle/examples/Ex_StationKeeping.jl`. LEO satellite
+  maintained above a mean-SMA trigger with periodic Hohmann re-boosts; solver refines
+  analytic ΔV guesses against a mean-SMA constraint at MOI. Demonstrates the full stack:
+  states, epochs, forces, propagation, maneuvers, and sequences composed via `using Epicycle`.
+
+**AstroModels**
+- `SphericalDrag` spacecraft geometry (`SphericalDrag(; c_d, drag_area)`) — isotropic
+  (spherical-body) drag geometry attached to `Spacecraft.drag`.
+- `SphericalSRP` spacecraft geometry (`SphericalSRP(; c_r, srp_area)`) — isotropic
+  (spherical-body) SRP geometry attached to `Spacecraft.srp`.
+- `Spacecraft.save_history` field — opt out of trajectory-segment storage during
+  propagation. `sc.state` and `sc.time` still update; only the segment push is skipped.
+
+**Enterprise: EpicycleEnterprise**
+- Full-field spherical-harmonic gravity — `EGM96` and `EGM2008` via `HarmonicGravity`.
+- NRLMSISE-00 atmospheric density — `MSISE00` via `AtmosphericDrag`.
+
 ## Contributing to Epicycle 
 
 Contributing is easy.

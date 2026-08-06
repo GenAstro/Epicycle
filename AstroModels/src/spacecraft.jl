@@ -13,7 +13,14 @@ Fields
 - cad_model::CADModel — 3D model for visualization
 - drag::Union{AbstractDragGeometry, Nothing} — drag geometry (e.g. `SphericalDrag`), or `nothing`
 - srp::Union{AbstractSRPGeometry, Nothing} — SRP geometry (e.g. `SphericalSRP`), or `nothing`
+- save_history::Bool — whether propagators append a segment to `history` on each call.
+  Default `true`; set `false` to skip the ephemeris save (useful for benchmarking or
+  when only the final state is wanted).
 
+  When `false`, `propagate!` still updates `sc.state` and `sc.time` to the final
+  integration point exactly as it does with `true`, but does not push a
+  `HistorySegment` onto `sc.history`.
+  
 # Notes:
 - Use the keyword constructor to create spacecraft and only define the fields you want to change from the defaults.
 - State can be provided two ways as shown in the example below
@@ -45,6 +52,7 @@ mutable struct Spacecraft{S<:OrbitState, TT<:Time, CS<:AbstractCoordinateSystem,
     cad_model::CADModel
     drag::Union{AbstractDragGeometry, Nothing}
     srp::Union{AbstractSRPGeometry, Nothing}
+    save_history::Bool
 end
 
 """
@@ -77,6 +85,7 @@ function Spacecraft(state::Union{AbstractState,OrbitState}, time::TT;
     cad_model::CADModel = CADModel(),
     drag::Union{AbstractDragGeometry, Nothing} = nothing,
     srp::Union{AbstractSRPGeometry, Nothing} = nothing,
+    save_history::Bool = true,
     ) where {TT<:Time, CS<:AbstractCoordinateSystem}
 
     # Normalize to OrbitState
@@ -108,7 +117,7 @@ function Spacecraft(state::Union{AbstractState,OrbitState}, time::TT;
     # History default: empty SpacecraftHistory
     hist_T = history === nothing ? SpacecraftHistory() : history
 
-    return Spacecraft{typeof(os_T), TTIME, CS, Tnum}(os_T, t_T, mass_T, String(name), hist_T, coord_sys, cad_model, drag, srp)
+    return Spacecraft{typeof(os_T), TTIME, CS, Tnum}(os_T, t_T, mass_T, String(name), hist_T, coord_sys, cad_model, drag, srp, save_history)
 end
 
 """
@@ -129,8 +138,10 @@ function Spacecraft(; state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
                       coord_sys = CoordinateSystem(earth, ICRFAxes()),
                       cad_model = CADModel(),
                       drag = nothing,
-                      srp = nothing)
-    Spacecraft(state, time; mass=mass, name=name, history=history, coord_sys=coord_sys, cad_model=cad_model, drag=drag, srp=srp)
+                      srp = nothing,
+                      save_history::Bool = true)
+    Spacecraft(state, time; mass=mass, name=name, history=history, coord_sys=coord_sys,
+               cad_model=cad_model, drag=drag, srp=srp, save_history=save_history)
 end
 
 """
@@ -146,6 +157,7 @@ function Base.show(io::IO, sc::Spacecraft)
      println(io, "  Total Mass = ", sc.mass, " kg")
      sc.drag === nothing ? println(io, "  Drag = none") : _indent_and_print(io, sc.drag, "  ")
      sc.srp  === nothing ? println(io, "  SRP  = none") : _indent_and_print(io, sc.srp,  "  ")
+     println(io, "  Save History = ", sc.save_history)
      _indent_and_print(io, sc.cad_model, "  ")
  end
 
@@ -170,15 +182,16 @@ Deep copy a spacecraft to ensure no aliasing of inner mutable fields
 function Base.deepcopy_internal(sc::Spacecraft, dict::IdDict)
     return Spacecraft(
         # TODO.  implement deep copy on composed objects and call here
-        state     = Base.deepcopy_internal(getfield(sc, :state), dict),
-        time      = Base.deepcopy_internal(getfield(sc, :time), dict),
-        mass      = getfield(sc, :mass),
-        name      = getfield(sc, :name),
-        history   = Base.deepcopy_internal(getfield(sc, :history), dict),
-        coord_sys = getfield(sc, :coord_sys),
-        cad_model = getfield(sc, :cad_model),
-        drag      = getfield(sc, :drag),
-        srp       = getfield(sc, :srp),
+        state        = Base.deepcopy_internal(getfield(sc, :state), dict),
+        time         = Base.deepcopy_internal(getfield(sc, :time), dict),
+        mass         = getfield(sc, :mass),
+        name         = getfield(sc, :name),
+        history      = Base.deepcopy_internal(getfield(sc, :history), dict),
+        coord_sys    = getfield(sc, :coord_sys),
+        cad_model    = getfield(sc, :cad_model),
+        drag         = getfield(sc, :drag),
+        srp          = getfield(sc, :srp),
+        save_history = getfield(sc, :save_history),
     )
 end
 
@@ -402,7 +415,8 @@ function Base.promote(sc::Spacecraft{S,TT,CS,T}, ::Type{Tnew}) where {S,TT,CS,T,
         sc.coord_sys,
         sc.cad_model,
         getfield(sc, :drag),
-        getfield(sc, :srp)
+        getfield(sc, :srp),
+        getfield(sc, :save_history),
     )
 end
 

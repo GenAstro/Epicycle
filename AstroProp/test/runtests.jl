@@ -312,6 +312,54 @@ end
     end
 end
 
+@testset "save_history = false skips ephemeris storage" begin
+    # Baseline: default (save_history = true) — records a segment.
+    sat_default = Spacecraft(
+        state = CartesianState([7000.0, 300.0, 0.0, 0.0, 8.5, 0.03]),
+        time  = Time("2015-09-21T12:23:12", TAI(), ISOT()),
+    )
+    @test sat_default.save_history == true
+    @test isempty(sat_default.history)
+
+    # save_history = false — must not record a segment.
+    sat_nohist = Spacecraft(
+        state        = CartesianState([7000.0, 300.0, 0.0, 0.0, 8.5, 0.03]),
+        time         = Time("2015-09-21T12:23:12", TAI(), ISOT()),
+        save_history = false,
+    )
+    @test sat_nohist.save_history == false
+    @test isempty(sat_nohist.history)
+
+    gravity = PointMassGravity(earth, (moon, sun))
+    forces  = ForceModel(gravity)
+    integ   = IntegratorConfig(Tsit5(); dt = 10.0, reltol = 1e-9, abstol = 1e-9)
+    prop    = OrbitPropagator(forces, integ)
+
+    sol_default = propagate!(prop, sat_default, StopAt(sat_default, PosDotVel(), 0.0; direction=-1))
+    sol_nohist  = propagate!(prop, sat_nohist,  StopAt(sat_nohist,  PosDotVel(), 0.0; direction=-1))
+
+    # Contract with save_history = true: one segment appended per propagate! call.
+    @test !isempty(sat_default.history)
+    @test length(sat_default.history) == 1
+
+    # Contract with save_history = false: history stays empty regardless of propagation.
+    @test isempty(sat_nohist.history)
+    @test length(sat_nohist.history) == 0
+
+    # sc.state and sc.time are updated in both cases — only history storage is skipped.
+    @test sat_nohist.state.state ≈ sol_nohist.u[end]
+    @test sat_nohist.time.tt.jd  > Time("2015-09-21T12:23:12", TAI(), ISOT()).tt.jd
+
+    # A second propagation on the same spacecraft still doesn't accumulate history.
+    propagate!(prop, sat_nohist, StopAt(sat_nohist, PosDotVel(), 0.0; direction=+1))
+    @test isempty(sat_nohist.history)
+
+    # The returned ODESolution still carries the full trajectory — the fast path only
+    # skips writing into sc.history, not the integrator's own record.
+    @test length(sol_nohist.t) > 1
+    @test length(sol_nohist.u) == length(sol_nohist.t)
+end
+
 @testset "Multi-Spacecraft Propagation" begin
     # Create two spacecraft with different initial conditions
     sat1 = Spacecraft(
