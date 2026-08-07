@@ -41,12 +41,7 @@ Epicycle/videos/
 
 Local/
 
-<<<<<<< HEAD
 AstroProp/lcov.info
-
-TaskList.xlsx
-=======
 TaskList.xlsx
 
-AstroProp/lcov.info
->>>>>>> force-models
+ci/_smoke_full.log

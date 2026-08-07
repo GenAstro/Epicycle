@@ -1,25 +1,36 @@
-# Test all packages in the Epicycle monorepo using Pkg.test()
-# This properly handles test dependencies from [extras] sections
+# Test all packages in the Epicycle monorepo from a single root Julia session.
+#
+# Design (see AstroSolve-coverage investigation, 2026-08-06):
+#   - Pkg.test spawns a per-package sandbox subprocess whose Manifest can't see
+#     dev-only umbrella packages like Epicycle. That masked ~half of AstroSolve's
+#     test coverage on CI (three test files that do `using Epicycle` were failing
+#     to load).
+#   - TestEnv.activate(pkg) layers the package's [extras] onto the current
+#     root env instead of building a fresh sandbox, so dev'd deps resolve.
+#     No sandbox subprocess, no re-resolve, no re-precompile per package.
+#
+# Requirements:
+#   - Must be called from the root project (workspace env with all sub-packages dev'd).
+#   - Julia must be launched with `--code-coverage=user` (or equivalent) for .cov
+#     files to be generated; the ENV var alone doesn't turn coverage on mid-process.
 
 using Pkg
+using TestEnv
 
-# Ensure coverage is enabled for all subprocesses
-ENV["JULIA_CODE_COVERAGE"] = "user"
-
-# Get the repo root directory (two levels up from this script)
 script_dir = dirname(@__FILE__)
-repo_root = dirname(dirname(script_dir))
+repo_root  = dirname(dirname(script_dir))
 
-# Store original project to restore later
-original_project = Base.active_project()
+# Confirm we're running from the root workspace project (has all packages dev'd).
+root_project = joinpath(repo_root, "Project.toml")
+Base.active_project() == root_project ||
+    @warn "test_all_packages.jl: expected root project $root_project active; got $(Base.active_project()). TestEnv layering may fail to resolve dev-only deps."
 
-# List of all packages in the monorepo
 packages = [
     "EpicycleBase",
     "AstroStates",
     "AstroEpochs",
     "AstroUniverse",
-    "AstroFrames", 
+    "AstroFrames",
     "AstroManeuvers",
     "AstroModels",
     "AstroCallbacks",
@@ -28,84 +39,34 @@ packages = [
     "Epicycle",
 ]
 
-#packages = ["AstroStates"]
-
-println("Testing all Epicycle packages with proper dependency handling...")
+println("Testing all Epicycle packages via TestEnv from root...")
 println("Repo root: $repo_root")
-println("=" ^ 50)
-
-# PHASE 1: Precompile all test dependencies to avoid noise during testing
-println("🔧 PHASE 1: Precompiling test dependencies...")
-println("-" ^ 50)
-
-for pkg in packages
-    pkg_path = joinpath(repo_root, pkg)
-    if isdir(pkg_path)
-        println("  → Precompiling $pkg test dependencies...")
-        try
-            Pkg.activate(pkg_path)
-            Pkg.resolve()      # Resolve test environment
-            Pkg.instantiate()  # Download and precompile test dependencies
-        catch e
-            println("    ⚠️  Warning: Could not precompile $pkg dependencies: $e")
-        end
-    end
-end
-
-# Restore original project after precompilation
-if original_project !== nothing
-    Pkg.activate(original_project)
-end
-
-println("✅ Precompilation complete!")
-println("\n" * "=" ^ 50)
-println("🧪 PHASE 2: Running tests (should be clean now)...")
-println("=" ^ 50)
+println("=" ^ 60)
 
 failed_packages = String[]
 
 for pkg in packages
     println("\n🧪 Testing $pkg...")
     pkg_path = joinpath(repo_root, pkg)
-    
     if !isdir(pkg_path)
         println("⚠️  Package directory not found: $pkg_path")
         continue
     end
-    
+
     try
-        # Activate package environment (deps already precompiled)
-        Pkg.activate(pkg_path)
-        
-        # Run tests with explicit coverage enabled
-        println("  → Running Pkg.test() with coverage explicitly enabled...")
-        
-        # Activate package environment 
-        Pkg.activate(pkg_path)
-        
-        # Run tests with coverage explicitly enabled
-        Pkg.test(coverage=true)
-        println("✅ $pkg tests passed")
-        
-    catch e
-        println("❌ $pkg tests failed: $e")
-        push!(failed_packages, pkg)
-    finally
-        # Always restore original project
-        if original_project !== nothing
-            Pkg.activate(original_project)
+        TestEnv.activate(pkg) do
+            include(joinpath(pkg_path, "test", "runtests.jl"))
         end
+        println("✅ $pkg tests passed")
+    catch e
+        println("❌ $pkg tests failed: $(sprint(showerror, e))")
+        push!(failed_packages, pkg)
     end
 end
 
-println("\n" * "=" ^ 50)
+println("\n" * "=" ^ 60)
 println("TEST SUMMARY:")
-println("=" ^ 50)
-
-# Ensure we're back in the original project
-if original_project !== nothing
-    Pkg.activate(original_project)
-end
+println("=" ^ 60)
 
 if isempty(failed_packages)
     println("🎉 All packages passed their tests!")
