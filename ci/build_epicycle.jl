@@ -55,14 +55,22 @@ tests_failed = false
 docs_failures = String[]
 
 # ---------------------------------------------------------------------------
-# PHASE A: Run tests (with coverage). Do NOT exit on failure yet — we still
-# want to generate and upload whatever coverage was produced.
+# PHASE A: Run tests in a SUBPROCESS with --code-coverage=user.
+# Subprocess exit flushes .cov files; the parent process (which runs
+# generate_coverage.jl below) then reads them cleanly. Running tests
+# in-process would leave coverage counts unflushed and generate_coverage.jl
+# would see zeros (root cause of the 0% Codecov upload post 2026-08-07).
+# Do NOT exit on failure yet — we still want to generate and upload
+# whatever coverage was produced.
 # ---------------------------------------------------------------------------
-println("\n🧪 Running tests with coverage...")
+println("\n🧪 Running tests with coverage (subprocess)...")
 try
-    # Path relative to project root, not ci directory
-    test_script = joinpath("..", "Epicycle", "util", "test_all_packages.jl")
-    include(test_script)
+    julia_exe   = Base.julia_cmd().exec[1]
+    project_dir = dirname(@__DIR__)                       # repo root
+    test_script = joinpath(project_dir, "Epicycle", "util", "test_all_packages.jl")
+    test_cmd    = `$julia_exe --project=$project_dir --code-coverage=user $test_script`
+    println("   → $test_cmd")
+    run(test_cmd)
     println("✅ All tests completed successfully!")
 catch e
     tests_failed = true

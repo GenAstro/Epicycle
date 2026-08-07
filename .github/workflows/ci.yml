@@ -39,10 +39,11 @@ jobs:
       - name: Phase 2 - Build Epicycle
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # --code-coverage=user must be at Julia startup for .cov files to be produced;
-        # ENV["JULIA_CODE_COVERAGE"] set mid-process has no effect. Since we moved from
-        # Pkg.test's subprocess sandbox to in-process TestEnv, this must be here.
-        run: DISPLAY=:0 xvfb-run -s '-screen 0 1024x768x24' julia --project=. --code-coverage=user ci/build_epicycle.jl
+        # build_epicycle.jl spawns test_all_packages.jl in a subprocess with
+        # --code-coverage=user; subprocess exit flushes .cov files. The parent
+        # process (this Julia invocation) only orchestrates and does not need
+        # coverage instrumentation.
+        run: DISPLAY=:0 xvfb-run -s '-screen 0 1024x768x24' julia --project=. ci/build_epicycle.jl
 
       # if: always() ensures coverage uploads even when a later step (e.g. a docs
       # build) fails. Previously an exit(1) in build_epicycle.jl skipped this step
