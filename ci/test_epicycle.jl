@@ -33,7 +33,7 @@ else
     
     # Fallback: run tests for each package individually
     packages = [
-        "EpicycleBase", "AstroStates", "AstroEpochs", "AstroUniverse",
+        "AstroRoutines", "EpicycleBase", "AstroStates", "AstroEpochs", "AstroUniverse",
         "AstroFrames", "AstroModels", "AstroManeuvers", "AstroCallbacks", 
         "AstroProp", "AstroSolve", "Epicycle"
     ]
@@ -117,7 +117,7 @@ println("🐛 DEBUG: JULIA_CODE_COVERAGE: $(get(ENV, "JULIA_CODE_COVERAGE", "NOT
 # Quick scan for .cov files before coverage generation
 println("🐛 DEBUG: Quick scan for .cov files in all package src directories:")
 packages_to_check = [
-    "EpicycleBase", "AstroStates", "AstroEpochs", "AstroUniverse",
+    "AstroRoutines", "EpicycleBase", "AstroStates", "AstroEpochs", "AstroUniverse",
     "AstroFrames", "AstroModels", "AstroManeuvers", "AstroCallbacks", 
     "AstroProp", "AstroSolve", "Epicycle"
 ]

@@ -26,6 +26,7 @@ Base.active_project() == root_project ||
     @warn "test_all_packages.jl: expected root project $root_project active; got $(Base.active_project()). TestEnv layering may fail to resolve dev-only deps."
 
 packages = [
+    "AstroRoutines",
     "EpicycleBase",
     "AstroStates",
     "AstroEpochs",

@@ -28,6 +28,7 @@ Pkg.resolve()
 
 # Develop all workspace packages
 packages = [
+    "AstroRoutines",
     "EpicycleBase",
     "AstroStates", 
     "AstroEpochs",

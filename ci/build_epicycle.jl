@@ -28,7 +28,12 @@ println("⚡ Loading Epicycle (this will trigger compilation with coverage)...")
 println("✅ Epicycle build complete!")
 println("📊 Loaded packages:")
 
-# Verify all packages are available
+# Verify all packages are available.
+#
+# This list is what `using Epicycle` must bring into scope, so it holds exactly the packages the
+# umbrella @reexports — not every package in the repo. AstroRoutines is deliberately absent: it is
+# registered and tested on its own and the umbrella does not depend on it, so isdefined(Main, ...)
+# would be false for it however healthy it is.
 packages_to_check = [
     :EpicycleBase, :AstroStates, :AstroEpochs, :AstroUniverse,
     :AstroFrames, :AstroModels, :AstroManeuvers, :AstroCallbacks,
@@ -108,7 +113,7 @@ end
 
 # List of packages to build docs for
 packages_to_document = [
-    "EpicycleBase", "AstroStates", "AstroEpochs", "AstroUniverse",
+    "AstroRoutines", "EpicycleBase", "AstroStates", "AstroEpochs", "AstroUniverse",
     "AstroFrames", "AstroModels", "AstroManeuvers", "AstroCallbacks",
     "AstroProp", "AstroSolve", "Epicycle"
 ]
