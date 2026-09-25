@@ -1,7 +1,7 @@
 name = "AstroManeuvers"
 uuid = "7696fc14-2f3a-46f6-b942-ece41ce8abed"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "0.2.0"
+version = "0.3.0"
 
 [deps]
 EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
@@ -16,15 +16,16 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 EpicycleBase = "0.1.0"
 AstroEpochs = "0.5.0"
 AstroStates = "0.10.0"
-AstroUniverse = "0.2.0"
-AstroFrames = "0.2.0"
-AstroModels = "0.2.0"
+AstroUniverse = "0.3.0"
+AstroFrames = "0.3.0"
+AstroModels = "0.3.0"
 julia = "1.10"
 
 [extras]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Test", "ForwardDiff", "Zygote"]
+test = ["Test", "ForwardDiff", "Logging", "Zygote"]

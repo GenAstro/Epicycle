@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 #
 # Atmospheric drag — API force type plus the extension seams pluggable atmospheres and space-weather
 # providers implement. Concrete atmospheres (e.g. Exponential, MSISE00) live in their own files.
@@ -73,7 +73,7 @@ struct AtmosphericDrag{EoT, DM<:AbstractDensityModel} <: OrbitODE
     central_body::CelestialBody
     model::DM
     eop_data::EoT
-    dependencies::Vector{Type{<:AbstractVar}}
+    dependencies::Vector{Type{<:AbstractVarTag}}
     num_funs::Int
 end
 
@@ -81,7 +81,7 @@ function AtmosphericDrag(body::CelestialBody;
                         model::AbstractDensityModel = Exponential())
     eop = fetch_iers_eop()
     return AtmosphericDrag(body, model, eop,
-                           Type{<:AbstractVar}[PosVel], 6)
+                           Type{<:AbstractVarTag}[PosVel], 6)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", f::AtmosphericDrag)

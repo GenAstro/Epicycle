@@ -34,34 +34,15 @@ Full documentation is available at: [AstroEpochs Documentation](https://genastro
 
 ## Comparison with Other Julia Time-Keeping Libraries
 
-Tempo.jl and AstroTime.jl are other high-quality Julia packages for astronomical time handling with distinct design philosophies. AstroTime.jl, developed by the JuliaAstro community, supports six astronomical time scales (TAI, TT, TCG, TCB, TDB, and UT1) using scale-specific types that change with each conversion. Tempo.jl supports UTC, TAI, TT, TDB, TCG, and TCB with efficient, allocation-free conversions and a type-stable architecture that allows time scale changes without changing the struct type—critical for performance in Epicycle's propagation and optimization algorithms. AstroEpochs.jl is an API built on Tempo.jl that provides type stability and seamless integration with the Epicycle ecosystem while using an interface styled after AstroPy.Time, a widely adopted standard in the astronomical community. 
+Tempo.jl and AstroTime.jl also handle astronomical time in Julia. AstroTime.jl, from the JuliaAstro community, supports six time scales (TAI, TT, TCG, TCB, TDB and UT1) with a separate type for each scale, so a conversion changes the type. Tempo.jl supports UTC, TAI, TT, TDB, TCG and TCB with allocation-free conversions and changes scale without changing the type, which Epicycle's propagation and optimization rely on for performance. AstroEpochs builds on Tempo.jl, keeps the IERS leap-second list current itself, and follows the interface of Astropy's `Time`.
 
-## Contributing to Epicycle 
+## Contributing
 
-Contributing is easy.
-
-1. Fork the project
-2. Create a new feature branch
-3. Make your changes
-4. Submit a pull request
-
-We use the Linux Kernel's Developer's Certificate of Origin (DCO) as detailed in CONTRIBUTING.txt.
+The terms for contributions are in [LICENSE.md](LICENSE.md).
 
 ## License
 
-We believe in the power of open source to foster innovation and community-driven 
-development and also recognize the need for a sustainable business model and a model
-that can handle export-controlled aerospace content. 
-
-For these reasons, Epicycle is offered under a tri-licensing model. The license allows
-users to choose between the following three options:
-
-1) LGPL V3.0
-2) Evaluation and Education use Only
-3) Commercial License
-
-See LICENSE.txt for terms each license option.  For commercial licensing, 
-email licensing at genastro.org.
+AstroEpochs is open source under the [MIT License](LICENSE.md).
 
 ## Notes
 Claude Sonnet and ChatGPT are used in the development of Epicycle.

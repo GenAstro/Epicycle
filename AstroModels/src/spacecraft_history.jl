@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 """
     HistorySegment
@@ -27,7 +27,7 @@ to organize mission events (e.g., propagation phases).
 using AstroModels, AstroUniverse, AstroEpochs, AstroFrames, AstroStates
 
 # Create empty segment
-coord_sys = CoordinateSystem(earth, ICRFAxes())
+coord_sys = CoordinateSystem(earth, ICRF())
 segment = HistorySegment(coord_sys, name="initial_orbit")
 
 # Create segment from existing data
@@ -77,7 +77,9 @@ function HistorySegment(times::Vector{T},
                        coord_system::CoordinateSystem;
                        name::String="",
                        metadata::Dict{String,Any}=Dict{String,Any}()) where {T<:Time, S<:CartesianState}
-    @assert length(times) == length(states) "times and states must have equal length"
+    length(times) == length(states) || throw(ArgumentError(
+        "HistorySegment: times and states must have equal length; got $(length(times)) " *
+        "times and $(length(states)) states"))
     times_f64 = [to_float64(t) for t in times]
     states_f64 = [to_float64(s) for s in states]
     HistorySegment(times_f64, states_f64, coord_system, name, metadata)
@@ -139,7 +141,8 @@ same_time = to_float64(time)  # Returns input unchanged
 ```
 """
 to_float64(t::Time{Float64}) = t  # No-op for Float64
-to_float64(t::Time) = Time(_value_to_float64(t.jd1), _value_to_float64(t.jd2), getfield(t, :scale), getfield(t, :format))
+to_float64(t::Time) = AstroEpochs._time_jd(_value_to_float64(t.jd1), _value_to_float64(t.jd2),
+                                            getfield(t, :scale), getfield(t, :format))
 
 """
     to_float64(state::CartesianState{Float64})
@@ -267,7 +270,7 @@ using AstroModels, AstroEpochs, AstroUniverse, AstroFrames
 
 # Basic usage - record solution trajectory (default)
 history = SpacecraftHistory()
-coord_sys = CoordinateSystem(earth, ICRFAxes())
+coord_sys = CoordinateSystem(earth, ICRF())
 
 segment1 = HistorySegment(coord_sys, name="orbit_1")
 push_segment!(history, segment1)
@@ -346,7 +349,8 @@ Base.lastindex(h::SpacecraftHistory) = length(h.segments)
 """
     Base.copy(history::SpacecraftHistory)
 
-Create a deep copy of a SpacecraftHistory, copying all segments and iterations.
+Copy a SpacecraftHistory's segment lists and recording flags. The segments
+themselves are shared with the original; use `deepcopy` for independent segments.
 """
 function Base.copy(history::SpacecraftHistory)
     SpacecraftHistory(copy(history.segments), copy(history.iterations), 
@@ -381,6 +385,19 @@ Add a segment to the history, routing based on recording flags.
 This routing is controlled by the solver during trajectory optimization:
 - During optimization iterations: `record_iterations=true, record_segments=false`
 - Final solution run: `record_iterations=false, record_segments=true`
+
+# Returns
+`nothing`. The function mutates either `history.segments` or
+`history.iterations` when the corresponding recording flag is enabled.
+
+# Example
+```julia
+using AstroUniverse: earth
+using AstroFrames: CoordinateSystem, ICRF
+history = SpacecraftHistory()
+segment = HistorySegment(CoordinateSystem(earth, ICRF()), name = "coast")
+push_segment!(history, segment)
+```
 """
 function push_segment!(history::SpacecraftHistory, segment::HistorySegment)
     if history.record_iterations

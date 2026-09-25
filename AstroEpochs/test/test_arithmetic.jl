@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: MIT
+
 using Test
 using AstroEpochs
 
@@ -26,13 +29,15 @@ using AstroEpochs
     t5 = t4 + 1e-6
     @test abs(t5.jd2) < 0.5  # Should rebalance so jd2 is still within [-0.5, 0.5]
 
-    # Time scale mismatch should error on subtraction
+    # Time scale mismatch should error on subtraction, and say how to convert
     t6 = Time(t0.jd1, t0.jd2, :tdb, :jd)
-    @test_throws ErrorException t6 - t0
+    @test_throws ArgumentError t6 - t0
+    @test occursin("t1.tdb", sprint(showerror, try t6 - t0 catch e e end))
 
-    # Time format mismatch should error on subtraction
-    t7 = Time(t0.jd1, t0.jd2, :tt, :mjd)
-    @test_throws ErrorException t7 - t0
+    # The format only sets how a time displays, so times in different formats subtract
+    t7 = AstroEpochs._time_jd(t0.jd1, t0.jd2 + 0.25, :tt, :mjd)
+    @test t7 - t0 ≈ 0.25 atol = 1e-12
+    @test Time("2024-01-02T12:00:00", TT(), ISOT()) - Time(2460311.0, 0.0, TT(), JD()) ≈ 1.0 atol = 1e-12
 end
 
 # Unit test for _rebalance function.  while jd2 <= half

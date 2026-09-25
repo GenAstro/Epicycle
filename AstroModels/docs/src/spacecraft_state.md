@@ -14,7 +14,7 @@ sc = Spacecraft(
 
 # Method 2: Using KeplerianState
 sc = Spacecraft(
-    state = KeplerianState([7000.0, 0.01, 45.0, 0.0, 0.0, 0.0])
+    state = KeplerianState([7000.0, 0.01, deg2rad(45.0), 0.0, 0.0, 0.0])  # angles in radians
 )
 
 # Method 3: Direct OrbitState construction
@@ -27,6 +27,7 @@ sc = Spacecraft(
 
 ## Accessing State
 
+<!-- doc-continue -->
 ```julia
 # Get current state in specific representation
 cart_state = get_state(sc, Cartesian())
@@ -38,6 +39,7 @@ pv = to_posvel(sc)  # [x, y, z, vx, vy, vz]
 
 ## Modifying State
 
+<!-- doc-continue -->
 ```julia
 # Update position and velocity
 new_pv = [7050.0, 0.0, 0.0, 0.0, 7.6, 0.0]
@@ -49,7 +51,7 @@ set_posvel!(sc, new_pv)  # Mutates spacecraft in place
 State components automatically promote for automatic differentiation:
 
 ```julia
-using ForwardDiff
+using AstroModels, AstroStates, ForwardDiff
 
 # Create with Dual mass
 sc = Spacecraft(

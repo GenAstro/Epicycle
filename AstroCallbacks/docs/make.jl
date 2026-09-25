@@ -1,7 +1,10 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using AstroCallbacks
 using Documenter
 
-DocMeta.setdocmeta!(AstroCallbacks, :DocTestSetup, :(using AstroCallbacks); recursive=true)
+DocMeta.setdocmeta!(AstroCallbacks, :DocTestSetup, :(using AstroCallbacks, AstroStates, AstroUniverse); recursive=true)
 
 makedocs(;
     modules=[AstroCallbacks],
@@ -17,9 +20,8 @@ makedocs(;
     pages=[
         "index.md",
     ],
-    warnonly=true,         # Just warn, don't error
+    warnonly=[:missing_docs, :cross_references],   # doctests and examples are fatal
     checkdocs=:none,       # Skip docstring completeness checks
-    doctest=false,         # Skip all doctests completely
     linkcheck=false        # Skip external link checking
 )
 

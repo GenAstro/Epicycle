@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 # Fast development coverage for individual modules
 # Usage: include("dev_coverage.jl"); dev_coverage("AstroManeuvers")
 

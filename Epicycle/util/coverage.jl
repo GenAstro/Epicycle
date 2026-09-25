@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 # Convenience script for running coverage analysis on monorepo packages
 # Usage: julia coverage.jl AstroManeuvers
 

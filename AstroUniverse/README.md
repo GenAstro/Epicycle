@@ -17,36 +17,20 @@ using Pkg
 Pkg.add("AstroUniverse")
 ```
 
+The first `using AstroUniverse` downloads about 110 MB of SPICE kernels, most of it the DE440
+ephemeris, and needs a network connection. Later sessions use the stored copy and work offline.
+
 ## Documentation
 
 Full documentation is available at: [AstroUniverse Documentation](https://genastro.github.io/Epicycle/AstroUniverse/dev/)
 
-## Contributing to Epicycle 
+## Contributing
 
-Contributing is easy.
-
-1. Fork the project
-2. Create a new feature branch
-3. Make your changes
-4. Submit a pull request
-
-We use the Linux Kernel's Developer's Certificate of Origin (DCO) as detailed in CONTRIBUTING.txt.
+The terms for contributions are in [LICENSE.md](LICENSE.md).
 
 ## License
 
-We believe in the power of open source to foster innovation and community-driven 
-development and also recognize the need for a sustainable business model and a model
-that can handle export-controlled aerospace content. 
-
-For these reasons, Epicycle is offered under a tri-licensing model. The license allows
-users to choose between the following three options:
-
-1) LGPL V3.0
-2) Evaluation and Education use Only
-3) Commercial License
-
-See LICENSE.txt for terms each license option.  For commercial licensing, 
-email licensing at genastro.org.
+AstroUniverse is open source under the [MIT License](LICENSE.md).
 
 ## Notes
 Claude Sonnet and ChatGPT are used in the development of Epicycle.

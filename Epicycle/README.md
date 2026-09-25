@@ -2,10 +2,7 @@
 
 ## Overview
 
-Epicycle is a Julia package ecosystem for astrodynamics and space mission design, built with a modular architecture that spans mission analysis workflows from preliminary design through trajectory optimization. The current implementation - which is the initial release - focuses on establishing a robust architecture with key components—coordinate systems, time standards, spacecraft state representations, basic propagation, targeting and optimization—while providing extensible interfaces for systematic expansion toward operational mission design and navigation capabilities.
-
-The ecosystem consists of eleven specialized packages organized in architectural layers, from core abstractions (EpicycleBase) through utilities (AstroEpochs, AstroStates, and AstroUniverse) to  integrated workflows (AstroManeuvers, AstroProp, and AstroSolve). The structure enables users to use low level utilities independently of the full system, or compose mission-specific analyses using interfaces designed to solve complex design problems, fast. The architecture in the first release is well tested and documented, and provides a clear pathway for extending capabilities toward high-fidelity force modeling, advanced optimization algorithms, and operational navigation applications as the framework matures.
-
+Epicycle is a Julia package ecosystem for astrodynamics and space mission design, built with a modular architecture that spans mission analysis workflows from preliminary design through trajectory optimization and orbit determination. 
 
 ## Package Architecture
 
@@ -15,6 +12,7 @@ The Epicycle ecosystem implements a layered architecture where each package prov
 |:--------|:--------|
 | `Epicycle` | Integration layer providing unified interface and common workflows |
 | `EpicycleBase` | Core abstractions, type hierarchy, and fundamental constants |
+| `AstroRoutines`| Low level astrodynamics functions and algorithms | 
 | `AstroStates` | Spacecraft state representations and state transformations | 
 | `AstroEpochs` | Time systems, epoch handling, and temporal conversions | 
 | `AstroUniverse` | Celestial body models, ephemeris data, and gravitational parameters | 
@@ -24,61 +22,40 @@ The Epicycle ecosystem implements a layered architecture where each package prov
 | `AstroCallbacks` | Utilities for constraints, objectives, and events |
 | `AstroProp` | Numerical integration and trajectory propagation methods | 
 | `AstroSolve` | Optimization algorithms and constraint solving capabilities |
-
-## What's New
-
-- **Earth station-keeping example** — `examples/Ex_StationKeeping.jl`. LEO satellite
-  maintained above a mean-SMA trigger with periodic Hohmann re-boosts; solver refines the
-  analytic ΔV guesses against a mean-SMA constraint at MOI. Demonstrates the full stack:
-  states, epochs, forces, propagation, maneuvers, and sequences composed via `using Epicycle`.
-
-See each subpackage's `README.md` for the What's New in that package.
+| `EpicycleIO` | Plotting, reporting, and 3D trajectory visualization |
+| `EpicycleGraphics` | 3D graphics and data visualization |
 
 ## Installation
 
+Versions through 0.4.0 are in Julia's General registry. From the next version Epicycle is
+released under the Gen Astro Source Available License, which General does not carry, so later
+versions come from the Gen Astro registry. Add it once, then install as usual:
+
 ```julia
 using Pkg
+Pkg.Registry.add(RegistrySpec(url = "https://github.com/GenAstro/GenAstro.git"))
 Pkg.add("Epicycle")
 ```
+
+General is still required, since these packages depend on packages registered there. Installing
+without the Gen Astro registry resolves to 0.4.0, the last version General carries, and
+reports nothing about the newer ones.
 
 ## Documentation
 
 Full documentation is available at: [Epicycle Documentation](https://genastro.github.io/Epicycle/Epicycle/dev/)
 
-## Contributing to Epicycle 
+## Contributing
 
-Contributing is easy.
-
-1. Fork the project
-2. Create a new feature branch
-3. Make your changes
-4. Submit a pull request
-
-We use the Linux Kernel's Developer's Certificate of Origin (DCO) as detailed in CONTRIBUTING.txt.
+The terms for contributions are in [LICENSE.md](LICENSE.md).
 
 ## License
 
-We believe in the power of open source to foster innovation and community-driven 
-development and also recognize the need for a sustainable business model and a model
-that can handle export-controlled aerospace content. 
+Packages in the Epicycle ecosystem are not all under the same license. Each package carries its own
+license file, which is the authoritative statement of its terms, so read the one in the package you
+intend to use.
 
-For these reasons, Epicycle is offered under a tri-licensing model. The license allows
-users to choose between the following three options:
-
-1) LGPL V3.0
-2) Evaluation and Education use Only
-3) Commercial License
-
-See LICENSE.txt for terms each license option.  For commercial licensing, 
-email licensing at genastro.org.
-
-## Epicycle in the Julia Ecosystem
-
-Epicycle complements existing Julia space packages by providing an integrated application for mission design workflows. [Julia Space Mission Design](https://github.com/JuliaSpaceMissionDesign) offers foundational libraries for astrodynamics computations—Epicycle uses JSMD's TEMPO.jl and is designed to incorporate additional JSMD components for high-fidelity modeling. [JuliaAstro](https://juliaastro.org/home/) focuses on libraries for observational astronomy and astrophysics, while Epicycle targets spacecraft mission design and navigation.
-
-Where these ecosystems provide libraries and tools for specific domains, Epicycle delivers a complete workflow-oriented system architected around trajectory design and optimization, visualization and eventually, navigation. 
-
-See the [documentation](https://genastro.github.io/Epicycle/Epicycle/dev/) for a detailed comparison and positioning within the Julia ecosystem.
+The `Epicycle` package itself is under the [Gen Astro Source Available License 1.0](LICENSE.md).
 
 ## Notes
-Claude Sonnet and ChatGPT are used in the development of Epicycle.
+Claude and ChatGPT are used in the development of Epicycle.

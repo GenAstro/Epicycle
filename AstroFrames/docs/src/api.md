@@ -9,4 +9,6 @@ CurrentModule = AstroFrames
 
 ```@autodocs
 Modules = [AstroFrames]
+Public  = true
+Private = false
 ```

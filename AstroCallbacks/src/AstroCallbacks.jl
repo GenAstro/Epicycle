@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 __precompile__()
 
@@ -26,12 +26,28 @@ using StaticArrays
 
 import AstroStates: state_tag_to_type, state_type_to_tag
 
-export Constraint
-export func_eval, _subjects_from_calc
 export AbstractCalcVariable, AbstractOrbitVar, AbstractBodyVar, AbstractManeuverVar
 export AbstractCalc, OrbitCalc, BodyCalc, ManeuverCalc
 export get_calc, set_calc!, calc_numvars, calc_is_settable, calc_input_statetag
-export PositionVector, VelocityVector, PosMag, SMA, TA, RAAN, IncomingAsymptoteFull
+export PositionVector, VelocityVector, PosMag, SMA, TA, RAAN
+export position_vector, velocity_vector, raan
+export state, state!
+
+# Quantity readers, and the deferred form. See quantity_readers.jl and calc.jl.
+export element, epoch, epoch!
+export delta_v, delta_v!
+export semi_major_axis, eccentricity, inclination, argument_of_periapsis, true_anomaly
+export semi_major_axis!, eccentricity!, inclination!, raan!, argument_of_periapsis!,
+       true_anomaly!
+export position_x, position_y, position_z, position_magnitude, velocity_magnitude
+export position_x!, position_y!, position_z!, position_vector!, velocity_vector!
+export position_magnitude!, velocity_magnitude!
+export position_dot_velocity
+export mean_long_sma, mean_long_sma!, outgoing_rla, delta_v_magnitude, delta_v_magnitude!
+export gravitational_parameter, gravitational_parameter!
+export Calc, reapply
+export history, quantities
+export label, set_quantity!, is_settable, output_partial   # from EpicycleBase, so writing a quantity needs only AstroCallbacks
 export OutGoingRLA, PosX, PosZ, VelMag, Ecc, Inc, PosDotVel, MeanSMA
 
 # export Maneuver Variables
@@ -42,6 +58,19 @@ export GravParam
 
 import EpicycleBase: AbstractCalcVariable, AbstractOrbitVar, AbstractBodyVar, AbstractManeuverVar
 
+"""
+    AbstractCalc
+
+The common type of the older calculation structs, `OrbitCalc`, `BodyCalc` and `ManeuverCalc`,
+each of which pairs a subject with a calculation tag. `get_calc` reads one and `set_calc!` writes
+it. New scripts use quantity functions and [`Calc`](@ref) instead.
+
+# Example
+```julia
+calc = OrbitCalc(sat, SMA())
+calc isa AbstractCalc
+```
+"""
 abstract type AbstractCalc end
 
 # Trait to default number of variables for a calc variable to 1
@@ -89,12 +118,12 @@ OrbitCalc(sc::Spacecraft, var::V; dependency=nothing) where {V<:AbstractOrbitVar
     OrbitCalc{typeof(sc),V,typeof(dependency)}(sc, var, dependency)
 
 """
-    BodyCalc(body::AbstractCelestialBody, var::AbstractBodyVar)
+    BodyCalc(body::CelestialBody, var::AbstractBodyVar)
 
 Calc struct for set/get body-derived variables for a CelestialBody
 
 Fields
-- body::B where B<:AbstractCelestialBody
+- body::B where B is a `CelestialBody`
 - var::V where V<:AbstractBodyVar
 
 # Notes:
@@ -170,6 +199,10 @@ for f in (
     "bodycalc_gravparam.jl",
     "maneuvercalc_deltavvector.jl",
     "maneuvercalc_deltavmag.jl",
+    "frame_aware_quantities.jl",
+    "quantity_readers.jl",
+    "calc.jl",
+    "history.jl",
 )
     include(f)
 end
@@ -184,6 +217,13 @@ _subjects_from_calc(c::AstroCallbacks.OrbitCalc)    = (c.sc,)
 _subjects_from_calc(c::AstroCallbacks.ManeuverCalc) = (c.man, c.sc)
 _subjects_from_calc(c::AstroCallbacks.BodyCalc)     = (c.body,)
 
+# A `Calc` states its subject in the same slot every spec does, so there is
+# nothing to dig for. Note what is *not* here: `ManeuverCalc` above also
+# reports `c.sc`, because the old form carried a spacecraft it never used to
+# evaluate a delta-V. A spacecraft that matters is named by some other spec in
+# the sequence — a constraint on it, or the propagate that moves it.
+_subjects_from_calc(c::Calc) = (first(c.args),)
+
 """
     function get_calc(c::AbstractCalc)
 
@@ -195,9 +235,21 @@ have custom interfaces)
 @inline get_calc(c::ManeuverCalc) = _evaluate(c.var, c.man, c.sc)
 
 """ 
-    function calc_input_statetag(v::AbstractOrbitVar)
+    calc_input_statetag(v::AbstractOrbitVar)
 
-Fallback to catch undeclared OrbitCalc state type tags
+State representation required by an older orbit-variable tag.
+
+# Returns
+An orbit-state type tag. Throws an error when the variable has not declared one.
+
+# Example
+```jldoctest
+calc_input_statetag(SMA())
+
+# output
+
+Keplerian()
+```
 """
 calc_input_statetag(v::AbstractOrbitVar) = begin
     tname = string(nameof(typeof(v)))
@@ -318,7 +370,7 @@ end
 """
     get_calc(c::OrbitCalc)
 
-Compute the value of an orbit-derived variable..
+Evaluate an orbit-derived variable.
 
 Arguments
 - c::OrbitCalc: Container holding the spacecraft, variable tag, and optional dependency.
@@ -350,7 +402,17 @@ end
 """
     set_calc!(c::AbstractCalc, newval)
 
-Set calc after checking if it is settable.  (Generic dispatch to type-specific implementations.)
+Write a new value through a settable legacy calculation.
+
+# Returns
+The value returned by the calculation-specific setter. Throws an error when
+the variable is read-only.
+
+# Example
+```julia
+calc = BodyCalc(earth, GravParam())
+set_calc!(calc, 398600.0)
+```
 """
 function set_calc!(c::AbstractCalc, newval)
     # Check if calc is settable
@@ -405,7 +467,7 @@ end
     _set_calc_type!(c::OrbitCalc, newval::Real)
 
 Type-specific implementation for OrbitCalc scalar assignments.
-Pass in real as a 1x1 vector to vector dispatch.
+Scalar values are forwarded as one-element vectors.
 """
 @inline function _set_calc_type!(c::OrbitCalc, newval::Real)
     return _set_calc_type!(c, [newval])
@@ -455,145 +517,23 @@ function _set_calc_type!(c::AbstractCalc, newval)
 end
 
 """
-    calc_is_settable(::AbstractCalcVariable)::Bool
+    calc_is_settable(variable::AbstractCalcVariable) -> Bool
 
-Fallback method to indicate if a Calc variable is settable.
+Whether a legacy calculation variable supports assignment.
+
+# Returns
+`false` unless the variable type provides a settable method.
+
+# Example
+```jldoctest
+calc_is_settable(SMA())
+
+# output
+
+true
+```
 """
 calc_is_settable(::AbstractCalcVariable) = false   # COV_EXCL_LINE
 
-"""
-    Constraint(calc; lower_bounds, upper_bounds, scale)
-
-Container that binds a calc and its bounds/scale for use in optimization, estimation, and analysis.
-
-Fields
-- calc::C where C<:AbstractCalc
-- lower_bounds::Vector{T}
-- upper_bounds::Vector{T}
-- scale::Vector{T}
-- numvars::Int
-
-# Notes:
-- The keyword constructor infers `numvars` from the calc.
-- Element type `T` is promoted across the three vectors (supports Dual numbers and BigFloat).
-- Use `func_eval(::Constraint)` to evaluate the calc and return a Vector.
-
-# Examples
-```julia
-mu_calc = BodyCalc(earth, GravParam())
-con = Constraint(calc=mu_calc, lower_bounds=[3.9e5], upper_bounds=[4.1e5], scale=[1.0])
-```
-"""
-struct Constraint{C<:AbstractCalc, T<:Real}
-    # TODO. This should be moved to AstroSolve. It is a higher level construct. 
-    calc::C
-    lower_bounds::Vector{T}
-    upper_bounds::Vector{T}
-    scale::Vector{T}
-    numvars::Int
-
-    # Inner constructor: single point of truth for validation/invariants
-    function Constraint{C,T}(
-        calc::C,
-        lb::Vector{T},
-        ub::Vector{T},
-        sc::Vector{T},
-        numvars::Integer,
-    ) where {C<:AbstractCalc, T<:Real}
-        n = Int(numvars)
-        if length(lb) != n || length(ub) != n || length(sc) != n
-            throw(ArgumentError(
-                "Constraint: lower/upper/scale lengths must equal numvars=$(n); " *
-                "got lower=$(length(lb)), upper=$(length(ub)), scale=$(length(sc))."
-            ))
-        end
-        return new{C,T}(calc, lb, ub, sc, n)
-    end
-end
-
-"""
-    function _infer_numvars(c::AbstractCalc)
-
-Return the number of variables for a calc.
-"""
-_infer_numvars(c::AbstractCalc) = Base.hasproperty(c, :var) ? calc_numvars(getproperty(c, :var)) : 1
-
-# Positional outer constructor
-function Constraint(calc::C,
-                    lower_bounds::AbstractVector{<:Real},
-                    upper_bounds::AbstractVector{<:Real},
-                    scale::AbstractVector{<:Real},
-                    numvars::Integer = _infer_numvars(calc)) where {C<:AbstractCalc}
-    # Promote to a common real eltype (supports Duals, BigFloat, etc.)
-    T = promote_type(eltype(lower_bounds), eltype(upper_bounds), eltype(scale))
-    lb = convert(Vector{T}, lower_bounds)
-    ub = convert(Vector{T}, upper_bounds)
-    sc = convert(Vector{T}, scale)
-    # Delegate validation to inner constructor
-    return Constraint{C,T}(calc, lb, ub, sc, Int(numvars))
-end
-
-""" 
-    function Constraint(; calc::AbstractCalc,
-                         lower_bounds::Union{AbstractVector{<:Real}, Nothing} = nothing,
-                         upper_bounds::Union{AbstractVector{<:Real}, Nothing} = nothing,
-                         scale::Union{AbstractVector{<:Real}, Nothing} = nothing)
-
-Keyword outer constructor for Constraint with intelligent defaults.
-
-At least one of `lower_bounds` or `upper_bounds` must be specified.
-- If `lower_bounds` is not specified, defaults to `fill(-Inf, n)` where `n` is inferred from calc
-- If `upper_bounds` is not specified, defaults to `fill(Inf, n)` where `n` is inferred from calc  
-- If `scale` is not specified, defaults to `ones(T, n)` where `T` is inferred from bounds
-""" 
-function Constraint(; calc::AbstractCalc,
-                     lower_bounds::Union{AbstractVector{<:Real}, Nothing} = nothing,
-                     upper_bounds::Union{AbstractVector{<:Real}, Nothing} = nothing,
-                     scale::Union{AbstractVector{<:Real}, Nothing} = nothing)
-    
-    # At least one bound must be specified
-    if lower_bounds === nothing && upper_bounds === nothing
-        throw(ArgumentError("Constraint: at least one of lower_bounds or upper_bounds must be specified"))
-    end
-    
-    # Infer number of variables from calc
-    n = _infer_numvars(calc)
-    
-    # Determine element type from provided bounds
-    if lower_bounds !== nothing && upper_bounds !== nothing
-        T = promote_type(eltype(lower_bounds), eltype(upper_bounds))
-    elseif lower_bounds !== nothing
-        T = eltype(lower_bounds)
-    else  # upper_bounds !== nothing
-        T = eltype(upper_bounds)
-    end
-    
-    # Apply defaults for unspecified bounds
-    lb = lower_bounds === nothing ? fill(T(-Inf), n) : convert(Vector{T}, lower_bounds)
-    ub = upper_bounds === nothing ? fill(T(Inf), n) : convert(Vector{T}, upper_bounds)
-    
-    # Apply default for scale if not specified
-    sc = scale === nothing ? ones(T, n) : convert(Vector{T}, scale)
-    
-    return Constraint(calc, lb, ub, sc, n)
-end
-
-#TODO.  Write a show method for Constraint.
-
-"""
-    function func_eval(constraint::Constraint)
-
-Evaluate the constraint's calc and return a Vector preserving eltype (AD-friendly)
-"""
-function func_eval(constraint::Constraint)
-    val = get_calc(constraint.calc)
-    if isa(val, Number)
-        return [val]
-    elseif isa(val, AbstractVector)
-        return collect(val)
-    else
-        error("func_eval: unsupported calc return type $(typeof(val)); expected Number or AbstractVector.")
-    end
-end
 
 end

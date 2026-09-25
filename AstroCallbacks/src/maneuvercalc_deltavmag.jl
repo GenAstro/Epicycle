@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 """
     DeltaVMag <: AbstractManeuverVar
@@ -8,7 +8,7 @@ Tag struct indicating magnitude of the delta-V vector of a maneuver.
 
 Examples
 ```julia
-# dv::ImpulsiveManeuver — replace with your maneuver
+# `dv` is an `ImpulsiveManeuver`
 dvmag_calc = ManeuverCalc(dv, DeltaVMag())
 Δv = get_calc(dvmag_calc)     
 ```

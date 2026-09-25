@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: MIT
+
 
 function cart_kep_run_roundtrip_test(kep::Vector{Float64}, μ::Float64; label="")
     cart = kep_to_cart(kep, μ)

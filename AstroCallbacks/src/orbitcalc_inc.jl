@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 """
     Inc <: AbstractOrbitVar
@@ -24,7 +24,7 @@ function _set!(::Inc, s::KeplerianState, newval::Vector{<:Real})
     length(newval) == 1 || error("Inc requires 1 element.")
     # Build a new KeplerianState with updated inclination
     @inbounds begin
-        s = KeplerianState(s.sma, s.ecc, newval[1], s.aop, s.raan, s.ta)
+        s = KeplerianState(s.sma, s.ecc, newval[1], s.raan, s.aop, s.ta)
     end
     return s
 end

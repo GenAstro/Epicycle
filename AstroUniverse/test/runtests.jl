@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: MIT
+
 using Test
 using SPICE
 
@@ -185,7 +188,10 @@ end
     @test_throws ArgumentError set_gravparam!(body, NaN)
 end
 
+include("runtests_kernel_manifest.jl")
 include("runtests_texture_file.jl")
 include("runtests_spice.jl")
+include("runtests_orientation.jl")
+include("test_correctness_eop.jl")
 
 nothing

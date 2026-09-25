@@ -1,7 +1,11 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using Test
 
 
 using AstroSolve
+using AstroSolve: get_sol_var, set_sol_var
 using AstroCallbacks
 using AstroStates
 using AstroEpochs

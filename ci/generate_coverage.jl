@@ -9,6 +9,7 @@ This runs after tests have completed successfully.
 println("📈 Generating coverage...")
 
 using Pkg
+using TOML
 Pkg.activate(".")
 
 # Add coverage packages if not already present
@@ -55,11 +56,11 @@ end
 # Look for .cov files directly in package src directories
 all_coverage = Coverage.FileCoverage[]
 
-packages = [
-    "AstroRoutines", "EpicycleBase", "AstroStates", "AstroEpochs", "AstroUniverse",
-    "AstroFrames", "AstroModels", "AstroManeuvers", "AstroCallbacks", 
-    "AstroProp", "AstroSolve", "Epicycle"
-]
+# Read from the workspace `projects` entry rather than repeated here. This list had eleven
+# packages and was missing AstroRoutines and EpicycleIO, so both passed their tests and then
+# reported no coverage at all — a package can be added to the tree, tested, and silently never
+# measured. See ci/setup_environment.jl for the other lists this replaced.
+packages = TOML.parsefile(joinpath(dirname(@__DIR__), "Project.toml"))["workspace"]["projects"]
 
 # DEBUG: Search for .cov files everywhere first
 println("🐛 DEBUG: Searching for ALL .cov files in entire directory tree...")

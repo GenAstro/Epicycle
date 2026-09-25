@@ -1,25 +1,37 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 """
     AbstractDragGeometry
 
-Supertype for spacecraft drag geometry — the physical shape/coefficient data that a
-drag force reads from the spacecraft. Fidelity is a concrete subtype: `SphericalDrag`
-now; higher-fidelity forms (e.g. an n-plate model loaded from a file) slot in later
-without changing `Spacecraft`.
+`AbstractDragGeometry` is the common type for the shape and coefficient data a
+drag force reads from a spacecraft. `SphericalDrag` provides the isotropic model;
+other fidelity levels use additional concrete subtypes.
+
+# Example
+```jldoctest
+SphericalDrag(c_d = 2.2, drag_area = 4.0) isa AbstractDragGeometry
+
+# output
+true
+```
 """
 abstract type AbstractDragGeometry end
 
 """
     SphericalDrag(; c_d, drag_area)
 
-Isotropic ("cannonball") drag geometry — a constant drag coefficient and reference
-area. Stored on `Spacecraft.drag` and read by the drag force.
+`SphericalDrag` defines isotropic drag geometry with a constant drag coefficient
+and reference area. A spacecraft stores the model in `drag`.
 
 # Fields
 - `c_d::T`       : drag coefficient (dimensionless)
 - `drag_area::T` : reference cross-sectional area [m²]
+
+# Example
+```julia
+drag = SphericalDrag(c_d = 2.2, drag_area = 4.0)
+```
 """
 struct SphericalDrag{T<:Real} <: AbstractDragGeometry
     c_d::T

@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 """
     IncomingAsymptote <: AbstractOrbitVar
@@ -8,7 +8,7 @@ Tag struct indicating full incoming hyperbolic asymptote state vector (length 6)
 
 Examples
 ```julia
-# sc::Spacecraft — replace with your Spacecraft instance
+# `sc` is a `Spacecraft`
 ia_calc = OrbitCalc(Spacecraft(), IncomingAsymptote())
 x = get_calc(ia_calc)             # [rp, c3, rla, dla, bpa, ta]
 set_calc!(ia_calc, [7000.0, 0.01, 1.0, 0.5, 0.2, 0.0])
@@ -63,4 +63,4 @@ function _set!(::Keplerian, s::KeplerianState, newval::Vector{<:Real})
     @inbounds begin s = KeplerianState(newval[1], newval[2], newval[3], 
     newval[4], newval[5], newval[6]) end 
     return s 
-end 
+end

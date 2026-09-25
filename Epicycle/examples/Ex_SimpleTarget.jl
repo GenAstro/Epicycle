@@ -1,77 +1,61 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
+#' # Targeting a Single Maneuver
+#'
+#' Size an impulsive maneuver so the following coast reaches a target apoapsis radius. The event
+#' sequence varies the in-track burn component, propagates to apoapsis, and constrains its radius.
+
 using Epicycle
 
-# ============================================================================
-# Shared Resources
-# ============================================================================
+#' ## Configuration
+#'
+#' Configure the spacecraft, propagator, and initial maneuver guess.
 
-# Create spacecraft with default orbital state
+# Create the spacecraft
 sat = Spacecraft()
 
-# Create force models, integrator, and propagator
+# Configure the propagator
 gravity = PointMassGravity(earth, (moon, sun))
-forces  = ForceModel(gravity)
-integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
-prop    = OrbitPropagator(forces, integ)
+forces = ForceModel(gravity)
+integ = IntegratorConfig(Tsit5();
+                         dt = 10.0,
+                         reltol = 1e-9,
+                         abstol = 1e-9)
+prop = OrbitPropagator(forces, integ)
 
-# ============================================================================
-# Event 1: TOI - Transfer Orbit Insertion
-# ============================================================================
+# Seed the VNB transfer-orbit insertion maneuver
+toi = ImpulsiveManeuver(axes = VNB(),
+                        element1 = 0.1)
 
-# Define TOI maneuver
-toi = ImpulsiveManeuver(
-    axes = VNB(),
-    element1 = 0.1,
-)
+#' ## Define the targeting problem
+#'
+#' Each `Event` is an action, its solver variables and its constraints. Only the in-track component
+#' of the burn may move, which the bounds say by holding the other two at zero.
 
-# Define solver variable for TOI delta-V
-toi_var = SolverVariable(
-    calc = ManeuverCalc(toi, sat, DeltaVVector()),
-    name = "toi",
-    lower_bound = [-10.0, 0.0, 0.0],
-    upper_bound = [10.0, 0.0, 0.0],
-)
-
-# Define TOI event struct with event function, solver variables, and constraints
-toi_fun() = maneuver!(sat, toi) 
-toi_event = Event(
-    name = "TOI Maneuver", 
-    event = toi_fun,
-    vars = [toi_var],
-    funcs = []
-)
-
-# ============================================================================
-# Event 2: Propagate to Apoapsis
-# ============================================================================
-
-# Define constraint on position magnitude at apoapsis
-pos_target = 55000.0
-pos_con = Constraint(
-    calc = OrbitCalc(sat, PosMag()),
-    lower_bounds = [pos_target],
-    upper_bounds = [pos_target],
-    scale = [1.0],
-)
-
-# Define propagation event to apoapsis with position constraint
-prop_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
-prop_event = Event(
-    name = "Propagate to Apoapsis", 
-    event = prop_fun,
-    funcs = [pos_con]
-)
-
-# ============================================================================
-# Trajectory Optimization
-# ============================================================================
-
-# Create sequence and add events
+# Assemble the maneuver and coast events
 seq = Sequence()
-add_sequence!(seq, toi_event, prop_event) 
+add_sequence!(seq,
 
-# Solve trajectory optimization using default settings (finite differences, IPOPT)
-result = solve_trajectory!(seq)
+    # Vary the in-track component of the burn
+    Event(name = "TOI",
+          event = () -> maneuver!(sat, toi),
+          vars = [Vary(delta_v, toi;
+                       lower_bound = [-10.0, 0.0, 0.0],
+                       upper_bound = [10.0, 0.0, 0.0],
+                       name = "toi")]),
 
-# Write a report documenting sequence and solution
+    # Coast to apoapsis and constrain its radius
+    Event(name = "Propagate to apoapsis",
+          event = () -> propagate!(prop, sat,
+                                   StopAt(position_dot_velocity, sat;
+                                          equals = 0.0,
+                                          direction = -1)),
+          funcs = [Constraint(position_magnitude, sat; equals = 55000.0)]))
+
+#' ## Solve the targeting problem
+
+# Solve and report the sequence and solution
+result = solve!(seq; method = Optimize(derivatives = :fd, print_level = 5))
 report_sequence(seq)
 report_solution(seq, result)

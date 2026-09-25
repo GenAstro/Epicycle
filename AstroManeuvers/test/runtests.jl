@@ -1,4 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 
 using Test
@@ -41,7 +42,7 @@ sat1 = Spacecraft(
     ref_vel = [0.4024239562931, 7.5689619624405, 1.2092462625626]
     ref_mass = 840.8269951084173
     @test isapprox(vel, ref_vel; rtol=1e-10, atol=1e-12)
-    @test isapprox(sat1.mass, ref_mass; rtol=1e-10, atol=1e-12)
+    @test isapprox(total_mass(sat1), ref_mass; rtol=1e-10, atol=1e-12)
 
     # TODO. Test history update
 end
@@ -64,7 +65,7 @@ end
     ref_vel = [0.8024239562931, 8.0689619624405, 1.8092462625626]
     ref_mass = 559.9227073368959
     @test isapprox(vel, ref_vel; rtol=1e-10, atol=1e-12)
-    @test isapprox(sat1.mass, ref_mass; rtol=1e-10, atol=1e-12)
+    @test isapprox(total_mass(sat1), ref_mass; rtol=1e-10, atol=1e-12)
 
     # TODO. Test history update
 end
@@ -169,7 +170,7 @@ end
     # Apply maneuver: state and mass remain Dual-typed
     maneuver!(sc, m)
     @test eltype(to_posvel(sc)) <: ForwardDiff.Dual
-    @test sc.mass isa ForwardDiff.Dual
+    @test total_mass(sc) isa ForwardDiff.Dual
 
     # compute_mass_used promotes to Dual when initial_mass is Dual
     used = AstroManeuvers.compute_mass_used(m, ForwardDiff.Dual{Nothing}(1000.0, 1.0), m.Isp)
@@ -318,3 +319,5 @@ end
 end
 
 nothing
+
+include("runtests_mass.jl")

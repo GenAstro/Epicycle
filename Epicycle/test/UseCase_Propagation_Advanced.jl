@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 include("UseCase_Init.jl")
 
 # Create the four mms spacecraft
@@ -26,20 +29,17 @@ pm_grav = PointMassGravity(earth,(moon,sun))
 forces = ForceModel(pm_grav)
 integ = IntegratorConfig(DP8(); abstol = 1e-11, reltol = 1e-11, dt = 4000)
 
-# Create a model that includes all four spacecraft
-dynsys = DynSys(
-                forces = forces, 
-                spacecraft = [mms1,mms2,mms3,mms4]
-                )
+prop = OrbitPropagator(forces, integ)
+fleet = [mms1, mms2, mms3, mms4]
 
 # Propagate to apoapsis of mms1
-propagate!(dynsys, integ, StopAtApoapsis(mms1))
+propagate!(prop, fleet, StopAt(mms1, PosDotVel(), 0.0; direction = -1))
 println(KeplerianState(mms1.state,earth.mu))
 
 # Propagate backwards for an hour
 println((mms1.time.tai).isot)
 t1 = mms1.time.jd;
-propagate!(dynsys, integ, StopAtSeconds(-3600.0); direction = :backward);
+propagate!(prop, fleet, StopAt(mms1, PropDurationSeconds(), -3600.0); direction = :backward);
 t2 = mms2.time.jd;
 (t2 - t1)*86400
 println((mms1.time.tai).isot)

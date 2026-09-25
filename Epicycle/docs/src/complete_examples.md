@@ -24,25 +24,25 @@ integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
 prop    = OrbitPropagator(forces, integ)
 
 # Propagate to periapsis
-propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
+propagate!(prop, sat, StopAt(position_dot_velocity, sat; equals = 0.0, direction = 1))
 println(get_state(sat, Keplerian()))
 
 # Propagate to apoapsis
-propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+propagate!(prop, sat, StopAt(position_dot_velocity, sat; equals = 0.0, direction = -1))
 println(get_state(sat, Keplerian()))
 
 # Stop when |r| reaches 7000 km 
-propagate!(prop, sat, StopAt(sat, PosMag(), 7000.0))
+propagate!(prop, sat, StopAt(position_magnitude, sat; equals = 7000.0))
 println(get_state(sat, SphericalRADEC()))       
 
 # Propagate to x-position crossing (increasing)
-sol = propagate!(prop, sat, StopAt(sat, PosX(), 7.5; direction=+1))
+sol = propagate!(prop, sat, StopAt(position_x, sat; equals = 7.5, direction = 1))
 println(get_state(sat, Cartesian()))
 
 # Propagate multiple spacecraft with multiple stopping conditions
 sc1 = Spacecraft(); sc2 = Spacecraft() 
-stop_sc1_node = StopAt(sc1, PosZ(), 0.0)
-stop_sc2_periapsis = StopAt(sc2, PosDotVel(), 0.0; direction=+1)
+stop_sc1_node = StopAt(position_z, sc1; equals = 0.0)
+stop_sc2_periapsis = StopAt(position_dot_velocity, sc2; equals = 0.0, direction = 1)
 propagate!(prop, [sc1,sc2], stop_sc1_node, stop_sc2_periapsis)
 ```
 
@@ -65,9 +65,9 @@ deltav2 = ImpulsiveManeuver(
      )
 
 # Apply the maneuver to the spacecraft
-println("Initial mass: ", sat1.mass)
+println("Initial mass: ", total_mass(sat1))
 maneuver!(sat1, deltav2)
-println("Mass after Inertial maneuver: ", sat1.mass)
+println("Mass after Inertial maneuver: ", total_mass(sat1))
 println("State after Inertial maneuver: \n", get_state(sat1, Cartesian()))
 
 # Create an impulsive maneuver in the VNB frame
@@ -82,7 +82,7 @@ deltav1 = ImpulsiveManeuver(
 
 # Apply the maneuver to the spacecraft
 maneuver!(sat1, deltav1)
-println("Mass after VNB maneuver: ", sat1.mass)
+println("Mass after VNB maneuver: ", total_mass(sat1))
 println("State after VNB maneuver: \n", get_state(sat1, Cartesian()))
 ```
 
@@ -141,7 +141,7 @@ toi_event = Event(
 # Propagation Event - Coast to Apoapsis
 # ============================================================================
 
-prop_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+prop_fun() = propagate!(prop, sat, StopAt(position_dot_velocity, sat; equals = 0.0, direction = -1))
 prop_event = Event(
     name = "Prop to Apoapsis", 
     event = prop_fun
@@ -171,15 +171,15 @@ moi_var = SolverVariable(
 pos_target = 45000.0
 pos_con = Constraint(
     calc = OrbitCalc(sat, PosMag()),
-    lower_bounds = [pos_target],
-    upper_bounds = [pos_target],
+    lower_bound = [pos_target],
+    upper_bound = [pos_target],
     scale = [1.0],
 )
 
 ecc_con = Constraint(
     calc = OrbitCalc(sat, Ecc()),
-    lower_bounds = [0.0],
-    upper_bounds = [0.0], 
+    lower_bound = [0.0],
+    upper_bound = [0.0], 
     scale = [1.0],
 )
 
@@ -205,10 +205,6 @@ result = solve_trajectory!(seq; record_iterations=true)
 report_sequence(seq)
 report_solution(seq, result)
 
-# Plot the trajectory 3D
-view = View3D()
-add_spacecraft!(view, sat; show_iterations=true)
-display_view(view)
 ```
 
 The output of this run:
@@ -358,7 +354,7 @@ prop    = OrbitPropagator(forces, integ)
 # ============================================================================
 
 # Define propagation event to equatorial plane crossing
-prop_to_z_crossing_1_fun() = propagate!(prop, sat, StopAt(sat, PosZ(), 0.0))
+prop_to_z_crossing_1_fun() = propagate!(prop, sat, StopAt(position_z, sat; equals = 0.0))
 prop_to_z_crossing_1_event = Event(
     name = "Prop to Z 1",
     event = prop_to_z_crossing_1_fun,
@@ -399,13 +395,13 @@ toi_event = Event(
 # Define constraint on radius at apoapsis
 apogee_radius_con = Constraint(
     calc = OrbitCalc(sat, PosMag()),
-    lower_bounds = [85000.0],
-    upper_bounds = [85000.0],
+    lower_bound = [85000.0],
+    upper_bound = [85000.0],
     scale = [1.0],
 )
 
 # Define propagation event to apoapsis with radius constraint
-prop_to_apogee_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=-1))
+prop_to_apogee_fun() = propagate!(prop, sat, StopAt(position_dot_velocity, sat; equals = 0.0, direction = -1))
 prop_to_apogee_event = Event(
     name = "Prop to Apoapsis",
     event = prop_to_apogee_fun,
@@ -416,7 +412,7 @@ prop_to_apogee_event = Event(
 # Event 4: Propagate to Perigee
 # ============================================================================
 
-prop_to_perigee_1_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
+prop_to_perigee_1_fun() = propagate!(prop, sat, StopAt(position_dot_velocity, sat; equals = 0.0, direction = 1))
 prop_to_perigee_1_event = Event(
     name = "Prop to Perigee 1",
     event = prop_to_perigee_1_fun,
@@ -426,7 +422,7 @@ prop_to_perigee_1_event = Event(
 # Event 5: Propagate to Equatorial Plane Crossing Again
 # ============================================================================
 
-prop_to_z_crossing_2_fun() = propagate!(prop, sat, StopAt(sat, PosZ(), 0.0))
+prop_to_z_crossing_2_fun() = propagate!(prop, sat, StopAt(position_z, sat; equals = 0.0))
 prop_to_z_crossing_2_event = Event(
     name = "Prop to Z 2",
     event = prop_to_z_crossing_2_fun,
@@ -467,20 +463,20 @@ mcc_event = Event(
 # Define constraints on inclination and perigee radius
 inclination_con = Constraint(
     calc = OrbitCalc(sat, Inc()),
-    lower_bounds = [deg2rad(2.0)],
-    upper_bounds = [deg2rad(2.0)],
+    lower_bound = [deg2rad(2.0)],
+    upper_bound = [deg2rad(2.0)],
     scale = [1.0],
 )
 
 perigee_radius_con = Constraint(
     calc = OrbitCalc(sat, PosMag()),
-    lower_bounds = [42195.0],
-    upper_bounds = [42195.0],
+    lower_bound = [42195.0],
+    upper_bound = [42195.0],
     scale = [1.0],
 )
 
 # Define propagation event to perigee with inclination and perigee radius constraints
-prop_to_perigee_2_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=1))
+prop_to_perigee_2_fun() = propagate!(prop, sat, StopAt(position_dot_velocity, sat; equals = 0.0, direction = 1))
 prop_to_perigee_2_event = Event(
     name = "Prop to Perigee 2",
     event = prop_to_perigee_2_fun,
@@ -510,8 +506,8 @@ moi_var = SolverVariable(
 # Define constraint on semi-major axis at GEO
 final_sma_con = Constraint(
     calc = OrbitCalc(sat, SMA()),
-    lower_bounds = [42166.90],
-    upper_bounds = [42166.90],
+    lower_bound = [42166.90],
+    upper_bound = [42166.90],
     scale = [1.0],
 )
 
@@ -551,10 +547,6 @@ report_solution(seq, result)
 # Propagate about one day to see final orbit
 propagate!(prop, sat, StopAt(sat, PropDurationDays(), 1.1)) 
 
-# Visualize with iterations
-view = View3D()
-add_spacecraft!(view, sat; show_iterations=true)
-display_view(view)
 ```
 
 The output for this configuration is

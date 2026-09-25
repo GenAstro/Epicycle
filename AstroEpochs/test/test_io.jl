@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: MIT
+
 #=
 Note, testing of valid properties is implicitly tested in test_formatconversions
 and test_scaleconversions.  These only test other areas not covered in those tests. 

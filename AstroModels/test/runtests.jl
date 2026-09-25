@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using Test
 using ForwardDiff
 using Logging
@@ -20,16 +23,16 @@ using AstroModels
     @test sc.state isa OrbitState
     @test to_vector(sc.state) == to_vector(state0)
     @test sc.time == t0
-    @test sc.mass == mass0
+    @test total_mass(sc) == mass0
     @test sc.name == name0
 
         # Coordinate system on constructor (Moon, ICRF)
-    cs_moon_icrf = CoordinateSystem(moon, ICRFAxes())
+    cs_moon_icrf = CoordinateSystem(moon, ICRF())
     sc_cs = Spacecraft(state=state0, time=t0, mass=mass0, name=name0, coord_sys=cs_moon_icrf)
 
-    @test sc_cs.coord_sys isa CoordinateSystem{<:CelestialBody, ICRFAxes}
+    @test sc_cs.coord_sys isa CoordinateSystem{<:CelestialBody, ICRF}
     @test sc_cs.coord_sys.origin === moon
-    @test sc_cs.coord_sys.axes isa ICRFAxes
+    @test sc_cs.coord_sys.axes isa ICRF
 end
 
 @testset "set_posvel! and to_posvel tests" begin
@@ -62,7 +65,7 @@ end
     # Construct the spacecraft matching the expected pretty-print
     state = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03])
     t     = Time("2015-09-21T12:23:12", TAI(), ISOT())
-    cs    = CoordinateSystem(earth, ICRFAxes())
+    cs    = CoordinateSystem(earth, ICRF())
     sc    = Spacecraft(state=state, time=t, mass=1000.0, name="SC-001", coord_sys=cs)
 
     expected = """
@@ -82,7 +85,7 @@ Spacecraft: SC-001
     vz  =     0.03000000
   CoordinateSystem:
     origin = Earth
-    axes   = ICRFAxes
+    axes   = ICRF
   Total Mass = 1000.0 kg
   Drag = none
   SRP  = none
@@ -100,7 +103,7 @@ end
     pv0 = [7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]
     state0 = CartesianState(pv0)
     t0     = Time("2015-09-21T12:23:12", TAI(), ISOT())
-    cs     = CoordinateSystem(earth, ICRFAxes())
+    cs     = CoordinateSystem(earth, ICRF())
     sc     = Spacecraft(state=state0, time=t0, mass=1000.0, name="SC-001", coord_sys=cs)
 
     # Getter returns the current pos/vel vector
@@ -119,7 +122,7 @@ end
     pv0    = [7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]
     state0 = CartesianState(pv0)
     t0     = Time("2015-09-21T12:23:12", TAI(), ISOT())
-    cs0    = CoordinateSystem(earth, ICRFAxes())
+    cs0    = CoordinateSystem(earth, ICRF())
     sc0    = Spacecraft(state=state0, time=t0, mass=1000.0, name="SC-001", coord_sys=cs0)
 
     sc1 = deepcopy(sc0)
@@ -127,10 +130,10 @@ end
     # Different objects; equal field values
     @test sc1 !== sc0
     @test sc1.name == sc0.name == "SC-001"
-    @test sc1.mass == sc0.mass == 1000.0
+    @test total_mass(sc1) == total_mass(sc0) == 1000.0
     @test sc1.time == sc0.time
     @test sc1.coord_sys.origin === earth
-    @test sc1.coord_sys.axes isa ICRFAxes
+    @test sc1.coord_sys.axes isa ICRF
     @test to_posvel(sc1) == to_posvel(sc0) == pv0
 
     # Test time mutation independence
@@ -148,9 +151,9 @@ end
     @test sc1.name == "SC-001"
 
     # Test coord_sys mutation independence
-    sc0.coord_sys = CoordinateSystem(moon, ICRFAxes())
+    sc0.coord_sys = CoordinateSystem(moon, ICRF())
     @test sc1.coord_sys.origin == earth
-    @test sc1.coord_sys.axes == ICRFAxes()
+    @test sc1.coord_sys.axes == ICRF()
 
     # History independence
     @test length(sc1.history) == 0
@@ -188,10 +191,10 @@ end
     t     = Time("2015-09-21T12:23:12", TAI(), ISOT())
     m     = ForwardDiff.Dual(1000.0, 1.0)  # 1 active partial
 
-    sc = Spacecraft(state=state, time=t, mass=m, coord_sys=CoordinateSystem(earth, ICRFAxes()))
+    sc = Spacecraft(state=state, time=t, mass=m, coord_sys=CoordinateSystem(earth, ICRF()))
 
     # Mass promoted to Dual
-    @test sc.mass isa ForwardDiff.Dual
+    @test total_mass(sc) isa ForwardDiff.Dual
 
     # State elements promoted to Dual and statetype preserved
     @test eltype(sc.state.state) <: ForwardDiff.Dual
@@ -216,7 +219,7 @@ end
     sc = Spacecraft(state=state, time=t, mass=m)
 
     @test sc.state.state isa Vector{<:ForwardDiff.Dual}
-    @test sc.mass isa ForwardDiff.Dual
+    @test total_mass(sc) isa ForwardDiff.Dual
     @test sc.time.jd1 isa ForwardDiff.Dual
     @test sc.time.jd2 isa ForwardDiff.Dual
     @test sc.history isa SpacecraftHistory
@@ -231,7 +234,7 @@ end
     sc = Spacecraft(state=state, time=t, mass=m)
 
     @test sc.state.state isa Vector{<:ForwardDiff.Dual}
-    @test sc.mass isa ForwardDiff.Dual
+    @test total_mass(sc) isa ForwardDiff.Dual
     @test sc.time.jd1 isa ForwardDiff.Dual
     @test sc.time.jd2 isa ForwardDiff.Dual
     @test sc.history isa SpacecraftHistory
@@ -244,7 +247,7 @@ end
     sc = Spacecraft(state=state, time=t, mass=m)
 
     @test sc.state.state isa Vector{<:ForwardDiff.Dual}
-    @test sc.mass isa ForwardDiff.Dual
+    @test total_mass(sc) isa ForwardDiff.Dual
     @test sc.time.jd1 isa ForwardDiff.Dual
     @test sc.time.jd2 isa ForwardDiff.Dual
     @test sc.history isa SpacecraftHistory
@@ -254,7 +257,7 @@ end
   # Prepare a baseline spacecraft in Cartesian
   state_cart = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.546, 0.0])
   t_tt       = Time("2015-09-21T12:23:12", TT(), ISOT())
-  cs_icrf    = CoordinateSystem(earth, ICRFAxes())
+  cs_icrf    = CoordinateSystem(earth, ICRF())
   sc_cart    = Spacecraft(state=state_cart, time=t_tt, mass=500.0, coord_sys=cs_icrf)
 
   # Test get pos_vel function (fast path for Cartesian)
@@ -282,7 +285,7 @@ struct FakeBody <: EpicycleBase.AbstractPoint
 end
 
 @testset "get_state error when μ is missing in coord system origin" begin
-    fake_coords = CoordinateSystem(FakeBody("FakePoint"), ICRFAxes())
+    fake_coords = CoordinateSystem(FakeBody("FakePoint"), ICRF())
     sc = Spacecraft(coord_sys=fake_coords)  # defaults to Cartesian state
 
     # Capture the exact error and assert on message substrings
@@ -293,12 +296,54 @@ end
         e
     end
 
-    @test err isa ErrorException
+    @test err isa ArgumentError
     msg = sprint(showerror, err)
 
     @test occursin("get_state: μ is required to convert from Cartesian() to Keplerian()", msg)
-    @test occursin("system does not have a celestial body (with a μ) as its origin", msg)
-    @test occursin("Change to state types", msg)
+    @test occursin("origin has no gravitational parameter", msg)
+    @test occursin("Use a celestial body such as `earth`", msg)
+    @test !occursin('\n', msg)          # one line, not the layout of the source file
+end
+
+@testset "assigning a state accepts any representation" begin
+    sc = Spacecraft()
+    sc.state = CartesianState([7100.0, 10.0, 20.0, 0.1, 7.4, 0.2])
+    @test sc.state isa OrbitState
+    @test to_posvel(sc) == [7100.0, 10.0, 20.0, 0.1, 7.4, 0.2]
+
+    # Another representation is converted to the one the spacecraft holds, with μ from its origin.
+    kep = KeplerianState(7000.0, 0.01, 0.1, 0.2, 0.3, 0.4)
+    sc.state = kep
+    @test sc.state.statetype == Cartesian()
+    @test to_posvel(sc) ≈ to_vector(CartesianState(kep, earth.mu)) rtol = 1e-14
+
+    # An origin with no μ cannot convert, and says so.
+    no_mu = Spacecraft(coord_sys = CoordinateSystem(FakeBody("FakePoint"), ICRF()))
+    @test_throws ArgumentError (no_mu.state = kep)
+
+    # The spacecraft's numeric type is kept, as the constructor keeps it.
+    sc32 = Spacecraft(mass = 1000.0f0, time = Time(2458849.5f0, 0.0f0, TDB(), JD()),
+                      state = CartesianState(Float32[7000, 0, 0, 0, 7.5, 0]))
+    sc32.state = CartesianState([7100.0, 0.0, 0.0, 0.0, 7.4, 0.0])
+    @test eltype(sc32.state.state) === Float32
+
+    # A vector is not a state; the message points at set_posvel!.
+    err = try; sc.state = [7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]; nothing; catch e; e; end
+    @test err isa ArgumentError
+    @test occursin("set_posvel!", sprint(showerror, err))
+end
+
+@testset "a conversion that needs no μ does not consult the origin" begin
+    # Cartesian to spherical is geometry alone, so an origin without μ is fine.
+    sc = Spacecraft(coord_sys = CoordinateSystem(FakeBody("FakePoint"), ICRF()))
+    @test get_state(sc, SphericalRADEC()) isa SphericalRADECState
+
+    # And the reverse direction through set_posvel!.
+    sph = Spacecraft(state = SphericalRADECState(CartesianState(to_posvel(sc))),
+                     coord_sys = CoordinateSystem(FakeBody("FakePoint"), ICRF()))
+    set_posvel!(sph, [7100.0, 50.0, 100.0, 0.3, 7.6, 0.2])
+    @test sph.state.statetype == SphericalRADEC()
+    @test to_posvel(sph) ≈ [7100.0, 50.0, 100.0, 0.3, 7.6, 0.2] rtol = 1e-12
 end
 
 @testset "Spacecraft promotion for AD" begin
@@ -333,8 +378,8 @@ end
     @test sc_dual.time.format == sc.time.format
     
     # Verify mass was promoted  
-    @test typeof(sc_dual.mass) === DualType
-    @test ForwardDiff.value(sc_dual.mass) ≈ sc.mass
+    @test typeof(total_mass(sc_dual)) === DualType
+    @test ForwardDiff.value(total_mass(sc_dual)) ≈ total_mass(sc)
     
     # Verify history remains Float64 (efficient storage)
     @test sc_dual.history isa SpacecraftHistory
@@ -348,12 +393,14 @@ end
     
     # Test that original spacecraft is unchanged
     @test eltype(sc.state.state) === Float64
-    @test typeof(sc.mass) === Float64
+    @test typeof(total_mass(sc)) === Float64
 end
 
 include("runtests_cadmodel.jl")
 include("runtests_spacecraft_historysegment.jl")
 include("runtests_spacecraft_history.jl")
 include("runtests_morestatetests.jl")
+include("runtests_mass.jl")
+include("test_correctness_ground_station.jl")
 
 nothing

@@ -1,8 +1,11 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 
 
 
 using SNOW
-using OrdinaryDiffEq
+using OrdinaryDiffEqHighOrderRK: DP8
 using LinearAlgebra
 
 using AstroEpochs
@@ -26,11 +29,8 @@ pm_grav = PointMassGravity(earth,(moon,sun))
 forces = ForceModel(pm_grav)
 integ = IntegratorConfig(DP8(); abstol = 1e-11, reltol = 1e-11, dt = 4000)
 
-# Define which spacecraft to propagate and which force model to use
-dynsys = DynSys(
-          forces = forces, 
-          spacecraft = [sat]
-          )
+# The propagator: forces and integrator
+prop = OrbitPropagator(forces, integ)
 
 # Create maneuver models for the hohmann transfer
 toi = ImpulsiveManeuver(
@@ -49,12 +49,7 @@ var_toi = SolverVariable(
 )
 
 pos_target = 45000.0
-pos_con = Constraint(
-    calc = OrbitCalc(sat, PosMag()),
-    lower_bounds = [pos_target],
-    upper_bounds = [pos_target],
-    scale = [1.0],
-)
+pos_con = Constraint(position_magnitude, sat; equals = pos_target)
 
 # Create the TOI Event
 toi_fun() = maneuver!(sat, toi) 
@@ -64,7 +59,7 @@ toi_event = Event(name = "toi",
                   funcs = [])
 
 # Create the prop to apopasis event
-prop_apo_fun() = propagate!(dynsys, integ, StopAtApoapsis(sat))
+prop_apo_fun() = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction = -1))
 prop_event = Event(name = "prop_apo", 
                    event = prop_apo_fun)
 

@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 
 using Test
 using LinearAlgebra
@@ -9,6 +12,7 @@ using AstroManeuvers
 using AstroUniverse
 using AstroCallbacks
 using AstroSolve
+using AstroSolve: apply_event
 
 @testset "Event Propagation Test" begin
     # Reset spacecraft to initial state for independent computation
@@ -20,8 +24,8 @@ using AstroSolve
         state = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 1.0]),
         time = Time("2020-09-21T12:23:12", TAI(), ISOT())
     )
-    dynsys1 = DynSys(forces = forces, spacecraft = [sat1_reset])
-    dynsys2 = DynSys(forces = forces, spacecraft = [sat2_reset])
+    prop1 = OrbitPropagator(forces, integ)
+    prop2 = OrbitPropagator(forces, integ)
 
     # --- Event infrastructure ---
     toi_event = ImpulsiveManeuver(
@@ -37,7 +41,7 @@ using AstroSolve
         upper_bound = [1.0, 0.0, 0.0])
 
     apply_toi = Event(event = () -> maneuver!(sat1_reset, toi_event), vars = [var_toi])
-    prop_to_moi() = propagate!(dynsys1, integ, StopAtApoapsis(sat1_reset))
+    prop_to_moi() = propagate!(prop1, sat1_reset, StopAt(sat1_reset, PosDotVel(), 0.0; direction = -1))
     prop_moi = Event(event = prop_to_moi)
 
     # Apply maneuver and propagate using event infrastructure
@@ -48,7 +52,7 @@ using AstroSolve
 
     # --- Independent computation ---
     maneuver!(sat2_reset, toi_event)
-    propagate!(dynsys2, integ, StopAtApoapsis(sat2_reset))
+    propagate!(prop2, sat2_reset, StopAt(sat2_reset, PosDotVel(), 0.0; direction = -1))
     truth_result = copy(to_posvel(sat2_reset))
 
     # --- Compare results ---

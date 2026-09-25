@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 """
     OutGoingRLA <: AbstractOrbitVar
@@ -8,7 +8,7 @@ Tag struct indicating outgoing hyperbolic asymptote right ascension (radians).
 
 Examples
 ```julia
-# sc::Spacecraft — replace with your Spacecraft instance
+# `sc` is a `Spacecraft`
 rla_calc = OrbitCalc(Spacecraft(), OutGoingRLA())
 Ω_out = get_calc(rla_calc)       # e.g., 1.047
 set_calc!(rla_calc, pi/3)        # set outgoing RLA to 60 degrees

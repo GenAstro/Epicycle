@@ -1,21 +1,24 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 
 
 import AstroProp: accel_eval!
 
 "Symbolic marker for thrust input (3D control)"
-struct DummyThrust <: AbstractControl
+struct DummyThrust <: AbstractControlTag
     numvars::Int
     DummyThrust() = new(3)
 end
 
 "Symbolic marker for scalar parameter"
-struct DummyParam <: AbstractParam
+struct DummyParam <: AbstractParamTag
     numvars::Int
     DummyParam() = new(1)
 end
 
 "Symbolic marker for scalar mass state"
-struct MassVal <: AbstractState
+struct MassVal <: AbstractStateTag
     numvars::Int
     MassVal() = new(1)
 end
@@ -36,11 +39,11 @@ Includes:
 - `DummyParam()`: scalar parameter
 """
 struct TheForceIsWithYou <: OrbitODE
-    dependencies::Tuple{AbstractVar,AbstractVar,AbstractVar,AbstractVar}
+    dependencies::Tuple{AbstractVarTag,AbstractVarTag,AbstractVarTag,AbstractVarTag}
     num_funs::Int
-    params::Dict{AbstractVar, Any}  # Add a params field
+    params::Dict{AbstractVarTag, Any}  # Add a params field
 
-    function TheForceIsWithYou(params=Dict(
+    function TheForceIsWithYou(params=Dict{AbstractVarTag,Any}(
         DummyParam() => 3e-8,
         DummyThrust() => -1e-8 .* ones(3)
     ))

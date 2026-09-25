@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: MIT
+
 using Test
 
 # TODO. When refactoring is done, modify the symbol tests below as needed.

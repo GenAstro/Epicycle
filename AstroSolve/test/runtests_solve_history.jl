@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using Test
 using AstroSolve
 using AstroCallbacks
@@ -8,7 +11,8 @@ using AstroEpochs
 using AstroStates
 using AstroUniverse
 using AstroFrames
-using OrdinaryDiffEq
+using CommonSolve: init, solve
+using OrdinaryDiffEqTsit5: Tsit5
 
 """
     setup_simple_target()
@@ -41,12 +45,7 @@ function setup_simple_target()
     # Define a constraint on position magnitude of spacecraft
     # Target apoapsis altitude of 55000 km
     pos_target = 55000.0
-    pos_con = Constraint(
-        calc = OrbitCalc(sat, PosMag()),
-        lower_bounds = [pos_target],
-        upper_bounds = [pos_target],
-        scale = [1.0],
-    )
+    pos_con = Constraint(position_magnitude, sat; equals = pos_target)
     
     # Create an event that applies the maneuver with toi as optimization variable
     fun_toi() = maneuver!(sat, toi)

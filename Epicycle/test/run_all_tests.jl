@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 # CI test runner: develop local packages in this repo and run each package's tests
 using Pkg, Logging
 

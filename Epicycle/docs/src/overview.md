@@ -29,7 +29,8 @@ Contemporary space missions require:
 
 Julia provides unique benefits for astrodynamics applications:
 - **Performance**: Near-C/Fortran speeds with high-level expressiveness
-- **Composability**: Multiple dispatch enables seamless package integration
+- **Extension**: a third party adds a force, a frame or a transcription by defining a type, without
+  changing Epicycle
 - **Scientific Computing**: Native differential equations, optimization, and automatic differentiation
 - **Growing Ecosystem**: Active scientific computing community with modern tooling
 
@@ -99,20 +100,12 @@ The packages are organized in layers to ensure clean separation of concerns:
 - Comprehensive test coverage across all packages
 - Continuous integration and automated testing
 - Clear documentation with worked examples
-- Type-stable implementations for optimal performance
+- Numerical code written so the compiler can specialise it, and benchmarked rather than assumed
 
 ## Licensing Model
 
-We believe in the power of open source to foster innovation and community-driven 
-development and also recognize the need for a sustainable business model and a model
-that can handle export-controlled aerospace content. 
-
-For these reasons, Epicycle is offered under a tri-licensing model. The license allows
-users to choose between the following three options:
-
-1) LGPL v3.0
-2) Evaluation and Education use Only
-3) Commercial License
+Each Epicycle package is licensed under the terms in its own `LICENSE.md`.
+[LICENSE.md](https://github.com/GenAstro/Epicycle/blob/main/LICENSE.md) in the repository lists which package is under which license.
 
 ## Acknowledgments
 
@@ -138,107 +131,7 @@ We gratefully acknowledge these projects and their maintainers, whose work makes
 
 ## Contributing
 
-To protect both contributors and our company, we use the Linux Kernel's Developer's 
-Certificate of Origin (DCO) as detailed in CONTRIBUTING.txt.
-
-## Getting Started
-
-New users should begin with the [Getting Started](getting_started.md) guide, which walks through installation and basic usage patterns. The [Tutorials](unit_examples.md) section provides hands-on examples for common astrodynamics tasks.
-
-For developers interested in extending Epicycle, each package maintains its own documentation with implementation details and contribution guidelines.
-
-## Software Architecture
-
-### Package Hierarchy
-
-| Package | Purpose | 
-|:--------|:--------|
-| `EpicycleBase` | Core abstractions and type hierarchy |
-| `AstroStates` | Orbital state representations and conversions | 
-| `AstroEpochs` | Time systems and epoch handling | 
-| `AstroUniverse` | Celestial body models and ephemeris | 
-| `AstroFrames` | Coordinate systems and transformations | 
-| `AstroModels` | Spacecraft and physical models | 
-| `AstroManeuvers`| Maneuver models and algorithms |
-| `AstroCallbacks` | Quantities used in I/O, stopping conditions, cost, constraints |
-| `AstroProp` | Trajectory propagation algorithms | 
-| `AstroSolve` | Optimization and constraint solving | 
-| `Epicycle` | The application.  `using Epicycle` loads everything. |
-
-### Dependency Structure
-
-The packages are organized in layers to ensure clean separation of concerns:
-
-1. **Foundation**: Core types and constants that all other packages depend on
-2. **Domain Specific**: Specialized functionality for states, time, coordinates, etc.
-3. **Analysis Tools**: Higher-level capabilities built on foundation components
-4. **Integration**: User-facing interfaces and complete workflows
-
-## Key Features
-
-### Comprehensive Force Modeling
-- Gravitational perturbations (J2-J6, third-body, solid tides)
-- Atmospheric drag with exponential and NRLMSISE-00 models
-- Solar radiation pressure with cylindrical and spherical Earth shadow models
-- Relativistic effects for high-precision applications
-
-### Advanced Propagation Methods
-- High-order Runge-Kutta integrators with adaptive stepping
-- Specialized methods for different orbit regimes
-- Event detection and handling during propagation
-- Parallel processing for large trajectory sets
-
-### Mission Design Tools
-- Lambert problem solvers for transfer trajectory design
-- Maneuver planning and optimization
-- Launch window analysis
-- Ground track and coverage analysis
-
-### Modern Development Practices
-- Comprehensive test coverage across all packages
-- Continuous integration and automated testing
-- Clear documentation with worked examples
-- Type-stable implementations for optimal performance
-
-## Licensing Model
-
-We believe in the power of open source to foster innovation and community-driven 
-development and also recognize the need for a sustainable business model and a model
-that can handle export-controlled aerospace content. 
-
-For these reasons, Epicycle is offered under a tri-licensing model. The license allows
-users to choose between the following three options:
-
-1) LGPL v3.0
-2) Evaluation and Education use Only
-3) Commercial License
-
-## Acknowledgments
-
-Epicycle builds upon the foundational work of many contributors to the aerospace and scientific computing communities:
-
-**Astrodynamics Standards**
-- NASA GMAT Development Team for orbital mechanics algorithms and validation test cases
-- David Vallado for "Fundamentals of Astrodynamics and Applications" formulations
-- The Astropy Project for rigorous time system standards and implementations
-
-**Julia Scientific Computing Ecosystem**
-- SciML Organization for OrdinaryDiffEq.jl and the broader differential equations ecosystem
-- Julia Astro community for SPICE.jl and astronomical coordinate systems
-- BYU FLOW Lab for SNOW.jl optimization framework
-- Wächter & Biegler for the IPOPT nonlinear programming solver
-
-**Open Source Foundations**
-- Julia Computing and contributors for the Julia language
-- The Documenter.jl team for documentation generation
-- GitHub Actions and the CI/CD community for automated testing infrastructure
-
-We gratefully acknowledge these projects and their maintainers, whose work makes Epicycle possible.
-
-## Contributing
-
-To protect both contributors and our company, we use the Linux Kernel's Developer's 
-Certificate of Origin (DCO) as detailed in CONTRIBUTING.txt.
+The terms for contributions to a package are in that package's `LICENSE.md`.
 
 ## Getting Started
 

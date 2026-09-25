@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: MIT
+
 @testset "Parabolic Cartesian state cart_to_kep" begin
     # Standard Earth μ (ASCII name)
     mu = 398600.4415

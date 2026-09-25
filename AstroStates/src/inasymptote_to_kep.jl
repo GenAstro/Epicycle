@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: MIT
 
 """
     inasymptote_to_kep(outasym::Vector{<:Real}, μ::Real; tol::Float64=1e-12)

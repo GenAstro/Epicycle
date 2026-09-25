@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using Test
 
 using AstroCallbacks
@@ -69,23 +72,6 @@ end
     @test AstroCallbacks._subjects_from_calc(mc) == (mc.man, sc)
 end
 
-# Rationale: func_eval always returns a Vector, for scalar and vector-valued calcs.
-@testset "func_eval output normalization" begin
-    sc = Spacecraft(
-        state=CartesianState([7000.0,300.0,0.0, 0.0,7.5,1.0]),
-        time=Time("2020-01-01T00:00:00", TAI(), ISOT()),
-    )
-    c_vec = Constraint(calc=OrbitCalc(sc, PositionVector()),
-                       lower_bounds=[-1.0,-1.0,-1.0], upper_bounds=[1.0,1.0,1.0], scale=[1.0,1.0,1.0])
-    v = func_eval(c_vec)
-    @test v == [7000.0, 300.0, 0.0]
-
-    c_sca = Constraint(calc=BodyCalc(earth, GravParam()),
-                       lower_bounds=[0.0], upper_bounds=[1e7], scale=[1.0])
-    s = func_eval(c_sca)
-    @test s isa Vector
-    @test length(s) == 1
-end
 
 # Rationale: Default trait calc_numvars(::AbstractCalcVariable) returns 1 for variables without overrides.
 struct DummyVarNum <: AstroCallbacks.AbstractCalcVariable end
@@ -124,20 +110,6 @@ end
     end
 end
 
-# Rationale: func_eval errors on unsupported calc return type (neither Number nor AbstractVector).
-struct FakeCalc <: AstroCallbacks.AbstractCalc end
-AstroCallbacks.get_calc(::FakeCalc) = [1.0 2.0; 3.0 4.0]  # Matrix triggers error path
-@testset "func_eval unsupported calc return type" begin
-    c = Constraint(calc=FakeCalc(), lower_bounds=[0.0], upper_bounds=[1.0], scale=[1.0])
-    try
-        AstroCallbacks.func_eval(c)
-        @test false
-    catch e
-        msg = sprint(showerror, e)
-        @test occursin("unsupported calc return type", msg)
-        @test occursin("Matrix", msg)
-    end
-end
 
 
 

@@ -1,9 +1,15 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 
 using SNOW
-using OrdinaryDiffEq
+using OrdinaryDiffEqTsit5: Tsit5
 using LinearAlgebra
 
 using Epicycle
+using AstroSolve
+using AstroSolve: SequenceManager, get_fun_lower_bounds, get_fun_upper_bounds,
+    get_var_lower_bounds, get_var_upper_bounds, get_var_values, solver_fun!
 
 # Create spacecraft
 sat = Spacecraft(
@@ -52,19 +58,9 @@ var_moi = SolverVariable(
 pos_target_1 = 25000.0  # Target after first propagation
 pos_target_2 = 55000.0  # Target after second propagation
 
-pos_con_1 = Constraint(
-    calc = OrbitCalc(sat, PosMag()),
-    lower_bounds = [pos_target_1],
-    upper_bounds = [pos_target_1],
-    scale = [1.0],
-)
+pos_con_1 = Constraint(position_magnitude, sat; equals = pos_target_1)
 
-pos_con_2 = Constraint(
-    calc = OrbitCalc(sat, PosMag()),
-    lower_bounds = [pos_target_2], 
-    upper_bounds = [pos_target_2],
-    scale = [1.0],
-)
+pos_con_2 = Constraint(position_magnitude, sat; equals = pos_target_2)
 
 # Create Events
 # Event 1: Apply TOI maneuver

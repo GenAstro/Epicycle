@@ -1,17 +1,20 @@
 # Mass
 
-The `mass` field stores the spacecraft's total mass in kilograms.
+A spacecraft carries its total mass in kilograms. Read it with `total_mass`; the field itself is
+private, and `sc.mass` throws. Mass changes only by applying a maneuver, so there is no setter.
 
 ## Basic Usage
 
 ```julia
+using AstroModels
+
 # Specify mass at construction
 sc = Spacecraft(
     mass = 1500.0  # kg
 )
 
-# Access mass
-current_mass = sc.mass
+# Read mass
+current_mass = total_mass(sc)
 ```
 
 ## Type Promotion
@@ -19,7 +22,7 @@ current_mass = sc.mass
 Mass participates in automatic differentiation type promotion:
 
 ```julia
-using ForwardDiff
+using AstroModels, ForwardDiff
 
 # Mass with Dual number
 sc = Spacecraft(
@@ -27,9 +30,10 @@ sc = Spacecraft(
 )
 
 # All numeric fields promote to Dual
-sc.mass   # Dual{Float64}
+total_mass(sc)   # Dual{Float64}
 sc.state  # OrbitState with Dual{Float64} elements
-sc.c_r    # Dual{Float64}
 ```
 
-The spacecraft's numeric type `T` is: `T = promote_type(eltype(state), typeof(time.jd1), typeof(mass), typeof(c_r))`
+The spacecraft's numeric type `T` is: `T = promote_type(eltype(state), typeof(time.jd1), typeof(mass))`.
+The SRP coefficient is not part of it: `c_r` belongs to the SRP geometry attached through the
+`srp` field, not to the spacecraft.

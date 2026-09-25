@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 """
     Ecc <: AbstractOrbitVar
@@ -8,7 +8,7 @@ Tag struct indicating Keplerian eccentricity of an orbit.
 
 Examples
 ```julia
-# sc::Spacecraft — replace with your Spacecraft instance
+# `sc` is a `Spacecraft`
 ecc_calc = OrbitCalc(Spacecraft(), Ecc())
 a = get_calc(ecc_calc)           
 set_calc!(ecc_calc, 0.02)        # set Ecc to 0.02
@@ -27,7 +27,7 @@ function _set!(::Ecc, s::KeplerianState, newval::Vector{<:Real})
     length(newval) == 1 || error("Ecc requires 1 element.")
     # Build a new KeplerianState with updated Ecc
     @inbounds begin
-        s = KeplerianState(s.sma, newval[1], s.inc, s.aop, s.raan, s.ta)
+        s = KeplerianState(s.sma, newval[1], s.inc, s.raan, s.aop, s.ta)
     end
     return s
 end

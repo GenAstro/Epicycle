@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Gen Astro LLC
+# SPDX-License-Identifier: MIT
+
 # BROU — Brouwer-Lyddane mean element conversions (FR-BROU-1..5, PR-BROU-1, SR-AD-1)
 # Reimplemented from GMAT StateConversionUtil.cpp. Classic @testset style.
 using Test

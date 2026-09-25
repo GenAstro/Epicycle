@@ -1,6 +1,10 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 
 using SNOW
-using OrdinaryDiffEq
+using CommonSolve: solve
+using OrdinaryDiffEqHighOrderRK: DP8
 using LinearAlgebra
 
 using AstroEpochs
@@ -11,6 +15,7 @@ using AstroFrames
 using AstroProp
 using AstroManeuvers
 using AstroSolve
+using AstroSolve: SequenceManager, get_sol_var, set_sol_var
 using AstroCallbacks
 using ForwardDiff
 
@@ -25,11 +30,8 @@ pm_grav = PointMassGravity(earth,(moon,sun))
 forces = ForceModel(pm_grav)
 integ = IntegratorConfig(DP8(); abstol = 1e-11, reltol = 1e-11, dt = 4000)
 
-# Define which spacecraft to propagate and which force model to use
-dynsys = DynSys(
-          forces = forces, 
-          spacecraft = [sat1]
-          )
+# The propagator: forces and integrator
+prop = OrbitPropagator(forces, integ)
 
 # Create maneuver models for the hohmann transfer
 toi = ImpulsiveManeuver(
@@ -68,8 +70,8 @@ pos_target = 45000
 pos_con_fun() = pos_mag(sat1)
 pos_con = Constraint(
     func = pos_con_fun,
-    lower_bounds = [pos_target],
-    upper_bounds = [pos_target],
+    lower_bound = [pos_target],
+    upper_bound = [pos_target],
     scale = [1.0],
     numvars=1
 )
@@ -77,8 +79,8 @@ pos_con = Constraint(
 ecc_con_fun() = eccentricity(sat1, earth.mu)
 ecc_con = Constraint(
     func = ecc_con_fun,
-    lower_bounds = [0],
-    upper_bounds = [0], 
+    lower_bound = [0],
+    upper_bound = [0], 
     scale = [1.0],
     numvars = 1
 )
@@ -87,8 +89,8 @@ vel_target = sqrt(earth.mu / pos_target)
 vel_con_fun() = vel_mag(sat1)
 vel_con = Constraint(
     func = vel_con_fun,
-    lower_bounds = [vel_target],
-    upper_bounds = [vel_target],
+    lower_bound = [vel_target],
+    upper_bound = [vel_target],
     scale = [1.0],
     numvars = 1
 )
@@ -101,7 +103,7 @@ toi_event = Event(name = "toi",
                   funcs = [])
 
 # Create the prop to apopasis event
-prop_apo_fun() = propagate!(dynsys, integ, StopAtApoapsis(sat1))
+prop_apo_fun() = propagate!(prop, sat1, StopAt(sat1, PosDotVel(), 0.0; direction = -1))
 prop_event = Event(name = "prop_apo", event = prop_apo_fun)
 
 # Create the TOI event. 

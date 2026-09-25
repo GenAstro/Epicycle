@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: MIT
+
 
 
 #  Test an orbit that is a straigth line (pos and vel aligned)

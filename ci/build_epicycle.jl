@@ -16,6 +16,14 @@ suppress the coverage upload.
 println("🏗️  Building Epicycle...")
 
 using Pkg
+# The package list is not written here. It is read from the workspace `projects` entry in the
+# repo-root Project.toml, which is the one place that has to be right for Julia to resolve at
+# all. Eight hand-maintained copies of this list is how AstroRoutines and EpicycleIO came to be
+# missing from CI after they moved in, and how CairoMakie survived in the workspace after
+# graphics left the umbrella.
+using TOML
+const WORKSPACE_PACKAGES = TOML.parsefile(
+    joinpath(dirname(@__DIR__), "Project.toml"))["workspace"]["projects"]
 Pkg.activate(".")
 
 # Set coverage environment BEFORE loading any packages
@@ -28,24 +36,23 @@ println("⚡ Loading Epicycle (this will trigger compilation with coverage)...")
 println("✅ Epicycle build complete!")
 println("📊 Loaded packages:")
 
-# Verify all packages are available.
-#
-# This list is what `using Epicycle` must bring into scope, so it holds exactly the packages the
-# umbrella @reexports — not every package in the repo. AstroRoutines is deliberately absent: it is
-# registered and tested on its own and the umbrella does not depend on it, so isdefined(Main, ...)
-# would be false for it however healthy it is.
-packages_to_check = [
-    :EpicycleBase, :AstroStates, :AstroEpochs, :AstroUniverse,
-    :AstroFrames, :AstroModels, :AstroManeuvers, :AstroCallbacks,
-    :AstroProp, :AstroSolve
-]
+# Verify all packages are available
+packages_to_check = Symbol.(filter(!=("Epicycle"), WORKSPACE_PACKAGES))
 
+# Load each package rather than assuming `using Epicycle` pulled it in. AstroRoutines and
+# EpicycleIO are workspace members that the umbrella deliberately does not depend on, so
+# `isdefined(Main, pkg)` reports them as failures when they are fine.
+#
+# And record the failure rather than exiting. CI exists to report everything wrong in one run;
+# exit(1) here stopped the whole pipeline before a single test ran, and skipped the summary.
+load_failures = String[]
 for pkg in packages_to_check
-    if isdefined(Main, pkg)
+    try
+        @eval using $pkg
         println("  ✅ $pkg loaded successfully")
-    else
-        println("  ❌ $pkg failed to load")
-        exit(1)
+    catch e
+        println("  ❌ $pkg failed to load: ", sprint(showerror, e))
+        push!(load_failures, String(pkg))
     end
 end
 
@@ -58,6 +65,25 @@ println("🎉 All packages loaded successfully!")
 # ---------------------------------------------------------------------------
 tests_failed = false
 docs_failures = String[]
+cdn_failed = false
+
+# ---------------------------------------------------------------------------
+# PHASE A0: Are EpicycleIO's third-party browser libraries still reachable?
+# Plotly and Cesium are not vendored — dashboard.html pulls both from a CDN at
+# exact pinned versions. Nothing else here touches a browser, so a withdrawn
+# version would blank every user's plots with the suite still green. Cheap, and
+# it runs first because it needs nothing built.
+# ---------------------------------------------------------------------------
+println("
+📡 Checking EpicycleIO browser assets...")
+let root = dirname(@__DIR__), script = joinpath(root, "EpicycleIO", "test", "check_cdn_assets.jl")
+    try
+        run(`$(Base.julia_cmd()) --project=$root $script`)
+    catch
+        global cdn_failed = true
+        @error "EpicycleIO browser assets did not resolve — see the pinned versions in dashboard.html"
+    end
+end
 
 # ---------------------------------------------------------------------------
 # PHASE A: Run tests in a SUBPROCESS with --code-coverage=user.
@@ -112,11 +138,7 @@ catch
 end
 
 # List of packages to build docs for
-packages_to_document = [
-    "AstroRoutines", "EpicycleBase", "AstroStates", "AstroEpochs", "AstroUniverse",
-    "AstroFrames", "AstroModels", "AstroManeuvers", "AstroCallbacks",
-    "AstroProp", "AstroSolve", "Epicycle"
-]
+packages_to_document = WORKSPACE_PACKAGES
 
 println("🏗️  Building documentation for $(length(packages_to_document)) packages...")
 
@@ -157,6 +179,8 @@ end
 # coverage has been generated and (via the workflow's always() upload step)
 # sent to Codecov.
 # ---------------------------------------------------------------------------
+cdn_status = cdn_failed ? "❌ unreachable" : "✅ reachable"
+println("Browser assets (Plotly, Cesium): $cdn_status")
 tests_status = tests_failed ? "❌ FAILED" : "✅ passed"
 docs_status = isempty(docs_failures) ? "✅ all built" : "❌ failed: " * join(docs_failures, ", ")
 
@@ -166,9 +190,11 @@ println("=" ^ 50)
 println("  Tests:  $tests_status")
 println("  Docs:   $docs_status")
 
-if tests_failed || !isempty(docs_failures)
+if tests_failed || !isempty(docs_failures) || cdn_failed || !isempty(load_failures)
     docs_list = join(docs_failures, ", ")
-    error("CI failed — tests_failed=$tests_failed, docs_failures=[$docs_list]")
+    load_list = join(load_failures, ", ")
+    error("CI failed — tests_failed=$tests_failed, docs_failures=[$docs_list], " *
+          "load_failures=[$load_list], browser_assets_unreachable=$cdn_failed")
 end
 
 println("\n🎉 Build, tests, coverage, and docs all completed successfully!")

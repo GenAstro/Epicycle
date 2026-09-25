@@ -1,7 +1,12 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 
 using Test
 using LinearAlgebra
 using Epicycle
+using AstroSolve
+using AstroSolve: apply_event
 
 # Create spacecraft
 sat1 = Spacecraft(
@@ -14,17 +19,11 @@ pm_grav = PointMassGravity(earth,(moon,sun))
 forces = ForceModel(pm_grav)
 integ = IntegratorConfig(DP8(); abstol = 1e-11, reltol = 1e-11, dt = 4000)
 
-# Define which spacecraft to propagate and which force model to use
-dynsys = DynSys(
-          forces = forces, 
-          spacecraft = [sat1]
-          )
+# The propagator: forces and integrator
+prop = OrbitPropagator(forces, integ)
 
 sat2 = deepcopy(sat1)
-dynsys2 = DynSys(
-          forces = forces, 
-          spacecraft = [sat2]
-          )
+prop2 = OrbitPropagator(forces, integ)
 
 # Create maneuver models for the hohmann transfer
 toi = ImpulsiveManeuver(
@@ -60,9 +59,9 @@ var_moi = SolverVariable(
 @testset "Event Propagation Test" begin
 
     # === Define propagation function ===
-    prop_to_moi() = propagate!(dynsys, integ, StopAtApoapsis(sat1))
+    prop_to_moi() = propagate!(prop, sat1, StopAt(sat1, PosDotVel(), 0.0; direction = -1))
 
-    propagate!(dynsys2, integ, StopAtApoapsis(sat2))
+    propagate!(prop2, sat2, StopAt(sat2, PosDotVel(), 0.0; direction = -1))
 
     # === Create the Event ===
     prop_moi = Event(event = prop_to_moi)

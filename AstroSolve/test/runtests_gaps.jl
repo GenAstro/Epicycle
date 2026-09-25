@@ -1,5 +1,9 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using Test
 using AstroSolve
+using AstroSolve: set_sol_var, topo_sort
 using AstroCallbacks
 using AstroManeuvers
 using AstroEpochs

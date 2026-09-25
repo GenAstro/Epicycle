@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<!-- Copyright (C) 2026 Gen Astro LLC -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Epicycle</title>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #101216; color: #d7dae0;
+               font: 13px/1.4 system-ui, -apple-system, Segoe UI, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  #bar { display: flex; align-items: center; gap: 12px; padding: 6px 12px;
+         border-bottom: 1px solid #23262e; }
+  #bar b { font-weight: 600; letter-spacing: .02em; }
+  #bar .sp { flex: 1 }
+  button { background: #1b1e25; color: #d7dae0; border: 1px solid #2c313b;
+           border-radius: 4px; padding: 3px 9px; cursor: pointer; font-size: 12px; }
+  button:hover { background: #232833; }
+  button.on { border-color: #00b4d8; color: #7fe3f5; }
+  #grid { display: grid; gap: 8px; padding: 8px; flex: 1; min-height: 0; overflow: auto;
+          box-sizing: border-box; grid-auto-rows: minmax(260px, 1fr); }
+  #grid.tabs { display: block; }
+  #grid.tabs .panel { display: none; height: 100%; }
+  #grid.tabs .panel.active { display: block; }
+  .panel { background: #161920; border: 1px solid #23262e; border-radius: 6px; min-height: 260px; }
+  #tabbar { display: none; gap: 6px; padding: 0 12px 6px; }
+  #grid.tabs ~ #tabbar, body.tabmode #tabbar { display: flex; }
+  #empty { padding: 40px; color: #6b7280; text-align: center; }
+  .scenehost { width: 100%; height: calc(100% - 28px); }
+  .scenebar { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px;
+              box-sizing: border-box; border-top: 1px solid #23262e; }
+  .scenebar button { padding: 2px 7px; font-size: 11px; }
+  .scenebar .readout, .scenebar .epoch { color: #8b95a5; font-size: 11px; }
+  .scenebar .epoch { margin-left: auto; }
+
+  /* A panel that just changed glows briefly, so the eye goes where the narration points. */
+  .panel { transition: box-shadow .6s ease, border-color .6s ease; }
+  .panel.fresh { border-color: #00b4d8;
+                 box-shadow: 0 0 0 1px #00b4d8, 0 0 22px rgba(0, 180, 216, .45); }
+
+  /* The caption strip. Hidden until narrate() publishes something. */
+  #narration { display: none; margin: 8px 8px 0; border: 1px solid #23262e; border-radius: 8px;
+               background: linear-gradient(90deg, rgba(0,180,216,.10), rgba(22,25,32,0) 55%), #14171d;
+               border-left: 4px solid #00b4d8; padding: 12px 16px; gap: 18px;
+               grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+  #narration.show { display: grid; animation: rise .45s ease; }
+  #narration.nocode { grid-template-columns: minmax(0, 1fr); }
+  @keyframes rise { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  #nTitle { font-size: 20px; font-weight: 700; letter-spacing: .03em; color: #7fe3f5;
+            text-transform: uppercase; }
+  #nSub { color: #8b95a5; font-size: 13px; margin: 2px 0 8px; }
+  #nText { font-size: 16px; line-height: 1.5; color: #e6e8ec; white-space: pre-wrap; min-height: 1.5em; }
+  #nText .cursor { display: inline-block; width: 8px; background: #7fe3f5; margin-left: 2px;
+                   animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  #nFacts { display: grid; grid-template-columns: max-content auto; gap: 2px 14px; margin-top: 10px;
+            font-size: 14px; }
+  #nFacts .k { color: #8b95a5; }
+  #nFacts .v { color: #ffd166; font-weight: 600; font-variant-numeric: tabular-nums; }
+  #nStatus { margin-top: 8px; color: #57e389; font-size: 13px; font-weight: 600; min-height: 1.2em; }
+  #nCodeWrap { display: flex; flex-direction: column; min-width: 0; }
+  #nCodeLabel { color: #8b95a5; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+                margin-bottom: 4px; }
+  #nCode { margin: 0; padding: 10px 12px; background: #0b0d11; border: 1px solid #23262e;
+           border-radius: 6px; overflow: auto; max-height: 34vh;
+           font: 13px/1.45 ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; color: #d7dae0; }
+  #nCode .kw  { color: #c792ea; }
+  #nCode .str { color: #c3e88d; }
+  #nCode .num { color: #f78c6c; }
+  #nCode .com { color: #6b7280; font-style: italic; }
+  #nCode .fn  { color: #82aaff; }
+  #nCode .sym { color: #ffcb6b; }
+  #nCode .kwa { color: #89ddff; }
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <b>Epicycle</b>
+  <span id="scopeNote"></span>
+  <span id="status">waiting for data…</span>
+  <span class="sp"></span>
+  <button id="layoutBtn">grid</button>
+</div>
+<div id="narration">
+  <div>
+    <div id="nTitle"></div>
+    <div id="nSub"></div>
+    <div id="nText"></div>
+    <div id="nFacts"></div>
+    <div id="nStatus"></div>
+  </div>
+  <div id="nCodeWrap">
+    <div id="nCodeLabel">what the script says</div>
+    <pre id="nCode"></pre>
+  </div>
+</div>
+<div id="tabbar"></div>
+<div id="grid"><div id="empty">Nothing plotted yet. Call <code>plot(x, y)</code> in Julia.</div></div>
+
+<script>
+const grid    = document.getElementById('grid');
+const tabbar  = document.getElementById('tabbar');
+const statusEl= document.getElementById('status');
+const layoutBtn = document.getElementById('layoutBtn');
+
+// A tab may be scoped to a subset of panels with ?panels=id1,id2. The panels themselves are
+// one set on one server; this only decides which of them this tab draws.
+const scopeParam = new URLSearchParams(location.search).get('panels');
+const scope = scopeParam ? scopeParam.split(',').map(s => s.trim()).filter(Boolean) : null;
+const inScope = p => !scope || scope.includes(p.id) || scope.includes(p.title);
+
+if (scope) {
+  document.getElementById('scopeNote').textContent =
+    scope.length === 1 ? '· one panel' : '· ' + scope.length + ' panels';
+  document.title = 'Epicycle — ' + scope.join(', ');
+}
+
+let known   = new Map();   // id -> {body, div}
+let tabs    = false;
+let active  = null;
+
+layoutBtn.onclick = () => {
+  tabs = !tabs;
+  grid.classList.toggle('tabs', tabs);
+  document.body.classList.toggle('tabmode', tabs);
+  layoutBtn.textContent = tabs ? 'tabs' : 'grid';
+  layoutBtn.classList.toggle('on', tabs);
+  render();
+};
+
+// Plotly's dark styling, applied to every panel so the user does not have to.
+const THEME = {
+  paper_bgcolor: '#161920',
+  plot_bgcolor:  '#161920',
+  font:   { color: '#d7dae0', size: 12 },
+  margin: { l: 60, r: 20, t: 36, b: 44 },
+  xaxis:  { gridcolor: '#232833', zerolinecolor: '#2c313b' },
+  yaxis:  { gridcolor: '#232833', zerolinecolor: '#2c313b' },
+  legend: { bgcolor: 'rgba(0,0,0,0)' },
+  polar:  { bgcolor: '#161920',
+            angularaxis: { gridcolor: '#232833', linecolor: '#2c313b' },
+            radialaxis:  { gridcolor: '#232833', linecolor: '#2c313b' } },
+  geo:    { bgcolor: '#161920', lakecolor: '#161920' }
+};
+
+function themed(layout) {
+  const out = Object.assign({}, THEME, layout || {});
+  for (const k of ['xaxis','yaxis','legend','polar','geo']) {
+    if (layout && layout[k]) out[k] = Object.assign({}, THEME[k] || {}, layout[k]);
+  }
+  if (typeof out.title === 'string') out.title = { text: out.title };
+  // A polar plot writes its 0 degree label above the plot area, which lands on the title
+  // at the default top margin.
+  if (out.polar) out.margin = Object.assign({}, out.margin, { t: 60 });
+  return out;
+}
+
+const CONFIG = { responsive: true, displaylogo: false };
+
+async function fetchJSON(name) {
+  const r = await fetch(name + '?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error(name + ': ' + r.status);
+  return r.json();
+}
+
+async function headMtime(name) {
+  // The server sends no ETag, so the payload itself is the change signal. Cheap enough:
+  // panels are small and this only runs on the poll interval.
+  const r = await fetch(name + '?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) return null;
+  return r.text();
+}
+
+function layoutGrid(n) {
+  if (tabs) return;
+  const cols = n <= 1 ? 1 : (n <= 4 ? 2 : 3);
+  grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+}
+
+function renderTabs(panels) {
+  tabbar.innerHTML = '';
+  if (!tabs) return;
+  panels.forEach(p => {
+    const b = document.createElement('button');
+    b.textContent = p.title;
+    if (p.id === active) b.classList.add('on');
+    b.onclick = () => { active = p.id; render(); };
+    tabbar.appendChild(b);
+  });
+}
+
+let lastPanels = [];
+
+function render() {
+  layoutGrid(lastPanels.length);
+  renderTabs(lastPanels);
+  if (tabs) {
+    if (!lastPanels.some(p => p.id === active)) active = lastPanels.length ? lastPanels[0].id : null;
+    lastPanels.forEach(p => {
+      const e = known.get(p.id);
+      if (e) e.div.classList.toggle('active', p.id === active);
+    });
+  }
+  for (const [, e] of known) if (!e.viewer) Plotly.Plots.resize(e.div);
+}
+
+// ── 3D views ──────────────────────────────────────────────────────────────────────────────
+// Cesium is fetched only when a scene panel first appears. A dashboard of plots should not
+// pull three megabytes it never uses.
+//
+// Everything inside makeViewer is carried over from the prototype unchanged: the inertial
+// camera lock, the day and night imagery blend, the sun and skybox settings. That took a
+// while to get right and is not worth rediscovering.
+
+const CESIUM_BASE = 'https://cdn.jsdelivr.net/npm/cesium@1.129/Build/Cesium/';
+let cesiumLoading = null;
+
+function loadCesium() {
+  if (window.Cesium) return Promise.resolve();
+  if (cesiumLoading) return cesiumLoading;
+  cesiumLoading = new Promise((resolve, reject) => {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = CESIUM_BASE + 'Widgets/widgets.css';
+    document.head.appendChild(css);
+    const js = document.createElement('script');
+    js.src = CESIUM_BASE + 'Cesium.js';
+    js.onload = () => { window.CESIUM_BASE_URL = CESIUM_BASE; resolve(); };
+    js.onerror = () => reject(new Error('could not load Cesium'));
+    document.head.appendChild(js);
+  });
+  return cesiumLoading;
+}
+
+function makeViewer(container) {
+  Cesium.Ion.defaultAccessToken = '';
+  const viewer = new Cesium.Viewer(container, {
+    baseLayer: false, baseLayerPicker: false, timeline: false, animation: false,
+    geocoder: false, homeButton: false, sceneModePicker: false,
+    navigationHelpButton: false, fullscreenButton: false, infoBox: false,
+    selectionIndicator: false,
+  });
+  viewer.cesiumWidget.creditContainer.style.display = 'none';
+
+  // Render at native physical pixels. Without this Chrome upscales the canvas by
+  // devicePixelRatio and everything softens.
+  viewer.useBrowserRecommendedResolution = false;
+  viewer.resolutionScale = window.devicePixelRatio || 1;
+
+  viewer.scene.sun.show                   = true;
+  viewer.scene.moon.show                  = false;
+  viewer.scene.skyBox.show                = false;   // TEMPORARY for brochure screenshots — revert to true
+  viewer.scene.skyAtmosphere.show         = false;
+  viewer.scene.globe.showGroundAtmosphere = false;
+  viewer.scene.backgroundColor            = Cesium.Color.BLACK;
+
+  // Day and night blending needs lighting on, so the globe shader knows where the sun is.
+  viewer.scene.globe.enableLighting = true;
+  (async () => {
+    const dayProvider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
+      'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer');
+    const day = viewer.imageryLayers.addImageryProvider(dayProvider);
+    day.dayAlpha   = 1.0;
+    day.nightAlpha = 0.35;      // faint fill on the night side so orbits stay visible
+
+    const nightProvider = await Cesium.SingleTileImageryProvider.fromUrl('./black_marble.jpg');
+    const night = viewer.imageryLayers.addImageryProvider(nightProvider);
+    night.dayAlpha              = 0.0;
+    night.nightAlpha            = 1.0;
+    night.brightness            = 3.0;
+    night.contrast              = 1.6;
+    night.colorToAlpha          = Cesium.Color.BLACK;
+    night.colorToAlphaThreshold = 0.2;
+  })();
+
+  // Lock the camera in the inertial frame, so orbits stay against the stars and the body
+  // rotates below.
+  viewer.scene.postUpdate.addEventListener((scene, time) => {
+    if (scene.mode !== Cesium.SceneMode.SCENE3D) return;
+    const R = Cesium.Transforms.computeIcrfToFixedMatrix(time);
+    if (!Cesium.defined(R)) return;
+    const cam = viewer.camera;
+    const offset = Cesium.Cartesian3.clone(cam.position);
+    cam.lookAtTransform(Cesium.Matrix4.fromRotationTranslation(R), offset);
+  });
+
+  return viewer;
+}
+
+function sceneControls(entry) {
+  const bar = document.createElement('div');
+  bar.className = 'scenebar';
+  const v = entry.viewer, clock = v.clock, vm = v.clockViewModel;
+
+  const mk = (label, fn) => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.onclick = fn;
+    bar.appendChild(b);
+    return b;
+  };
+
+  const play = mk('play', () => setPlaying(!clock.shouldAnimate));
+  function setPlaying(on) {
+    clock.shouldAnimate = on;
+    vm.shouldAnimate = on;
+    play.textContent = on ? 'pause' : 'play';
+    play.classList.toggle('on', on);
+  }
+
+  mk('reset', () => {
+    const t0 = clock.startTime.clone();
+    clock.currentTime = t0;
+    vm.currentTime = t0;
+  });
+
+  const readout = document.createElement('span');
+  readout.className = 'readout';
+  function setMultiplier(m) {
+    m = Math.max(1, Math.min(86400, m));
+    clock.multiplier = m;
+    vm.multiplier = m;
+    readout.textContent = m >= 3600 ? (m / 3600).toFixed(1) + 'x hr/s'
+                        : m >= 60   ? (m / 60).toFixed(1) + 'x min/s'
+                                    : m.toFixed(m >= 10 ? 0 : 1) + 'x';
+  }
+  entry.setMultiplier = setMultiplier;
+
+  mk('slower', ev => setMultiplier(clock.multiplier / (ev.shiftKey ? 5 : 2)));
+  mk('faster', ev => setMultiplier(clock.multiplier * (ev.shiftKey ? 5 : 2)));
+  bar.appendChild(readout);
+
+  const stars = mk('stars', () => {
+    const on = !v.scene.skyBox.show;
+    v.scene.skyBox.show = on;
+    stars.classList.toggle('on', on);
+  });
+  // TEMPORARY for brochure screenshots — restore this line with skyBox.show above
+  // stars.classList.add('on');
+
+  const epoch = document.createElement('span');
+  epoch.className = 'epoch';
+  bar.appendChild(epoch);
+  v.scene.preRender.addEventListener(() => {
+    epoch.textContent = Cesium.JulianDate.toIso8601(clock.currentTime, 0);
+  });
+
+  setMultiplier(clock.multiplier || 60);
+  return bar;
+}
+
+async function renderScene(entry, file, packets) {
+  await loadCesium();
+
+  if (!entry.viewer) {
+    entry.div.innerHTML = '';
+    const host = document.createElement('div');
+    host.className = 'scenehost';
+    entry.div.appendChild(host);
+    entry.viewer = makeViewer(host);
+    entry.div.appendChild(sceneControls(entry));
+  }
+
+  const v = entry.viewer;
+  if (entry.source) v.dataSources.remove(entry.source);
+  entry.source = await Cesium.CzmlDataSource.load(file + '?t=' + Date.now());
+  v.dataSources.add(entry.source);
+
+  // The clock span comes from the CZML document packet.
+  const doc = packets.find(p => p.id === 'document');
+  if (doc && doc.clock) {
+    const parts = doc.clock.interval.split('/');
+    v.clock.startTime   = Cesium.JulianDate.fromIso8601(parts[0]);
+    v.clock.stopTime    = Cesium.JulianDate.fromIso8601(parts[1]);
+    v.clock.currentTime = Cesium.JulianDate.fromIso8601(doc.clock.currentTime);
+    v.clockViewModel.startTime   = v.clock.startTime;
+    v.clockViewModel.stopTime    = v.clock.stopTime;
+    v.clockViewModel.currentTime = v.clock.currentTime;
+    if (entry.setMultiplier) entry.setMultiplier(doc.clock.multiplier || 60);
+  }
+
+  // Frame the whole trajectory: four times the largest position magnitude.
+  let maxR = 0;
+  for (const packet of packets) {
+    const cart = packet.position && packet.position.cartesian;
+    if (!Array.isArray(cart) || cart.length % 4 !== 0) continue;
+    for (let i = 0; i < cart.length; i += 4) {
+      const r = Math.hypot(cart[i + 1], cart[i + 2], cart[i + 3]);
+      if (r > maxR) maxR = r;
+    }
+  }
+  if (maxR > 0) {
+    const d = maxR * 4.0;
+    v.camera.setView({
+      destination: new Cesium.Cartesian3(d * 0.7, -d * 0.7, d * 0.5),
+      orientation: {
+        direction: Cesium.Cartesian3.negate(
+          new Cesium.Cartesian3(0.7, -0.7, 0.5), new Cesium.Cartesian3()),
+        up: Cesium.Cartesian3.UNIT_Z,
+      },
+    });
+  }
+}
+
+// ── Narration ─────────────────────────────────────────────────────────────────────────────
+// One caption at a time, read from narration.json. Text that extends what is already shown is
+// typed on from where it left off; text that replaces it is typed from the start.
+
+const nEl = {
+  box: document.getElementById('narration'), title: document.getElementById('nTitle'),
+  sub: document.getElementById('nSub'), text: document.getElementById('nText'),
+  facts: document.getElementById('nFacts'), status: document.getElementById('nStatus'),
+  code: document.getElementById('nCode'), codeWrap: document.getElementById('nCodeWrap'),
+};
+let nSeq = -1, nShown = '', nTarget = '', nTimer = null;
+
+// A tab scoped to some panels reads the caption kept for exactly those panels, so it keeps its
+// own words after the script moves on. The name is built the way narration_file builds it in
+// Julia: panel ids, sorted, joined with '~'. An unscoped tab follows the latest caption.
+const panelId = s => s.replace(/[^A-Za-z0-9_\-]/g, '_');
+const captionFile = scope
+  ? 'narration_' + scope.map(panelId).sort().join('~') + '.json'
+  : 'narration.json';
+
+const escapeHtml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+// Enough Julia to read comfortably: comments, strings, symbols, numbers, keywords, calls and
+// keyword arguments. Tokens are matched on the raw source and escaped one at a time.
+const JL_TOKENS = /(#.*)|("(?:\\.|[^"\\])*")|(:[A-Za-z_][A-Za-z0-9_!]*)|(\b\d+(?:\.\d+)?(?:[eE][-+]?\d+)?\b)|(\b(?:function|end|using|import|for|in|if|else|elseif|do|return|const|struct|begin|let|while|true|false|nothing)\b)|([A-Za-z_][A-Za-z0-9_!]*(?=\())|([A-Za-z_][A-Za-z0-9_]*(?=\s*=[^=]))/g;
+
+function highlightJulia(src) {
+  let out = '', last = 0, m;
+  JL_TOKENS.lastIndex = 0;
+  while ((m = JL_TOKENS.exec(src)) !== null) {
+    if (m[0].length === 0) { JL_TOKENS.lastIndex++; continue; }
+    out += escapeHtml(src.slice(last, m.index));
+    const cls = m[1] ? 'com' : m[2] ? 'str' : m[3] ? 'sym' : m[4] ? 'num'
+              : m[5] ? 'kw' : m[6] ? 'fn' : 'kwa';
+    out += '<span class="' + cls + '">' + escapeHtml(m[0]) + '</span>';
+    last = m.index + m[0].length;
+  }
+  return out + escapeHtml(src.slice(last));
+}
+
+function typeText() {
+  if (nShown === nTarget) { nEl.text.innerHTML = escapeHtml(nShown); nTimer = null; return; }
+  const step = Math.max(1, Math.ceil((nTarget.length - nShown.length) / 60));
+  nShown = nTarget.slice(0, nShown.length + step);
+  nEl.text.innerHTML = escapeHtml(nShown) + '<span class="cursor">&nbsp;</span>';
+  nTimer = setTimeout(typeText, 16);
+}
+
+async function tickNarration() {
+  let n;
+  try { n = await fetchJSON(captionFile); } catch (e) { return; }
+  if (!n || n.seq === nSeq) return;
+  nSeq = n.seq;
+
+  const has = n.title || n.text || n.code || (n.facts && n.facts.length);
+  if (!has) { nEl.box.classList.remove('show'); nShown = nTarget = ''; return; }
+
+  const newTitle = nEl.title.textContent !== (n.title || '');
+  if (!nEl.box.classList.contains('show') || newTitle) {
+    nEl.box.classList.remove('show'); void nEl.box.offsetWidth;   // restart the entrance
+    nEl.box.classList.add('show');
+  }
+  nEl.title.textContent = n.title || '';
+  nEl.sub.textContent = n.subtitle || '';
+  nEl.status.textContent = n.status || '';
+
+  nEl.facts.innerHTML = '';
+  for (const [k, v] of (n.facts || [])) {
+    nEl.facts.insertAdjacentHTML('beforeend',
+      '<span class="k">' + escapeHtml(k) + '</span><span class="v">' + escapeHtml(v) + '</span>');
+  }
+
+  const code = n.code || '';
+  nEl.box.classList.toggle('nocode', !code);
+  nEl.codeWrap.style.display = code ? '' : 'none';
+  if (nEl.code.dataset.src !== code) {
+    nEl.code.dataset.src = code;
+    nEl.code.innerHTML = highlightJulia(code);
+  }
+
+  const text = n.text || '';
+  if (!text.startsWith(nShown)) nShown = '';
+  nTarget = text;
+  if (!nTimer) typeText();
+}
+
+async function tick() {
+  await tickNarration();
+  try {
+    const manifest = await fetchJSON('dashboard.json');
+    const panels = (manifest.panels || []).filter(inScope);
+    lastPanels = panels;
+
+    const empty = document.getElementById('empty');
+    if (empty && panels.length) empty.remove();
+
+    // Remove panels that went away.
+    for (const id of [...known.keys()]) {
+      if (!panels.some(p => p.id === id)) {
+        known.get(id).div.remove();
+        known.delete(id);
+      }
+    }
+
+    for (const p of panels) {
+      let entry = known.get(p.id);
+      if (!entry) {
+        const div = document.createElement('div');
+        div.className = 'panel';
+        div.id = 'panel-' + p.id;
+        grid.appendChild(div);
+        entry = { body: null, div };
+        known.set(p.id, entry);
+      }
+
+      const file = p.file || ('panel_' + p.id + '.json');
+      const body = await headMtime(file);
+      if (body === null || body === entry.body) continue;
+      entry.body = body;
+
+      // Draw the eye to what just changed. A panel's first appearance counts, since that is when
+      // a narrated step has usually just produced it.
+      entry.div.classList.add('fresh');
+      clearTimeout(entry.freshTimer);
+      entry.freshTimer = setTimeout(() => entry.div.classList.remove('fresh'), 3500);
+      if (!tabs) entry.div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      if (p.kind === 'scene') {
+        await renderScene(entry, file, JSON.parse(body));
+        continue;
+      }
+
+      const fig = JSON.parse(body);
+      // react rather than newPlot: it updates in place and keeps the zoom and pan the user
+      // set, which on a live plot is the difference between useful and unusable.
+      await Plotly.react(entry.div, fig.data || [], themed(fig.layout), CONFIG);
+    }
+
+    render();
+    statusEl.textContent = panels.length
+      ? panels.length + (panels.length === 1 ? ' panel' : ' panels')
+      : (scope ? 'no panel here yet named ' + scope.join(' or ') : 'waiting for data…');
+  } catch (e) {
+    statusEl.textContent = 'disconnected — is Julia still running?';
+  }
+}
+
+tick();
+setInterval(tick, 400);
+</script>
+</body>
+</html>

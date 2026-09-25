@@ -45,3 +45,19 @@ AstroProp/lcov.info
 TaskList.xlsx
 
 ci/_smoke_full.log
+
+# Local scratch and run output, never part of a package
+lcov.info
+*.log
+~$*
+Project.toml.disabled
+_testlog*.txt
+est_phase_out.txt
+out_seq*.txt
+AstroProp/_fix_afm.jl
+AstroProp/_install_afm_master.jl
+AstroProp/test/_smoke_load.jl
+
+# Literate renders one page per script in Epicycle/examples/ at doc-build time, and the build
+# empties this directory first. The scripts are the source; these are output.
+Epicycle/docs/src/examples/

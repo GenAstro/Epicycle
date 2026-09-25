@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using LinearAlgebra
 using AstroFrames
 using AstroProp
@@ -5,6 +8,9 @@ using AstroEpochs
 using AstroStates
 using AstroManeuvers
 using AstroSolve
+using AstroSolve: SequenceManager, apply_event, func_eval, get_fun_values, get_var_lower_bounds,
+    get_var_scales, get_var_shifts, get_var_upper_bounds, get_var_values, reset_stateful_structs!,
+    set_var_values, solver_fun!
 using AstroUniverse
 using Test
 
@@ -19,11 +25,8 @@ pm_grav = PointMassGravity(earth,(moon,sun))
 forces = ForceModel(pm_grav)
 integ = IntegratorConfig(DP8(); abstol = 1e-11, reltol = 1e-11, dt = 4000)
 
-# Define which spacecraft to propagate and which force model to use
-dynsys = DynSys(
-          forces = forces, 
-          spacecraft = [sat1]
-          )
+# The propagator: forces and integrator
+prop = OrbitPropagator(forces, integ)
 
 # Create maneuver models for the hohmann transfer
 toi = ImpulsiveManeuver(
@@ -65,7 +68,7 @@ toi_fun() = maneuver!(sat1, toi)
 toi_event = Event(name = "toi", event = toi_fun, vars = [var_toi])
 
 # Create the prop to apopasis event
-prop_apo_fun() = propagate!(dynsys, integ, StopAtApoapsis(sat1))
+prop_apo_fun() = propagate!(prop, sat1, StopAt(sat1, PosDotVel(), 0.0; direction = -1))
 prop_event = Event(name = "prop_apo", event = prop_apo_fun)
 
 # Create the TOI event. 
@@ -110,20 +113,10 @@ end
 end
 
 pos_target = 45000.0
-pos_con = Constraint(
-    calc = OrbitCalc(sat1, PosMag()),
-    lower_bounds= [pos_target],
-    upper_bounds=[pos_target],
-    scale = [1.0],
-)
+pos_con = Constraint(position_magnitude, sat1; equals = pos_target)
 
 vel_target = sqrt(earth.mu / pos_target)
-vel_con = Constraint(
-    calc = OrbitCalc(sat1, VelMag()),
-    lower_bounds = [vel_target],
-    upper_bounds = [vel_target],
-    scale = [1.0],
-)
+vel_con = Constraint(velocity_magnitude, sat1; equals = vel_target)
 
 # Create the MOI Event
 toi_fun() = maneuver!(sat1, toi) 
@@ -133,7 +126,7 @@ toi_event = Event(name = "toi",
                   funcs = [])
 
 # Create the prop to apopasis event
-prop_apo_fun() = propagate!(dynsys, integ, StopAtApoapsis(sat1))
+prop_apo_fun() = propagate!(prop, sat1, StopAt(sat1, PosDotVel(), 0.0; direction = -1))
 prop_event = Event(name = "prop_apo", event = prop_apo_fun)
 
 # Create the TOI event. 
@@ -202,7 +195,7 @@ moi2 = ImpulsiveManeuver(
 
     # Now apply the same sequence to sat2 directly
     maneuver!(sat2, toi2)
-    propagate!(dynsys2, integ, StopAtApoapsis(sat2))
+    propagate!(prop2, sat2, StopAt(sat2, PosDotVel(), 0.0; direction = -1))
     maneuver!(sat2, moi2)
     state_sat2 = to_posvel(sat2)
 

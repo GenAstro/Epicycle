@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 #
 # Benchmark: same LEO + Exponential-drag prop as bench_prop_exponential.jl, but propagated
 # until the Brouwer mean SMA decays to 6708 km. The MeanSMA callback is evaluated at every
@@ -10,14 +10,14 @@
 # workload, where the trigger event determines the propagation length.
 #
 # Run manually (not wired into runtests.jl):
-#   using Pkg; Pkg.activate("c:/Users/steve/Dev/epicycle-dev")
+#   using Pkg; Pkg.activate("<environment>")
 #   include(joinpath(pkgdir(AstroProp), "test", "bench_prop_callback.jl"))
 
 using AstroProp
 using AstroModels, AstroStates, AstroEpochs
 using AstroCallbacks: MeanSMA
 using AstroUniverse: earth
-using OrdinaryDiffEq: Vern9
+using OrdinaryDiffEqVerner: Vern9
 using BenchmarkTools
 
 const MEAN_SMA_TARGET = 6708.0    # km, decay trigger

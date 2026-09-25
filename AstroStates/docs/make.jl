@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: MIT
+
 using AstroStates
 using Documenter
 
@@ -17,7 +20,7 @@ makedocs(;
     pages=[
         "index.md",
     ],
-    warnonly=true,         # Just warn, don't error
+    warnonly=[:missing_docs, :cross_references],   # doctests and examples are fatal
     checkdocs=:none        # Skip docstring completeness checks
 )
 

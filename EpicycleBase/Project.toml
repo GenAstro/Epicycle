@@ -1,13 +1,14 @@
 name = "EpicycleBase"
 uuid = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [compat]
 julia = "1.10"
 
 [extras]
+InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Test", "InteractiveUtils"]

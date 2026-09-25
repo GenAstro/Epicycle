@@ -1,22 +1,28 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 """
     report_sequence(seq::Sequence)
 
-Generate a comprehensive report summarizing the trajectory sequence configuration.
-
-This function creates a human-readable summary of the sequence structure showing:
-- Sequence overview (total events, variables, constraints)
-- Event details with dependencies and execution order
-- Variable information (names, sizes, bounds)
-- Constraint summary (types, sizes, bounds)
+Print the execution order, variables, constraints, and stateful objects in a trajectory sequence.
 
 # Arguments
-- `seq::Sequence`: Trajectory sequence to analyze
+- `seq::Sequence`: Trajectory sequence to report.
+
+# Notes
+Events are shown in execution order. Variable and constraint counts include
+their scalar components, and bounds are shown in solver units.
 
 # Returns
-- Nothing (prints directly to stdout for better formatting)
+`nothing`. The report is written to standard output.
+
+# Example
+<!-- doc-fragment -->
+```julia
+report_sequence(seq)
+```
 """
 function report_sequence(seq::Sequence)
-    # Create sequence manager to get ordered information
     sm = SequenceManager(seq)
     
     println()
@@ -24,7 +30,6 @@ function report_sequence(seq::Sequence)
     println("="^50)
     println()
     
-    # Overview
     println("Sequence Overview:")
     println("- Total Events: $(length(sm.sorted_events))")
     total_vars = sum(v.numvars for v in sm.ordered_vars; init=0)
@@ -32,7 +37,6 @@ function report_sequence(seq::Sequence)
     total_constraints = sum(sm.fun_sizes; init=0)
     println("- Constraint Objects: $(length(sm.ordered_funcs)) ($(total_constraints) constraint functions)")
     
-    # Execution order summary
     event_names = ["\"$(event.name)\"" for event in sm.sorted_events]
     if length(event_names) <= 3
         order_str = join(event_names, " → ")
@@ -42,7 +46,6 @@ function report_sequence(seq::Sequence)
     println("- Execution Order: [$order_str]")
     println()
     
-    # Event Details
     println("EVENT DETAILS:")
     println("-"^20)
     println()
@@ -50,7 +53,6 @@ function report_sequence(seq::Sequence)
     for (i, event) in enumerate(sm.sorted_events)
         println("Event $i: \"$(event.name)\"")
         
-        # Variables section
         if !isempty(event.vars)
             total_event_vars = sum(v.numvars for v in event.vars; init=0)
             println("├─ Variable Objects ($(length(event.vars))): $(total_event_vars) optimization variables")
@@ -58,11 +60,9 @@ function report_sequence(seq::Sequence)
                 is_last_var = (j == length(event.vars))
                 prefix = is_last_var && isempty(event.funcs) ? "│  └─ " : "│  ├─ "
                 
-                # Extract variable information
                 var_desc = get_enhanced_variable_description(var)
                 println("$prefix$var_desc")
                 
-                # Show component breakdown for multi-component variables
                 if var.numvars > 1
                     show_variable_components(var, is_last_var && isempty(event.funcs))
                 end
@@ -71,7 +71,6 @@ function report_sequence(seq::Sequence)
             println("├─ Variable Objects (0): None")
         end
         
-        # Constraints section
         if !isempty(event.funcs)
             total_event_constraints = sum(f.numvars for f in event.funcs; init=0)
             println("└─ Constraint Objects ($(length(event.funcs))): $(total_event_constraints) constraint functions")
@@ -79,11 +78,9 @@ function report_sequence(seq::Sequence)
                 is_last = (j == length(event.funcs))
                 prefix = is_last ? "   └─ " : "   ├─ "
                 
-                # Extract constraint information
                 constraint_desc = get_enhanced_constraint_description(func)
                 println("$prefix$constraint_desc")
                 
-                # Show component breakdown for multi-component constraints
                 if func.numvars > 1
                     show_constraint_components(func, is_last)
                 end
@@ -99,12 +96,10 @@ function report_sequence(seq::Sequence)
         println()
     end
     
-    # Stateful Objects Summary
     if !isempty(sm.stateful_structs)
         println("STATEFUL OBJECTS:")
         println("-"^20)
         
-        # Group by type for cleaner display
         type_counts = Dict{String, Int}()
         for obj in sm.stateful_structs
             type_name = get_simplified_type_name(obj)
@@ -170,7 +165,7 @@ function get_enhanced_constraint_description(func)
     
     # Get bounds description for single component
     if func.numvars == 1
-        bounds_desc = get_bounds_description(func.lower_bounds[1], func.upper_bounds[1])
+        bounds_desc = get_bounds_description(func.lower_bound[1], func.upper_bound[1])
         return "$calc_desc $bounds_desc"
     else
         return "$calc_desc ($(func.numvars) components)"
@@ -191,6 +186,15 @@ function get_calc_description(calc)
         # Try to extract variable type from calc.var field (more reliable)
         calc_fields = fieldnames(typeof(calc))
         
+        # A quantity-form spec holds a `Calc`, which names the quantity by its
+        # function rather than by a variable type. Report the domain name a
+        # reader recognises, and the function's own name when none is declared.
+        if :f in calc_fields
+            quantity = getfield(calc, :f)
+            declared = EpicycleBase.label(quantity)
+            return declared == "quantity" ? string(nameof(quantity)) : declared
+        end
+
         if :var in calc_fields
             var_obj = getfield(calc, :var)
             var_name = string(typeof(var_obj))
@@ -279,7 +283,7 @@ function show_constraint_components(func, is_last_constraint::Bool)
     for i in 1:func.numvars
         is_last_component = (i == func.numvars)
         comp_prefix = is_last_component ? "└─ " : "├─ "
-        bounds_desc = get_bounds_description(func.lower_bounds[i], func.upper_bounds[i])
+        bounds_desc = get_bounds_description(func.lower_bound[i], func.upper_bound[i])
         println("$base_prefix$comp_prefix Component $i: $bounds_desc")
     end
 end
@@ -312,6 +316,11 @@ from `solve_trajectory!()`.
 
 # Returns
 - Nothing (prints directly to stdout for better formatting)
+# Example
+<!-- doc-fragment -->
+```julia
+report_solution(seq)
+```
 """
 function report_solution(seq::Sequence, result)
     # Create sequence manager to get ordered information
@@ -430,8 +439,8 @@ function report_solution(seq::Sequence, result)
                 if size == 1
                     # Single constraint
                     achieved = constraint_vals[1]
-                    target_lower = constraint.lower_bounds[1]
-                    target_upper = constraint.upper_bounds[1]
+                    target_lower = constraint.lower_bound[1]
+                    target_upper = constraint.upper_bound[1]
                     
                     # Show achieved value and target bounds
                     if abs(target_lower - target_upper) < 1e-12
@@ -446,8 +455,8 @@ function report_solution(seq::Sequence, result)
                     println("  $calc_desc ($size components):")
                     for i in 1:size
                         achieved = constraint_vals[i]
-                        target_lower = constraint.lower_bounds[i]
-                        target_upper = constraint.upper_bounds[i]
+                        target_lower = constraint.lower_bound[i]
+                        target_upper = constraint.upper_bound[i]
                         
                         if abs(target_lower - target_upper) < 1e-12
                             target_str = "$(round(target_upper, digits=6))"
@@ -474,25 +483,18 @@ end
 
 Create mapping from events to their constraints for reporting.
 """
+# Each event with its constraints, in the order the sequence runs them, which is the order the
+# solver stacks their values in. A Dict was returned here until 2026-09-20, and iterating it gave
+# hash order: the report then read values off the constraint vector in one order while naming them
+# in another, so a GEO transfer printed "Inclination: 85000.0 (target: 0.034907)".
 function get_event_constraint_mapping(sm::SequenceManager)
-    event_constraints = Dict{String, Vector{Tuple{Any, Int}}}()
-    
-    # Initialize all events with empty constraint lists
+    event_constraints = Pair{String, Vector{Tuple{Any, Int}}}[]
     for event in sm.sorted_events
-        event_constraints[event.name] = Tuple{Any, Int}[]
+        push!(event_constraints,
+              event.name => [(constraint, constraint.numvars) for constraint in event.funcs])
     end
-    
-    # Map constraints to their events
-    constraint_idx = 1
-    for event in sm.sorted_events
-        for constraint in event.funcs
-            push!(event_constraints[event.name], (constraint, constraint.numvars))
-        end
-    end
-    
     return event_constraints
 end
-
 
 
 

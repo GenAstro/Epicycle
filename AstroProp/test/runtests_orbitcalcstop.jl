@@ -1,4 +1,10 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using Test
+import SciMLBase
+using OrdinaryDiffEqTsit5: Tsit5
+using SciMLBase: ReturnCode
 using LinearAlgebra
 using AstroEpochs, AstroStates, AstroFrames, AstroUniverse
 using AstroModels: Spacecraft, to_posvel
@@ -11,7 +17,7 @@ make_sat() = Spacecraft(
     state = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
     time  = Time("2015-09-21T12:23:12", TAI(), ISOT()),
     name  = "SC-StopAt",
-    coord_sys = CoordinateSystem(earth, ICRFAxes()),
+    coord_sys = CoordinateSystem(earth, ICRF()),
 )
 
 # Forces + integrator (same for all tests)
@@ -254,7 +260,7 @@ end
         sat_earth = Spacecraft(
             state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
             time = Time("2015-01-01T00:00:00", TAI(), ISOT()),
-            coord_sys = CoordinateSystem(earth, ICRFAxes()),
+            coord_sys = CoordinateSystem(earth, ICRF()),
         )
         t_start = deepcopy(sat_earth.time)
         
@@ -275,7 +281,7 @@ end
         sat_mars = Spacecraft(
             state = CartesianState([4000.0, 0.0, 0.0, 0.0, 3.0, 0.0]),
             time = Time("2020-06-01T12:00:00", TAI(), ISOT()),
-            coord_sys = CoordinateSystem(mars, ICRFAxes()),
+            coord_sys = CoordinateSystem(mars, ICRF()),
         )
         t_start = deepcopy(sat_mars.time)
         
@@ -383,6 +389,34 @@ end
         @test res_tight ≤ res_loose  # tighter tol should not be worse than looser
     end
 
+end
+
+# The quantity form: `StopAt(quantity, subject, deps...; equals, direction)`, the same shape as a
+# Constraint. Truth: the stop is evaluated in the coordinate system named, so at an ecliptic node
+# the ecliptic z is zero and the equatorial z is not. A stop that ignored the frame would land at
+# the equatorial node instead. Periapsis by quantity must also land where periapsis by tag does.
+using AstroCallbacks: position_z, position_dot_velocity, PosDotVel
+
+@testset "StopAt on a quantity stops in the coordinate system it names" begin
+    # A 45° orbit whose equatorial node is on the y axis. Starting on the x axis would not do: that
+    # is the equinox line, which both planes contain, so both nodes would lie on it.
+    sat = Spacecraft(state = CartesianState([0.0, 7000.0, 0.0, -5.3, 0.0, 5.3]),
+                     time  = Time("2015-09-21T12:23:12", TAI(), ISOT()))
+    propagate!(prop, sat, StopAt(position_z, sat, EarthMJ2000Ec; equals = 0.0, direction = 1))
+    @test abs(position_z(sat, EarthMJ2000Ec)) < POS_TOL
+    @test abs(position_z(sat, EarthMJ2000Eq)) > 100.0
+
+    # The same event through the quantity form and the tag form.
+    a = Spacecraft(state = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
+                   time  = Time("2015-09-21T12:23:12", TAI(), ISOT()))
+    b = deepcopy(a)
+    propagate!(prop, a, StopAt(position_dot_velocity, a; equals = 0.0, direction = 1))
+    propagate!(prop, b, StopAt(b, PosDotVel(), 0.0; direction = +1))
+    @test to_posvel(a) ≈ to_posvel(b) atol = POS_TOL
+
+    # The detection keywords reach the stop, as they do in the tag form.
+    s = StopAt(position_dot_velocity, a; equals = 0.0, detection = :continuous, rootfind_tol = 1e-6)
+    @test s.detection === :continuous && s.rootfind_tol == 1e-6
 end
 
 nothing

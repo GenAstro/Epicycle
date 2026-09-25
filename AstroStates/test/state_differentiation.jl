@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: MIT
+
 
 # marker_ad_permutations.jl (add/include in your test suite)
 

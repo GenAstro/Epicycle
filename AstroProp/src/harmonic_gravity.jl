@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 #
 # Spherical-harmonic gravity — API type plus the extension seam pluggable geopotential fields
 # implement. Concrete fields (e.g. Zonal, EGM96, EGM2008) live in their own files.
@@ -85,7 +85,7 @@ struct HarmonicGravity{MT<:AbstractGeopotential, GD, EoT} <: OrbitODE
     model::MT
     data::GD
     eop_data::EoT
-    dependencies::Vector{Type{<:AbstractVar}}
+    dependencies::Vector{Type{<:AbstractVarTag}}
     num_funs::Int
 end
 
@@ -108,7 +108,7 @@ function HarmonicGravity(body::CelestialBody; degree::Int, order::Int,
     data = geopotential_data(model, body, degree, order)
     eop  = fetch_iers_eop()
     return HarmonicGravity(body, degree, order, model, data, eop,
-                           Type{<:AbstractVar}[PosVel], 6)
+                           Type{<:AbstractVarTag}[PosVel], 6)
 end
 
 function accel_eval!(force::HarmonicGravity, t::Time, x̄::Vector, x̄̇::Vector,

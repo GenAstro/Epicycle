@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 # Solar radiation pressure — open, Epicycle interface vs GMAT.
 # Two-body (point-mass Earth) + cannonball SRP, near-GEO, 1 day. Dependency-light (@assert + println).
 #
@@ -12,7 +15,7 @@ using Test
 using AstroProp
 using AstroModels, AstroStates, AstroEpochs
 using AstroUniverse: earth
-using OrdinaryDiffEq: Vern9
+using OrdinaryDiffEqVerner: Vern9
 using LinearAlgebra: norm
 earth.mu = 398600.4415
 

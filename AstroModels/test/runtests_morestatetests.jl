@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using Test
 using LinearAlgebra
 
@@ -14,7 +17,7 @@ using LinearAlgebra
     for (initial_state, expected_type) in state_types
         sc = Spacecraft(
             state = initial_state,
-            coord_sys = CoordinateSystem(earth, ICRFAxes())
+            coord_sys = CoordinateSystem(earth, ICRF())
         )
         
         # Get original posvel
@@ -49,7 +52,7 @@ end
     # Start with Keplerian
     sc = Spacecraft(
         state = KeplerianState(7000.0, 0.01, 0.2, 0.3, 0.4, 0.5),
-        coord_sys = CoordinateSystem(earth, ICRFAxes())
+        coord_sys = CoordinateSystem(earth, ICRF())
     )
     
     # Convert through Cartesian several times
@@ -77,21 +80,21 @@ end
     # Test error when μ is required but coord system origin is not a celestial body
     # Use a spacecraft as the origin (has no mu field)
     origin_sc = Spacecraft(state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]))
-    coords_no_mu = CoordinateSystem(origin_sc, ICRFAxes())
+    coords_no_mu = CoordinateSystem(origin_sc, ICRF())
     
     # to_posvel: Keplerian -> Cartesian requires μ
     sc_kep = Spacecraft(
         state = KeplerianState(7000.0, 0.01, 0.1, 0.2, 0.3, 0.4),
         coord_sys = coords_no_mu
     )
-    @test_throws ErrorException to_posvel(sc_kep)
+    @test_throws ArgumentError to_posvel(sc_kep)
     
     # set_posvel!: Cartesian -> Keplerian requires μ
     sc_kep2 = Spacecraft(
         state = KeplerianState(7000.0, 0.01, 0.1, 0.2, 0.3, 0.4),
         coord_sys = coords_no_mu
     )
-    @test_throws ErrorException set_posvel!(sc_kep2, [7100.0, 50.0, 100.0, 0.3, 7.6, 0.2])
+    @test_throws ArgumentError set_posvel!(sc_kep2, [7100.0, 50.0, 100.0, 0.3, 7.6, 0.2])
 end
 
 # Test numeric type preservation
@@ -100,7 +103,7 @@ end
     sc = Spacecraft(
         state = KeplerianState(7000.0, 0.001, 0.1, 0.2, 0.3, 0.4),
         mass = 1500.0,
-        coord_sys = CoordinateSystem(earth, ICRFAxes())
+        coord_sys = CoordinateSystem(earth, ICRF())
     )
     
     new_pv = [7100.0, 50.0, 100.0, 0.3, 7.6, 0.2]
@@ -108,5 +111,5 @@ end
     
     # State should still be Float64
     @test eltype(sc.state.state) === Float64
-    @test typeof(sc.mass) === Float64
+    @test typeof(total_mass(sc)) === Float64
 end

@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 
 
 
@@ -8,6 +11,7 @@ using AstroEpochs
 using AstroStates
 using AstroManeuvers
 using AstroSolve
+using AstroSolve: get_fun_values, solver_fun!
 using AstroUniverse
 
 include("config_hohmann_transfer.jl")

@@ -1,10 +1,15 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 
 
 
 using Test
 using SNOW
-using OrdinaryDiffEq
+using OrdinaryDiffEqHighOrderRK: DP8
 using LinearAlgebra
+using AstroSolve
+using AstroSolve: SequenceManager, get_var_values, solver_fun!
 
 @testset "GEO Transfer Sequence vs GMAT" begin
 
@@ -70,36 +75,16 @@ var_moi_v = SolverVariable(
 # Define constraints matching GMAT targets
 
 # Target 1: Apoapsis radius = 85,000 km after TOI
-apogee_radius_con = Constraint(
-    calc = OrbitCalc(sat, PosMag()),
-    lower_bounds = [85000.0],
-    upper_bounds = [85000.0],
-    scale = [1.0],
-)
+apogee_radius_con = Constraint(position_magnitude, sat; equals = 85000.0)
 
 # Target 2a: Inclination = 2° after MCC
-inclination_con = Constraint(
-    calc = OrbitCalc(sat, Inc()),   
-    lower_bounds = [deg2rad(2.0)],
-    upper_bounds = [deg2rad(2.0)], 
-    scale = [1.0],
-)
+inclination_con = Constraint(inclination, sat; equals = deg2rad(2.0))
 
 # Target 2b: Perigee radius = 42,195 km after MCC
-perigee_radius_con = Constraint(
-    calc = OrbitCalc(sat, PosMag()),
-    lower_bounds = [42195.0],
-    upper_bounds = [42195.0],
-    scale = [1.0],
-)
+perigee_radius_con = Constraint(position_magnitude, sat; equals = 42195.0)
 
 # Target 3: Final SMA = 42,166.90 km (GEO) after MOI
-final_sma_con = Constraint(
-    calc = OrbitCalc(sat, SMA()),
-    lower_bounds = [42166.90],
-    upper_bounds = [42166.90],
-    scale = [1.0],
-)
+final_sma_con = Constraint(semi_major_axis, sat; equals = 42166.90)
 
 # Event 1: Propagate to Z=0 crossing (equatorial plane)
 prop_to_z_crossing_1_fun() = propagate!(prop, sat, StopAt(sat, PosZ(), 0.0))

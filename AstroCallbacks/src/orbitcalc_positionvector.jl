@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 """
     PositionVector <: AbstractOrbitVar
@@ -8,7 +8,7 @@ Tag struct indicating Cartesian position vector (x, y, z) of a spacecraft.
 
 Examples
 ```julia
-# sc::Spacecraft — replace with your Spacecraft instance
+# `sc` is a `Spacecraft`
 posvec_calc = OrbitCalc(Spacecraft(), PositionVector())
 r = get_calc(posvec_calc)
 set_calc!(posvec_calc, [7000.0, 300.0, 0.0])

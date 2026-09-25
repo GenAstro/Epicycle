@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 # ============================================================================
 # Time-based stopping condition types
@@ -81,7 +81,7 @@ Generic stopping condition for orbital propagation based on calculated quantitie
 
 # Fields
 - `subject::S`: The object to evaluate (e.g., `Spacecraft`, `Maneuver`, `CelestialBody`)
-- `var::V`: The calculation variable to monitor (e.g., `PosX()`, `VelMag()`, `PropDurationSeconds()`)
+- `var::V`: What is monitored: a `Calc`, which the quantity form builds; a calculation tag such as `PosX()`; or a time such as `PropDurationSeconds()`
 - `target::T`: Target value to stop at (numeric value or vector matching calc output)
 - `direction::Int`: Event crossing direction for state-based stops (-1: decreasing, 0: any, +1: increasing)
   * For time-based stops (PropDuration*), must be 0 (event crossing not applicable)
@@ -107,26 +107,26 @@ Generic stopping condition for orbital propagation based on calculated quantitie
 The `direction` field is for **event crossing direction** (state-based stops only).
 For **time integration direction** (forward/backward), use the `direction` keyword in `propagate!()`.
 
-Both `:discrete` and `:continuous` deliver the crossing to the same precision — they only
-differ in how they poll for it. `sol.u[end]` and `sc.state` land at the interpolated root
+Both `:discrete` and `:continuous` deliver the crossing to the same precision and differ only
+in how they poll for it. `sol.u[end]` and `sc.state` land at the interpolated root
 under either mode; `sc.history`'s terminal entry is the root state.
 
 # Examples
 ```julia
 # Fast path (default): DiscreteCallback + interpolant bisection
-stop_cond = StopAt(sc, PosZ(), 0.0; direction=+1)
+stop_cond = StopAt(position_z, sc; equals = 0.0, direction = 1)
 
 # Escape hatch for a signal that oscillates faster than one Vern9 step
-stop_fast = StopAt(sc, SomeFastOsc(), 0.0; detection=:continuous)
+stop_fast = StopAt(my_fast_signal, sc; equals = 0.0, detection = :continuous)
 
 # Loosen the bisection tolerance if 1e-9 is tighter than needed
-stop_loose = StopAt(sc, PosDotVel(), 0.0; direction=-1, rootfind_tol=1e-6)
+stop_loose = StopAt(position_dot_velocity, sc; equals = 0.0, direction = -1, rootfind_tol = 1e-6)
 
 # Time-based stops don't use root-finding at all; both fields are inert.
 stop_time = StopAt(sc, PropDurationSeconds(), 3600.0)
 ```
 """
-struct StopAt{S,V<:AbstractCalcVariable,T}
+struct StopAt{S,V,T}
     subject::S
     var::V
     target::T
@@ -140,7 +140,8 @@ function StopAt(subject, var, target;
                 direction::Int = 0,
                 detection::Symbol = :discrete,
                 rootfind_tol::Real = 1e-9)
-    var isa AbstractCalcVariable || error("var must be <: AbstractCalcVariable, got $(typeof(var))")
+    var isa AbstractCalcVariable || var isa AstroCallbacks.Calc ||
+        error("var must be <: AbstractCalcVariable or a Calc, got $(typeof(var))")
 
     detection in (:discrete, :continuous) ||
         throw(ArgumentError("detection must be :discrete or :continuous; got detection = $(repr(detection))"))
@@ -238,33 +239,34 @@ make_calc(subject, var) = error("make_calc not implemented for $(typeof(subject)
 # Common case: orbit variables on spacecraft
 make_calc(sc::Spacecraft, v::AbstractOrbitVar) = OrbitCalc(sc, v)
 
+# A `Calc` already names its subject and its dependencies, so there is nothing
+# to build — it is the calc.
+make_calc(_subject, c::AstroCallbacks.Calc) = c
+
 """
-    rebind(stop_condition::StopAt, owner_map::Dict{Any,Any})
+    StopAt(quantity::Function, subject, deps...; equals, direction=0,
+           detection=:discrete, rootfind_tol=1e-9)
 
-Create a new StopAt condition with updated subject references based on an owner mapping.
+Stop when `quantity` reaches `equals`.
 
-# Arguments
-- `stop_condition::StopAt`: The original stopping condition
-- `owner_map::Dict{Any,Any}`: Mapping from old subjects to new subjects
+The quantity form of the stopping condition:
 
-# Returns
-A new `StopAt` with the subject updated according to the mapping, while preserving
-the variable, target, and direction unchanged.
-
-# Usage
-This function is used internally when transferring stopping conditions between
-different propagation contexts where the subject objects may need to be remapped.
-
-# Example
 ```julia
-old_stop = StopAt(old_spacecraft, PosX(), 7000.0)
-owner_map = Dict(old_spacecraft => new_spacecraft)
-new_stop = rebind(old_stop, owner_map)
-# new_stop.subject == new_spacecraft, other fields unchanged
+propagate!(prop, sat, StopAt(position_dot_velocity, sat; equals = 0.0, direction = 1))  # periapsis
+propagate!(prop, sat, StopAt(position_z, sat, EarthMJ2000Ec; equals = 0.0))
 ```
+
+Its first arguments are the same as every other spec's, and the goal is a
+keyword as it is for a constraint, so the two read alike. Builds a
+[`Calc`](@ref) and defers to the positional constructor.
+
+An angular quantity is unwrapped before the root is bracketed; see
+`_stop_residual`.
 """
-rebind(x::StopAt, owner_map::Dict{Any,Any}) =
-    StopAt(get(owner_map, x.subject, x.subject), x.var, x.target, x.direction)
+StopAt(quantity::Function, subject, deps...; equals, direction::Int = 0,
+       detection::Symbol = :discrete, rootfind_tol::Real = 1e-9) =
+    StopAt(subject, AstroCallbacks.Calc(quantity, subject, deps...), equals;
+           direction = direction, detection = detection, rootfind_tol = rootfind_tol)
 
 """
    _subject_update_from_u!(subject, dynsys, u)
@@ -306,6 +308,24 @@ function _posvel_from_u(u, dynsys, sc::Spacecraft)
     i0 = 6*(idx-1) + 1
     return collect(@view u[i0:i0+5])
 end
+
+""" 
+    _stop_residual(value, target, calc) -> Real
+
+The quantity the root-finder brackets: zero when the stop is reached.
+
+Stopping on an **angle** is not supported yet. The residual jumps by a full
+turn at the wrap boundary, so the bracket either misses the crossing or
+converges onto the discontinuity. Wrapping into `[-C/2, C/2)` removes that jump
+but puts a false root at the boundary itself: an unwrapped stop on
+`true_anomaly = 0` fires at 180 degrees, the antipode. That is a root-finder problem rather than a
+quantity-interface one, and it is deferred; the `is_cyclic` trait is recorded
+on the angles but nothing here reads it.
+
+Until then, stop on a quantity that does not wrap. Periapsis and apoapsis are
+`position_dot_velocity = 0` with `direction = 1` and `-1`.
+"""
+_stop_residual(value, target, calc) = value - target
 
 """
     _build_callback(cond::StopAt, dynsys)
@@ -397,8 +417,8 @@ end
 
 Escape hatch for signals that can double-cross within a single Vern9 step (fast oscillators
 with loose tolerances). Full `ContinuousCallback` with interp_points=2 and save_positions
-disabled — same root-find precision as the hybrid path, but pays for dense-output
-evaluation at every accepted step whether a sign change exists or not.
+disabled. The root-find precision is the hybrid path's, and it pays for a dense-output
+evaluation at every accepted step whether or not a sign change exists.
 """
 function _build_continuous_callback(cond::StopAt, dynsys)
     subject = cond.subject
@@ -411,7 +431,7 @@ function _build_continuous_callback(cond::StopAt, dynsys)
     function g(u, t, _integ)
         _subject_update_from_u!(subject, dynsys, u)
         val = get_calc(calc)
-        return val - target
+        return _stop_residual(val, target, calc)
     end
     term!(integ) = terminate!(integ)
 
@@ -459,14 +479,14 @@ Access final states via `sol.u[end]`, times via `sol.t`, or interpolate at any t
 # Examples
 ```julia
 using AstroEpochs, AstroStates, AstroFrames, AstroUniverse 
-using AstroModels, AstroCallbacks, AstroProp, OrdinaryDiffEq
+using AstroModels, AstroCallbacks, AstroProp, OrdinaryDiffEqTsit5
 
 # Spacecraft
 sat = Spacecraft(
     state=CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
     time=Time("2015-09-21T12:23:12", TAI(), ISOT()),
     #name="SC-StopAt",
-    coord_sys=CoordinateSystem(earth, ICRFAxes()),
+    coord_sys=CoordinateSystem(earth, ICRF()),
 )
 
 # Forces + integrator
@@ -476,21 +496,37 @@ integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
 prop    = OrbitPropagator(forces, integ)
 
 # Propagate to periapsis
-propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
+propagate!(prop, sat, StopAt(position_dot_velocity, sat; equals = 0.0, direction = 1))
 
-# Propagate backwards to node
-propagate!(prop, sat, StopAt(sat, PosX(), 0.0); direction=:backward)
+# Propagate backwards to the plane x = 0
+propagate!(prop, sat, StopAt(position_x, sat; equals = 0.0); direction=:backward)
 
 # Propagate multiple spacecraft with multiple stopping conditions
-sc1 = Spacecraft(); sc2 = Spacecraft() 
-stop_sc1_node = StopAt(sc1, PosZ(), 0.0)
-stop_sc2_periapsis = StopAt(sc2, PosDotVel(), 0.0; direction=+1)
+sc1 = Spacecraft(); sc2 = Spacecraft()
+stop_sc1_node = StopAt(position_z, sc1; equals = 0.0)
+stop_sc2_periapsis = StopAt(position_dot_velocity, sc2; equals = 0.0, direction = 1)
 propagate!(prop, [sc1,sc2], stop_sc1_node, stop_sc2_periapsis)
 
 ```
 """
 function propagate!(op::OrbitPropagator, sc_or_scs, stops...;
                    direction::Symbol = :forward, kwargs...)
+    recorder = _RECORDER[]
+    recorder === nothing ||
+        return recorder("propagate", () -> _propagate_now!(op, sc_or_scs, stops...;
+                                                            direction = direction, kwargs...))
+    return _propagate_now!(op, sc_or_scs, stops...; direction = direction, kwargs...)
+end
+
+# While a targeting block records (AstroSolve's `target!`), a call to `propagate!` is not run: it
+# is handed to the recorder as a deferred action, and runs each time the solver replays the
+# sequence. The hook lives here rather than in AstroSolve because the verb a script writes is this
+# one, and AstroSolve cannot add a method of the same signature without replacing it. Nothing is
+# recorded when no block is active, which is every call outside `target!`.
+const _RECORDER = Ref{Any}(nothing)
+
+function _propagate_now!(op::OrbitPropagator, sc_or_scs, stops...;
+                         direction::Symbol = :forward, kwargs...)
     scv = _as_scvec(sc_or_scs)
     dyn = DynSys(spacecraft=scv, forces=op.forces)
 
@@ -504,9 +540,8 @@ function propagate!(op::OrbitPropagator, sc_or_scs, stops...;
     cbset = isempty(callbacks) ? nothing :
             length(callbacks) == 1 ? callbacks[1] : CallbackSet(callbacks...)
 
-    # Delegate to existing DynSys-based propagate! with both callbacks and time conditions
-    # Note: We pass time_conds separately, not as callbacks
-    return propagate!(dyn, op.integ, cbset, time_conds...; direction=direction, kwargs...)
+    # Time conditions go separately, not as callbacks: they set the integration span.
+    return _propagate_dynsys!(dyn, op.integ, cbset, time_conds...; direction=direction, kwargs...)
 end
 
 # Helper: detect time-based stopping conditions

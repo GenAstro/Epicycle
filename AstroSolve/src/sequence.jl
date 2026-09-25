@@ -1,25 +1,30 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 """
     Sequence
 
-A directed acyclic graph (DAG) representation of trajectory events for optimization.
+A trajectory assembled from events and the dependencies between them.
 
-In Epicycle, trajectories are modeled as sequences of events (maneuvers, propagations, etc.) 
-that must occur in a specific order. The `Sequence` struct represents this as a DAG where
-events are nodes and dependencies are edges.
+Each event may represent an action such as a maneuver or propagation. Dependencies
+determine the order in which events run and allow a sequence to branch or merge.
+Use [`add_sequence!`](@ref) for a linear chain and [`add_events!`](@ref) when
+an event depends on one or more earlier events.
 
 # Fields
-- `events::Vector{Event}`: Collection of all events in the sequence
-- `adj_map::Dict{Event, Vector{Event}}`: Adjacency map defining event dependencies
+- `adj_map::Dict{Event, Vector{Event}}`: for each event, the events that depend on it. This
+  is the whole definition of the sequence: every event appears as a key, and one with no
+  dependents maps to an empty vector rather than being absent.
+- `events::Vector{Event}`: unused. Neither [`add_events!`](@ref) nor
+  [`add_sequence!`](@ref) writes it, so it is always empty.
 
 # Examples
 ```julia
 seq = Sequence()
-add_events!(seq, event1, Event[])          # Add root event
-add_events!(seq, event2, [event1])         # event2 depends on event1
-add_events!(seq, event3, [event1, event2]) # event3 depends on both
+departure, coast, arrival = Event(), Event(), Event()
+add_events!(seq, departure, Event[])
+add_events!(seq, coast, [departure])
+add_events!(seq, arrival, [coast])
 ```
 """
 struct Sequence
@@ -30,7 +35,11 @@ end
 """
     Sequence()
 
-Create an empty trajectory sequence with no events or dependencies.
+Create an empty trajectory sequence.
+
+# Returns
+A `Sequence` with no events and an empty dependency map, ready for
+[`add_events!`](@ref) or [`add_sequence!`](@ref).
 """
 function Sequence()
     Sequence(Event[], Dict{Event, Vector{Event}}())
@@ -167,16 +176,16 @@ function find_all_stateful_structs(ordered_vars, sorted_events)
 
     # 1) From SolverVariables (via calc containers)
     for sv in ordered_vars
-        _push_stateful!(out, seen, _subjects_from_calc(sv.calc))
+        _push_stateful!(out, seen, AstroCallbacks._subjects_from_calc(sv.calc))
     end
 
     # 2) From Events: vars (SolverVariables) and funcs (Constraints with calc)
     for event in sorted_events
         for sv in event.vars
-            _push_stateful!(out, seen, _subjects_from_calc(sv.calc))
+            _push_stateful!(out, seen, AstroCallbacks._subjects_from_calc(sv.calc))
         end
         for con in event.funcs
-            _push_stateful!(out, seen, _subjects_from_calc(con.calc))
+            _push_stateful!(out, seen, AstroCallbacks._subjects_from_calc(con.calc))
         end
     end
 
@@ -248,25 +257,33 @@ end
 """
     add_events!(seq::Sequence, event::Event, dependencies::Vector{Event})
 
-Add an event to the sequence with specified dependencies.
-
-This function adds `event` to the sequence DAG, ensuring that all events in 
-`dependencies` must occur before `event` during execution. The internal adjacency 
-map is updated to reflect these dependencies.
+Add an event and identify the events that must run immediately before it.
+Pass an empty `Event` vector for an event with no dependencies.
 
 # Arguments
-- `seq::Sequence`: Sequence to modify
-- `event::Event`: Event to add to the sequence
-- `dependencies::Vector{Event}`: Events directly linked to and preceding `event`.
+- `seq::Sequence`: the sequence to add to. Modified in place.
+- `event::Event`: the event being added.
+- `dependencies::Vector{Event}`: the events that must run immediately before `event`.
+  Each is added to `seq` as well if it is not already there, so dependencies need not be
+  added first.
+
+# Notes
+Calling this twice with the same `event` records the dependencies of both calls rather
+than replacing the first set.
+
+# Returns
+`nothing`. The event and its dependencies are recorded on `seq`, which is what a
+later solve walks to order execution.
 
 # Examples
 ```julia
 seq = Sequence()
-add_events!(seq, maneuver_event, [prop_event])  # maneuver after propagation
-add_events!(seq, final_event, [maneuver_event, other_event])  # final after both
+departure, coast, correction, arrival = Event(), Event(), Event(), Event()
+add_events!(seq, departure, Event[])
+add_events!(seq, coast, [departure])
+add_events!(seq, correction, [departure])
+add_events!(seq, arrival, [coast, correction])
 ```
-
-See also: [`Sequence`](@ref), [`topo_sort`](@ref)
 """
 function add_events!(seq::Sequence, event::Event, dependencies::Vector{Event})
     # Ensure all dependencies are keys in the map
@@ -280,30 +297,28 @@ function add_events!(seq::Sequence, event::Event, dependencies::Vector{Event})
     if !haskey(seq.adj_map, event)
         seq.adj_map[event] = Event[]
     end
+    return nothing
 end
 
 """
     add_sequence!(seq::Sequence, events::Event...)
 
-Add a linear sequence of events where each event depends on the previous one.
-
-This is a convenience function for the common case of a linear event chain.
-Each event is added only with dependencies from the event immediately before it.
+Add events as a linear chain in execution order.
+Each event depends on the event immediately before it.
 
 # Arguments
-- `seq::Sequence`: Sequence to add events to
-- `events::Event...`: Events in execution order (first executes first)
+- `seq::Sequence`: the sequence to add to. Modified in place.
+- `events::Event...`: the events, first to run first. The first is added with no
+  dependencies. Calling with no events leaves `seq` unchanged.
+
+# Returns
+`nothing`. The events are recorded on `seq` in the order given.
 
 # Examples
 ```julia
 seq = Sequence()
-# These two are equivalent:
-add_sequence!(seq, toi_event, prop_event, moi_event)
-
-# Equivalent to:
-add_events!(seq, toi_event, Event[])
-add_events!(seq, prop_event, [toi_event])
-add_events!(seq, moi_event, [prop_event])
+toi, prop, moi = Event(), Event(), Event()
+add_sequence!(seq, toi, prop, moi)
 ```
 """
 function add_sequence!(seq::Sequence, events::Event...)
@@ -558,7 +573,7 @@ Extract upper bounds from all constraint functions in the sequence manager.
 - `Vector`: Concatenated upper bounds for all constraints
 """
 function get_fun_upper_bounds(sm::SequenceManager)
-    vcat([c.upper_bounds for c in sm.ordered_funcs]...)
+    vcat([c.upper_bound for c in sm.ordered_funcs]...)
 end 
 
 """
@@ -573,7 +588,7 @@ Extract lower bounds from all constraint functions in the sequence manager.
 - `Vector`: Concatenated lower bounds for all constraints
 """
 function get_fun_lower_bounds(sm::SequenceManager)
-    vcat([c.lower_bounds for c in sm.ordered_funcs]...)
+    vcat([c.lower_bound for c in sm.ordered_funcs]...)
 end 
 
 """
@@ -691,7 +706,7 @@ function solver_fun!(F::AbstractVector, x::AbstractVector, sm::SequenceManager)
 end
 
 """
-    solve_trajectory!(seq::Sequence; record_iterations::Bool=false)
+    _solve_event_graph!(seq::Sequence; record_iterations::Bool=false)
 
 Solve trajectory sequence using default SNOW/IPOPT configuration.
 
@@ -705,12 +720,12 @@ Solve trajectory sequence using default SNOW/IPOPT configuration.
 - Original flag values are restored after optimization completes
 - Final solution respects original recording settings (no forced recording)
 """
-function solve_trajectory!(seq::Sequence; record_iterations::Bool=false)
-    solve_trajectory!(seq, default_snow_options(); record_iterations=record_iterations)
+function _solve_event_graph!(seq::Sequence; record_iterations::Bool=false)
+    _solve_event_graph!(seq, default_snow_options(); record_iterations=record_iterations)
 end
 
 """
-    solve_trajectory!(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
+    _solve_event_graph!(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
 
 Solve trajectory sequence using specified SNOW optimization options.
 
@@ -736,7 +751,7 @@ Named tuple with:
 - After convergence: restores original flags and records final solution to `segments`
 - Original flag values are preserved and restored after optimization
 """
-function solve_trajectory!(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
+function _solve_event_graph!(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
     # Get all spacecraft from the sequence
     sm = SequenceManager(seq)
     spacecraft = [obj for obj in sm.stateful_structs if obj isa Spacecraft]
@@ -803,8 +818,11 @@ function default_snow_options()
         "max_iter" => 1000,
         "tol" => 1e-6,
         "file_print_level" => 0,
-        "output_file" => "ipopt_$(time_ns()).out"
+        # IPOPT opens this and does not release it, so a second solve naming
+        # the same path fails with "Couldn't open output file". Unique per call,
+        # and in the temp directory so a run does not leave logs in whatever
+        # folder the user happened to start from.
+        "output_file" => joinpath(tempdir(), "ipopt_$(time_ns()).out")
     )
     return Options(derivatives=ForwardFD(), solver=IPOPT(ip_options))
 end
-

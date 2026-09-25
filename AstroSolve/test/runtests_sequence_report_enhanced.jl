@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using Test
 using Epicycle
 
@@ -33,11 +36,7 @@ using Epicycle
             scale = [1.0, 1.0, 1.0]
         )
         
-        constraint_test = Constraint(
-            calc = OrbitCalc(sat, SMA()),
-            lower_bounds = [42000.0],
-            upper_bounds = [42000.0]
-        )
+        constraint_test = Constraint(semi_major_axis, sat; equals = 42000.0)
         
         test_event = Event(
             name = "Test Event",
@@ -80,11 +79,7 @@ using Epicycle
             scale = [1.0, 1.0, 1.0]
         )
         
-        sma_constraint = Constraint(
-            calc = OrbitCalc(sat, SMA()),
-            lower_bounds = [42000.0],
-            upper_bounds = [42000.0]
-        )
+        sma_constraint = Constraint(semi_major_axis, sat; equals = 42000.0)
         
         test_event = Event(
             name = "Test Maneuver",
@@ -104,7 +99,7 @@ using Epicycle
         @test occursin("Constraint Objects: 1 (1 constraint functions)", output)
         @test occursin("Event 1: \"Test Maneuver\"", output)
         @test occursin("test_var: DeltaVVector() (ManeuverCalc) (3 components)", output)
-        @test occursin("SMA() (OrbitCalc) = 42000.0", output)
+        @test occursin("Semi-major axis = 42000.0", output)   # the quantity, named
         
         # Test solution report content
         mock_result = (
@@ -174,25 +169,23 @@ using Epicycle
             time = Time("2020-01-01T00:00:00", UTC(), ISOT())
         )
         
-        calc = OrbitCalc(sat, SMA())
-        
         # Test equality constraint (both bounds)
-        con1 = Constraint(calc=calc, lower_bounds=[42000.0], upper_bounds=[42000.0])
-        @test con1.lower_bounds == [42000.0]
-        @test con1.upper_bounds == [42000.0]
+        con1 = Constraint(semi_major_axis, sat; equals = 42000.0)
+        @test con1.lower_bound == [42000.0]
+        @test con1.upper_bound == [42000.0]
         
         # Test lower bound only (upper should default to Inf)
-        con2 = Constraint(calc=calc, lower_bounds=[40000.0])
-        @test con2.lower_bounds == [40000.0]
-        @test con2.upper_bounds == [Inf]
+        con2 = Constraint(semi_major_axis, sat; lower_bound = 40000.0)
+        @test con2.lower_bound == [40000.0]
+        @test con2.upper_bound == [Inf]
         
         # Test upper bound only (lower should default to -Inf)
-        con3 = Constraint(calc=calc, upper_bounds=[45000.0])
-        @test con3.lower_bounds == [-Inf]
-        @test con3.upper_bounds == [45000.0]
+        con3 = Constraint(semi_major_axis, sat; upper_bound = 45000.0)
+        @test con3.lower_bound == [-Inf]
+        @test con3.upper_bound == [45000.0]
         
         # Test error when no bounds specified
-        @test_throws ArgumentError Constraint(calc=calc)
+        @test_throws ArgumentError Constraint(semi_major_axis, sat)
     end
     
     @testset "Empty Sequence Test" begin
@@ -269,13 +262,11 @@ using Epicycle
             time = Time("2020-01-01T00:00:00", UTC(), ISOT())
         )
         
-        calc = OrbitCalc(sat, SMA())
-        
         # Test lower bound only (≥)
-        con_lower = Constraint(calc=calc, lower_bounds=[40000.0])
+        con_lower = Constraint(semi_major_axis, sat; lower_bound = 40000.0)
         
         # Test upper bound only (≤)  
-        con_upper = Constraint(calc=calc, upper_bounds=[50000.0])
+        con_upper = Constraint(semi_major_axis, sat; upper_bound = 50000.0)
         
         test_event = Event(
             name = "Inequality Test",
@@ -423,12 +414,7 @@ using Epicycle
         sat = Spacecraft()
         
         # Create a 3-component position vector constraint 
-        pos_con = Constraint(
-            calc = OrbitCalc(sat, PositionVector()),
-            lower_bounds = [-55000.0, 0.5, 0.3],
-            upper_bounds = [-55000.0, 0.5, 0.3],
-            scale = [1.0, 1.0, 1.0]
-        )
+        pos_con = Constraint(position_vector, sat; equals = [-55000.0, 0.5, 0.3], scale = [1.0, 1.0, 1.0])
         
         test_event = Event(
             name = "Multi-Component Test",
@@ -441,7 +427,7 @@ using Epicycle
         
         # Test sequence report shows multi-component constraint
         output = capture_output(report_sequence, seq)
-        @test occursin("PositionVector() (OrbitCalc) (3 components)", output)
+        @test occursin("Position (3 components)", output)
         
         # Test solution report with multi-component constraint values
         mock_result = (
@@ -451,7 +437,7 @@ using Epicycle
         )
         
         sol_output = capture_output(report_solution, seq, mock_result)
-        @test occursin("PositionVector() (OrbitCalc) (3 components):", sol_output)
+        @test occursin("Position (3 components):", sol_output)
         @test occursin("Component 1: -55000.1", sol_output)
         @test occursin("Component 2: 0.51", sol_output) 
         @test occursin("Component 3: 0.31", sol_output)

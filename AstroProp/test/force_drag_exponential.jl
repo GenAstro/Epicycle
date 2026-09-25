@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 # Atmospheric drag (NRLMSISE-00) on two-body gravity — Epicycle interface vs GMAT.
 #
 # Uses the spec'd user interface: cannonball drag geometry on the Spacecraft, an
@@ -15,7 +18,7 @@
 using AstroProp
 using AstroModels, AstroStates, AstroEpochs
 using AstroUniverse: earth
-using OrdinaryDiffEq: Vern9
+using OrdinaryDiffEqVerner: Vern9
 using LinearAlgebra: norm
 using Test
 

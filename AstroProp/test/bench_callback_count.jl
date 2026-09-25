@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 #
 # Instrumentation: count how many times MeanSMA is evaluated per accepted ODE step
 # during a propagate! with a MeanSMA StopAt callback.
@@ -20,16 +20,17 @@
 # root-finding polling schedule), not in the MeanSMA calc itself.
 #
 # Run manually:
-#   using Pkg; Pkg.activate("c:/Users/steve/Dev/epicycle-dev")
-#   include(raw"c:\Users\steve\Dev\Epicycle\AstroProp\test\bench_callback_count.jl")
+#   using Pkg; Pkg.activate("<environment>")
+#   include("AstroProp/test/bench_callback_count.jl")
 
 using AstroProp
+using SciMLBase: ContinuousCallback
 using AstroModels, AstroStates, AstroEpochs
 using AstroCallbacks
 using AstroCallbacks: MeanSMA
 using AstroStates: BrouwerMeanLongState
 using AstroUniverse: earth
-using OrdinaryDiffEq: Vern9
+using OrdinaryDiffEqVerner: Vern9
 
 const MEAN_SMA_TARGET = 6768.0    # km
 const _MEANSMA_CALLS  = Ref(0)

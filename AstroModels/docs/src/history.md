@@ -10,6 +10,7 @@ Trajectory history is automatically recorded during spacecraft propagation and o
 
 Container for all trajectory segments:
 
+<!-- doc-fragment -->
 ```julia
 mutable struct SpacecraftHistory
     segments::Vector{HistorySegment}      # Solution trajectory
@@ -27,6 +28,7 @@ end
 
 A continuous segment of trajectory data:
 
+<!-- doc-fragment -->
 ```julia
 struct HistorySegment
     times::Vector{Time{Float64}}              # Time points
@@ -80,6 +82,7 @@ propagate!(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
 
 ### Basic Access
 
+<!-- doc-continue -->
 ```julia
 # Access segments
 history = sat.history
@@ -98,6 +101,7 @@ segment = history.segments[2]     # Second segment
 
 ### Iteration
 
+<!-- doc-continue -->
 ```julia
 # Iterate over all segments
 for segment in sat.history
@@ -108,6 +112,7 @@ end
 
 ### Segment Data
 
+<!-- doc-continue -->
 ```julia
 segment = history.segments[1]
 
@@ -125,6 +130,7 @@ metadata = segment.metadata
 
 ### Extracting Position/Velocity
 
+<!-- doc-continue -->
 ```julia
 # Loop over states in a segment
 for (t, state) in zip(segment.times, segment.states)
@@ -140,6 +146,7 @@ end
 
 The `segments` field contains the final mission trajectory:
 
+<!-- doc-continue -->
 ```julia
 # Final trajectory after propagation or optimization
 for segment in sat.history.segments
@@ -157,6 +164,7 @@ This is what you use for:
 
 The `iterations` field contains diagnostic data from trajectory optimization:
 
+<!-- doc-continue -->
 ```julia
 # Check if iterations were recorded
 if !isempty(sat.history.iterations)
@@ -180,6 +188,7 @@ See [AstroSolve documentation](https://genastro.github.io/Epicycle/AstroSolve/de
 
 History recording is controlled by flags:
 
+<!-- doc-continue -->
 ```julia
 history = sat.history
 
@@ -199,6 +208,7 @@ history.record_iterations    # true = recording iterations
 
 ### Check for Data
 
+<!-- doc-continue -->
 ```julia
 # Check if spacecraft has history
 if !isempty(sat.history)
@@ -210,6 +220,7 @@ end
 
 ### Multi-Segment Missions
 
+<!-- doc-continue -->
 ```julia
 # After multi-phase mission
 propagate!(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
@@ -227,6 +238,7 @@ end
 
 ### Coordinate System Awareness
 
+<!-- doc-continue -->
 ```julia
 # Segments may have different coordinate systems
 for segment in sat.history
@@ -243,31 +255,22 @@ end
 History is populated automatically:
 
 **AstroProp**: Creates new segment when `propagate!()` is called
+
+<!-- doc-continue -->
 ```julia
 propagate!(prop, sat, StopAt(sat, PropDurationDays(), 0.5))
 # sat.history now contains propagation data
 ```
 
 **AstroManeuvers**: Creates new segment at maneuver application
+
+<!-- doc-continue -->
 ```julia
 maneuver!(sat, toi)
 # New segment created for post-maneuver trajectory
 ```
 
 See respective module documentation for details on how they interact with history.
-
-### Visualization
-
-**View3D** (in Epicycle module) automatically renders all segments:
-```julia
-using Epicycle
-
-view = View3D()
-add_spacecraft!(view, sat)  # Renders entire history
-display_view(view)
-```
-
-Each segment can be rendered with different colors for multi-phase missions.
 
 ## See Also
 

@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 """
     VelocityVector <: AbstractOrbitVar
@@ -8,7 +8,7 @@ Tag struct indicating Cartesian velocity vector (vx, vy, vz) of a spacecraft.
 
 Examples
 ```julia
-# sc::Spacecraft — replace with your Spacecraft instance
+# `sc` is a `Spacecraft`
 velvec_calc = OrbitCalc(Spacecraft(), VelocityVector())
 r = get_calc(velvec_calc)
 set_calc!(velvec_calc, [7000.0, 300.0, 0.0])

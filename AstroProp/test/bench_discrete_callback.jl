@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 #
 # DIAGNOSTIC — not a production callback path.
 #
@@ -19,14 +19,15 @@
 # bench_prop_callback.jl so results aren't cross-contaminated.
 #
 # Run manually:
-#   using Pkg; Pkg.activate("c:/Users/steve/Dev/epicycle-dev")
-#   include(raw"c:\Users\steve\Dev\Epicycle\AstroProp\test\bench_discrete_callback.jl")
+#   using Pkg; Pkg.activate("<environment>")
+#   include("AstroProp/test/bench_discrete_callback.jl")
 
 using AstroProp
 using AstroModels, AstroStates, AstroEpochs
 using AstroCallbacks: MeanSMA, OrbitCalc, get_calc
 using AstroUniverse: earth
-using OrdinaryDiffEq: Vern9, DiscreteCallback, terminate!
+using OrdinaryDiffEqVerner: Vern9
+using SciMLBase: ContinuousCallback, DiscreteCallback, terminate!
 using BenchmarkTools
 
 # ── Monkey-patch: DiscreteCallback in place of ContinuousCallback ────────────

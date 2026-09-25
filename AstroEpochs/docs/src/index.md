@@ -4,7 +4,7 @@ CurrentModule = AstroEpochs
 
 # AstroEpochs
 
-The AstroEpochs module provides time system implementations for astronomical applications. AstroEpochs supports high-precision time representations using dual-float  Julian Date storage -  parameterized for differentiability - and conversions between time scales and formats.
+The AstroEpochs module provides time system implementations for astronomical applications. AstroEpochs supports high-precision time representations using dual-float Julian Date storage, parameterized for differentiability, and conversions between time scales and formats.
 
 **Key Features:**
 - **High-precision storage** using dual Float64 values (`jd1`, `jd2`) to represent Julian Dates
@@ -20,9 +20,9 @@ The API for AstroEpochs is inspired by Astropy.Time. The numerics are built on J
 
 ## Comparison with Other Julia Time-Keeping Libraries
 
-Tempo.jl and AstroTime.jl are other high-quality Julia packages for astronomical time handling with distinct design philosophies. AstroTime.jl, developed by the JuliaAstro community, supports six astronomical time scales (TAI, TT, TCG, TCB, TDB, and UT1) using scale-specific types that change with each conversion. Tempo.jl supports UTC, TAI, TT, TDB, TCG, and TCB with efficient, allocation-free conversions and a type-stable architecture that allows time scale changes without changing the struct type—critical for performance in Epicycle's propagation and optimization algorithms. AstroEpochs.jl is an API built on Tempo.jl that provides type stability and seamless integration with the Epicycle ecosystem while using an interface styled after AstroPy.Time, a widely adopted standard in the astronomical community. 
+Tempo.jl and AstroTime.jl also handle astronomical time in Julia. AstroTime.jl, from the JuliaAstro community, supports six time scales (TAI, TT, TCG, TCB, TDB and UT1) with a separate type for each scale, so a conversion changes the type. Tempo.jl supports UTC, TAI, TT, TDB, TCG and TCB with allocation-free conversions and changes scale without changing the type, which Epicycle's propagation and optimization rely on for performance. AstroEpochs builds on Tempo.jl, keeps the IERS leap-second list current itself, and follows the interface of Astropy's `Time`. 
 
-## Quickstart
+## Quick Start
 
 ```julia
 using AstroEpochs
@@ -46,6 +46,9 @@ t_utc = t1.utc
 t_tdb = t1.tdb
 ```
 
+Scale properties return new `Time` values. Format properties return a number
+for `jd` and `mjd`, or a string for `isot`.
+
 ## Time Struct
 
 The `Time` struct is the core type for representing astronomical epochs with high precision. It uses a split Julian Date representation to maintain numerical accuracy over long time spans and supports automatic conversions between different time scales and formats.
@@ -53,8 +56,8 @@ The `Time` struct is the core type for representing astronomical epochs with hig
 **Fields:**
 - `jd1` — Primary component of the split Julian Date (typically the integer part)
 - `jd2` — Secondary component of the split Julian Date (typically the fractional part)  
-- `scale` — Time scale tag struct (`TT()`, `TAI()`, `UTC()`, `TDB()`, `TCB()`, `TCG()`)
-- `format` — Time format tag struct (`JD()`, `MJD()`, `ISOT()`)
+- `scale` — the time scale as a Symbol (`:tt`, `:tai`, `:utc`, `:tdb`, `:tcb`, `:tcg`); constructors take the tags `TT()`, `TAI()`, `UTC()`, `TDB()`, `TCB()`, `TCG()`
+- `format` — the time format as a Symbol (`:jd`, `:mjd`, `:isot`); constructors take the tags `JD()`, `MJD()`, `ISOT()`
 
 The split representation maintains precision by keeping `jd2` small (∈ [-0.5, 0.5)) while `jd1` carries the large offset. The complete Julian Date is `jd1 + jd2`.
 
@@ -77,6 +80,19 @@ AstroEpochs supports various astronomical time scales.
 | **UTC** | Coordinated Universal Time - Civil time standard with leap seconds to maintain alignment with Earth rotation |
 | **TCB** | Barycentric Coordinate Time - Coordinate time in the barycentric reference system |
 | **TCG** | Geocentric Coordinate Time - Coordinate time in the geocentric reference system |
+
+## Time Formats
+
+AstroEpochs supports multiple time formats for input and output:
+
+| Format | Description | Example |
+|:-------|:------------|:--------|
+| **JD** | Julian Date - Days since January 1, 4713 BCE at noon | 2451545.0 |
+| **JD (precision)** | Julian Date with split representation for high precision | jd1=2451545.0, jd2=0.378264 |
+| **MJD** | Modified Julian Date - JD minus 2400000.5 | 51544.5 |
+| **ISOT** | ISO 8601 timestamp string | "2000-01-01T12:00:00.000" |
+
+## Usage Examples
 
 The examples below illustrate how to create a time struct in various time scales.
 
@@ -101,10 +117,11 @@ t_tcg = Time(51545.0, TCG(), MJD())
 # View all supported scales
 subtypes(AstroEpochs.AbstractTimeScale)
 ```
-
 Converting between time scales creates a new Time object with the converted epoch:
 
 ```julia
+using AstroEpochs
+
 # Convert from TAI to TT
 t_tai = Time(51545.0, TAI(), MJD())
 t_tt = t_tai.tt
@@ -115,108 +132,97 @@ t_tdb = t_utc.tdb
 
 # Chain conversions while preserving format
 t_final = t_utc.tai.tt.tdb
-``` 
-## Time Formats
+```
 
-AstroEpochs supports multiple time formats for input and output:
+## Leap Seconds
 
-| Format | Description | Example |
-|:-------|:------------|:--------|
-| **JD** | Julian Date - Days since January 1, 4713 BCE at noon UTC | 2451545.0 |
-| **JD (precision)** | Julian Date with split representation for high precision | jd1=2451545.0, jd2=0.378264 |
-| **MJD** | Modified Julian Date - JD minus 2400000.5 | 51544.5 |
-| **ISOT** | ISO 8601 timestamp string | "2000-01-01T12:00:00.000" |
+UTC differs from TAI by a whole number of seconds, TAI − UTC, which changes when the IERS adds a
+leap second. The IERS announces each one in Bulletin C, about six months ahead; TAI − UTC has
+been 37 s since 2017-01-01.
 
-The examples below illustrate how to create time objects using different time formats.
+AstroEpochs reads TAI − UTC from `leap-seconds.list`, the IERS list as IANA publishes it at
+<https://data.iana.org/time-zones/tzdb/leap-seconds.list>. Each data line gives the date of a
+change, in seconds since 1900-01-01, and the value of TAI − UTC from that date. The line that
+begins `#@` gives the date the list expires, which the IERS extends each time it confirms that
+no leap second is coming. The change takes effect at 0h UTC on the date given.
 
+The file is stored in AstroEpochs' Scratch space:
+
+```text
+<depot>/scratchspaces/241dcde3-d7a4-450d-948f-15f2ea2ba1fa/leap_seconds/leap-seconds.list
+```
+
+where `<depot>` is the first entry of `DEPOT_PATH`, usually `~/.julia`. AstroEpochs downloads it
+the first time a session converts to or from UTC and no stored copy exists, and again once the
+stored copy has passed its expiry date. `refresh_leap_seconds!()` downloads it immediately.
+
+Without a network connection, an expired copy is used with a warning. With no copy at all, the
+table built into Tempo.jl is used, which ends at the 2017-01-01 leap second, also with a warning.
+A UTC date before 1972-01-01 has no leap-second value; AstroEpochs uses 0 and warns.
+
+```@raw html
+<!-- doc-fragment -->
+```
 ```julia
 using AstroEpochs
 
-# Julian Date format
-t_jd = Time(2451545.0, TT(), JD())
+# Where the list is stored, and its contents
+path = joinpath(DEPOT_PATH[1], "scratchspaces", "241dcde3-d7a4-450d-948f-15f2ea2ba1fa",
+                "leap_seconds", "leap-seconds.list")
+isfile(path)                # true once a UTC conversion has run
+print(read(path, String))
 
-# Modified Julian Date format  
-t_mjd = Time(51544.5, TT(), MJD())
-
-# ISO 8601 string format
-t_iso = Time("2000-01-01T12:00:00.000", TT(), ISOT())
-
-# High-precision Julian Date using split representation
-t_precise = Time(2451545.0, 0.37826388888889, TT(), JD())  
-
-# View all supported formats
-subtypes(AstroEpochs.AbstractTimeFormat)
+# Download the list now, rather than when the stored copy expires
+refresh_leap_seconds!()
 ```
 
-Converting between formats (returns numeric values or strings, not new Time objects):
+## Format Conversion
+
+Lowercase format properties expose the same epoch in another representation.
 
 ```julia
-# Start with a time in JD format
 t = Time(2451545.25, UTC(), JD())
 
-# Access different format representations
-jd_value = t.jd      # 2451545.25 (Julian Date)
-mjd_value = t.mjd    # 51544.75 (Modified Julian Date)  
-iso_string = t.isot  # "2000-01-01T18:00:00.000" (ISO string)
-
-# Note: Format conversions return values, not new Time structs
-# To create a new Time with different format, use the constructor
-t_mjd_format = Time(t.mjd, UTC(), MJD())
+jd = t.jd
+mjd = t.mjd
+timestamp = t.isot
 ```
 
-## Time Differentiation
-
-AstroEpochs supports automatic differentiation for time-dependent calculations using standard Julia AD packages. The `Time` struct preserves numeric types through operations, enabling differentiation of functions that depend on time.
-
-**Using FiniteDiff.jl:**
+Construct a new `Time` when a different stored format is required:
 
 ```julia
-using AstroEpochs, FiniteDiff
-
-# Define a function that depends on time
-function time_dependent_function(jd_offset)
-    t = Time(2451545.0 + jd_offset, TT(), JD())
-    # Convert to TDB and extract Julian Date
-    return t.tdb.jd
-end
-
-# Compute derivative with respect to Julian Date offset
-jd_offset = 0.5  # half day offset
-derivative = FiniteDiff.finite_difference_derivative(time_dependent_function, jd_offset)
-println("d(TDB)/d(JD) ≈ $derivative")
+t_mjd = Time(t.mjd, UTC(), MJD())
 ```
 
-**Using Zygote.jl:**
+## Precision And Arithmetic
+
+`Time` stores a Julian Date as `jd1 + jd2`. The internal representation keeps
+`jd2` near zero to retain precision while `jd1` carries the large epoch offset.
+Supplying split values avoids losing a small offset when constructing a distant
+epoch.
+
+Arithmetic uses days. Adding a real number advances an epoch by that many days,
+and subtracting two epochs in the same scale returns their separation in days.
 
 ```julia
-using AstroEpochs, Zygote
+t0 = Time(2451545.0, TT(), JD())
+t1 = t0 + 0.5
 
-# Create base time object outside the differentiated function
-t_base = Time(2451545.0, TAI(), JD())
-
-# Define a function that adds time in a specific scale
-function add_time_in_scale(seconds_offset, scale_sym)
-    t_in_scale = getproperty(t_base, scale_sym)  # Convert to desired scale
-    dt_days = seconds_offset / 86400.0           # Convert seconds to days
-    t_future = t_in_scale + dt_days              # Add time offset
-    t_back = getproperty(t_future, t_base.scale) # Convert back to original scale
-    return t_back.jd                             # Return Julian Date
-end
-
-# Compute gradient with respect to seconds added in TDB scale
-seconds = 3600.0  # 1 hour in seconds
-grad = Zygote.gradient(s -> add_time_in_scale(s, :tdb), seconds)
-println("∇(JD)/∇(TDB_seconds) = $(grad[1])")
+elapsed_days = t1 - t0
 ```
-## Index
+
+The numeric type is preserved through construction, arithmetic, and scale
+conversion so time-dependent calculations can participate in differentiation.
+
+## API Reference
 
 ```@index
 Pages = ["index.md"]
 ```
 
-## API Reference
-
 ```@autodocs
 Modules = [AstroEpochs]
+Public  = true
+Private = false
 Order = [:type, :function, :macro, :constant]
 ```

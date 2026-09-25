@@ -6,49 +6,37 @@ Epicycle is an application and package ecosystem for space mission design and na
 
 ## AstroCallbacks Overview
 
-AstroCallbacks provides fundamental calculations used throughout the Epicycle ecosystem. These calculations can be used in targeting and optimization variables and constraints, propagator stopping conditions, I/O operations, and eventually solver-for and consider parameters for orbit determination.
+AstroCallbacks provides a common interface for reading and writing spacecraft, maneuver, and celestial-body quantities. AstroProp uses these quantities for stopping conditions, AstroSolve uses them for variables and constraints, and reporting tools use them for columns and plots.
 
-The module serves as a foundation for higher-level astrodynamics operations, providing core mathematical functions and utilities needed across multiple Epicycle packages. AstroCallbacks contains the "Calcs" - a collection of structs that provide a unified interface for setting and getting quantities throughout Epicycle.
-
-The Calc framework provides type-stable access to commonly needed astrodynamics quantities while maintaining automatic differentiation compatibility. Calc types include OrbitCalc (orbital elements), BodyCalc (celestial body properties), and ManeuverCalc (Δv and thrust properties).
+A quantity is a function of a subject, such as `semi_major_axis(sat)`, and frame-dependent quantities accept a coordinate system after the subject, as in `inclination(sat, EarthMJ2000Ec)`. The older Calc structs (`OrbitCalc`, `BodyCalc`, `ManeuverCalc`) are still accepted and will be deprecated in a future release. The documentation covers both.
 
 ## Installation
 
+Versions through 0.4.0 are in Julia's General registry. From the next version AstroCallbacks is
+released under the Gen Astro Source Available License, which General does not carry, so later
+versions come from the Gen Astro registry. Add it once, then install as usual:
+
 ```julia
 using Pkg
+Pkg.Registry.add(RegistrySpec(url = "https://github.com/GenAstro/GenAstro.git"))
 Pkg.add("AstroCallbacks")
 ```
+
+General is still required, since these packages depend on packages registered there. Installing
+without the Gen Astro registry resolves to 0.4.0, the last version General carries, and
+reports nothing about the newer ones.
 
 ## Documentation
 
 Full documentation is available at: [AstroCallbacks Documentation](https://genastro.github.io/Epicycle/AstroCallbacks/dev/)
 
-## Contributing to Epicycle 
+## Contributing
 
-Contributing is easy.
-
-1. Fork the project
-2. Create a new feature branch
-3. Make your changes
-4. Submit a pull request
-
-We use the Linux Kernel's Developer's Certificate of Origin (DCO) as detailed in CONTRIBUTING.txt.
+The terms for contributions are in [LICENSE.md](LICENSE.md).
 
 ## License
 
-We believe in the power of open source to foster innovation and community-driven 
-development and also recognize the need for a sustainable business model and a model
-that can handle export-controlled aerospace content. 
-
-For these reasons, Epicycle is offered under a tri-licensing model. The license allows
-users to choose between the following three options:
-
-1) LGPL V3.0
-2) Evaluation and Education use Only
-3) Commercial License
-
-See LICENSE.txt for terms each license option.  For commercial licensing, 
-email licensing at genastro.org.
+AstroCallbacks is source available under the [Gen Astro Source Available License 1.0](LICENSE.md).
 
 ## Notes
 Claude Sonnet and ChatGPT are used in the development of Epicycle.

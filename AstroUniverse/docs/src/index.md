@@ -4,207 +4,141 @@ CurrentModule = AstroUniverse
 
 # AstroUniverse
 
-The AstroUniverse module provides models for celestial bodies, their physical properties, and related utilities for astrodynamics applications. It includes predefined celestial body objects with standard gravitational parameters and other physical constants commonly used in orbital mechanics.
+The AstroUniverse package provides celestial-body definitions, physical constants,
+SPICE ephemerides, and orientation models for astrodynamics applications. It ships
+with definitions for the Sun, Moon, planets, and Pluto, and supports additional
+bodies through `CelestialBody`.
 
-The module automatically downloads and manages SPICE kernels (NASA's ephemeris data) to provide accurate celestial body positions and orientations using Scratch.jl. 
+Planet and Moon positions come from the DE440 ephemeris, downloaded the first time AstroUniverse loads. Planetary
+orientations use the IAU 2015 model by default. Earth orientation is handled
+separately through IERS Earth orientation parameters and a selectable frame theory.
 
 ## Quick Start
 
-The example below shows how to access predefined celestial bodies and their properties and how to add a celestial body:
+Built-in bodies expose their physical properties directly. Distances are in
+kilometers, time intervals are in seconds, and gravitational parameters are in
+km^3/s^2.
 
 ```julia
 using AstroUniverse
 
-# Access predefined celestial bodies
 earth.mu
+mars.equatorial_radius
 venus.naifid
 
-# Create a custom body
 phobos = CelestialBody(
-    name = "Phobos",
-    naifid = 401,                    # NAIF ID for Phobos
-    mu = 7.0875e-4,       # km³/s² (gravitational parameter)
-    equatorial_radius = 11.1,                   # km (mean radius)
-)
-
-# Define a texture map for 3D graphics
-custom_body = CelestialBody(
-    texture_file = "/path/to/texture.jpg"
+    "Phobos",
+    7.0875e-4,  # gravitational parameter [km^3/s^2]
+    11.1,       # equatorial radius [km]
+    0.0,        # flattening
+    401,        # NAIF ID
 )
 ```
 
-Note: built-in bodies include `sun`, `mercury`, `venus`, `earth`, `moon`, `mars`, `jupiter`, `saturn`, `uranus`, `neptune`, and `pluto`.
+The built-in bodies are `sun`, `mercury`, `venus`, `earth`, `moon`, `mars`,
+`jupiter`, `saturn`, `uranus`, `neptune`, and `pluto`.
 
-## SPICE Kernels and Ephemeris Data
+## Ephemeris Translation
 
-AstroUniverse uses NASA's SPICE system for high-fidelity ephemeris calculations. SPICE provides accurate positions and orientations of celestial bodies across time.
-
-### Default Kernels
-
-The following kernels are automatically downloaded and loaded when you first use AstroUniverse:
-
-- **naif0012.tls**: Leap second kernel for time conversions
-- **de440.bsp**: Planetary ephemeris covering years 1550-2650
-
-These kernels are stored using Scratch.jl and persist across Julia sessions, so they only download once.
-
-### Basic Workflow
-
-Loading additional SPICE kernels is a two-step process:
+`translate` and `translate_state` evaluate relative positions and states from
+loaded SPICE kernels. Epochs are TDB Julian dates.
 
 ```julia
-using AstroUniverse
+jd_tdb = 2458849.5
 
-# Step 1: Download kernel to persistent storage (only happens once)
-download_spice_kernel("de440s.bsp",
-    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp")
+r_mars_from_earth = translate(earth, mars, jd_tdb)
+x_moon_from_earth = translate_state(earth, moon, jd_tdb)
+```
 
-# Step 2: Load kernel into SPICE system
+## Body Orientation
+
+The Sun, planets other than Earth, and Pluto use published IAU orientation
+polynomials. A custom body can use a Julia orientation model or a frame supplied
+by a loaded SPICE kernel.
+
+```julia
+model = orientation_model(mars)
+rotation = body_axes_rotation(model, mars.naifid, 2458849.5)
+```
+
+Earth and the Moon use dedicated frame models instead of the planetary
+pole-and-prime-meridian model. AstroFrames provides those frame transformations.
+
+## Earth Orientation
+
+The active frame theory selects the default Earth precession-nutation chain.
+`IAU2006()` is the default; `FK5()` selects the classical IAU-76/80 chain.
+
+```julia
+frame_theory()
+set_frame_theory!(FK5())
+```
+
+Earth orientation parameters (EOP) are the measured corrections to Earth's rotation that the
+IERS publishes: UT1−UTC and polar motion. They enter every transformation to or from an
+Earth-fixed frame. Each frame theory reads its own table, `IAU2006()` the IAU 2000A series and
+`FK5()` the IAU 1980 series.
+
+A table loads the first time a transformation needs it and stays loaded for the session. Loading
+goes through SatelliteToolboxTransformations, which keeps the IERS files in its own on-disk cache
+and downloads a new copy when that cache is missing or out of date. `eop_refresh!` downloads the
+latest series immediately. A run that must not reach the network, or must give the same numbers
+every time, loads a file with `eop_load` or installs a table with `set_eop!` before its first
+transformation.
+
+```@raw html
+<!-- doc-fragment -->
+```
+```julia
+eop()                                              # the active theory's table, loaded on first use
+eop_refresh!()                                     # download the latest IERS series now
+eop_refresh!(; theory = FK5())                     # the same for the FK5 table
+
+eop_load("finals2000A.all"; theory = IAU2006())    # a local IERS file, no network
+set_eop!(table)                                    # a table already in hand
+```
+
+## SPICE Kernels
+
+AstroUniverse downloads its default kernels once, verifies their SHA-256
+checksums, and stores them between Julia sessions with Scratch.jl. The default
+set contains a leap-second kernel, the 1950-2100 DE440 ephemeris, and the lunar
+orientation kernels used by Moon frames.
+
+The download happens the first time AstroUniverse loads, directly or through a
+package that uses it, and is about 110 MB, most of it the ephemeris. That first
+load needs a network connection and waits for the download; later sessions read
+the stored kernels and work offline.
+
+Additional kernels can be downloaded and loaded independently:
+
+```julia
+download_spice_kernel(
+    "de440s.bsp",
+    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp",
+)
 load_spice_kernel("de440s.bsp")
 ```
 
-This separation allows you to download kernels once and selectively load different combinations in different sessions.
-
-### Common Use Cases
-
-!!! warning "Large File Downloads"
-    The examples below download ephemeris files ranging from ~13 MB to ~114 MB. These files are stored locally and only download once, but be aware of the initial download time and bandwidth usage.
-
-**Extended Planetary Ephemeris:**
-```julia
-# Smaller file size, same time range as de440 (1550-2650)
-download_spice_kernel("de440s.bsp",
-    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp")
-load_spice_kernel("de440s.bsp")
-
-# Extended time range planetary ephemeris (1550-2650, larger file)
-download_spice_kernel("de430.bsp",
-    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de430.bsp")
-load_spice_kernel("de430.bsp")
-```
-
-**Satellite Ephemerides:**
-```julia
-# Mars satellites (Phobos, Deimos)
-download_spice_kernel("mar099.bsp",
-    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/mar099.bsp")
-load_spice_kernel("mar099.bsp")
-
-# Jupiter satellites (Io, Europa, Ganymede, Callisto)
-download_spice_kernel("jup365.bsp",
-    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/jup365.bsp")
-load_spice_kernel("jup365.bsp")
-
-# Saturn satellites
-download_spice_kernel("sat441.bsp",
-    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/sat441.bsp")
-load_spice_kernel("sat441.bsp")
-```
-
-**Browse all available kernels:**
-- Planetary: https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/
-- Satellites: https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/
-- Leap seconds: https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/
-
-### Managing Kernels
-
-**List downloaded kernels (files on disk):**
-```julia
-list_downloaded_spice_kernels()
-# Output:
-# Downloaded SPICE Kernels:
-#   naif0012.tls              (5.3 KB)
-#   de440.bsp                 (114.0 MB)
-#   de440s.bsp                (31.0 MB)
-#   jup365.bsp                (13.2 MB)
-```
-
-**List loaded kernels (in SPICE memory):**
-```julia
-list_cached_spice_kernels()
-# Output:
-# Cached SPICE Kernels (3 loaded):
-#   naif0012.tls
-#   de440.bsp
-#   jup365.bsp
-```
-
-**Get storage directory:**
-```julia
-cache_dir = get_spice_directory()
-println("Kernels stored at: ", cache_dir)
-```
-
-**Unload specific kernel:**
-```julia
-# Swap ephemeris versions
-unload_spice_kernel("de440.bsp")
-load_spice_kernel("de440s.bsp")
-```
-
-**Clear all loaded kernels:**
-```julia
-# Start fresh with custom configuration
-unload_all_spice_kernels()
-load_spice_kernel("naif0012.tls")
-load_spice_kernel("de440s.bsp")
-load_spice_kernel("jup365.bsp")
-```
-
-### Custom Configurations
-
-For specialized analyses, you can create custom kernel configurations:
-
-```julia
-using AstroUniverse
-
-# Clear default kernels
-unload_all_spice_kernels()
-
-# Load only what you need
-load_spice_kernel("naif0012.tls")      # Required for time conversions
-load_spice_kernel("de440s.bsp")        # Smaller planetary ephemeris
-load_spice_kernel("mar099.bsp")        # Mars satellites only
-
-# Your analysis code here...
-```
-
-### Advanced Usage
-
-**Manual file placement:**
-```julia
-# Get storage directory
-storage_dir = get_spice_directory()
-
-# Copy a local kernel file to storage
-cp("my_custom_kernel.bsp", joinpath(storage_dir, "my_custom_kernel.bsp"))
-
-# Load it
-load_spice_kernel("my_custom_kernel.bsp")
-```
-
-**Delete downloaded kernels:**
-
-Kernels persist across sessions. To remove them, use standard filesystem operations:
-```julia
-storage_dir = get_spice_directory()
-rm(joinpath(storage_dir, "old_kernel.bsp"))
-```
-
-The storage directory is managed by Scratch.jl and will be automatically cleaned if the package is removed.
+`list_downloaded_spice_kernels` reports files stored on disk, while
+`list_cached_spice_kernels` reports kernels loaded in the current process.
+`unload_spice_kernel` and `unload_all_spice_kernels` remove kernels from the
+current SPICE session without deleting downloaded files.
 
 ## Texture Maps
 
-Relatively small texture files for the Sun and planets are distributed with AstroUniverse in the AstroUniverse/data folder. Thanks to https://www.solarsystemscope.com/ for texture maps which are licensed using the Creative Commons 4.0 BY license.
+Small texture maps for the Sun and planets are distributed in the package's
+`data` directory. The images are provided by Solar System Scope under the
+Creative Commons Attribution 4.0 license.
 
-## Table of Contents
+## API Reference
 
 ```@index
 ```
 
-## API Reference
-
 ```@autodocs
 Modules = [AstroUniverse]
+Public  = true
+Private = false
 Order = [:type, :function, :macro, :constant]
 ```

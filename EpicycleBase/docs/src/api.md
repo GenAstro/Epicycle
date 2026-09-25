@@ -1,8 +1,10 @@
 # API Reference
 
 ```@autodocs
-Modules = [AstroStates]
+Modules = [EpicycleBase]
 Order = [:type, :function, :macro, :constant]
+Public = true
+Private = false
 ```
 
 ## Index

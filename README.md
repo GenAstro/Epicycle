@@ -65,32 +65,14 @@ Epicycle is an application for space systems with a nod to the giants before us 
 - Full-field spherical-harmonic gravity — `EGM96` and `EGM2008` via `HarmonicGravity`.
 - NRLMSISE-00 atmospheric density — `MSISE00` via `AtmosphericDrag`.
 
-## Contributing to Epicycle 
+## Contributing
 
-Contributing is easy.
-
-1. Fork the project
-2. Create a new feature branch
-3. Make your changes
-4. Submit a pull request
-
-We use the Linux Kernel's Developer's Certificate of Origin (DCO) as detailed in CONTRIBUTING.txt.
+The terms for contributions are in [LICENSE.md](LICENSE.md).
 
 ## License
 
-We believe in the power of open source to foster innovation and community-driven 
-development and also recognize the need for a sustainable business model and a model
-that can handle export-controlled aerospace content. 
-
-For these reasons, Epicycle is offered under a tri-licensing model. The license allows
-users to choose between the following three options:
-
-1) LGPL V3.0
-2) Evaluation and Education use Only
-3) Commercial License
-
-See LICENSE.txt for terms each license option.  For commercial licensing, 
-email licensing at genastro.org.
+Each package is licensed under the terms in its own `LICENSE.md`. [LICENSE.md](LICENSE.md) lists
+which package is under which license.
 
 ## Notes
 Claude Sonnet and ChatGPT are used in the development of Epicycle.

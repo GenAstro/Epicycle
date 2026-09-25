@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: MIT
 
 __precompile__()
 """
@@ -10,7 +10,8 @@ storage and conversions between scales such as TT, TAI, UTC, TDB, TCB, TCG.
 The API is inspired by AstroPy.Time. The numerics are built on Tempo.jl
 
 Notes
-- This module does not handle leap seconds directly. Those are handled in Tempo.jl. 
+- Leap seconds come from the IERS leap-second list, downloaded on first use and refreshed when
+  it expires; see `leap_seconds.jl`. Other scale conversions come from Tempo.jl.
 - This module currently mixes symbols and instances for time scales and formats.
   Future versions will standardize on typed tags (e.g., TT(), TDB(), JD()) to avoid ambiguity.
 
@@ -39,6 +40,7 @@ using EpicycleBase
 export Time
 export TAI, TT, TDB, UTC, TCB, TCG
 export JD, MJD, ISOT
+export refresh_leap_seconds!
 
 import Base: +,-
 
@@ -46,69 +48,152 @@ const SECONDS_IN_DAY = 86400.0
 const MJD_EPOCH = Tempo.DJM0 
 const J2000_EPOCH = 2451545.0
 
+include("leap_seconds.jl")
+
 abstract type AbstractTimeScale end
 abstract type AbstractTimeFormat end
 
 """
-    TT <: AbstractTimeScale
+    TT()
 
 Terrestrial Time scale.
+
+# Example
+```jldoctest
+Time(2451545.0, TT(), JD()).scale
+
+# output
+
+:tt
+```
 """
 struct TT   <: AbstractTimeScale end
 
 """
-    TDB <: AbstractTimeScale
+    TDB()
 
 Barycentric Dynamical Time scale.
+
+# Example
+```jldoctest
+Time(2451545.0, TDB(), JD()).scale
+
+# output
+
+:tdb
+```
 """
 struct TDB  <: AbstractTimeScale end
 
 """
-    UTC <: AbstractTimeScale    
+    UTC()
 
 Coordinated Universal Time scale.
+
+# Example
+```jldoctest
+Time(2451545.0, UTC(), JD()).scale
+
+# output
+
+:utc
+```
 """
 struct UTC  <: AbstractTimeScale end
 
 """
-    TCB <: AbstractTimeScale
+    TCB()
 
 Barycentric Coordinate Time scale.
+
+# Example
+```jldoctest
+Time(2451545.0, TCB(), JD()).scale
+
+# output
+
+:tcb
+```
 """
 struct TCB  <: AbstractTimeScale end
 
 """
-    TCG <: AbstractTimeScale
+    TCG()
 
 Geocentric Coordinate Time scale.
+
+# Example
+```jldoctest
+Time(2451545.0, TCG(), JD()).scale
+
+# output
+
+:tcg
+```
 """
 struct TCG  <: AbstractTimeScale end
 
 """
-    TAI <: AbstractTimeScale
+    TAI()
 
 International Atomic Time scale.
+
+# Example
+```jldoctest
+Time(2451545.0, TAI(), JD()).scale
+
+# output
+
+:tai
+```
 """
 struct TAI  <: AbstractTimeScale end
 
 """
-    JD <: AbstractTimeFormat
+    JD()
 
 Julian Date format.
+
+# Example
+```jldoctest
+Time(2451545.0, TT(), JD()).format
+
+# output
+
+:jd
+```
 """
 struct JD     <: AbstractTimeFormat end
 
 """
-    MJD <: AbstractTimeFormat
+    MJD()
 
 Modified Julian Date format.
+
+# Example
+```jldoctest
+Time(51544.5, TT(), MJD()).format
+
+# output
+
+:mjd
+```
 """
 struct MJD    <: AbstractTimeFormat end   
 
 """
-    ISOT <: AbstractTimeFormat
+    ISOT()
 
 ISO 8601 Time format.
+
+# Example
+```jldoctest
+Time("2000-01-01T12:00:00.000", TT(), ISOT()).format
+
+# output
+
+:isot
+```
 """
 struct ISOT   <: AbstractTimeFormat end
 
@@ -171,13 +256,16 @@ const OFFSET_TABLE = Dict{Tuple{Symbol, Symbol}, Function}(
     (:tai, :tt)  => Tempo.offset_tai2tt,
     (:tt, :tdb)  => Tempo.offset_tt2tdb,
     (:tdb, :tt)  => Tempo.offset_tdb2tt,
-    (:tai, :utc) => Tempo.offset_tai2utc,
-    (:utc, :tai) => Tempo.offset_utc2tai,
+    (:tai, :utc) => offset_tai2utc,                # leap_seconds.jl: the IERS list, kept current
+    (:utc, :tai) => offset_utc2tai,
     (:tcg, :tt)  => Tempo.offset_tcg2tt,
     (:tcb,:tdb)  => Tempo.offset_tcb2tdb,
     (:tt,:tcg)   => Tempo.offset_tt2tcg,
     (:tdb,:tcb)  => Tempo.offset_tdb2tcb,
 )
+
+# Marks the constructor that takes Julian-date parts whatever the format; see `_time_jd`.
+struct _JDParts end
 
 """
     Time{T<:Real}
@@ -241,8 +329,9 @@ struct Time{T<:Real}
     scale::Symbol
     format::Symbol
 
-    # Core typed constructor (validating), infers T from jd1/jd2
-    function Time(jd1::T, jd2::T, scale::Symbol, format::Symbol) where {T<:Real}
+    # Julian-date parts, whatever the format; `format` only sets how the time displays.
+    # Reached through `_time_jd`, never directly by a caller.
+    function Time{T}(::_JDParts, jd1::T, jd2::T, scale::Symbol, format::Symbol) where {T<:Real}
         jd1, jd2 = _rebalance(jd1, jd2)
         _validate_scale(scale)
         _validate_format(format)
@@ -250,14 +339,34 @@ struct Time{T<:Real}
     end
 end
 
-"""
-    Time(jd1::Real, jd2::Real, scale::Symbol, format::Symbol)
 
-Promotes to `T = promote_type(typeof(jd1), typeof(jd2))` and constructs `Time{T}`.
 """
-function Time(jd1::Real, jd2::Real, scale::Symbol, format::Symbol)
+    _time_jd(jd1, jd2, scale::Symbol, format::Symbol) -> Time
+
+A `Time` from the two parts of a Julian date, displayed in `format`. The internal way to copy or
+shift a time while keeping its format; the public two-part constructor reads its parts in the
+format it names.
+"""
+function _time_jd(jd1::Real, jd2::Real, scale::Symbol, format::Symbol)
     T = promote_type(typeof(jd1), typeof(jd2))
-    return Time(T(jd1), T(jd2), scale, format)
+    return Time{T}(_JDParts(), T(jd1), T(jd2), scale, format)
+end
+
+"""
+    Time(val1::Real, val2::Real, scale::Symbol, format::Symbol)
+
+A time from two parts of a date in `format`, summed: Julian-date parts for `:jd`, Modified
+Julian Date parts for `:mjd`, as in AstroPy. Splitting a date into a whole and a fractional part
+keeps full precision. An ISOT time is a string; two numbers with `:isot` raise an `ArgumentError`.
+The numeric type is `promote_type(typeof(val1), typeof(val2))`.
+"""
+function Time(val1::Real, val2::Real, scale::Symbol, format::Symbol)
+    _validate_format(format)
+    format === :isot && throw(ArgumentError(
+        "Time: an ISOT time is a string, such as Time(\"2024-01-01T00:00:00\", UTC(), ISOT()); " *
+        "two numbers are the parts of a Julian date or a Modified Julian Date."))
+    format === :mjd && return _time_jd(val1 + MJD_EPOCH, val2, scale, :mjd)
+    return _time_jd(val1, val2, scale, format)
 end
 
 """
@@ -310,13 +419,14 @@ function Time(isostr::String, scale::Symbol, format::Symbol)
     jd1, jd2 = calhms2jd_prec(y, m, d, h, mi, s)
 
     jd1, jd2 = _rebalance(jd1, jd2)
-    return Time(jd1, jd2, scale, format)
+    return _time_jd(jd1, jd2, scale, format)
 end
 
-""" 
-    Time(jd1::Real, jd2::Real, s::AbstractTimeScale, f::AbstractTimeFormat) -> Time
+"""
+    Time(val1::Real, val2::Real, s::AbstractTimeScale, f::AbstractTimeFormat) -> Time
 
-Construct time given JD parts and typed scale/format tags.
+Construct a time from two parts of a date in the format `f`, with typed scale and format tags:
+Julian-date parts for `JD()`, Modified Julian Date parts for `MJD()`.
 """
 Time(jd1::Real, jd2::Real, s::AbstractTimeScale, f::AbstractTimeFormat) =
     Time(jd1, jd2, _scale_symbol(s), _format_symbol(f))
@@ -518,7 +628,7 @@ function Base.getproperty(t::Time, name::Symbol)
     # Time scale conversion 
     if name in TIME_SCALES
         newjd1, newjd2 = apply_offsets(t.jd1, t.jd2, t.scale, name)
-        return Time(newjd1, newjd2, name, t.format)
+        return _time_jd(newjd1, newjd2, name, t.format)
     end
 
     # Fall back to normal field access
@@ -558,12 +668,12 @@ function _from_format(value::Real, scale::Symbol, format::Symbol)
         jd1 = floor(T, value)
         jd2 = T(value - jd1)
         jd1, jd2 = _rebalance(jd1, jd2)
-        return Time(jd1, jd2, scale, :jd)
+        return _time_jd(jd1, jd2, scale, :jd)
     elseif format == :mjd
         jd1 = floor(T, value) + T(MJD_EPOCH)
         jd2 = T(value - floor(T, value))
         jd1, jd2 = _rebalance(jd1, jd2)
-        return Time(jd1, jd2, scale, :mjd)
+        return _time_jd(jd1, jd2, scale, :mjd)
     else
         throw(ArgumentError("Internal Error: Unsupported time format: $format")) # COV_EXCL_LINE
     end
@@ -606,12 +716,9 @@ end
   Subtract two `Time` objects, returning the difference in days.
 """
 function -(t2::Time, t1::Time)::Real
-    if t1.scale != t2.scale
-        error("Cannot subtract Times with different scales (", t1.scale, " vs ", t2.scale, ")")
-    end
-    if t1.format != t2.format
-        error("Cannot subtract Times with different formats (", t1.format, " vs ", t2.format, ")")
-    end
+    t1.scale === t2.scale || throw(ArgumentError(
+        "Time: cannot subtract times in different scales ($(_scale_tag_str(t2.scale)) and " *
+        "$(_scale_tag_str(t1.scale))); convert one first, for example `t2 - t1.$(t2.scale)`."))
     return (t2.jd1 - t1.jd1) + (t2.jd2 - t1.jd2)
 end
 
@@ -622,7 +729,7 @@ Subtract days `dt` from `t` returning new time object.
 """
 function Base.:-(t::Time{T}, dt::Real) where {T<:Real}
     δ1, δ2 = _rebalance(-T(dt), zero(T))
-    return Time(getfield(t, :_jd1) + δ1, getfield(t, :_jd2) + δ2, t.scale, t.format)
+    return _time_jd(getfield(t, :_jd1) + δ1, getfield(t, :_jd2) + δ2, t.scale, t.format)
 end
 
 """
@@ -635,7 +742,7 @@ function +(t::Time, dt::Real)
     δ1, δ2 = _rebalance(dt, zero(dt))
     jd1 = t.jd1 + δ1
     jd2 = t.jd2 + δ2
-    return Time(jd1, jd2, t.scale, t.format)
+    return _time_jd(jd1, jd2, t.scale, t.format)
 end
 
 """
@@ -739,8 +846,9 @@ function _isot_to_date(isostr::String)
     if !(1 <= mth <= 12)
         throw(ArgumentError("Month must be between 1 and 12. Got: $mth"))
     end
-    if !(1 <= d <= 31)
-        throw(ArgumentError("Day must be between 1 and 31. Got: $d"))
+    if !(1 <= d <= _days_in_month(y, mth))
+        throw(ArgumentError("Time: $isostr is not a date; " *
+                            "$(_MONTH_NAMES[mth]) $y has $(_days_in_month(y, mth)) days."))
     end
     if !(0 <= h < 24)
         throw(ArgumentError("Hour must be between 0 and 23. Got: $h"))
@@ -754,6 +862,12 @@ function _isot_to_date(isostr::String)
     
     return (y, mth, d, h, mi, s) 
 end
+
+const _MONTH_NAMES = ("January", "February", "March", "April", "May", "June", "July",
+                      "August", "September", "October", "November", "December")
+
+_is_leap_year(y) = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
+_days_in_month(y, m) = m == 2 ? (_is_leap_year(y) ? 29 : 28) : (m in (4, 6, 9, 11) ? 30 : 31)
 
 """
     calhms2jd_prec(Y::I, M::I, D::I, h::I, m::I, sec::N) where {I <: Integer, N <: Number}

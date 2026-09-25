@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 #
 # Benchmark: pure propagation with two-body gravity + Exponential atmospheric drag.
 #
@@ -16,7 +16,7 @@
 using AstroProp
 using AstroModels, AstroStates, AstroEpochs
 using AstroUniverse: earth
-using OrdinaryDiffEq: Vern9
+using OrdinaryDiffEqVerner: Vern9
 using BenchmarkTools
 
 const PROP_DURATION_DAYS = 30.0

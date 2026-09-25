@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using AstroSolve
 using Documenter
 
@@ -14,8 +17,13 @@ makedocs(;
     ),
     pages=[
         "AstroSolve.jl" => "index.md",
+        "Concepts"      => "concepts.md",
+        "Parameter optimization" => "optimization.md",
+        "Optimal control"        => "optimal_control.md",
+        "Estimation"             => "estimation.md",
+        "API reference"          => "api.md",
     ],
-    warnonly=true,         # Just warn, don't error
+    warnonly=[:missing_docs, :cross_references],   # doctests and examples are fatal
     checkdocs=:none        # Skip docstring completeness checks
 )
 

@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Gen Astro LLC
+# SPDX-License-Identifier: MIT
+
 using Test
 using AstroStates
 using LinearAlgebra

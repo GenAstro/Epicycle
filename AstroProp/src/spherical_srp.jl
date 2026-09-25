@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 #
 # Solar radiation pressure — cannonball (spherical) SRP with a pluggable shadow model.
 # Shadow-factor formulas adapted from Hammerhead-Space AstroForceModels.jl (MIT) and
@@ -8,21 +8,10 @@
 
 const _C_M_S = 2.99792458e8        # speed of light [m/s]
 
-# ─────────────────────────────── shadow model seam ───────────────────────────
-"""
-    AbstractShadowModel
-
-The eclipse model used by [`SolarRadiationPressure`](@ref), chosen with its `shadow` keyword — it
-gives the fraction of the Sun's disk that is unobscured by the occulting body.
-
-# Available models
-- [`DualCone`](@ref) — umbra + penumbra dual-cone eclipse. Open.
-
-# Writing your own
-Define a type that subtypes `AbstractShadowModel` and give it a
-`_shadow_factor(model, r_sat, r_sun, R_sun, R_occ)` method returning a lighting factor in ``[0, 1]``.
-`SolarRadiationPressure` then works with it unchanged.
-"""
+# ─────────────────────────────── shadow model ────────────────────────────────
+# The type of the `shadow` keyword. `DualCone` is the one eclipse model and the only one supported,
+# so the type is internal: a second model is a `_shadow_factor` method on a new subtype, and becomes
+# supported when it ships with tests.
 abstract type AbstractShadowModel end
 
 """
@@ -61,7 +50,8 @@ speed of light, and ``r_{\\mathrm{AU}}`` is `nominal_sun`.
 # Arguments
 - `body::CelestialBody`: positional, required — the central body whose shadow can eclipse the
   spacecraft.
-- `shadow::AbstractShadowModel`: the eclipse model — [`DualCone`](@ref) (umbra + penumbra).
+- `shadow`: the eclipse model. [`DualCone`](@ref), umbra and penumbra, is the default and the
+  only model.
 - `solar_flux::Real`: the solar irradiance at 1 AU, W/m². Must be positive. Default `1367.0`
   (GMAT `SRP.Flux`).
 - `nominal_sun::Real`: the reference Sun distance used for 1/r² scaling, km. Must be positive.
@@ -87,7 +77,7 @@ struct SolarRadiationPressure{S<:AbstractShadowModel} <: OrbitODE
     nominal_sun::Float64       # km             (GMAT SRP.Nominal_Sun; the AU used for 1/r² scaling)
     R_sun::Float64             # km
     R_occ::Float64             # km (occulting body radius)
-    dependencies::Vector{Type{<:AbstractVar}}
+    dependencies::Vector{Type{<:AbstractVarTag}}
     num_funs::Int
 end
 
@@ -101,7 +91,7 @@ function SolarRadiationPressure(body::CelestialBody;
         "nominal_sun must be positive; got nominal_sun = $nominal_sun km"))
     return SolarRadiationPressure(body, shadow, Float64(solar_flux), Float64(nominal_sun),
                                   sun.equatorial_radius, body.equatorial_radius,
-                                  Type{<:AbstractVar}[PosVel], 6)
+                                  Type{<:AbstractVarTag}[PosVel], 6)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", f::SolarRadiationPressure)

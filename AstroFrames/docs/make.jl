@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: MIT
+
 using AstroFrames
 using Documenter
 
@@ -16,7 +19,7 @@ makedocs(;
         "Home" => "index.md",
         "Reference Guide" => "api.md",
     ],
-    warnonly=true,         # Just warn, don't error
+    warnonly=[:missing_docs, :cross_references],   # doctests and examples are fatal
     checkdocs=:none        # Skip docstring completeness checks
 )
 

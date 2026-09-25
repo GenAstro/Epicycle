@@ -1,6 +1,6 @@
 name = "AstroProp"
 uuid = "0e2365da-becf-4b4f-af1d-8bfff9db196c"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
 
 [deps]
@@ -12,22 +12,30 @@ AstroModels = "ac4cc047-8a77-4e9e-bb46-f1584e9a10ee"
 AstroStates = "e8875680-ece1-4c6e-865d-f99ee1f9f9b4"
 AstroUniverse = "4bd44dca-1e45-43d2-b940-3f88da59ea6f"
 EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
+OrdinaryDiffEqTsit5 = "b1df2697-797e-41e3-8120-5422d3b24e4a"
+OrdinaryDiffEqVerner = "79d7bb75-1356-48c1-b8c0-6832512096c2"
+SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 SatelliteToolboxBase = "9e17983a-0463-41a7-9a16-1682db6d8b66"
 SatelliteToolboxTransformations = "6b019ec1-7a1e-4f04-96c7-a9db1ca5514d"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-AstroCallbacks = "0.4.0"
+AstroCallbacks = "0.5.0"
 AstroEpochs = "0.5.0"
-AstroFrames = "0.2.0"
-AstroManeuvers = "0.2.0"
-AstroModels = "0.2.0"
+AstroFrames = "0.3.0"
+AstroManeuvers = "0.3.0"
+AstroModels = "0.3.0"
 AstroStates = "0.10.0"
-AstroUniverse = "0.2.0"
-EpicycleBase = "0.1.0"
-OrdinaryDiffEq = "6.101"
+AstroUniverse = "0.3.0"
+EpicycleBase = "0.1.1"
+CommonSolve = "0.2"
+ForwardDiff = "0.10"
+OrdinaryDiffEqTsit5 = "1.4"
+OrdinaryDiffEqVerner = "1.5"
+SciMLBase = "2.99"
 SatelliteToolboxBase = "~1.2"
 SatelliteToolboxTransformations = "~1.2"
 StaticArrays = "1"
@@ -36,8 +44,9 @@ julia = "1.10"
 [extras]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+OrdinaryDiffEqHighOrderRK = "d28bc4f8-55e1-4f49-af69-84c1a99f0f58"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "ForwardDiff", "SciMLBase", "BenchmarkTools"]
+test = ["Test", "ForwardDiff", "SciMLBase", "BenchmarkTools", "OrdinaryDiffEqHighOrderRK"]

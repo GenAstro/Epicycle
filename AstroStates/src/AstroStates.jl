@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: MIT
 
 """
 Module containing orbital state representations and conversions.
@@ -31,7 +31,6 @@ export outasymptote_to_kep, cart_to_outasymptote, to_vector, cart_to_inasymptote
 export inasymptote_to_kep, sphazfpa_to_cart, cart_to_sphazfpa, equinoctial_to_alt_equinoctial
 export alt_equinoctial_to_equinoctial, equinoctial_to_cart, cart_to_equinoctial
 export modkep_to_kep, kep_to_modkep
-export _marker_type
 export state_tag_to_type, state_type_to_tag
 
 struct Cartesian <: AbstractOrbitStateType end
@@ -826,6 +825,126 @@ end
 @inline state_type_to_tag(::Type{<:BrouwerMeanLongState})  = BrouwerMeanLong()
 @inline state_type_to_tag(::Type{<:BrouwerMeanShortState}) = BrouwerMeanShort()        
 
+# --- Documentation for the representation tags and the tag mapping -----------
+
+"""
+    AbstractOrbitState
+
+The common type of the orbital state representations, such as `CartesianState` and
+`KeplerianState`. Each holds six numbers, which [`to_vector`](@ref) returns in the
+representation's order.
+
+# Example
+```jldoctest
+CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]) isa AbstractOrbitState
+
+# output
+true
+```
+"""
+AbstractOrbitState
+
+for (tag, state) in ((:Cartesian, :CartesianState), (:Keplerian, :KeplerianState),
+                     (:Equinoctial, :EquinoctialState), (:SphericalRADEC, :SphericalRADECState),
+                     (:SphericalAZIFPA, :SphericalAZIFPAState),
+                     (:ModifiedEquinoctial, :ModifiedEquinoctialState),
+                     (:OutGoingAsymptote, :OutGoingAsymptoteState),
+                     (:IncomingAsymptote, :IncomingAsymptoteState),
+                     (:ModifiedKeplerian, :ModifiedKeplerianState),
+                     (:AlternateEquinoctial, :AlternateEquinoctialState),
+                     (:BrouwerMeanLong, :BrouwerMeanLongState),
+                     (:BrouwerMeanShort, :BrouwerMeanShortState))
+    @eval @doc """
+        $($(string(tag)))()
+
+    The tag for the `$($(string(state)))` representation. An `OrbitState` carries one to say what
+    its six numbers are, and [`state_tag_to_type`](@ref) maps it to `$($(string(state)))`.
+
+    # Example
+    ```julia
+    OrbitState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0], Cartesian())
+    state_tag_to_type($($(string(tag)))())     # $($(string(state)))
+    ```
+    """ $tag
+end
+
+"""
+    state_tag_to_type(tag::AbstractOrbitStateType) -> Type
+
+The state type a representation tag names, such as `KeplerianState` for `Keplerian()`.
+
+# Arguments
+- `tag`: a representation tag, such as `Keplerian()`.
+
+# Returns
+The concrete state type. The inverse of [`state_type_to_tag`](@ref).
+
+# Example
+```jldoctest
+state_tag_to_type(Keplerian())
+
+# output
+KeplerianState
+```
+"""
+state_tag_to_type
+
+"""
+    state_type_to_tag(T::Type) -> AbstractOrbitStateType
+    state_type_to_tag(state::AbstractOrbitState) -> AbstractOrbitStateType
+
+The representation tag for a state type or a state, such as `Keplerian()` for `KeplerianState`.
+
+# Arguments
+- `T` or `state`: a state type, such as `KeplerianState`, or a state of that type.
+
+# Returns
+The tag instance. The inverse of [`state_tag_to_type`](@ref).
+
+# Example
+```jldoctest
+state_type_to_tag(KeplerianState)
+
+# output
+Keplerian()
+```
+"""
+state_type_to_tag
+
+"""
+    to_vector(state) -> Vector
+
+The six numbers of a state, in its representation's order. Distances are in km, speeds in km/s
+and angles in radians.
+
+| Representation | Order |
+|---|---|
+| `CartesianState` | x, y, z, vx, vy, vz |
+| `KeplerianState` | sma, ecc, inc, raan, aop, ta |
+| `ModifiedKeplerianState` | rp, ra, inc, raan, aop, ta |
+| `SphericalRADECState` | r, dec, ra, v, decv, rav |
+| `SphericalAZIFPAState` | r, ra, dec, v, vazi, fpa |
+| `ModifiedEquinoctialState` | p, f, g, h, k, L |
+| `EquinoctialState` | a, h, k, p, q, mlong |
+| `AlternateEquinoctialState` | a, h, k, altp, altq, mlong |
+| `OutGoingAsymptoteState`, `IncomingAsymptoteState` | rp, c3, rla, dla, bpa, ta |
+| `BrouwerMeanLongState`, `BrouwerMeanShortState` | sma, ecc, inc, raan, aop, ma |
+
+For an `OrbitState` it returns the stored vector itself, not a copy.
+
+# Returns
+A 6-element vector.
+
+# Example
+```jldoctest
+to_vector(CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]))[5]
+
+# output
+7.5
+```
+"""
+to_vector
+
 # Bring in the OrbitState wrapper and helpers now that concrete types exist
 include("orbit_state.jl")
 
@@ -874,9 +993,8 @@ function to_vector(state::BrouwerMeanShortState)
     [state.sma, state.ecc, state.inc, state.raan, state.aop, state.ma]
 end
 function to_vector(v::Vector{<:Real})
-    error("Cannot call `to_vector` on raw Vector — a state type was expected 
-    but got Vector{Float64}. This means one of your conversions returned a 
-    vector instead of a struct.")
+    error("Cannot call `to_vector` on raw Vector: a state type was expected but got " *
+          "$(typeof(v)). One of your conversions returned a vector instead of a struct.")
 end
 
 # =============================================================================

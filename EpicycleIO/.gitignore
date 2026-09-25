@@ -1,0 +1,7 @@
+# Written by Ex_09_Report.jl when the examples run from this directory.
+flight.txt
+*.txt.bak
+*.cov
+*.mem
+docs/build/
+docs/Manifest.toml

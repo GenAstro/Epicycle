@@ -20,6 +20,7 @@ current_time = sc.time
 
 Time can be specified in different time scales (TAI, UTC, TT, TDB):
 
+<!-- doc-continue -->
 ```julia
 # TAI (International Atomic Time)
 sc = Spacecraft(
@@ -42,7 +43,7 @@ sc = Spacecraft(
 When using automatic differentiation, the time's Julian day components promote to Dual numbers:
 
 ```julia
-using ForwardDiff
+using AstroModels, AstroEpochs, ForwardDiff
 
 sc = Spacecraft(
     time = Time("2015-09-21T12:23:12", TAI(), ISOT()),

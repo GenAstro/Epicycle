@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 """
     DeltaVVector <: AbstractManeuverVar
@@ -13,13 +13,13 @@ Notes
 
 Examples
 ```julia
-# dv::ImpulsiveManeuver — replace with your maneuver
-dvvec_calc = ManeuverCalc(dv, DeltaVVector())
+sc  = Spacecraft()
+toi = ImpulsiveManeuver()
+dvvec_calc = ManeuverCalc(toi, sc, DeltaVVector())
 Δv = get_calc(dvvec_calc)                 # e.g., [0.1, 0.2, 0.3]
 set_calc!(dvvec_calc, [0.2, 0.3, 0.4])    # set the delta-V vector
 ```
 """
-
 struct DeltaVVector <: AbstractManeuverVar end
 
 calc_is_settable(::DeltaVVector) = true    # COV_EXCL_LINE (inlined)

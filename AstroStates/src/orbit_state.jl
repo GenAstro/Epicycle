@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: MIT
 
 """
     OrbitState(state::AbstractVector, statetype::AbstractOrbitStateType)
@@ -10,6 +10,10 @@ A generic wrapper for orbital state vectors and their associated metadata.
 - `state`: The numerical state vector (e.g., position/velocity, orbital elements). Must be a vector of real numbers.
 - `statetype`: Marker instance indicating the state representation (e.g., `Cartesian()`, `Keplerian()`, etc.).
 -              - to see all state types, use `subtypes(AbstractOrbitStateType)`.
+# Fields
+- `state::V`: the six numbers of the state, in the order `to_vector` gives for the representation.
+- `statetype::S`: the tag naming the representation, such as `Cartesian()`.
+
 # Example
 ```julia
 state_vec = [7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]  # Cartesian position and velocity

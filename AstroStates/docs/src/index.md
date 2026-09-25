@@ -21,6 +21,7 @@ The example below illustrates how to create a state struct, perform conversions,
 
 ```julia
 using AstroStates
+using InteractiveUtils        # subtypes
 
 # Define a Cartesian state
 cart = CartesianState([7000.0, 0.0, 100.0, 0.0, 7.5, 2.5])
@@ -72,10 +73,12 @@ h.c3
 
 ## OrbitState Container
 
-The OrbitState struct provides a type-stable container when the representation may change during a simulation but type stability is still required. For example, Epicycle’s Spacecraft uses OrbitState to accept different input representations and to switch state types during a run. OrbitState stores (1) the state data and (2) a tag that describes the representation. The tag is a state-type marker that parallels the concrete state struct names (e.g., Keplerian, Cartesian, etc.).
+The OrbitState struct holds a state whose representation may change during a run, without the
+cost that normally comes from letting a type vary. For example, Epicycle’s Spacecraft uses OrbitState to accept different input representations and to switch state types during a run. OrbitState stores (1) the state data and (2) a tag that describes the representation. The tag is a state-type marker that parallels the concrete state struct names (e.g., Keplerian, Cartesian, etc.).
 
 ```julia
 using AstroStates
+using InteractiveUtils        # subtypes
 
 # Create an OrbitState struct that stores the state and state type.
 os = OrbitState([-98000.0, 2.6, pi/4, deg2rad(145), pi/8, 0.0 ],Keplerian())
@@ -230,6 +233,8 @@ J = first(Zygote.jacobian(f, x))
 
 ```@autodocs
 Modules = [AstroStates]
+Public  = true
+Private = false
 Order = [:type]
 ```
 
@@ -237,6 +242,8 @@ Order = [:type]
 
 ```@autodocs
 Modules = [AstroStates]
+Public  = true
+Private = false
 Order = [:function]
 ```
 

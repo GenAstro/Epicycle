@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 __precompile__()
 
@@ -14,7 +14,7 @@ using EpicycleBase
 using AstroEpochs
 using AstroStates
 using AstroFrames
-using AstroModels: Spacecraft, to_posvel, set_posvel!
+using AstroModels: Spacecraft, to_posvel, set_posvel!, total_mass, notify_once!
 using AstroModels: HistorySegment, SpacecraftHistory, push_segment!
 
 export ImpulsiveManeuver, maneuver!
@@ -221,13 +221,47 @@ function compute_mass_used(m::ImpulsiveManeuver, initial_mass::Real, Isp::Real)
 end
 
 """
-    consume_fuel!(m::ImpulsiveManeuver, sc)
+    consume_fuel!(m::ImpulsiveManeuver, sc::Spacecraft) -> Spacecraft
 
-Subtract mass used by maneuver from the spacecraft mass.
+Draw the propellant `m` consumes out of `sc`.
+
+# Arguments
+- `m`: The maneuver. It carries the Δv and the `Isp` the mass used is computed from.
+- `sc`: The spacecraft the propellant comes out of.
+
+# Returns
+`sc`, with its mass reduced.
+
+# Notes
+The maneuver is the argument rather than a mass delta because the maneuver carries the
+`Isp` the mass used is computed from. Tanks are not modeled yet, so the burn draws from the
+spacecraft's total mass. That pool includes any payload, and a warning says so once per
+spacecraft.
+
+Mass follows the rocket equation, so however large the burn, mass approaches zero without
+crossing it and nothing throws. A solver varying Δv proposes infeasible burns as a matter of
+course, and a throw would end the run instead of letting it step back. Drag and SRP go as
+`1/m`, so a mass near zero makes later accelerations unphysical: keep mass above a floor with an
+explicit constraint in the solve. If mass reaches zero, which for an impulsive burn takes a Δv
+large enough for the exponential to underflow, a warning says so once.
 """
 function consume_fuel!(m::ImpulsiveManeuver, sc::Spacecraft)
-    total_mass = sc.mass
-    sc.mass -= compute_mass_used(m, total_mass, m.Isp)
+    m0 = total_mass(sc)
+
+    notify_once!(sc, :lumped_mass_burn,
+        "Spacecraft \"$(sc.name)\" has no propellant tanks modeled, so this burn draws " *
+        "from its total mass, which includes any payload.")
+
+    m1 = m0 - compute_mass_used(m, m0, m.Isp)
+    setfield!(sc, :mass, convert(typeof(getfield(sc, :mass)), m1))
+
+    if m1 <= zero(m1)
+        notify_once!(sc, :non_positive_mass,
+            "Spacecraft \"$(sc.name)\" is at $(m1) kg after this burn. Drag and SRP divide " *
+            "by mass, so results past this point are not physical. Constrain mass to stay " *
+            "positive in the solve rather than relying on the objective to avoid it.")
+    end
+
     return sc
 end
 
@@ -248,40 +282,29 @@ Arguments
 - sc::Spacecraft  The same spacecraft instance with updated state, mass, and history
 
 # Examples
-```jldoctest
+```julia
 using AstroManeuvers, AstroFrames, AstroModels
 
-m = ImpulsiveManeuver(axes=Inertial(), 
-                      Isp=300.0, 
-                      element1=0.01, 
-                      element2=0.0, 
-                      element3=0.0)
-
+m  = ImpulsiveManeuver(axes=Inertial(), Isp=300.0, element1=0.01)
 sc = Spacecraft()
 maneuver!(sc, m)
 
-# output
-Spacecraft: unnamed
-  AstroEpochs.Time
-    value  = 2015-09-21T12:23:12.000
-    scale  = UTC()
-    format = ISOT()
-  OrbitState:
-    statetype: AstroStates.Cartesian
-  CartesianState:
-    x   =  7000.00000000
-    y   =     0.00000000
-    z   =     0.00000000
-    vx  =     0.01000000
-    vy  =     7.50000000
-    vz  =     0.00000000
-  CoordinateSystem:
-    origin: Earth
-    axes: ICRFAxes
-  Total Mass = 996.6078730003628 kg
+to_posvel(sc)[4]     # 0.01 km/s along x
+total_mass(sc)       # 996.6078730003628 kg
 ```
 """
 function maneuver!(sc::Spacecraft, m::ImpulsiveManeuver)
+    recorder = _RECORDER[]
+    recorder === nothing || return recorder("maneuver", () -> _maneuver_now!(sc, m))
+    return _maneuver_now!(sc, m)
+end
+
+# While a targeting block records (AstroSolve's `target!`), a burn is not applied: it is handed to
+# the recorder as a deferred action and applied each time the solver replays the sequence. See the
+# same hook on `AstroProp.propagate!`. Nothing is recorded outside `target!`.
+const _RECORDER = Ref{Any}(nothing)
+
+function _maneuver_now!(sc::Spacecraft, m::ImpulsiveManeuver)
     Δv_inertial = get_deltav_inertial(m, sc)
     state = to_posvel(sc)
     state[4:6] .+= Δv_inertial

@@ -1,4 +1,9 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using Test
+using OrdinaryDiffEqTsit5: Tsit5
+using SciMLBase: ReturnCode
 using LinearAlgebra
 using SciMLBase
 
@@ -51,40 +56,22 @@ end
 # 2) propagate! direction handling: :infer default (no time condition) and the StopAt-direction /
 #    propagation-direction mismatch guards in _compute_tf.
 @testset "direction inference and mismatch guards" begin
-    forces = forces_earth_only()
-    integ  = integ_fast()
+    prop = OrbitPropagator(forces_earth_only(), integ_fast())
 
     # _infer_direction: state-only stop under :infer → defaults to :forward (covers that branch).
     sat = make_sat()
-    sol = propagate!(DynSys(spacecraft=[sat], forces=forces), integ,
-                     StopAt(sat, PosDotVel(), 0.0; direction=+1); direction=:infer)
+    sol = propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1); direction=:infer)
     @test sol.retcode in (ReturnCode.Success, ReturnCode.Terminated)
 
     # _compute_tf: StopAt direction contradicts the inferred propagation direction → error.
     #   negative duration infers :backward, but stop_dir = +1 (increasing) contradicts it
-    @test_throws ErrorException propagate!(DynSys(spacecraft=[make_sat()], forces=forces), integ,
-        StopAt(make_sat(), PropDurationSeconds(), -3600.0; direction=+1); direction=:infer)
+    sat = make_sat()
+    @test_throws ErrorException propagate!(prop, sat,
+        StopAt(sat, PropDurationSeconds(), -3600.0; direction=+1); direction=:infer)
     #   positive duration infers :forward, but stop_dir = -1 (decreasing) contradicts it
-    @test_throws ErrorException propagate!(DynSys(spacecraft=[make_sat()], forces=forces), integ,
-        StopAt(make_sat(), PropDurationSeconds(),  3600.0; direction=-1); direction=:infer)
-end
-
-# 4) Legacy StopAt* backward-prop terminate branches (integrator.dt < 0)
-@testset "Legacy StopAt* terminate on backward propagation" begin
-    sat1 = make_sat()
-    sat2 = make_sat()
-    sat3 = make_sat()
-    prop_forces = forces_earth_only()
-    integ = integ_fast()
-
-    sol1 = propagate!(DynSys(spacecraft=[sat1], forces=prop_forces), integ, StopAtSeconds(-10.0); direction = :backward)
-    @test sol1.retcode in (ReturnCode.Success, ReturnCode.Terminated)
-
-    sol2 = propagate!(DynSys(spacecraft=[sat2], forces=prop_forces), integ, StopAtDays(-1/86400); direction = :backward)
-    @test sol2.retcode in (ReturnCode.Success, ReturnCode.Terminated)
-
-    sol3 = propagate!(DynSys(spacecraft=[sat3], forces=prop_forces), integ, StopAtRadius(sat3, 7100.0); direction = :backward)
-    @test sol3.retcode in (ReturnCode.Success, ReturnCode.Terminated)
+    sat = make_sat()
+    @test_throws ErrorException propagate!(prop, sat,
+        StopAt(sat, PropDurationSeconds(),  3600.0; direction=-1); direction=:infer)
 end
 
 nothing

@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 using Test
 using AstroModels
@@ -14,7 +14,7 @@ using AstroUniverse
 
 @testset "SpacecraftHistory Tests" begin
 @testset "HistorySegment - empty constructor basic" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     segment = HistorySegment(coord_sys)
     
     @test segment.times isa Vector{Time{Float64}}
@@ -28,7 +28,7 @@ using AstroUniverse
 end
 
 @testset "HistorySegment - empty constructor with name" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     segment = HistorySegment(coord_sys, name="test_segment")
     
     @test segment.name == "test_segment"
@@ -38,7 +38,7 @@ end
 end
 
 @testset "HistorySegment - empty constructor with metadata" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     meta = Dict("mission" => "test", "phase" => 1)
     segment = HistorySegment(coord_sys, metadata=meta)
     
@@ -48,7 +48,7 @@ end
 end
 
 @testset "HistorySegment - empty constructor with all kwargs" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     meta = Dict("event" => "maneuver", "delta_v" => 0.5)
     segment = HistorySegment(coord_sys, name="maneuver_1", metadata=meta)
     
@@ -66,7 +66,7 @@ end
                 Time("2024-01-01T01:00:00", TAI(), ISOT())]
     states = [CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
                 CartesianState([7100.0, 100.0, 0.0, 0.0, 7.4, 0.1])]
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     
     segment = HistorySegment(times, states, coord_sys)
     
@@ -84,7 +84,7 @@ end
 @testset "HistorySegment - full constructor with kwargs" begin
     times = [Time("2024-01-01T00:00:00", TAI(), ISOT())]
     states = [CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0])]
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     meta = Dict{String,Any}("source" => "propagation")
     
     segment = HistorySegment(times, states, coord_sys, name="orbit1", metadata=meta)
@@ -96,7 +96,7 @@ end
 @testset "HistorySegment - full constructor single point" begin
     times = [Time("2024-01-01T00:00:00", TAI(), ISOT())]
     states = [CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0])]
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     
     segment = HistorySegment(times, states, coord_sys)
     
@@ -108,7 +108,7 @@ end
     n = 100
     times = [Time("2024-01-01T00:00:00", TAI(), ISOT()) + i*60.0 for i in 0:n-1]
     states = [CartesianState([7000.0 + i, 0.0, 0.0, 0.0, 7.5, 0.0]) for i in 0:n-1]
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     
     segment = HistorySegment(times, states, coord_sys, name="long_prop")
     
@@ -120,7 +120,7 @@ end
 @testset "HistorySegment - full constructor empty vectors" begin
     times = Vector{Time}()
     states = Vector{CartesianState{Float64}}()
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     
     segment = HistorySegment(times, states, coord_sys)
     
@@ -136,18 +136,18 @@ end
     times = [Time("2024-01-01T00:00:00", TAI(), ISOT())]
     states = [CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
                 CartesianState([7100.0, 100.0, 0.0, 0.0, 7.4, 0.1])]
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     
-    @test_throws AssertionError HistorySegment(times, states, coord_sys)
+    @test_throws ArgumentError HistorySegment(times, states, coord_sys)
 end
 
 @testset "HistorySegment - mismatched lengths fail (reversed)" begin
     times = [Time("2024-01-01T00:00:00", TAI(), ISOT()),
                 Time("2024-01-01T01:00:00", TAI(), ISOT())]
     states = [CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0])]
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     
-    @test_throws AssertionError HistorySegment(times, states, coord_sys)
+    @test_throws ArgumentError HistorySegment(times, states, coord_sys)
 end
 
 # =============================================================================
@@ -155,7 +155,7 @@ end
 # =============================================================================
 
 @testset "HistorySegment - isempty" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     
     # Empty segment
     empty_seg = HistorySegment(coord_sys)
@@ -173,7 +173,7 @@ end
 # =============================================================================
 
 @testset "HistorySegment - struct is immutable" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     segment = HistorySegment(coord_sys, name="test")
     
     # Cannot reassign struct fields
@@ -181,7 +181,7 @@ end
 end
 
 @testset "HistorySegment - internal vectors are mutable" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     segment = HistorySegment(coord_sys)
     
     # Can mutate internal vectors
@@ -198,7 +198,7 @@ end
 end
 
 @testset "HistorySegment - metadata dict is mutable" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     segment = HistorySegment(coord_sys)
     
     # Can add to metadata dict
@@ -295,7 +295,7 @@ end
 # =============================================================================
 
 @testset "Integration - build segment with mixed types" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     segment = HistorySegment(coord_sys, name="mixed_types")
     
     # Add Float64 state
@@ -320,14 +320,14 @@ end
 end
 
 @testset "Integration - segment with coordinate system" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     times = [Time("2024-01-01T00:00:00", TAI(), ISOT())]
     states = [CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0])]
     
     segment = HistorySegment(times, states, coord_sys, name="test")
     
     @test segment.coordinate_system.origin === earth
-    @test segment.coordinate_system.axes isa ICRFAxes
+    @test segment.coordinate_system.axes isa ICRF
 end
 
 # =============================================================================
@@ -335,7 +335,7 @@ end
 # =============================================================================
 
 @testset "Show - empty segment" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     segment = HistorySegment(coord_sys)
     
     output = sprint(show, segment)
@@ -344,12 +344,12 @@ end
     @test contains(output, "Points: 0")
     @test contains(output, "Start Time: (no data)")
     @test contains(output, "End Time: (no data)")
-    @test contains(output, "Coordinate System: Earth, ICRFAxes")
+    @test contains(output, "Coordinate System: Earth, ICRF")
     @test contains(output, "Metadata: 0 entries")
 end
 
 @testset "Show - segment with name" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     segment = HistorySegment(coord_sys, name="test_orbit")
     
     output = sprint(show, segment)
@@ -358,7 +358,7 @@ end
 end
 
 @testset "Show - segment with single point" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     times = [Time("2024-01-01T00:00:00", TAI(), ISOT())]
     states = [CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0])]
     segment = HistorySegment(times, states, coord_sys)
@@ -372,7 +372,7 @@ end
 end
 
 @testset "Show - segment with multiple points" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     times = [Time("2024-01-01T00:00:00", TAI(), ISOT()),
              Time("2024-01-01T01:00:00", TAI(), ISOT())]
     states = [CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
@@ -387,7 +387,7 @@ end
 end
 
 @testset "Show - segment with metadata" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     meta = Dict{String,Any}("mission" => "demo", "phase" => 1, "dv" => 0.5)
     segment = HistorySegment(coord_sys, metadata=meta)
     
@@ -397,7 +397,7 @@ end
 end
 
 @testset "Show - segment with one metadata entry" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     meta = Dict{String,Any}("mission" => "demo")
     segment = HistorySegment(coord_sys, metadata=meta)
     
@@ -407,7 +407,7 @@ end
 end
 
 @testset "Show - complete segment" begin
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     times = [Time("2024-01-01T00:00:00", TAI(), ISOT()),
              Time("2024-01-01T06:00:00", TAI(), ISOT())]
     states = [CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0]),
@@ -422,7 +422,7 @@ end
     @test contains(output, "Start Time: 2024-01-01T00:00:00.000")
     @test contains(output, "End Time: 2024-01-01T06:00:00.000")
     @test contains(output, "TAI")
-    @test contains(output, "Coordinate System: Earth, ICRFAxes")
+    @test contains(output, "Coordinate System: Earth, ICRF")
     @test contains(output, "Metadata: 1 entry")
 end
 

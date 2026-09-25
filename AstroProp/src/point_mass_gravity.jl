@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 """
     PointMassGravity(body, perturbers = (); include_center = true)
@@ -21,11 +21,11 @@ grav  = PointMassGravity(earth, (moon, sun))                          # Earth + 
 third = PointMassGravity(earth, (moon, sun); include_center = false)  # third bodies only
 ```
 """
-struct PointMassGravity <: OrbitODE
+struct PointMassGravity <: AbstractGravityForce
     central_body::CelestialBody
     pert_bodies::Tuple{Vararg{CelestialBody}}
     include_center::Bool
-    dependencies::Vector{Type{<:AbstractVar}}
+    dependencies::Vector{Type{<:AbstractVarTag}}
     num_funs::Int
 
     function PointMassGravity(central_body::CelestialBody,
@@ -35,6 +35,22 @@ struct PointMassGravity <: OrbitODE
         check_duplicates(all_bodies)
         return new(central_body, perturbers, include_center, [PosVel], 6)
     end
+end
+
+# ---------------------------------------------------------------------------
+# Kernel — generic in mu for ForwardDiff
+# ---------------------------------------------------------------------------
+
+"""
+    _gravity_accel(mu, r) -> Vector
+
+Point-mass gravitational acceleration kernel.  Generic in `mu::T` so that
+`ForwardDiff.derivative` can seed mu with a Dual number for exact ∂f/∂μ.
+
+a = -μ · r / ‖r‖³
+"""
+@inline function _gravity_accel(mu::T, r̄::AbstractVector) where T
+    return -mu .* r̄ ./ norm(r̄)^3
 end
 
 """
@@ -63,13 +79,10 @@ function compute_point_mass_gravity!(
     x̄̇::AbstractVector{T},
     center::CelestialBody,
     pert_bodies::Tuple{Vararg{CelestialBody}};
-    jac::Dict = Dict(),
     include_center::Bool = true,
     tol::Real = 1e-12,
 ) where T
-    # TODO: Trap jacobian calls that don't exist
-    # Time and state preparations (ephemeris is computed in TDB)
-    t_tdb = t.tdb
+    t_tdb  = t.tdb
     jd_tdb = t_tdb.jd
     r̄ = posvel[1:3]
     r = norm(r̄)
@@ -78,18 +91,8 @@ function compute_point_mass_gravity!(
         error("Computation of acceleration failed: Position is less than tol and approaching singularity.")
     end
 
-    # Initialize Jacobian for PosVel if requested
-    compute_jac_posvel = haskey(jac, PosVel)
-    if compute_jac_posvel
-        I3 = Matrix{T}(I, 3, 3)
-        jac[PosVel][1:3, 4:6] .= I3
-        ∂r̄̈∂r̄ = include_center ? center.mu * (3 * (r̄ * r̄') / r^5 - I3 / r^3) : zeros(T, 3, 3)
-    end
+    acc = include_center ? _gravity_accel(center.mu, r̄) : zeros(T, 3)
 
-    # Compute the acceleration of central body if requested
-    acc = include_center ? -center.mu * r̄ / r^3 : zeros(T, 3)
-
-    # Compute the acceleration and jacobian of perturbing bodies
     for pert in pert_bodies
         r̄ₖ = translate(center, pert, jd_tdb)
         r̄ᵣ = r̄ₖ - r̄
@@ -97,35 +100,70 @@ function compute_point_mass_gravity!(
         if rᵣ < tol
             error("Computation of acceleration failed: Perturbing body vector is less than tol and approaching singularity.")
         end
-
         acc += pert.mu * (r̄ᵣ / rᵣ^3 - r̄ₖ / norm(r̄ₖ)^3)
-
-        if compute_jac_posvel
-            ∂r̄̈∂r̄ += pert.mu * (-I3 / rᵣ^3 + 3 * (r̄ᵣ * r̄ᵣ') / rᵣ^5)
-        end
     end
 
     x̄̇[1:3] = posvel[4:6]
     x̄̇[4:6] = acc
-
-    if compute_jac_posvel
-        jac[PosVel][4:6, 1:3] .= ∂r̄̈∂r̄
-    end
-
     return nothing
 end
 
-""" 
-    accel_eval!(model::PointMassGravity, t::Time, x̄::Vector, 
-                 x̄̇::Vector, sc::Spacecraft, params; jac::Dict = Dict())
+"""
+    accel_eval!(model::PointMassGravity, t::Time, x̄::AbstractVector,
+                 x̄̇::AbstractVector, sc::Spacecraft, params)
 
 Evaluate the acceleration due to point-mass gravity from central and perturbing bodies.
 """
-function accel_eval!(model::PointMassGravity, t::Time, x̄::Vector,
-                        x̄̇::Vector, sc::Spacecraft, params; jac::Dict = Dict())
+function accel_eval!(model::PointMassGravity, t::Time, x̄::AbstractVector,
+                        x̄̇::AbstractVector, sc::Spacecraft, params)
     compute_point_mass_gravity!(t, x̄, x̄̇, model.central_body, model.pert_bodies;
-                                jac = jac, include_center = model.include_center)
+                                include_center = model.include_center)
     return x̄̇
+end
+
+# ---------------------------------------------------------------------------
+# state_jac! — A = ∂f/∂y  (analytic registration via dispatch)
+# ---------------------------------------------------------------------------
+
+function state_jac!(out::AbstractMatrix, m::PointMassGravity, t::Time,
+                     y::AbstractVector, sc::Spacecraft)
+    r̄ = y[1:3]
+    r = norm(r̄)
+    I3 = Matrix{Float64}(I, 3, 3)
+
+    # ∂ṙ/∂v = I₃
+    out[1:3, 4:6] .+= I3
+
+    # ∂v̇/∂r = μ·(3r̂r̂ᵀ − I)/r³  for the central body, when this force includes it
+    ∂v̇∂r = m.include_center ? m.central_body.mu * (3 * (r̄ * r̄') / r^5 - I3 / r^3) :
+                              zeros(3, 3)
+
+    # Perturber contributions
+    t_tdb  = t.tdb
+    jd_tdb = t_tdb.jd
+    for pert in m.pert_bodies
+        r̄ₖ = translate(m.central_body, pert, jd_tdb)
+        r̄ᵣ = r̄ₖ .- r̄
+        rᵣ = norm(r̄ᵣ)
+        ∂v̇∂r .+= pert.mu * (-I3 / rᵣ^3 + 3 * (r̄ᵣ * r̄ᵣ') / rᵣ^5)
+    end
+
+    out[4:6, 1:3] .+= ∂v̇∂r
+    return nothing
+end
+
+# ---------------------------------------------------------------------------
+# param_jac! — B = ∂f/∂p  (analytic registration via dispatch)
+# ---------------------------------------------------------------------------
+
+function param_jac!(out::AbstractVector, m::PointMassGravity, ::Mu, t::Time,
+                     y::AbstractVector, sc::Spacecraft)
+    # Without the central term this force does not depend on the central body's μ.
+    m.include_center || return nothing
+    r̄ = y[1:3]
+    out[4:6] .+= ForwardDiff.derivative(
+        μ -> _gravity_accel(μ, r̄), m.central_body.mu)
+    return nothing
 end
 
 """

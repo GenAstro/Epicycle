@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 using Test
 using AstroModels
@@ -14,7 +14,7 @@ using AstroUniverse
     # Setup - Reusable test data
     ==========================================================================#
     
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
     t1 = Time("2024-01-01T00:00:00", TAI(), ISOT())
     t2 = Time("2024-01-01T01:00:00", TAI(), ISOT())
     state1 = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0])
@@ -363,14 +363,14 @@ using AstroUniverse
         )
         
         # Add first segment
-        coord_sys1 = CoordinateSystem(earth, ICRFAxes())
+        coord_sys1 = CoordinateSystem(earth, ICRF())
         seg1_times = [Time("2024-01-01T00:00:00", TAI(), ISOT())]
         seg1_states = [CartesianState([7000.0, 0.0, 0.0, 0.0, 7.5, 0.0])]
         seg1 = HistorySegment(seg1_times, seg1_states, coord_sys1, name="propagate_1")
         push_segment!(sc.history, seg1)
         
         # Add second segment (different coordinate system - spacecraft can change frames)
-        coord_sys2 = CoordinateSystem(earth, ICRFAxes())  # Could be different frame
+        coord_sys2 = CoordinateSystem(earth, ICRF())  # Could be different frame
         seg2_times = [Time("2024-01-01T01:00:00", TAI(), ISOT())]
         seg2_states = [CartesianState([7100.0, 100.0, 0.0, 0.0, 7.4, 0.1])]
         seg2 = HistorySegment(seg2_times, seg2_states, coord_sys2, name="maneuver_1")
@@ -398,7 +398,7 @@ using AstroUniverse
         )
         
         # Add multiple segments
-        coord_sys = CoordinateSystem(earth, ICRFAxes())
+        coord_sys = CoordinateSystem(earth, ICRF())
         for i in 1:5
             seg_times = [Time("2024-01-01T$(lpad(i-1,2,'0')):00:00", TAI(), ISOT())]
             seg_states = [CartesianState([7000.0+i*100, 0.0, 0.0, 0.0, 7.5, 0.0])]

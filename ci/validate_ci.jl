@@ -35,13 +35,33 @@ pass(msg)  = println("  $GREEN $msg")
 # brittle; a regex over the literal is neither, but it fails loudly when a list is renamed, which
 # is the behaviour that matters — a silently empty list would make every check below vacuous.
 
-"""Extract the names in the array literal assigned to `var` in `path`."""
+"""The workspace members, which is the one list the others are derived from."""
+workspace_projects() =
+    TOML.parsefile(joinpath(REPO_ROOT, "Project.toml"))["workspace"]["projects"]
+
+"""
+Extract the names assigned to `var` in `path`.
+
+Two forms are in use. A literal array is read directly. A list derived from the workspace — either
+`WORKSPACE_PACKAGES` or a direct read of `["workspace"]["projects"]` — resolves to the workspace
+members, with `Epicycle` dropped where the expression filters it out. Reading only the literal form
+reports every derived list as missing, and a list that cannot be read looks the same as an empty
+one, so every downstream check then reports that nothing is built or tested.
+"""
 function list_names(path::AbstractString, var::AbstractString)
     isfile(path) || return nothing
     src = read(path, String)
     m = match(Regex(var * raw"\s*=\s*\[(.*?)\]", "s"), src)
-    m === nothing && return nothing
-    return [String(x.captures[1]) for x in eachmatch(r"[:\"]([A-Za-z][A-Za-z0-9_]*)\"?", m.captures[1])]
+    if m !== nothing
+        return [String(x.captures[1]) for x in eachmatch(r"[:\"]([A-Za-z][A-Za-z0-9_]*)\"?", m.captures[1])]
+    end
+    d = match(Regex(var * raw"\s*=(.{0,400})", "s"), src)
+    d === nothing && return nothing
+    rhs = d.captures[1]
+    occursin("WORKSPACE_PACKAGES", rhs) || occursin("\"workspace\"", rhs) || return nothing
+    names = workspace_projects()
+    occursin("!=(\"Epicycle\")", rhs) && (names = filter(!=("Epicycle"), names))
+    return String.(names)
 end
 
 # (label, file, variable, what the list means)
@@ -131,11 +151,31 @@ let root_project = TOML.parsefile(joinpath(REPO_ROOT, "Project.toml")),
     elseif isempty(local_pkgs)
         pass("no repo-local packages are plain [deps] entries")
     else
+        # An unregistered repo-local dep is fine when setup develops the workspace before it
+        # instantiates, because develop writes a path into the manifest and the resolve then has
+        # somewhere to look. The invariant is the ordering, so check that rather than the symptom.
+        local setup_src   = read(joinpath(REPO_ROOT, "ci", "setup_environment.jl"), String)
+        local dev_at      = findfirst("Pkg.develop", setup_src)
+        local inst_at     = findfirst("Pkg.instantiate", setup_src)
+        local develops_first = dev_at !== nothing &&
+                               (inst_at === nothing || first(dev_at) < first(inst_at))
+        local workspace = workspace_projects()
         for dep in local_pkgs
-            dep in REGISTERED ? pass("$dep is registered — a plain [deps] entry is fine") :
-                fail("$dep is in root [deps] but is NOT registered — a fresh Pkg.instantiate() " *
-                     "fails with \"expected package $dep to be registered\"; it must arrive via " *
-                     "Pkg.develop until it is registered")
+            if dep in REGISTERED
+                pass("$dep is registered — a plain [deps] entry is fine")
+            elseif dep in workspace && develops_first
+                pass("$dep is unregistered but is a workspace member, and setup develops before " *
+                     "it instantiates — the resolve finds it by path")
+            elseif dep in workspace
+                fail("$dep is in root [deps], is NOT registered, and ci/setup_environment.jl " *
+                     "instantiates before it develops — the resolve looks $dep up in the " *
+                     "registries and fails with \"expected package $dep to be registered\". " *
+                     "Move the develop loop above Pkg.instantiate()")
+            else
+                fail("$dep is in root [deps] but is NOT registered and is not a workspace " *
+                     "member — a fresh Pkg.instantiate() fails with \"expected package $dep to " *
+                     "be registered\"; it must arrive via Pkg.develop until it is registered")
+            end
         end
     end
 end
@@ -193,6 +233,45 @@ let available = Set(ROOT_DEPS) ∪ Set(readdir(Sys.STDLIB)),
     end
     blocks == 0 ? warn_("no executed doc blocks found — are all fences plain ```julia?") :
                   pass("scanned $blocks executed block(s) across $(length(files)) file(s)")
+end
+
+# ── 5b. The scripts CI runs import only what the root project provides ───────
+#
+# CI activates the repository root and then includes these scripts, so a package they import has
+# to be in the root [deps]. The warm `epicycle-dev` environment has more in it than the root does,
+# which is why one of these builds locally and fails in CI. `Literate` was used by
+# `Epicycle/docs/examples.jl` and declared nowhere, and the check above did not see it because it
+# reads executed doc blocks and this is an ordinary `using` in a script.
+
+println("
+▸ Scripts CI runs import only what the root project provides")
+let available = Set(ROOT_DEPS) ∪ Set(readdir(Sys.STDLIB)) ∪ Set(workspace_projects()),
+    scanned = 0, bad = 0
+
+    scripts = String[]
+    append!(scripts, [joinpath("ci", f) for f in readdir(joinpath(REPO_ROOT, "ci")) if endswith(f, ".jl")])
+    for pkg in sort(workspace_projects())
+        d = joinpath(REPO_ROOT, pkg, "docs")
+        isdir(d) || continue
+        append!(scripts, [joinpath(pkg, "docs", f) for f in readdir(d) if endswith(f, ".jl")])
+    end
+
+    for rel in scripts
+        scanned += 1
+        for line in eachline(joinpath(REPO_ROOT, rel))
+            startswith(lstrip(line), "#") && continue
+            m = match(r"^[ 	]*(?:using|import)[ 	]+([A-Za-z][\w.:, ]*)", line)
+            m === nothing && continue
+            for raw in split(m.captures[1], ",")
+                name = String(first(split(strip(raw), ('.', ':', ' '); keepempty = false), 1)[1])
+                (isempty(name) || name in available) && continue
+                fail("$rel imports `$name`, which the root project does not provide — " *
+                     "CI activates the repository root, so add it to the root Project.toml")
+                bad += 1
+            end
+        end
+    end
+    bad == 0 && pass("scanned $scanned script(s), every import is available at the root")
 end
 
 # ── 6. Nothing is silently skipped ───────────────────────────────────────────

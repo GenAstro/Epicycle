@@ -5,26 +5,27 @@ The `coord_sys` field specifies the coordinate system (origin body and axes) for
 ## Basic Usage
 
 ```julia
-using AstroFrames, AstroUniverse
+using AstroModels, AstroFrames, AstroUniverse
 
 # Earth-centered inertial (default)
 sc = Spacecraft(
-    coord_sys = CoordinateSystem(earth, ICRFAxes())
+    coord_sys = CoordinateSystem(earth, ICRF())
 )
 
 # Mars-centered inertial
 sc = Spacecraft(
-    coord_sys = CoordinateSystem(mars, ICRFAxes())
+    coord_sys = CoordinateSystem(mars, ICRF())
 )
 
 # Moon-centered inertial
 sc = Spacecraft(
-    coord_sys = CoordinateSystem(moon, ICRFAxes())
+    coord_sys = CoordinateSystem(moon, ICRF())
 )
 ```
 
 ## Accessing Coordinate System
 
+<!-- doc-continue -->
 ```julia
 # Get origin body
 origin = sc.coord_sys.origin  # CelestialBody

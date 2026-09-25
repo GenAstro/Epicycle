@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: MIT
+
 """
     isapproxrel(a::Float64, b::Float64; rtol=1e-12, atol=1e-12) -> Bool
 

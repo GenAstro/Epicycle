@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using LinearAlgebra
 using AstroFrames
 using AstroProp
@@ -5,6 +8,7 @@ using AstroEpochs
 using AstroStates
 using AstroManeuvers
 using AstroSolve
+using AstroSolve: SequenceManager
 using AstroUniverse
 
 # Create spacecraft
@@ -23,16 +27,10 @@ pm_grav = PointMassGravity(earth,(moon,sun))
 forces = ForceModel(pm_grav)
 integ = IntegratorConfig(DP8(); abstol = 1e-11, reltol = 1e-11, dt = 4000)
 
-# Define which spacecraft to propagate and which force model to use
-dynsys = DynSys(
-          forces = forces, 
-          spacecraft = [sat1]
-          )
+# The propagator: forces and integrator
+prop = OrbitPropagator(forces, integ)
 
-dynsys2 = DynSys(
-          forces = forces, 
-          spacecraft = [sat2]
-          )
+prop2 = OrbitPropagator(forces, integ)
           
 # Create maneuver models for the hohmann transfer
 toi = ImpulsiveManeuver(
@@ -70,20 +68,10 @@ var_moi = SolverVariable(
 )
 
 pos_target = 45000.0
-pos_con = Constraint(
-    calc = OrbitCalc(sat1, PosMag()),
-    lower_bounds = [pos_target],
-    upper_bounds =[pos_target],
-    scale = [1.0],
-)
+pos_con = Constraint(position_magnitude, sat1; equals = pos_target)
 
 vel_target = sqrt(earth.mu / pos_target)
-vel_con = Constraint(
-    calc = OrbitCalc(sat1, VelMag()),
-    lower_bounds = [vel_target],
-    upper_bounds = [vel_target],
-    scale = [1.0],
-)
+vel_con = Constraint(velocity_magnitude, sat1; equals = vel_target)
 
 # Create the MOI Event
 toi_fun() = maneuver!(sat1, toi) 
@@ -94,7 +82,7 @@ toi_event = Event(name = "toi",
                   )
 
 # Create the prop to apopasis event
-prop_apo_fun() = propagate!(dynsys, integ, StopAtApoapsis(sat1))
+prop_apo_fun() = propagate!(prop, sat1, StopAt(sat1, PosDotVel(), 0.0; direction = -1))
 prop_event = Event(name = "prop_apo", event = prop_apo_fun)
 
 # Create the TOI event. 

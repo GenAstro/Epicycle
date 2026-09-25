@@ -1,16 +1,23 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 __precompile__()
 
 """
     module AstroProp
 
-Propagation interfaces, stopping conditions, and interface to OrdinaryDiffEq.
+Propagation interfaces, stopping conditions, and the interface to the ODE solvers.
 """
 module AstroProp
 
-using OrdinaryDiffEq, LinearAlgebra
+# The solvers we name, and nothing else. OrdinaryDiffEq the metapackage pulls 176 packages
+# against 91 for these, so eighty-five packages of stiff and specialist solvers used to load on
+# every `using` and were never called. SciMLBase carries ODEProblem and the callbacks;
+# CommonSolve carries `solve`.
+using SciMLBase, CommonSolve
+using OrdinaryDiffEqTsit5, OrdinaryDiffEqVerner
+using LinearAlgebra
+using ForwardDiff
 
 using EpicycleBase
 using AstroStates
@@ -19,7 +26,8 @@ using AstroUniverse
 using AstroFrames
 using AstroModels: Spacecraft, to_posvel, set_posvel!, total_mass, SphericalDrag, AbstractDragGeometry, SphericalSRP, AbstractSRPGeometry
 using AstroModels: HistorySegment, SpacecraftHistory, push_segment!
-using AstroCallbacks: OrbitCalc, get_calc
+using AstroCallbacks: OrbitCalc, get_calc, Calc
+import AstroCallbacks
 
 using SatelliteToolboxTransformations: r_eci_to_ecef, ecef_to_geodetic, fetch_iers_eop,
                                        J2000, ITRF, DCM
@@ -28,53 +36,120 @@ using StaticArrays: SVector
 
 import AstroCallbacks: AbstractFun, AbstractCalcVariable, AbstractOrbitVar
 import AstroUniverse: translate
-export TwoBodyGravity, ExponentialAtmosphere, CartesianODE, IntegratorConfig
-export DynamicsSystem, propagate!, DynSys, ForceModel
-export StopAtApoapsis, StopAtAscendingNode, StopAtPeriapsis, StopAtDays
+import AstroUniverse: Mu                   # re-export below
+import AstroModels: Mass                   # re-export below
+import EpicycleBase: AbstractStateTag, AbstractParamTag, AbstractVarTag
+import EpicycleBase: ModelVariable, get_field, set_field!
+# state_jac! and param_jac! are EpicycleBase's extension interface, declared there as
+# bare generics. They have to be imported to be extended: defined at this module's top
+# level after a plain `using`, each definition creates a NEW AstroProp function, and the
+# eight force-model methods below hang off it where nobody dispatching on the interface
+# can see them.
+import EpicycleBase: state_jac!, param_jac!
+import CommonSolve: solve                  # extended below for OrbitODEProblem
+
+export IntegratorConfig
+export Tsit5, Vern7, Vern9                 # the integrators AstroProp loads, so `using AstroProp` runs
+export propagate!, ForceModel
 export PosVel
-export StopAtSeconds, StopAtRadius
-export nbody_perts
-export PointMassGravity, compute_point_mass_gravity!, evaluate, accel_eval!
+export PointMassGravity, accel_eval!
 export HarmonicGravity, AtmosphericDrag, SolarRadiationPressure
 export Zonal, Exponential
-export Cylindrical, DualCone, NoShadow
-export AbstractGeopotential, AbstractDensityModel, AbstractShadowModel, density
+export DualCone
+export AbstractGeopotential, AbstractDensityModel, density
 export geopotential_accel, geopotential_data, max_degree, max_order
 export gravity_center, includes_central
 export SphericalDrag, SphericalSRP, total_mass
 
 export OrbitODE
-export IntegratorConfig
 export OrbitPropagator, StopAt
 export PropDurationSeconds, PropDurationDays
 
+export Mu, Mass                            # pass-through from AstroUniverse / AstroModels
+export JacobianConfig, JacobianResult
+export eval_jacobian!, eval_jacobian, state_jac!, param_jac!
+export fd_differentiate_wrt
+export STMConfig, OrbitODEProblem, PropagationResult, solve
+
 """
-    PosVel <: AbstractState
+    PosVel <: AbstractStateTag
 
-Position-velocity state representation for orbital propagation. This is a legacy 
-state type used internally by the propagation system.
+Tag singleton identifying the 6-element position–velocity state on a `Spacecraft`.
+Use with `get_field` / `set_field!` and as the `tag` for state-vector solve-fors
+and sensitivity blocks.
 
-# Fields
-- `numvars::Int`: Number of state variables (always 6 for position and velocity)
-
-# Notes
-This struct is marked for deprecation and should be replaced with new state 
-representations from AstroStates.
+# Identity
+`(sc, PosVel())` is the canonical `(obj, tag)` pair for the propagated
+spacecraft state.  `get_field(sc, PosVel())` returns `[r..., v...]` (length 6);
+`set_field!(sc, PosVel(), x)` writes back through `set_posvel!`.
 """
-struct PosVel <: AbstractState 
-    numvars::Int
-    PosVel() = new(6)
+struct PosVel <: AbstractStateTag end
+
+"""Return the position–velocity state of `sc` as a length-6 vector `[r..., v...]`."""
+get_field(sc::Spacecraft, ::PosVel) = to_posvel(sc)
+
+"""Write the position–velocity state of `sc` from a length-6 vector `[r..., v...]`."""
+function set_field!(sc::Spacecraft, ::PosVel, x::AbstractVector)
+    set_posvel!(sc, x)
+    return nothing
 end
 
+"""
+    OrbitODE
+
+Abstract type for a force that acts on a spacecraft during propagation.
+
+A force of your own subtypes `OrbitODE` and adds one method of [`accel_eval!`](@ref). A
+`ForceModel` then sums it with the built-in forces for `propagate!`, for a collocation phase flown
+by a `ForceModel`, and for the state transition matrix and sensitivity propagation.
+"""
 abstract type OrbitODE <: AbstractFun end
 
+"""
+    accel_eval!(force, t, y, dy, sc, params) -> dy
+
+Write one force's contribution to the time derivative of a spacecraft's state.
+
+# Arguments
+- `force`: The force, a subtype of [`OrbitODE`](@ref).
+- `t::Time`: The epoch of the evaluation.
+- `y`: The state: position and velocity in km and km/s, followed by any further components the
+  caller integrates, such as mass in a collocation phase.
+- `dy`: The buffer this force writes into, the same length as `y`.
+- `sc`: The spacecraft the force acts on, which carries its mass and drag and SRP geometry.
+- `params`: Passed through by the caller. A collocation phase flown by a `ForceModel` passes
+  `(control = u, params = p)`; `propagate!` passes internal bookkeeping a force does not read.
+
+# Returns
+`dy`.
+
+# Notes
+Every caller hands each force a buffer of zeros and sums the forces afterwards, so a method may
+assign its contribution or add it, with the same result. Rows 4 to 6 are this force's acceleration
+in km/s². Rows past 6 are summed across forces in the same way, so two thrusters that each write
+a mass flow rate both count. Rows 1 to 3, ṙ = v, are written once by the caller, and whatever a
+force writes there is ignored.
+
+A method should accept `y` and `dy` of any element type, not only `Float64`: the Jacobian of a
+force with no analytic `state_jac!` is taken by automatic differentiation through this method.
+"""
+function accel_eval! end
+
+
+# Common supertype for gravity force models recognised by `_find_center`.
+# Defined here so `PointMassGravity` can subtype it without pulling in the
+# (currently blocked) external-force adapter.
+abstract type AbstractGravityForce <: OrbitODE end
+
+# external_force.jl is intentionally not included until the AstroForceModels,
+# SatelliteToolboxGravityModels and ForwardDiff version conflict is resolved upstream.
+# The file remains in the source tree.
 include("point_mass_gravity.jl")
 include("harmonic_gravity.jl")
 include("zonal_gravity.jl")
 include("atmospheric_drag.jl")
 include("exponential_atmosphere.jl")
 include("spherical_srp.jl")
-include("stop_conditions.jl")
 
 """
     IntegratorConfig
@@ -135,6 +210,9 @@ struct ForceModel{N} <: OrbitODE
 end
 
 include("orbit_propagator.jl")
+include("jacobian_config.jl")
+include("orbit_ode_problem.jl")
+include("variational.jl")
 
 """
     ForceModel(forces...)
@@ -213,32 +291,8 @@ function _find_center(forces::Tuple)
     return centers[1]
 end
 
-"""
-    DynSys(; spacecraft, forces)
-
-Container for a dynamic system segment.
-
-# Keyword Arguments
-- `spacecraft`: Vector of spacecraft structs (subtypes of `Spacecraft`)
-- `forces`: OrbitODE model (e.g. CartesianForceModel)
-
-# Fields
-- `spacecraft::Vector{<:Spacecraft}`: Collection of spacecraft to propagate
-- `forces::OrbitODE`: Force model defining the dynamics
-
-# Constructor
-    DynSys(; spacecraft, forces)
-
-# Example
-```julia
-sc = Spacecraft()
-gravity = PointMassGravity(earth, ())
-sys = DynSys(spacecraft=[sc], forces=gravity)
-```
-
-# Notes
-This interface will be deprecated in future releases
-"""
+# The spacecraft and forces of one propagation, as the engine below consumes them. Internal:
+# `propagate!(::OrbitPropagator, ...)` builds one per call.
 struct DynSys
     spacecraft::Vector{<:Spacecraft}
     forces::OrbitODE
@@ -270,6 +324,9 @@ function _build_odes!(model::ForceModel, start_epoch, du, u, p, t, spacecraft_li
         acc = zeros(eltype(posvel), 6)
         a_sum = zeros(eltype(posvel), 3)
         for force in model.forces
+            # A fresh buffer per force. Built-in forces overwrite what they write and a user force
+            # may add to it; without the reset an additive force counted every earlier force again.
+            fill!(acc, zero(eltype(acc)))
             accel_eval!(force, current_time, posvel, acc, sc, p)
             # Superimpose acceleration contributions only; kinematics set once below.
             a_sum[1] += acc[4]; a_sum[2] += acc[5]; a_sum[3] += acc[6]
@@ -324,17 +381,11 @@ function _update_structs!(forces::ForceModel, sol_u::Vector{<:Real}, odereg::Dic
     end
 end
 
-"""
-    This interface will be deprecated in future releases.
-
-    propagate!(model::DynSys, config::IntegratorConfig, stop_conditions...; 
-              direction=:forward, prop_stm=false, kwargs...)
-
-Propagate spacecraft orbital states using numerical integration.
-"""
-function propagate!(model::DynSys, config::IntegratorConfig,
+# The integration engine behind `propagate!(::OrbitPropagator, ...)`: integrates `model` with
+# `config`, stopping on the callbacks and at most one time-based condition in `stop_conditions`.
+function _propagate_dynsys!(model::DynSys, config::IntegratorConfig,
     stop_conditions...;
-    direction::Symbol = :forward, prop_stm::Bool = false,
+    direction::Symbol = :forward,
     kwargs...)
 
     # Validate direction keyword
@@ -451,5 +502,7 @@ function _compute_tf(stop::StopAt{<:Any, <:IntegratorTimeCalc}, direction::Symbo
     # Apply sign based on propagation direction
     return direction == :backward ? -tf_magnitude : tf_magnitude
 end
+
+include("precompile.jl")
 
 end

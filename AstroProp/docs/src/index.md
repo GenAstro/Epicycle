@@ -8,19 +8,35 @@ AstroProp provides force models, orbital propagators, and stopping conditions
 for modelling spacecraft motion. AstroProp provides interfaces to the extensive 
 numerical integration libraries in Julia's OrdinaryDiffEq.jl.  AstroProp is tested against the General Mission Analysis Tool (GMAT).
 
+## Installation
+
+Versions through 0.4.0 are in Julia's General registry. From the next version AstroProp is
+released under the Gen Astro Source Available License, which General does not carry, so later
+versions come from the Gen Astro registry. Add it once, then install as usual:
+
+```julia
+using Pkg
+Pkg.Registry.add(RegistrySpec(url = "https://github.com/GenAstro/GenAstro.git"))
+Pkg.add("AstroProp")
+```
+
+General is still required, since these packages depend on packages registered there. Installing
+without the Gen Astro registry resolves to 0.4.0, the last version General carries, and
+reports nothing about the newer ones.
+
 ## Quick Start
 
 The example below shows how to propagate a spacecraft using various stopping conditions:
 
 ```julia
 using AstroEpochs, AstroStates, AstroFrames, AstroUniverse 
-using AstroModels, AstroCallbacks, AstroProp, OrdinaryDiffEq
+using AstroModels, AstroCallbacks, AstroProp
 
 # Spacecraft — define time, state, and physical properties
 sat = Spacecraft(
     state=CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 0.03]),
     time=Time("2015-09-21T12:23:12", TAI(), ISOT()),
-    coord_sys=CoordinateSystem(earth, ICRFAxes()),
+    coord_sys=CoordinateSystem(earth, ICRF()),
     mass=1000.0,
     drag=SphericalDrag(c_d=2.2, drag_area=10.0),
     srp=SphericalSRP(c_r=1.8, srp_area=10.0),
@@ -41,22 +57,27 @@ propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), 3600.0))
 target_time = Time("2015-09-22T12:00:00", TDB(), ISOT())
 propagate!(prop, sat, StopAt(sat, target_time))
 
-# Propagate to periapsis (r·v = 0, increasing crossing)
-propagate!(prop, sat, StopAt(sat, PosDotVel(), 0.0; direction=+1))
+# Propagate to periapsis: r·v reaches zero while increasing
+propagate!(prop, sat, StopAt(position_dot_velocity, sat; equals = 0.0, direction = 1))
 println(get_state(sat, Keplerian()))
+
+# Propagate to the ascending node on the ecliptic: z is evaluated in EarthMJ2000Ec axes
+propagate!(prop, sat, StopAt(position_z, sat, EarthMJ2000Ec; equals = 0.0, direction = 1))
 
 # Propagate backward for 2 hours using negative duration
 propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), -7200.0); direction=:infer)
 
-# Stop when |r| reaches 7000 km 
-propagate!(prop, sat, StopAt(sat, PosMag(), 7000.0))
+# Stop when |r| reaches 7000 km
+propagate!(prop, sat, StopAt(position_magnitude, sat; equals = 7000.0))
 println(get_state(sat, SphericalRADEC()))       
 
 # Propagate multiple spacecraft with multiple stopping conditions
-sc1 = Spacecraft(mass=1000.0, drag=SphericalDrag(c_d=2.2, drag_area=10.0))
-sc2 = Spacecraft(mass=1000.0, drag=SphericalDrag(c_d=2.2, drag_area=10.0))
-stop_sc1_node = StopAt(sc1, PosZ(), 0.0)
-stop_sc2_periapsis = StopAt(sc2, PosDotVel(), 0.0; direction=+1)
+sc1 = Spacecraft(mass=1000.0, drag=SphericalDrag(c_d=2.2, drag_area=10.0),
+                 srp=SphericalSRP(c_r=1.8, srp_area=10.0))
+sc2 = Spacecraft(mass=1000.0, drag=SphericalDrag(c_d=2.2, drag_area=10.0),
+                 srp=SphericalSRP(c_r=1.8, srp_area=10.0))
+stop_sc1_node = StopAt(position_z, sc1; equals = 0.0)
+stop_sc2_periapsis = StopAt(position_dot_velocity, sc2; equals = 0.0, direction = 1)
 propagate!(prop, [sc1, sc2], stop_sc1_node, stop_sc2_periapsis)
 ```
 
@@ -68,6 +89,9 @@ Propagates one or more spacecraft under specified forces to one or more stopping
 
 **Syntax:**
 
+```@raw html
+<!-- doc-fragment -->
+```
 ```julia
 sol = propagate!(propagator, spacecraft, stops...; direction=:forward, kwargs...)
 ```
@@ -81,10 +105,13 @@ sol = propagate!(propagator, spacecraft, stops...; direction=:forward, kwargs...
 - `kwargs...`: Additional keyword arguments passed to the ODE solver
 
 **Returns:**
-- `sol`: ODE solution object from DifferentialEquations.jl
+- `sol`: the `ODESolution` from the integrator
 
 **Common usage patterns:**
 
+```@raw html
+<!-- doc-fragment -->
+```
 ```julia
 # Single spacecraft, single stop
 propagate!(prop, sat, stop)
@@ -110,6 +137,9 @@ An `OrbitPropagator` combines a force model and integrator configuration to defi
 
 **Basic setup pattern:**
 
+```@raw html
+<!-- doc-fragment -->
+```
 ```julia
 # 1. Define the gravitational forces
 gravity = PointMassGravity(central_body, (perturbers...,))
@@ -160,11 +190,10 @@ AstroProp leverages Julia's DifferentialEquations.jl ecosystem, providing access
 **Recommended integrators for orbital mechanics:**
 
 - **`Tsit5()`**: Tsitouras 5th order adaptive method. Good default choice for most applications with moderate accuracy requirements.
-- **`Vern9()`**: Verner 9th order adaptive method. Higher accuracy for demanding applications like precision orbit determination.
-- **`DP5()`**: Dormand-Prince 5th order method. Classic choice, similar performance to Tsit5.
 - **`Vern7()`**: Verner 7th order method. Balance between Vern9 accuracy and Tsit5 speed.
+- **`Vern9()`**: Verner 9th order adaptive method. Higher accuracy for demanding applications like precision orbit determination.
 
-For a complete list of available integrators, see the [DifferentialEquations.jl documentation](https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Full-List-of-Methods).
+AstroProp exports these three. Any other OrdinaryDiffEq integrator works once its solver package is loaded; see the [DifferentialEquations.jl documentation](https://docs.sciml.ai/DiffEqDocs/stable/solvers/ode_solve/#Full-List-of-Methods) for the full list.
 
 #### Integrator Parameters
 
@@ -239,6 +268,9 @@ forces = ForceModel(
     The Enterprise version adds the full gravity fields, `EGM96` and `EGM2008`, evaluated to high
     degree and order for precision work. You select one the same way — just change `model`:
 
+    ```@raw html
+    <!-- doc-fragment -->
+    ```
     ```julia
     using EpicycleEnterprise
     grav = HarmonicGravity(earth; degree = 70, order = 70, model = EGM96())
@@ -251,7 +283,7 @@ It uses the drag coefficient and area you set on the spacecraft, and gets the lo
 the atmosphere model you pick.
 
 ```julia
-sc.drag = SphericalDrag(; c_d = 2.2, drag_area = 10.0)    # drag properties, on the spacecraft
+sat.drag = SphericalDrag(; c_d = 2.2, drag_area = 10.0)   # drag properties, on the spacecraft
 drag    = AtmosphericDrag(earth; model = Exponential())    # atmosphere model, on the force
 ```
 
@@ -263,6 +295,9 @@ that's fast and works well for early analysis.
     operational drag work. It responds to solar and geomagnetic activity, taken from
     `SpaceIndices` tables:
 
+    ```@raw html
+    <!-- doc-fragment -->
+    ```
     ```julia
     using EpicycleEnterprise
     drag = AtmosphericDrag(mars; model = MSISE00())
@@ -271,12 +306,11 @@ that's fast and works well for early analysis.
 ### Solar radiation pressure
 
 `SolarRadiationPressure` computes the push of sunlight on the spacecraft. It uses the reflectivity
-and area you set on the spacecraft, and accounts for eclipses with the shadow model you pick:
-`NoShadow`, a simple `Cylindrical` shadow, or `DualCone` — a realistic shadow with both umbra and
-penumbra.
+and area you set on the spacecraft, and accounts for eclipses with the shadow model you pick.
+`DualCone`, which models both umbra and penumbra, is the default and the only shadow model.
 
 ```julia
-sc.srp = SphericalSRP(; c_r = 1.3, srp_area = 10.0)
+sat.srp = SphericalSRP(; c_r = 1.3, srp_area = 10.0)
 srp    = SolarRadiationPressure(earth; shadow = DualCone())
 ```
 
@@ -286,13 +320,67 @@ Once you've built the forces you want, add them to a `ForceModel`:
 forces = ForceModel(grav, drag, srp)
 ```
 
+### Writing a force
+
+A force of your own is a subtype of `OrbitODE` with one method of `accel_eval!`, and a
+`ForceModel` sums it with the built-in forces. The method writes the force's acceleration in
+km/s² to rows 4 to 6 of `dy`. Each force receives `dy` filled with zeros and the forces are summed
+afterwards, so assigning the acceleration and adding it give the same result. Rows 1 to 3 are
+written by the propagator. The example below adds a constant acceleration along the velocity,
+such as a low-thrust engine held prograde, to point-mass gravity.
+
+```julia
+using AstroEpochs, AstroStates, AstroUniverse, AstroModels, AstroProp
+using LinearAlgebra: norm
+import AstroProp: accel_eval!
+
+# A constant acceleration along the velocity vector, in km/s².
+struct AlongTrackThrust <: OrbitODE
+    accel::Float64
+end
+
+# Rows 4 to 6 only. Leave the element types open so the Jacobian can be taken through it.
+function accel_eval!(f::AlongTrackThrust, t, y, dy, sc, params)
+    v = y[4:6]
+    dy[4:6] .= f.accel .* v ./ norm(v)
+    return dy
+end
+
+sat = Spacecraft(state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.546, 0.0]),
+                 time  = Time("2020-01-01T00:00:00", UTC(), ISOT()))
+forces = ForceModel(PointMassGravity(earth, ()), AlongTrackThrust(1.0e-7))
+prop   = OrbitPropagator(forces, IntegratorConfig(Tsit5(); dt = 60.0, reltol = 1e-10, abstol = 1e-10))
+
+# A day of thrusting raises the orbit.
+propagate!(prop, sat, StopAt(sat, PropDurationDays(), 1.0))
+```
+
 ## Stopping Conditions
 
 AstroProp supports two categories of stopping conditions: state-based and time-based.
 
+### Stopping on a Quantity
+
+`StopAt(quantity, subject, deps...; equals, direction)` stops the propagation when a quantity of the subject reaches `equals`. The quantity is a function from AstroCallbacks, such as `position_dot_velocity`, `position_z` or `position_magnitude`, or a function of your own that takes the subject as its first argument. A coordinate system after the subject evaluates the quantity in that system, so `position_z` with `EarthMJ2000Ec` stops at the ecliptic plane rather than the equator. `direction = 1` stops on an increasing crossing, `-1` on a decreasing one, and `0`, the default, on either. The arguments are those of a `Constraint` in AstroSolve, so a stop and a target read alike. Stopping on an angle such as `raan` or true anomaly is not supported yet, because the value wraps at 2π and the wrap is bracketed as a crossing.
+
+```julia
+# Periapsis and apoapsis: r·v reaches zero, increasing and decreasing
+propagate!(prop, sat, StopAt(position_dot_velocity, sat; equals = 0.0, direction = 1))
+propagate!(prop, sat, StopAt(position_dot_velocity, sat; equals = 0.0, direction = -1))
+
+# A radius of 7000 km, crossed in either direction
+propagate!(prop, sat, StopAt(position_magnitude, sat; equals = 7000.0))
+
+# The ascending node on the ecliptic; the quantity is evaluated in EarthMJ2000Ec axes
+propagate!(prop, sat, StopAt(position_z, sat, EarthMJ2000Ec; equals = 0.0, direction = 1))
+position_z(sat, EarthMJ2000Ec)     # zero at the stop
+```
+
+Time-based stops, below, take a duration or an epoch rather than a quantity.
+
 ### State-Based Stopping Conditions
 
-State-based stops trigger when a calculated quantity (position, velocity, or derived value) crosses a target value. These use calculation variables from AstroCallbacks:
+`StopAt` also accepts the calculation tags from AstroCallbacks, with the subject first and the target positional:
 
 ```julia
 # Stop at periapsis (r·v = 0, velocity increasing)
@@ -365,8 +453,8 @@ The `propagate!()` function accepts a `direction` keyword to control time integr
 The `:infer` keyword is particularly useful in optimization and when the propagation direction may vary:
 
 ```julia
-# Optimization variable (can be positive or negative)
-duration = optimize_parameter  # Could be -1000.0 or +1000.0
+# A duration whose sign a solver may change, here negative
+duration = -1000.0
 
 # Using :infer allows the sign to determine direction automatically
 propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), duration); direction=:infer)
@@ -387,6 +475,9 @@ This design enables clean optimization code where the duration variable can expl
 
 AstroProp validates that explicit directions don't contradict duration signs:
 
+```@raw html
+<!-- doc-fragment -->
+```
 ```julia
 # These cause errors:
 propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), -100.0); direction=:forward)  # Error!

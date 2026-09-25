@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 # Zonal (J2–J5) gravity — open, native. Standalone validation script; kept dependency-light
 # (Base @assert + println only) so it runs directly in the AstroProp environment, e.g.
 #   julia --project=<...>/Epicycle/AstroProp  AstroProp/test/force_gravity_zonal.jl
@@ -12,7 +15,7 @@ using AstroProp: geopotential_data, geopotential_accel     # seam internals for 
 using Test
 using AstroModels, AstroStates, AstroEpochs
 using AstroUniverse: earth
-using OrdinaryDiffEq: Vern9
+using OrdinaryDiffEqVerner: Vern9
 using LinearAlgebra: norm
 
 # ── 1. Native J2 self-check — closed form, no GMAT ────────────────────────────

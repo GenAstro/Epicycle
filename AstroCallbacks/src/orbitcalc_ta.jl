@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 """
     TA <: AbstractOrbitVar
@@ -26,7 +26,7 @@ function _set!(::TA, s::KeplerianState, newval::Vector{<:Real})
     length(newval) == 1 || error("TA requires 1 element.")
     # Build a new KeplerianState with updated TA
     @inbounds begin
-        s = KeplerianState(s.sma, s.ecc, s.inc, s.aop, s.raan, newval[1])
+        s = KeplerianState(s.sma, s.ecc, s.inc, s.raan, s.aop, newval[1])
     end
     return s
 end

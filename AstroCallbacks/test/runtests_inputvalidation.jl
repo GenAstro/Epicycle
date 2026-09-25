@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 using Test
 using LinearAlgebra
 
@@ -44,27 +47,5 @@ end
     @test kep isa KeplerianState
 end
 
-# Rationale: Constraint positional/keyword constructors validate lengths and promote eltype.
-@testset "Constraint constructors and type promotion" begin
-    sc = Spacecraft(
-        state=CartesianState([7000.0,300.0,0.0, 0.0,7.5,1.0]),
-        time=Time("2020-01-01T00:00:00", TAI(), ISOT()),
-    )
-    oc = OrbitCalc(sc, VelocityVector())
-
-    # Positional constructor: 3-var vector constraint, BigFloat promotion
-    lb = big.([-1.0, -1.0, -1.0]); ub = big.([1.0, 1.0, 1.0]); sca = big.([1.0, 1.0, 1.0])
-    c = Constraint(oc, lb, ub, sca)
-    @test eltype(c.lower_bounds) === BigFloat
-    @test c.numvars == 3
-
-    # Keyword constructor infers numvars from variable
-    ck = Constraint(calc=oc, lower_bounds=[-1.0,-1.0,-1.0], upper_bounds=[1.0,1.0,1.0], scale=[1.0,1.0,1.0])
-    @test ck.numvars == 3
-
-    # Length mismatches throw
-    @test_throws ArgumentError Constraint(oc, [-1.0], [1.0,1.0], [1.0,1.0], 2)
-    #@test_throws ArgumentError Constraint(calc=oc, lower_bounds=[-1.0, -1.0], upper_bounds=[1.0,1.0], scale=[1.0], numvars=2)
-end
 
 nothing

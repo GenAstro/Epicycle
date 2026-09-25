@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 # Test all packages in the Epicycle monorepo from a single root Julia session.
 #
 # Design (see AstroSolve-coverage investigation, 2026-08-06):
@@ -15,6 +18,7 @@
 #     files to be generated; the ENV var alone doesn't turn coverage on mid-process.
 
 using Pkg
+using TOML
 using TestEnv
 
 script_dir = dirname(@__FILE__)
@@ -25,20 +29,23 @@ root_project = joinpath(repo_root, "Project.toml")
 Base.active_project() == root_project ||
     @warn "test_all_packages.jl: expected root project $root_project active; got $(Base.active_project()). TestEnv layering may fail to resolve dev-only deps."
 
-packages = [
-    "AstroRoutines",
-    "EpicycleBase",
-    "AstroStates",
-    "AstroEpochs",
-    "AstroUniverse",
-    "AstroFrames",
-    "AstroManeuvers",
-    "AstroModels",
-    "AstroCallbacks",
-    "AstroProp",
-    "AstroSolve",
-    "Epicycle",
-]
+# Read from the workspace `projects` entry rather than repeated here. See ci/setup_environment.jl
+# for why: a hand-kept copy of this list is how packages get added to the tree and never tested.
+packages = let root = dirname(dirname(@__DIR__))
+    all_pkgs = TOML.parsefile(joinpath(root, "Project.toml"))["workspace"]["projects"]
+    # Named packages run only those, in the given order. Thirteen suites share one
+    # process and the run gets killed for low memory on a loaded machine, so a subset
+    # is how a targeted check gets made without the whole corpus. No names means all,
+    # which is what CI does.
+    if isempty(ARGS)
+        all_pkgs
+    else
+        unknown = setdiff(ARGS, all_pkgs)
+        isempty(unknown) || error("test_all_packages.jl: not workspace projects: " *
+                                  join(unknown, ", "))
+        ARGS
+    end
+end
 
 println("Testing all Epicycle packages via TestEnv from root...")
 println("Repo root: $repo_root")

@@ -1,6 +1,9 @@
+# Copyright (C) 2025 Gen Astro LLC
+# SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+
 #= 
 
-# ===== To run from monorepo root (c:\Users\steve\Dev\Epicycle). 
+# ===== Run from the monorepo root.
 module_name = "EpicycleBase"      # Done
 module_name = "AstroStates"
 module_name = "AstroEpochs"    # Done

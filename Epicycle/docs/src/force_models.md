@@ -1,13 +1,12 @@
 # Force Models
 
-Epicycle force models are composable: each is an `OrbitODE` that contributes an acceleration, and
-`ForceModel` sums any mix of them for the propagator. This page documents the **full** capability —
-open and Enterprise. Enterprise features are marked with an admonition and require the
-`EpicycleEnterprise` package (commercial license); everything else is open.
+Each Epicycle force model is an `OrbitODE` that contributes an acceleration, and `ForceModel` sums
+any mix of them for the propagator. This page documents the full capability, open and Enterprise.
+Enterprise features are marked and require the `EpicycleEnterprise` package under a commercial
+licence; everything else is open.
 
-Fidelity is chosen by a *model* tag on the force, not by swapping the force type. Moving from open to
-Enterprise fidelity changes one tag — the surrounding script is unchanged. (See the model-seam
-pattern in the architecture spec, §11.10.)
+Fidelity is chosen by a `model` tag on the force rather than by swapping the force type. Moving
+from open to Enterprise fidelity changes that one tag and leaves the surrounding script unchanged.
 
 ## Composing forces
 
@@ -31,9 +30,10 @@ Zonal
 ```
 
 !!! note "Enterprise — full-field geopotential"
-    `EGM96` and `EGM2008` provide the full spherical-harmonic field (high degree and order) through
-    the same `AbstractGeopotential` seam. They ship in the `EpicycleEnterprise` package (commercial
-    license). The call is identical to the open path — only the `model` tag changes:
+    `EGM96` and `EGM2008` provide the full spherical-harmonic field at high degree and order,
+    behind the same `AbstractGeopotential` extension interface (abstract type). They ship in the
+    `EpicycleEnterprise` package under a commercial licence. The call is identical to the open
+    path, and only the `model` tag changes:
 
     ```julia
     using EpicycleEnterprise
@@ -48,12 +48,12 @@ Zonal
 AtmosphericDrag
 AbstractDensityModel
 Exponential
-ConstantSpaceWeather
 ```
 
 !!! note "Enterprise — NRLMSISE-00 density"
-    `MSISE00` is the NRLMSISE-00 empirical density model, plugged into `AtmosphericDrag` through the
-    `AbstractDensityModel` seam. It ships in `EpicycleEnterprise` (commercial license):
+    `MSISE00` is the NRLMSISE-00 empirical density model, reaching `AtmosphericDrag` through the
+    `AbstractDensityModel` extension interface (abstract type). It ships in `EpicycleEnterprise`
+    under a commercial licence:
 
     ```julia
     using EpicycleEnterprise
@@ -67,8 +67,8 @@ ConstantSpaceWeather
 SolarRadiationPressure
 ```
 
-Shadow (eclipse) models, all open: `NoShadow`, `Cylindrical`, and `DualCone` — the dual-cone
-(umbra + penumbra) model.
+Shadow (eclipse) model, open: `DualCone`, which models both umbra and penumbra. It is the
+default and the only one.
 
 ## Spacecraft geometry
 

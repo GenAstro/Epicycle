@@ -1,21 +1,33 @@
 name = "AstroFrames"
 uuid = "7b16edaa-6936-47b4-b191-819abb0f77bd"
+version = "0.3.0"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "0.2.0"
 
 [deps]
-EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
+AstroEpochs = "241dcde3-d7a4-450d-948f-15f2ea2ba1fa"
+AstroStates = "e8875680-ece1-4c6e-865d-f99ee1f9f9b4"
 AstroUniverse = "4bd44dca-1e45-43d2-b940-3f88da59ea6f"
+EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+SPICE = "5bab7191-041a-5c2e-a744-024b9c3a5062"
+SatelliteToolboxTransformations = "6b019ec1-7a1e-4f04-96c7-a9db1ca5514d"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-EpicycleBase = "0.1.0"
-AstroUniverse = "0.2.0"
+AstroEpochs = "0.5.0"
+AstroStates = "0.10.0"
+AstroUniverse = "0.3.0"
+EpicycleBase = "0.1.1"
+SPICE = "0.2"
+SatelliteToolboxTransformations = "1.2.0"
+StaticArrays = "1.9.17"
 julia = "1.10"
 
 [extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 AstroUniverse = "4bd44dca-1e45-43d2-b940-3f88da59ea6f"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "InteractiveUtils", "AstroUniverse"]
+test = ["Test", "InteractiveUtils", "AstroUniverse", "ForwardDiff"]

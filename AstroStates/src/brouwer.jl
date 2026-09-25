@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: MIT
 #
 # Brouwer-Lyddane mean element conversions (BROU), reimplemented in idiomatic Julia
 # from GMAT's StateConversionUtil.cpp (NASA, public domain). Radians throughout;
@@ -36,8 +36,8 @@ end
     _true_to_mean_anom(ν, e)
 
 Convert true anomaly `ν` to mean anomaly `M` for an elliptic orbit via the eccentric anomaly:
-`E = atan2(√(1-e²)·sin ν, e + cos ν)`, `M = E - e·sin E`. Angles in radians. Internal helper so
-`AstroStates` need not depend on the anomaly-conversion package across the public/dev seam.
+`E = atan2(√(1-e²)·sin ν, e + cos ν)`, `M = E - e·sin E`. Angles in radians. Internal helper so `AstroStates`
+need not depend on the anomaly-conversion package, which sits in a different repository.
 """
 @inline function _true_to_mean_anom(ν::Real, e::Real)
     s = sqrt(max(1.0 - e^2, 0.0))
@@ -503,7 +503,9 @@ Convert osculating Keplerian elements to Brouwer mean (short-period-only, J2) el
 A 6-element vector `[a, e, i, Ω, ω, M]` of mean elements, where `M` is the **mean anomaly** (rad).
 
 # Example
+```julia
 mean = kep_to_brouwer_mean_short([7000.0, 0.01, pi/6, 0.0, 0.0, pi/3], 398600.4415)
+```
 
 # Notes
 - As `kep_to_brouwer_mean_long`, but removes only the first-order J2 short-period variation
@@ -549,7 +551,9 @@ Convert osculating Keplerian elements to Brouwer-Lyddane mean (long-period) elem
 A 6-element vector `[a, e, i, Ω, ω, M]` of mean elements, where `M` is the **mean anomaly** (rad).
 
 # Example
+```julia
 mean = kep_to_brouwer_mean_long([7000.0, 0.01, pi/6, 0.0, 0.0, pi/3], 398600.4415)
+```
 
 # Notes
 - Angles in radians; distances in km consistent with the Earth `μ`.
@@ -597,7 +601,9 @@ Convert Brouwer mean (short-period-only, J2) elements to osculating Keplerian el
 A 6-element vector `[a, e, i, Ω, ω, ν]` of osculating Keplerian elements, where `ν` is the **true anomaly** (rad).
 
 # Example
+```julia
 osc = brouwer_mean_short_to_kep([7000.0, 0.01, pi/6, 0.0, 0.0, pi/3], 398600.4415)
+```
 
 # Notes
 - As `brouwer_mean_long_to_kep`, but applies only the first-order J2 short-period correction.
@@ -624,7 +630,9 @@ Convert Brouwer-Lyddane mean (long-period) elements to osculating Keplerian elem
 A 6-element vector `[a, e, i, Ω, ω, ν]` of osculating Keplerian elements, where `ν` is the **true anomaly** (rad).
 
 # Example
+```julia
 osc = brouwer_mean_long_to_kep([7000.0, 0.01, pi/6, 0.0, 0.0, pi/3], 398600.4415)
+```
 
 # Notes
 - Angles in radians; distances in km consistent with the Earth `μ`.

@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Gen Astro LLC
-# SPDX-License-Identifier: LGPL-3.0-only OR LicenseRef-GenAstro-Commercial OR LicenseRef-GenAstro-Evaluation
+# SPDX-License-Identifier: MIT
 
 using Test
 using AstroUniverse
@@ -18,7 +18,7 @@ using Logging
         
         # Verify default kernel files exist on disk
         @test isfile(joinpath(cache_dir, "naif0012.tls"))
-        @test isfile(joinpath(cache_dir, "de440.bsp"))
+        @test isfile(joinpath(cache_dir, "epicycle_de440_1950-2100.bsp"))
         
         # Verify kernels are actually cached (loaded in SPICE memory)
         loaded_kernels = String[]
@@ -28,8 +28,9 @@ using Logging
                 push!(loaded_kernels, basename(result[1]))
             end
         end
-        @test "naif0012.tls" in loaded_kernels
-        @test "de440.bsp" in loaded_kernels
+        for filename in AstroUniverse.DEFAULT_KERNELS
+            @test filename in loaded_kernels
+        end
     end
     
     @testset "Download Operations" begin
@@ -65,7 +66,7 @@ using Logging
         storage_dir = get_spice_directory()
         downloaded_files = readdir(storage_dir)
         @test "naif0012.tls" in downloaded_files
-        @test "de440.bsp" in downloaded_files
+        @test "epicycle_de440_1950-2100.bsp" in downloaded_files
         @test "de440s.bsp" in downloaded_files  # From earlier test
     end
     
@@ -95,8 +96,9 @@ using Logging
             end
         end
         @test "de440s.bsp" in cached_kernels
-        @test "naif0012.tls" in cached_kernels
-        @test "de440.bsp" in cached_kernels
+        for filename in AstroUniverse.DEFAULT_KERNELS
+            @test filename in cached_kernels
+        end
         
         # Clean up
         unload_spice_kernel("de440s.bsp")
@@ -161,10 +163,17 @@ using Logging
         @test_nowarn unload_all_spice_kernels()
         @test SPICE.ktotal("ALL") == 0
         
-        # Reload defaults for remaining tests
-        load_spice_kernel("naif0012.tls")
-        load_spice_kernel("de440.bsp")
-        @test SPICE.ktotal("ALL") == 2
+        # Put back exactly what AstroUniverse.__init__ loaded, read from DEFAULT_KERNELS so
+        # this cannot drift from it again. It previously reloaded a hand-written pair —
+        # naif0012.tls and de440.bsp — which is two of the four and the wrong ephemeris:
+        # de440.bsp is not epicycle_de440_1950-2100.bsp and covers a different span. Every
+        # suite running after this one in the same process then failed on
+        # "Insufficient ephemeris data", and the `== 2` below asserted the broken state was
+        # correct.
+        for k in AstroUniverse.DEFAULT_KERNELS
+            load_spice_kernel(k)
+        end
+        @test SPICE.ktotal("ALL") == length(AstroUniverse.DEFAULT_KERNELS)
     end
     
     @testset "Error Handling" begin
@@ -193,24 +202,24 @@ using Logging
     end
     
     @testset "Kernel Swapping Workflow" begin
-        # Ensure clean state - unload de440s.bsp from previous test, ensure de440.bsp is loaded
+        # Ensure clean state - unload de440s.bsp from previous test, ensure epicycle_de440_1950-2100.bsp is loaded
         try
             unload_spice_kernel("de440s.bsp")
         catch
         end
         
-        # Make sure de440.bsp is loaded
+        # Make sure epicycle_de440_1950-2100.bsp is loaded
         try
-            load_spice_kernel("de440.bsp")
+            load_spice_kernel("epicycle_de440_1950-2100.bsp")
         catch
         end
         initial_count = SPICE.ktotal("ALL")
         
-        # Unload de440.bsp
-        unload_spice_kernel("de440.bsp")
+        # Unload epicycle_de440_1950-2100.bsp
+        unload_spice_kernel("epicycle_de440_1950-2100.bsp")
         @test SPICE.ktotal("ALL") == initial_count - 1
         
-        # Verify de440.bsp is no longer in the pool
+        # Verify epicycle_de440_1950-2100.bsp is no longer in the pool
         loaded_kernels = String[]
         for i in 1:SPICE.ktotal("ALL")
             result = SPICE.kdata(i, "ALL")
@@ -218,7 +227,7 @@ using Logging
                 push!(loaded_kernels, basename(result[1]))
             end
         end
-        @test !("de440.bsp" in loaded_kernels)
+        @test !("epicycle_de440_1950-2100.bsp" in loaded_kernels)
         
         # Load de440s.bsp instead
         load_spice_kernel("de440s.bsp")
@@ -233,14 +242,14 @@ using Logging
             end
         end
         @test "de440s.bsp" in loaded_kernels
-        @test !("de440.bsp" in loaded_kernels)
+        @test !("epicycle_de440_1950-2100.bsp" in loaded_kernels)
         
         # Swap back
         unload_spice_kernel("de440s.bsp")
-        load_spice_kernel("de440.bsp")
+        load_spice_kernel("epicycle_de440_1950-2100.bsp")
         @test SPICE.ktotal("ALL") == initial_count
         
-        # Verify final state: de440.bsp is in pool, de440s.bsp is not
+        # Verify final state: epicycle_de440_1950-2100.bsp is in pool, de440s.bsp is not
         loaded_kernels = String[]
         for i in 1:SPICE.ktotal("ALL")
             result = SPICE.kdata(i, "ALL")
@@ -248,7 +257,7 @@ using Logging
                 push!(loaded_kernels, basename(result[1]))
             end
         end
-        @test "de440.bsp" in loaded_kernels
+        @test "epicycle_de440_1950-2100.bsp" in loaded_kernels
         @test !("de440s.bsp" in loaded_kernels)
     end
     
@@ -264,10 +273,18 @@ using Logging
         load_spice_kernel("de440s.bsp")
         @test SPICE.ktotal("ALL") == 2
         
-        # Restore defaults
+        # Restore what AstroUniverse.__init__ loaded, read from DEFAULT_KERNELS. This is the
+        # last testset in the file, so the state it leaves is what every later suite in the
+        # process inherits — test_all_packages.jl runs all thirteen in one process. Reloading
+        # a hand-written pair here left two kernels of four, and de440.bsp in place of the
+        # merged epicycle_de440_1950-2100.bsp, which carries the satellite ephemerides. Plain
+        # DE440 has planetary barycentres only, so body 499 (Mars) and 699 (Saturn) go missing
+        # and every later frame test fails on "Insufficient ephemeris data".
         unload_all_spice_kernels()
-        load_spice_kernel("naif0012.tls")
-        load_spice_kernel("de440.bsp")
+        for k in AstroUniverse.DEFAULT_KERNELS
+            load_spice_kernel(k)
+        end
+        @test SPICE.ktotal("ALL") == length(AstroUniverse.DEFAULT_KERNELS)
     end
     
 end
