@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Plotting results · Epicycle.jl</title><meta name="title" content="Plotting results · Epicycle.jl"/><meta property="og:title" content="Plotting results · Epicycle.jl"/><meta property="twitter:title" content="Plotting results · Epicycle.jl"/><meta name="description" content="Documentation for Epicycle.jl."/><meta property="og:description" content="Documentation for Epicycle.jl."/><meta property="twitter:description" content="Documentation for Epicycle.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/examples/Ex_PlottingResults/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/examples/Ex_PlottingResults/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/examples/Ex_PlottingResults/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../packages/">Packages</a></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox" checked/><label class="tocitem" for="menuitem-4"><span class="docs-label">Examples</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><input class="collapse-toggle" id="menuitem-4-1" type="checkbox"/><label class="tocitem" for="menuitem-4-1"><span class="docs-label">Propagation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_PropagationBasics/">Propagation and stopping conditions</a></li><li><a class="tocitem" href="../Ex_ImpulsiveManeuver/">Impulsive maneuvers</a></li><li><a class="tocitem" href="../Ex_SpacecraftHistory/">The spacecraft history</a></li><li><a class="tocitem" href="../Ex_Propagation_Moon/">Propagation about the Moon</a></li><li><a class="tocitem" href="../Ex_Propagation_Mars/">Propagation about Mars</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-2" type="checkbox"/><label class="tocitem" for="menuitem-4-2"><span class="docs-label">Targeting</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_SimpleTarget/">Targeting a single maneuver</a></li><li><a class="tocitem" href="../Ex_HohmannTransfer/">Hohmann transfer</a></li><li><a class="tocitem" href="../Ex_GeoTransfer/">GEO transfer, as an event sequence</a></li><li><a class="tocitem" href="../Ex_GeoTransferTargetBlock/">GEO transfer, in flight order</a></li><li><a class="tocitem" href="../Ex_StationKeeping/">Station keeping</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-3" type="checkbox"/><label class="tocitem" for="menuitem-4-3"><span class="docs-label">Optimal control</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_Brachistochrone/">The brachistochrone</a></li><li><a class="tocitem" href="../Ex_HullProblem/">The Hull problem</a></li><li><a class="tocitem" href="../Ex_LinearTangentSteering/">Linear tangent steering</a></li><li><a class="tocitem" href="../Ex_ObstacleAvoidance/">Obstacle avoidance</a></li><li><a class="tocitem" href="../Ex_MoonLanding/">Soft lunar landing</a></li><li><a class="tocitem" href="../Ex_GoddardRocket/">The Goddard rocket</a></li><li><a class="tocitem" href="../Ex_LowThrustOrbitRaising/">Low thrust orbit raising</a></li><li><a class="tocitem" href="../Ex_ForceModelCustomForceModel/">Orbit raising with a custom force model</a></li><li><a class="tocitem" href="../Ex_LyapunovTransfer/">Earth-Moon Lyapunov transfer</a></li><li><a class="tocitem" href="../Ex_ReferenceTracking/">Reference tracking with a path bound</a></li><li><a class="tocitem" href="../Ex_ParameterIdentification/">Parameter identification</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-4" type="checkbox"/><label class="tocitem" for="menuitem-4-4"><span class="docs-label">Low thrust and interplanetary</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_MarsTransferSimsFlanagan/">Earth to Mars, Sims-Flanagan</a></li><li><a class="tocitem" href="../Ex_ApophisRendezvousSimsFlanagan/">Earth to Apophis rendezvous, Sims-Flanagan</a></li><li><a class="tocitem" href="../Ex_MixedTranscription/">Two transcriptions in one problem</a></li><li><a class="tocitem" href="../Ex_GravityAssistMGA/">Earth-Earth-Venus gravity assist</a></li><li><a class="tocitem" href="../Ex_GravityAssistMGAManeuver/">Gravity assist with an Epicycle maneuver</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-5" type="checkbox"/><label class="tocitem" for="menuitem-4-5"><span class="docs-label">Orbit determination</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_OrbitDetermination/">Batch least squares</a></li><li><a class="tocitem" href="../Ex_ExtendedKalmanFilter/">Extended Kalman filter</a></li><li><a class="tocitem" href="../Ex_SteppedKalmanFilter/">Stepping the filter</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-6" type="checkbox" checked/><label class="tocitem" for="menuitem-4-6"><span class="docs-label">Plotting and visualization</span><i class="docs-chevron"></i></label><ul class="collapsed"><li class="is-active"><a class="tocitem" href>Plotting results</a><ul class="internal"><li><a class="tocitem" href="#Configuration"><span>Configuration</span></a></li><li><a class="tocitem" href="#Plot-a-propagated-orbit"><span>Plot a propagated orbit</span></a></li><li><a class="tocitem" href="#Data-for-the-rest-of-the-page"><span>Data for the rest of the page</span></a></li><li><a class="tocitem" href="#A-panel-for-each-plot-type"><span>A panel for each plot type</span></a></li><li><a class="tocitem" href="#Adding-to-a-panel,-and-replacing-one"><span>Adding to a panel, and replacing one</span></a></li><li><a class="tocitem" href="#A-trace-with-no-wrapper"><span>A trace with no wrapper</span></a></li><li><a class="tocitem" href="#Styling-a-panel-for-print"><span>Styling a panel for print</span></a></li></ul></li><li><a class="tocitem" href="../Ex_TrajectoryView/">Viewing a trajectory in 3D</a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li><a class="is-disabled">Plotting and visualization</a></li><li class="is-active"><a href>Plotting results</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Plotting results</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_PlottingResults.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Plotting-Results"><a class="docs-heading-anchor" href="#Plotting-Results">Plotting Results</a><a id="Plotting-Results-1"></a><a class="docs-heading-anchor-permalink" href="#Plotting-Results" title="Permalink"></a></h1><p>Plot a propagated orbit, draw each plot type provided by EpicycleIO, and prepare a panel for print. The first panel uses a six-hour propagation; the remaining panels use generated data to keep the example focused on plotting.</p><p>Plots are drawn by Plotly in a browser page served from the local machine, and the page updates while a script is still running, so a long propagation or a solver iteration can be watched as it proceeds. Attribute names are Plotly&#39;s own and pass through unchanged, so Plotly&#39;s reference documentation applies directly.</p><p>Only the first panel is real. The rest draw from the generators below, each named for the plot type it feeds, because a porkchop needs a Lambert sweep and a sky view needs a station pass, and generating either here would teach a second interface to explain the first.</p><pre><code class="language-julia hljs">using Epicycle
+using EpicycleIO</code></pre><h2 id="Configuration"><a class="docs-heading-anchor" href="#Configuration">Configuration</a><a id="Configuration-1"></a><a class="docs-heading-anchor-permalink" href="#Configuration" title="Permalink"></a></h2><p>Configure a spacecraft and propagator for the orbit panel.</p><pre><code class="language-julia hljs"># Configure the propagator
+forces = ForceModel(PointMassGravity(earth, ()))
+integ = IntegratorConfig(DP8();
+                        dt = 60.0,
+                        reltol = 1e-12,
+                        abstol = 1e-12)
+propagator = OrbitPropagator(forces, integ)
+
+# Place the spacecraft in low Earth orbit
+start_epoch = Time(&quot;2024-03-01T00:00:00.000&quot;, UTC(), ISOT())
+sat = Spacecraft(state = CartesianState([6878.137, 0.0, 0.0, 0.0, 4.71754, 5.99820]),
+                 time = start_epoch,
+                 name = &quot;Explorer&quot;)</code></pre><h2 id="Plot-a-propagated-orbit"><a class="docs-heading-anchor" href="#Plot-a-propagated-orbit">Plot a propagated orbit</a><a id="Plot-a-propagated-orbit-1"></a><a class="docs-heading-anchor-permalink" href="#Plot-a-propagated-orbit" title="Permalink"></a></h2><p>Propagate the orbit and plot altitude and speed from the recorded history.</p><pre><code class="language-julia hljs"># Propagate for six hours
+propagate!(propagator, sat, StopAt(sat, PropDurationSeconds(), 6 * 3600.0))
+
+# Read the recorded trajectory back as quantities rather than as raw state vectors
+t, r_mag, v_mag = history(Calc(epoch, sat),
+                          Calc(position_magnitude, sat),
+                          Calc(velocity_magnitude, sat))
+
+hours = [24 * (ti - t[1]) for ti in t]
+altitude = r_mag .- earth.equatorial_radius
+
+# Plot altitude and speed against elapsed time
+xyplot(&quot;Orbit&quot;, hours, altitude;
+     name = &quot;altitude  km&quot;,
+     line_color = &quot;rgb(30,90,200)&quot;,
+     line_width = 3)
+
+xyplot!(&quot;Orbit&quot;, hours, v_mag .* 100;
+      name = &quot;speed  cm/s × 10⁵&quot;,
+      line_color = &quot;rgb(230,90,30)&quot;,
+      line_width = 2)
+
+panel!(&quot;Orbit&quot;;
+       xaxis_title = &quot;hours from epoch&quot;,
+       legend_orientation = &quot;h&quot;)</code></pre><h2 id="Data-for-the-rest-of-the-page"><a class="docs-heading-anchor" href="#Data-for-the-rest-of-the-page">Data for the rest of the page</a><a id="Data-for-the-rest-of-the-page-1"></a><a class="docs-heading-anchor-permalink" href="#Data-for-the-rest-of-the-page" title="Permalink"></a></h2><p>One generator per plot shape, each named for the plot type it feeds. <code>grid_data</code> serves the contour, the heatmap and the surface, because all three take two axes and a matrix.</p><pre><code class="language-julia hljs"># Two axes and a matrix, indexed [row, column] with rows following y and columns following x
+grid_data() = (collect(range(0, 120; length = 60)),
+               collect(range(180, 400; length = 70)),
+               [12 + 0.004(d - 55)^2 + 0.0025(a - 300)^2 + 6sin(d / 23) * cos(a / 37)
+                for a in range(180, 400; length = 70), d in range(0, 120; length = 60)])
+
+# A series and the one-sigma envelope around it
+xy_data(n = 240) = (collect(range(0, 12; length = n)),
+                    [0.004 + 0.010 * abs(sin(2π * x / 9)) for x in range(0, 12; length = n)])
+
+# Azimuth and elevation through one station pass, in radians
+polar_data(n = 120) = (deg2rad.(35 .+ 210 .* range(0, 1; length = n)),
+                       deg2rad.(78 .* sin.(π .* range(0, 1; length = n)) .+ 2))
+
+# Values whose distribution is the point
+histogram_data(n = 600) = [0.014 * sin(11k) + 0.009 * cos(3k) for k in 1:n]
+
+# Points in three axes
+scatter_data(n = 250) = ([90 * sin(0.7k) + 12 * cos(5k) for k in 1:n],
+                         [70 * cos(0.7k) + 12 * sin(5k) for k in 1:n],
+                         [0.4 * sin(0.3k) for k in 1:n])
+
+# Longitude and latitude in degrees
+ground_track_data(n = 500) = (collect(range(-180, 180; length = n)),
+                              [42 * sin(deg2rad(2.2x)) for x in range(-180, 180; length = n)])
+
+# A value per category
+bar_data() = ([&quot;TOI&quot;, &quot;MCC-1&quot;, &quot;MCC-2&quot;, &quot;MOI&quot;], [2.82, 0.14, 0.06, 1.48])</code></pre><h2 id="A-panel-for-each-plot-type"><a class="docs-heading-anchor" href="#A-panel-for-each-plot-type">A panel for each plot type</a><a id="A-panel-for-each-plot-type-1"></a><a class="docs-heading-anchor-permalink" href="#A-panel-for-each-plot-type" title="Permalink"></a></h2><p>A contour for a porkchop, a heatmap for the same grid filled, a surface for it in three axes, a band for a covariance envelope, a polar plot for a station pass, a bar chart for a delta-v budget, a histogram for a residual distribution, a geographic plot for a ground track, and a 3D scatter for a B-plane.</p><pre><code class="language-julia hljs"># Draw a porkchop plot with labeled contours
+departure, arrival, c3 = grid_data()
+
+contour(&quot;Porkchop&quot;, departure, arrival, c3;
+        colorscale = &quot;Viridis&quot;,
+        contours_start = 10,
+        contours_end = 60,
+        contours_size = 5,
+        contours_showlabels = true,
+        colorbar_title = &quot;C3  km²/s²&quot;)
+
+# Draw the grid as a heatmap
+heatmap(&quot;Porkchop, filled&quot;, departure, arrival, c3;
+        colorscale = &quot;Viridis&quot;,
+        colorbar_title = &quot;C3  km²/s²&quot;)
+
+panel!(&quot;Porkchop, filled&quot;;
+       xaxis_title = &quot;departure, days&quot;,
+       yaxis_title = &quot;arrival, days&quot;)
+
+# Draw the grid as a surface
+surface(&quot;Porkchop, in relief&quot;, departure, arrival, c3;
+        colorscale = &quot;Plasma&quot;,
+        colorbar_title = &quot;C3  km²/s²&quot;)
+
+panel!(&quot;Porkchop, in relief&quot;;
+       scene_xaxis_title = &quot;departure, days&quot;,
+       scene_yaxis_title = &quot;arrival, days&quot;,
+       scene_zaxis_title = &quot;C3  km²/s²&quot;)
+
+# Overlay residuals on a covariance envelope
+t_resid, sigma = xy_data()
+residual = [0.9 * s * sin(7x) for (x, s) in zip(t_resid, sigma)]
+
+band(&quot;Range residuals&quot;, t_resid, -3 .* sigma, 3 .* sigma;
+     name = &quot;3σ&quot;,
+     fillcolor = &quot;rgba(120,130,150,0.25)&quot;,
+     line_width = 0)
+
+xyplot!(&quot;Range residuals&quot;, t_resid, residual;
+      mode = &quot;markers&quot;,
+      name = &quot;residual&quot;,
+      marker_size = 4,
+      marker_color = &quot;rgb(30,90,200)&quot;)
+
+panel!(&quot;Range residuals&quot;;
+       title = &quot;Range residuals with 3σ covariance&quot;,
+       xaxis_title = &quot;hours&quot;,
+       yaxis_title = &quot;km&quot;)
+
+# Draw a sky view with north at the top and zenith at the center
+az, el = polar_data()
+
+scatterpolar(&quot;Sky view&quot;, az, rad2deg.(el);
+             thetaunit = &quot;radians&quot;,
+             mode = &quot;lines&quot;,
+             name = &quot;Pass 3&quot;,
+             line_color = &quot;rgb(230,90,30)&quot;,
+             line_width = 3)
+
+panel!(&quot;Sky view&quot;;
+       polar_angularaxis_direction = &quot;clockwise&quot;,
+       polar_angularaxis_rotation = 90,
+       polar_radialaxis_range = [90, 0],
+       polar_radialaxis_title = &quot;elevation, deg&quot;)
+
+# Draw a delta-v budget, one bar per maneuver
+maneuvers, delta_vs = bar_data()
+
+bar(&quot;Delta-v budget&quot;, maneuvers, delta_vs;
+    marker_color = &quot;rgb(30,90,200)&quot;)
+
+panel!(&quot;Delta-v budget&quot;; yaxis_title = &quot;delta-v  km/s&quot;)
+
+# Draw the residual distribution
+histogram(&quot;Residual distribution&quot;, histogram_data();
+          nbinsx = 40,
+          marker_color = &quot;rgb(120,140,190)&quot;)
+
+panel!(&quot;Residual distribution&quot;;
+       xaxis_title = &quot;postfit residual  km&quot;,
+       yaxis_title = &quot;count&quot;)
+
+# Draw a ground track and tracking stations
+track_lon, track_lat = ground_track_data()
+
+scattergeo(&quot;Ground track&quot;, track_lon, track_lat;
+           mode = &quot;lines&quot;,
+           name = &quot;Explorer&quot;,
+           line_color = &quot;rgb(0,170,200)&quot;,
+           line_width = 2)
+
+scattergeo!(&quot;Ground track&quot;, [-77.0, 11.9, 148.98], [38.9, 57.0, -35.4];
+            mode = &quot;markers+text&quot;,
+            name = &quot;stations&quot;,
+            text = [&quot;Wallops&quot;, &quot;Kiruna&quot;, &quot;Canberra&quot;],
+            textposition = &quot;top center&quot;,
+            marker_size = 9,
+            marker_color = &quot;rgb(255,170,40)&quot;)
+
+panel!(&quot;Ground track&quot;;
+       geo_projection_type = &quot;equirectangular&quot;,
+       geo_showcoastlines = true,
+       geo_showland = true)
+
+# Draw one B-plane point per Monte Carlo case
+b_dot_r, b_dot_t, arrival_offset = scatter_data()
+
+scatter3d(&quot;B-plane&quot;, b_dot_r, b_dot_t, arrival_offset;
+          mode = &quot;markers&quot;,
+          name = &quot;dispersion&quot;,
+          marker_size = 3,
+          marker_color = arrival_offset,
+          marker_colorscale = &quot;Turbo&quot;)
+
+panel!(&quot;B-plane&quot;;
+       scene_xaxis_title = &quot;B·R  km&quot;,
+       scene_yaxis_title = &quot;B·T  km&quot;,
+       scene_zaxis_title = &quot;arrival offset  hours&quot;)</code></pre><h2 id="Adding-to-a-panel,-and-replacing-one"><a class="docs-heading-anchor" href="#Adding-to-a-panel,-and-replacing-one">Adding to a panel, and replacing one</a><a id="Adding-to-a-panel,-and-replacing-one-1"></a><a class="docs-heading-anchor-permalink" href="#Adding-to-a-panel,-and-replacing-one" title="Permalink"></a></h2><p>A leading string names a panel. Plotting into a name that already exists replaces what is in it, so running a script twice leaves one figure rather than two, and the <code>!</code> form adds instead.</p><pre><code class="language-julia hljs"># Add a second series to a panel that already holds one
+xyplot!(&quot;Delta-v budget&quot;, maneuvers, delta_vs .* 1.08;
+      name = &quot;with margin&quot;,
+      mode = &quot;markers&quot;,
+      marker_size = 10,
+      marker_color = &quot;rgb(230,90,30)&quot;)</code></pre><h2 id="A-trace-with-no-wrapper"><a class="docs-heading-anchor" href="#A-trace-with-no-wrapper">A trace with no wrapper</a><a id="A-trace-with-no-wrapper-1"></a><a class="docs-heading-anchor-permalink" href="#A-trace-with-no-wrapper" title="Permalink"></a></h2><p>Plotly has around forty trace types and nine have wrappers here. The rest are reached by building the trace with <code>PlotlyBase</code>, which EpicycleIO re-exports, and handing it to <code>xyplot</code>. A wrapper is a convenience for a common case rather than a gate.</p><pre><code class="language-julia hljs"># Build an unwrapped Plotly violin trace
+xyplot(&quot;Residual spread&quot;,
+     PlotlyBase.violin(y = histogram_data(),
+                       box_visible = true,
+                       name = &quot;range&quot;))
+
+panel!(&quot;Residual spread&quot;;
+       yaxis_title = &quot;residual  km&quot;,
+       xaxis_showticklabels = false)</code></pre><h2 id="Styling-a-panel-for-print"><a class="docs-heading-anchor" href="#Styling-a-panel-for-print">Styling a panel for print</a><a id="Styling-a-panel-for-print-1"></a><a class="docs-heading-anchor-permalink" href="#Styling-a-panel-for-print" title="Permalink"></a></h2><p>Everything above takes the dashboard&#39;s default appearance, which is made for a screen. A figure headed for a document or a slide wants near-black text on white, gridlines light enough to sit behind the data, and a font size that survives being shrunk into a column.</p><p>Metadata and appearance are both <code>panel!</code> keywords, and settings accumulate, so both blocks below apply to a panel that is already drawn without redrawing it.</p><pre><code class="language-julia hljs"># Set the title, axis labels, and legend placement
+panel!(&quot;Porkchop&quot;;
+       title = &quot;Earth to Mars, 2031 opportunity&quot;,
+       xaxis_title = &quot;departure, days from 2031-01-01&quot;,
+       yaxis_title = &quot;arrival, days from 2031-01-01&quot;,
+       legend_orientation = &quot;h&quot;)
+
+# Use print-friendly colors, gridlines, and type
+panel!(&quot;Porkchop&quot;;
+       font_size = 14,
+       font_color = &quot;rgb(20,20,25)&quot;,
+       paper_bgcolor = &quot;white&quot;,
+       plot_bgcolor = &quot;white&quot;,
+       xaxis_gridcolor = &quot;rgb(226,230,236)&quot;,
+       yaxis_gridcolor = &quot;rgb(226,230,236)&quot;,
+       xaxis_linecolor = &quot;rgb(20,20,25)&quot;,
+       yaxis_linecolor = &quot;rgb(20,20,25)&quot;)
+
+# Report what was drawn
+println(&quot;panels drawn : 11&quot;)
+println(&quot;real data    : the Orbit panel, from a six hour propagation&quot;)
+println(&quot;invented data: every other panel, to show the call rather than the analysis&quot;)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Ex_SteppedKalmanFilter/">« Stepping the filter</a><a class="docs-footer-nextpage" href="../Ex_TrajectoryView/">Viewing a trajectory in 3D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Friday 25 September 2026 21:14">Friday 25 September 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

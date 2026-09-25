@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Low thrust orbit raising · Epicycle.jl</title><meta name="title" content="Low thrust orbit raising · Epicycle.jl"/><meta property="og:title" content="Low thrust orbit raising · Epicycle.jl"/><meta property="twitter:title" content="Low thrust orbit raising · Epicycle.jl"/><meta name="description" content="Documentation for Epicycle.jl."/><meta property="og:description" content="Documentation for Epicycle.jl."/><meta property="twitter:description" content="Documentation for Epicycle.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/examples/Ex_LowThrustOrbitRaising/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/examples/Ex_LowThrustOrbitRaising/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/examples/Ex_LowThrustOrbitRaising/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../packages/">Packages</a></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox" checked/><label class="tocitem" for="menuitem-4"><span class="docs-label">Examples</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><input class="collapse-toggle" id="menuitem-4-1" type="checkbox"/><label class="tocitem" for="menuitem-4-1"><span class="docs-label">Propagation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_PropagationBasics/">Propagation and stopping conditions</a></li><li><a class="tocitem" href="../Ex_ImpulsiveManeuver/">Impulsive maneuvers</a></li><li><a class="tocitem" href="../Ex_SpacecraftHistory/">The spacecraft history</a></li><li><a class="tocitem" href="../Ex_Propagation_Moon/">Propagation about the Moon</a></li><li><a class="tocitem" href="../Ex_Propagation_Mars/">Propagation about Mars</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-2" type="checkbox"/><label class="tocitem" for="menuitem-4-2"><span class="docs-label">Targeting</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_SimpleTarget/">Targeting a single maneuver</a></li><li><a class="tocitem" href="../Ex_HohmannTransfer/">Hohmann transfer</a></li><li><a class="tocitem" href="../Ex_GeoTransfer/">GEO transfer, as an event sequence</a></li><li><a class="tocitem" href="../Ex_GeoTransferTargetBlock/">GEO transfer, in flight order</a></li><li><a class="tocitem" href="../Ex_StationKeeping/">Station keeping</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-3" type="checkbox" checked/><label class="tocitem" for="menuitem-4-3"><span class="docs-label">Optimal control</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_Brachistochrone/">The brachistochrone</a></li><li><a class="tocitem" href="../Ex_HullProblem/">The Hull problem</a></li><li><a class="tocitem" href="../Ex_LinearTangentSteering/">Linear tangent steering</a></li><li><a class="tocitem" href="../Ex_ObstacleAvoidance/">Obstacle avoidance</a></li><li><a class="tocitem" href="../Ex_MoonLanding/">Soft lunar landing</a></li><li><a class="tocitem" href="../Ex_GoddardRocket/">The Goddard rocket</a></li><li class="is-active"><a class="tocitem" href>Low thrust orbit raising</a><ul class="internal"><li><a class="tocitem" href="#Problem-Formulation"><span>Problem Formulation</span></a></li><li><a class="tocitem" href="#Configuration"><span>Configuration</span></a></li><li><a class="tocitem" href="#Equations-of-motion"><span>Equations of motion</span></a></li><li><a class="tocitem" href="#The-initial-guess"><span>The initial guess</span></a></li><li><a class="tocitem" href="#Configure-the-optimal-control-problem"><span>Configure the optimal control problem</span></a></li><li><a class="tocitem" href="#Solve-the-optimal-control-problem"><span>Solve the optimal control problem</span></a></li></ul></li><li><a class="tocitem" href="../Ex_ForceModelCustomForceModel/">Orbit raising with a custom force model</a></li><li><a class="tocitem" href="../Ex_LyapunovTransfer/">Earth-Moon Lyapunov transfer</a></li><li><a class="tocitem" href="../Ex_ReferenceTracking/">Reference tracking with a path bound</a></li><li><a class="tocitem" href="../Ex_ParameterIdentification/">Parameter identification</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-4" type="checkbox"/><label class="tocitem" for="menuitem-4-4"><span class="docs-label">Low thrust and interplanetary</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_MarsTransferSimsFlanagan/">Earth to Mars, Sims-Flanagan</a></li><li><a class="tocitem" href="../Ex_ApophisRendezvousSimsFlanagan/">Earth to Apophis rendezvous, Sims-Flanagan</a></li><li><a class="tocitem" href="../Ex_MixedTranscription/">Two transcriptions in one problem</a></li><li><a class="tocitem" href="../Ex_GravityAssistMGA/">Earth-Earth-Venus gravity assist</a></li><li><a class="tocitem" href="../Ex_GravityAssistMGAManeuver/">Gravity assist with an Epicycle maneuver</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-5" type="checkbox"/><label class="tocitem" for="menuitem-4-5"><span class="docs-label">Orbit determination</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_OrbitDetermination/">Batch least squares</a></li><li><a class="tocitem" href="../Ex_ExtendedKalmanFilter/">Extended Kalman filter</a></li><li><a class="tocitem" href="../Ex_SteppedKalmanFilter/">Stepping the filter</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-6" type="checkbox"/><label class="tocitem" for="menuitem-4-6"><span class="docs-label">Plotting and visualization</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_PlottingResults/">Plotting results</a></li><li><a class="tocitem" href="../Ex_TrajectoryView/">Viewing a trajectory in 3D</a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li><a class="is-disabled">Optimal control</a></li><li class="is-active"><a href>Low thrust orbit raising</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Low thrust orbit raising</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_LowThrustOrbitRaising.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Low-Thrust-Orbit-Raising-with-Collocation"><a class="docs-heading-anchor" href="#Low-Thrust-Orbit-Raising-with-Collocation">Low-Thrust Orbit Raising with Collocation</a><a id="Low-Thrust-Orbit-Raising-with-Collocation-1"></a><a class="docs-heading-anchor-permalink" href="#Low-Thrust-Orbit-Raising-with-Collocation" title="Permalink"></a></h1><p>Maximize the radius reached by a continuously thrusting spacecraft in a fixed time. A <code>HermiteSimpson</code> collocation phase solves the state history and thrust direction.</p><p>This is Bryson&#39;s orbit-raising problem in canonical units, with an initial radius and gravitational parameter of one. CSALT reports a final radius of 1.5230.</p><pre><code class="language-julia hljs">using Epicycle
+using LinearAlgebra</code></pre><h2 id="Problem-Formulation"><a class="docs-heading-anchor" href="#Problem-Formulation">Problem Formulation</a><a id="Problem-Formulation-1"></a><a class="docs-heading-anchor-permalink" href="#Problem-Formulation" title="Permalink"></a></h2><p>The fixed-time orbit-raising problem is</p><p class="math-container">\[\begin{aligned}
+\underset{r(t),\,\theta(t),\,v_r(t),\,v_\theta(t),\,m(t),
+\,u_r(t),\,u_\theta(t)}{\operatorname{maximize}} \quad &amp; r(t_f) \\
+\text{subject to} \quad
+&amp; \dot{r}=v_r, \\
+&amp; \dot{\theta}=\frac{v_\theta}{r}, \\
+&amp; \dot{v}_r=\frac{v_\theta^2}{r}-\frac{\mu}{r^2}
+  +\frac{T}{m}u_r, \\
+&amp; \dot{v}_\theta=-\frac{v_rv_\theta}{r}+\frac{T}{m}u_\theta, \\
+&amp; \dot{m}=-\dot{m}_p, \\
+&amp; r(0)=1,\quad \theta(0)=0,\quad v_r(0)=0,
+  \quad v_\theta(0)=1,\quad m(0)=1, \\
+&amp; v_r(t_f)=0,\quad v_\theta(t_f)=\sqrt{\frac{\mu}{r(t_f)}}, \\
+&amp; u_r^2+u_\theta^2=1,\quad t_f=3.32.
+\end{aligned}\]</p><p>where <span>$r$</span> and <span>$\theta$</span> are polar position, <span>$v_r$</span> and <span>$v_\theta$</span> are radial and transverse velocity, <span>$m$</span> is mass, and <span>$u_r$</span> and <span>$u_\theta$</span> are the radial and transverse components of thrust direction. The canonical model uses <span>$\mu=1$</span>, <span>$T=0.1405$</span>, and <span>$\dot{m}_p=0.0749$</span>.</p><h2 id="Configuration"><a class="docs-heading-anchor" href="#Configuration">Configuration</a><a id="Configuration-1"></a><a class="docs-heading-anchor-permalink" href="#Configuration" title="Permalink"></a></h2><p>Use constant thrust and mass flow, leaving thrust direction as the control.</p><pre><code class="language-julia hljs"># Set the gravitational parameter, thrust, and mass flow
+struct RaisingModel
+    mu    ::Float64
+    thrust::Float64
+    mdot  ::Float64
+end
+
+model = RaisingModel(1.0, 0.1405, 0.0749)
+
+# Set the initial state and transfer duration
+y0 = [1.0, 0.0, 0.0, 1.0, 1.0]        # radius, angle, radial and transverse speed, mass
+tf = 3.32</code></pre><h2 id="Equations-of-motion"><a class="docs-heading-anchor" href="#Equations-of-motion">Equations of motion</a><a id="Equations-of-motion-1"></a><a class="docs-heading-anchor-permalink" href="#Equations-of-motion" title="Permalink"></a></h2><p>The state is radius, polar angle, radial speed, transverse speed and mass. The control is the thrust direction, given by its radial and transverse components.</p><pre><code class="language-julia hljs"># Define the state and control representations
+struct RaisingState{T} &lt;: AbstractState
+    r ::T
+    θ ::T
+    vr::T
+    vθ::T
+    m ::T
+end
+
+struct RaisingControl{T} &lt;: AbstractControl
+    u_r::T
+    u_θ::T
+end
+
+# Evaluate the state rates
+function raising!(dy, y::RaisingState, u::RaisingControl, p, t, model)
+    a = model.thrust / y.m
+    dy[1] = y.vr
+    dy[2] = y.vθ / y.r
+    dy[3] = y.vθ^2 / y.r - model.mu / y.r^2 + a * u.u_r
+    dy[4] = -y.vr * y.vθ / y.r + a * u.u_θ
+    dy[5] = -model.mdot
+end
+
+# Supply the state partials
+@partial(raising!, state) do dF, y, u, p, t, model
+    a = model.thrust / y.m
+    dF[1, 3] = 1.0
+    dF[2, 1] = -y.vθ / y.r^2
+    dF[2, 4] = 1.0 / y.r
+    dF[3, 1] = -y.vθ^2 / y.r^2 + 2.0 * model.mu / y.r^3
+    dF[3, 4] = 2.0 * y.vθ / y.r
+    dF[3, 5] = -a * u.u_r / y.m
+    dF[4, 1] = y.vr * y.vθ / y.r^2
+    dF[4, 3] = -y.vθ / y.r
+    dF[4, 4] = -y.vr / y.r
+    dF[4, 5] = -a * u.u_θ / y.m
+end
+
+# Supply the control partials
+@partial(raising!, control) do dF, y, u, p, t, model
+    a = model.thrust / y.m
+    dF[3, 1] = a
+    dF[4, 2] = a
+end</code></pre><h2 id="The-initial-guess"><a class="docs-heading-anchor" href="#The-initial-guess">The initial guess</a><a id="The-initial-guess-1"></a><a class="docs-heading-anchor-permalink" href="#The-initial-guess" title="Permalink"></a></h2><p>Generate a dynamically consistent guess by integrating transverse thrust with RK4 and sampling the result at the mesh nodes.</p><pre><code class="language-julia hljs"># Fly the initial guess
+function flown_guess(times; steps = 2000)
+    f(y) = [y[3],
+            y[4] / y[1],
+            y[4]^2 / y[1] - model.mu / y[1]^2,
+            -y[3] * y[4] / y[1] + model.thrust / y[5],
+            -model.mdot]
+    h = tf / steps
+    y = copy(y0)
+    t = 0.0
+    out = zeros(5, length(times))
+    next = 1
+    for _ in 0:steps
+        while next &lt;= length(times) &amp;&amp; t &gt;= times[next] - 1e-9
+            out[:, next] = y
+            next += 1
+        end
+        k1 = f(y)
+        k2 = f(y .+ h / 2 .* k1)
+        k3 = f(y .+ h / 2 .* k2)
+        k4 = f(y .+ h .* k3)
+        y = y .+ h / 6 .* (k1 .+ 2k2 .+ 2k3 .+ k4)
+        t += h
+    end
+    return out
+end
+
+guess = flown_guess([0.0, tf / 2, tf])</code></pre><h2 id="Configure-the-optimal-control-problem"><a class="docs-heading-anchor" href="#Configure-the-optimal-control-problem">Configure the optimal control problem</a><a id="Configure-the-optimal-control-problem-1"></a><a class="docs-heading-anchor-permalink" href="#Configure-the-optimal-control-problem" title="Permalink"></a></h2><p>Fix the departure state, keep the thrust direction at unit magnitude, and require a circular arrival orbit. The objective maximizes the final radius.</p><pre><code class="language-julia hljs"># Build the Hermite-Simpson phase
+phase = CollocationPhase(name = :orbit_raising,
+                         transcription = HermiteSimpson(n_steps = 40),
+                         dynamics = raising!,
+                         model = model,
+                         state = RaisingState,
+                         control = RaisingControl,
+                         tspan = (0.0, tf))
+
+# Vary the state history using the flown guess
+Vary(state, phase;
+     guess = guess,
+     lower_bound = [0.5, 0.0, -10.0, -10.0, 0.1],
+     upper_bound = [5.0, 4π, 10.0, 10.0, 3.0])
+
+# Vary the thrust direction
+Vary(control, phase;
+     guess = fill(1.0 / sqrt(2), 2, 3),
+     lower_bound = [-10.0, -10.0],
+     upper_bound = [10.0, 10.0])
+
+# Define the boundary, path, and objective quantities
+departure(c) = (y = state(c); [y.r, y.θ, y.vr, y.vθ, y.m])
+
+unit_thrust(c) = [control(c).u_r^2 + control(c).u_θ^2]
+
+circular_orbit(c) = (y = state(c); [y.vr, sqrt(c.model.mu / y.r) - y.vθ])
+
+final_radius(c) = state(c).r
+
+# Supply their analytic partials
+@partial(departure, state) do c
+    Matrix(1.0I, 5, 5)
+end
+
+@partial(unit_thrust, control) do c
+    [2.0 * control(c).u_r  2.0 * control(c).u_θ]
+end
+
+@partial(circular_orbit, state) do c
+    y = state(c)
+    [0.0                                     0.0  1.0   0.0  0.0
+     -0.5 * sqrt(c.model.mu / y.r) / y.r     0.0  0.0  -1.0  0.0]
+end
+
+@partial(final_radius, state) do c
+    [1.0  0.0  0.0  0.0  0.0]
+end
+
+# Apply the departure, thrust-direction, and arrival constraints
+Constraint(departure, phase; equals = y0, at = Initial())
+Constraint(unit_thrust, phase; equals = 1.0, at = Path())
+Constraint(circular_orbit, phase; equals = [0.0, 0.0], at = Final())
+
+# Maximize the final radius
+Objective(final_radius, phase; sense = Max())</code></pre><h2 id="Solve-the-optimal-control-problem"><a class="docs-heading-anchor" href="#Solve-the-optimal-control-problem">Solve the optimal control problem</a><a id="Solve-the-optimal-control-problem-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-the-optimal-control-problem" title="Permalink"></a></h2><p><code>check_partials</code> compares every declared partial against a finite difference before the solve, which is where a wrong derivative is cheap to find.</p><pre><code class="language-julia hljs"># Check the declared partials against finite differences
+check_partials(phase)
+
+# Solve the problem
+result = solve!(Sequence(phase); method = Optimize(max_iter = 1000, tol = 1e-6, print_level = 5))
+
+# Compare the solution with the CSALT reference
+y_final = get_final_state(phase)
+println(&quot;status       : &quot;, result.info)
+println(&quot;final radius : &quot;, round(y_final.r, digits = 6), &quot;   (CSALT reference 1.5230)&quot;)
+println(&quot;final mass   : &quot;, round(y_final.m, digits = 6))
+println(&quot;radial speed : &quot;, round(y_final.vr, sigdigits = 3), &quot;   (circular orbit: 0)&quot;)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Ex_GoddardRocket/">« The Goddard rocket</a><a class="docs-footer-nextpage" href="../Ex_ForceModelCustomForceModel/">Orbit raising with a custom force model »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Friday 25 September 2026 21:14">Friday 25 September 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

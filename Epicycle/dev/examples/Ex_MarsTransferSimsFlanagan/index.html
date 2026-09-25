@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Earth to Mars, Sims-Flanagan · Epicycle.jl</title><meta name="title" content="Earth to Mars, Sims-Flanagan · Epicycle.jl"/><meta property="og:title" content="Earth to Mars, Sims-Flanagan · Epicycle.jl"/><meta property="twitter:title" content="Earth to Mars, Sims-Flanagan · Epicycle.jl"/><meta name="description" content="Documentation for Epicycle.jl."/><meta property="og:description" content="Documentation for Epicycle.jl."/><meta property="twitter:description" content="Documentation for Epicycle.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/examples/Ex_MarsTransferSimsFlanagan/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/examples/Ex_MarsTransferSimsFlanagan/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/examples/Ex_MarsTransferSimsFlanagan/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../packages/">Packages</a></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox" checked/><label class="tocitem" for="menuitem-4"><span class="docs-label">Examples</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><input class="collapse-toggle" id="menuitem-4-1" type="checkbox"/><label class="tocitem" for="menuitem-4-1"><span class="docs-label">Propagation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_PropagationBasics/">Propagation and stopping conditions</a></li><li><a class="tocitem" href="../Ex_ImpulsiveManeuver/">Impulsive maneuvers</a></li><li><a class="tocitem" href="../Ex_SpacecraftHistory/">The spacecraft history</a></li><li><a class="tocitem" href="../Ex_Propagation_Moon/">Propagation about the Moon</a></li><li><a class="tocitem" href="../Ex_Propagation_Mars/">Propagation about Mars</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-2" type="checkbox"/><label class="tocitem" for="menuitem-4-2"><span class="docs-label">Targeting</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_SimpleTarget/">Targeting a single maneuver</a></li><li><a class="tocitem" href="../Ex_HohmannTransfer/">Hohmann transfer</a></li><li><a class="tocitem" href="../Ex_GeoTransfer/">GEO transfer, as an event sequence</a></li><li><a class="tocitem" href="../Ex_GeoTransferTargetBlock/">GEO transfer, in flight order</a></li><li><a class="tocitem" href="../Ex_StationKeeping/">Station keeping</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-3" type="checkbox"/><label class="tocitem" for="menuitem-4-3"><span class="docs-label">Optimal control</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_Brachistochrone/">The brachistochrone</a></li><li><a class="tocitem" href="../Ex_HullProblem/">The Hull problem</a></li><li><a class="tocitem" href="../Ex_LinearTangentSteering/">Linear tangent steering</a></li><li><a class="tocitem" href="../Ex_ObstacleAvoidance/">Obstacle avoidance</a></li><li><a class="tocitem" href="../Ex_MoonLanding/">Soft lunar landing</a></li><li><a class="tocitem" href="../Ex_GoddardRocket/">The Goddard rocket</a></li><li><a class="tocitem" href="../Ex_LowThrustOrbitRaising/">Low thrust orbit raising</a></li><li><a class="tocitem" href="../Ex_ForceModelCustomForceModel/">Orbit raising with a custom force model</a></li><li><a class="tocitem" href="../Ex_LyapunovTransfer/">Earth-Moon Lyapunov transfer</a></li><li><a class="tocitem" href="../Ex_ReferenceTracking/">Reference tracking with a path bound</a></li><li><a class="tocitem" href="../Ex_ParameterIdentification/">Parameter identification</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-4" type="checkbox" checked/><label class="tocitem" for="menuitem-4-4"><span class="docs-label">Low thrust and interplanetary</span><i class="docs-chevron"></i></label><ul class="collapsed"><li class="is-active"><a class="tocitem" href>Earth to Mars, Sims-Flanagan</a><ul class="internal"><li><a class="tocitem" href="#Configuration"><span>Configuration</span></a></li><li><a class="tocitem" href="#The-impulsive-reference"><span>The impulsive reference</span></a></li><li><a class="tocitem" href="#The-ephemerides"><span>The ephemerides</span></a></li><li><a class="tocitem" href="#Configure-the-transfer"><span>Configure the transfer</span></a></li><li><a class="tocitem" href="#The-objective"><span>The objective</span></a></li><li><a class="tocitem" href="#Solve-the-transfer"><span>Solve the transfer</span></a></li></ul></li><li><a class="tocitem" href="../Ex_ApophisRendezvousSimsFlanagan/">Earth to Apophis rendezvous, Sims-Flanagan</a></li><li><a class="tocitem" href="../Ex_MixedTranscription/">Two transcriptions in one problem</a></li><li><a class="tocitem" href="../Ex_GravityAssistMGA/">Earth-Earth-Venus gravity assist</a></li><li><a class="tocitem" href="../Ex_GravityAssistMGAManeuver/">Gravity assist with an Epicycle maneuver</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-5" type="checkbox"/><label class="tocitem" for="menuitem-4-5"><span class="docs-label">Orbit determination</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_OrbitDetermination/">Batch least squares</a></li><li><a class="tocitem" href="../Ex_ExtendedKalmanFilter/">Extended Kalman filter</a></li><li><a class="tocitem" href="../Ex_SteppedKalmanFilter/">Stepping the filter</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-6" type="checkbox"/><label class="tocitem" for="menuitem-4-6"><span class="docs-label">Plotting and visualization</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_PlottingResults/">Plotting results</a></li><li><a class="tocitem" href="../Ex_TrajectoryView/">Viewing a trajectory in 3D</a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li><a class="is-disabled">Low thrust and interplanetary</a></li><li class="is-active"><a href>Earth to Mars, Sims-Flanagan</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Earth to Mars, Sims-Flanagan</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_MarsTransferSimsFlanagan.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Earth-to-Mars,-Low-Thrust-(Sims-Flanagan)"><a class="docs-heading-anchor" href="#Earth-to-Mars,-Low-Thrust-(Sims-Flanagan)">Earth to Mars, Low Thrust (Sims-Flanagan)</a><a id="Earth-to-Mars,-Low-Thrust-(Sims-Flanagan)-1"></a><a class="docs-heading-anchor-permalink" href="#Earth-to-Mars,-Low-Thrust-(Sims-Flanagan)" title="Permalink"></a></h1><p>Deliver as much mass as possible to Mars with a one-newton engine over a transfer time fixed at the Hohmann value. A <code>SimsFlanaganPhase</code> connects circular, coplanar Earth and Mars ephemerides while minimizing propellant use.</p><p>Sims-Flanagan discretises an arc into segments, each carrying one impulse, propagated from both ends to a match point in the middle. Its variables are not a state and a control history, which is why they have their own names: <code>forward_control</code>, <code>backward_control</code>, <code>initial_mass</code> and <code>final_mass</code>.</p><p>The impulsive Hohmann transfer between the same orbits is the upper bound on delivered mass, and the example prints both.</p><pre><code class="language-julia hljs">using Epicycle
+using LinearAlgebra
+using Printf</code></pre><h2 id="Configuration"><a class="docs-heading-anchor" href="#Configuration">Configuration</a><a id="Configuration-1"></a><a class="docs-heading-anchor-permalink" href="#Configuration" title="Permalink"></a></h2><p>Use circular, coplanar orbits so the Earth and Mars ephemerides can be evaluated directly.</p><pre><code class="language-julia hljs"># Set the solar and planetary constants
+const MU_SUN = 1.32712440018e11           # km^3/s^2
+const AU = 1.495978707e8                  # km
+const R_EARTH = 1.0 * AU
+const R_MARS = 1.524 * AU
+
+const VC_EARTH = sqrt(MU_SUN / R_EARTH)
+const VC_MARS = sqrt(MU_SUN / R_MARS)
+const OM_EARTH = VC_EARTH / R_EARTH
+const OM_MARS = VC_MARS / R_MARS
+
+# Set the spacecraft and engine properties
+const M0 = 1500.0                         # kg
+const ISP = 3000.0                        # s
+const TMAX = 1.0e-3                       # kN, one newton
+const G0 = 9.80665e-3                     # km/s^2
+
+# Compute the Hohmann transfer time and the required initial Mars phase
+const A_TRANSFER = (R_EARTH + R_MARS) / 2.0
+const TOF = π * sqrt(A_TRANSFER^3 / MU_SUN)
+const THETA_MARS0 = π - OM_MARS * TOF</code></pre><h2 id="The-impulsive-reference"><a class="docs-heading-anchor" href="#The-impulsive-reference">The impulsive reference</a><a id="The-impulsive-reference-1"></a><a class="docs-heading-anchor-permalink" href="#The-impulsive-reference" title="Permalink"></a></h2><p>A two-burn Hohmann transfer between the same orbits delivers more mass than any low thrust transfer can, because it spends its impulses where they are worth most. It is the upper bound the answer is read against.</p><pre><code class="language-julia hljs"># Compute the impulsive upper bound
+const DV1 = VC_EARTH * (sqrt(2 * R_MARS / (R_EARTH + R_MARS)) - 1)
+const DV2 = VC_MARS * (1 - sqrt(2 * R_EARTH / (R_EARTH + R_MARS)))
+const MF_IMPULSIVE = M0 * exp(-(DV1 + DV2) / (ISP * G0))</code></pre><h2 id="The-ephemerides"><a class="docs-heading-anchor" href="#The-ephemerides">The ephemerides</a><a id="The-ephemerides-1"></a><a class="docs-heading-anchor-permalink" href="#The-ephemerides" title="Permalink"></a></h2><p>Each end of the phase follows a body. An ephemeris returns position, velocity and acceleration at an epoch, which is all the transcription reads.</p><pre><code class="language-julia hljs"># Evaluate the Earth ephemeris
+function earth_ephemeris(t::Real)
+    θ = OM_EARTH * t
+    r = R_EARTH * [cos(θ), sin(θ), 0.0]
+    v = VC_EARTH * [-sin(θ), cos(θ), 0.0]
+    a = -(MU_SUN / R_EARTH^2) * [cos(θ), sin(θ), 0.0]
+    return r, v, a
+end
+
+# Evaluate Mars from the phase that places it at arrival
+function mars_ephemeris(t::Real)
+    θ = THETA_MARS0 + OM_MARS * t
+    r = R_MARS * [cos(θ), sin(θ), 0.0]
+    v = VC_MARS * [-sin(θ), cos(θ), 0.0]
+    a = -(MU_SUN / R_MARS^2) * [cos(θ), sin(θ), 0.0]
+    return r, v, a
+end</code></pre><h2 id="Configure-the-transfer"><a class="docs-heading-anchor" href="#Configure-the-transfer">Configure the transfer</a><a id="Configure-the-transfer-1"></a><a class="docs-heading-anchor-permalink" href="#Configure-the-transfer" title="Permalink"></a></h2><p>Sixty segments, thirty propagated forward from Earth and thirty backward from Mars. The match point scale is what makes the two halves&#39; disagreement comparable across position, velocity and mass.</p><pre><code class="language-julia hljs"># Build the Sims-Flanagan phase
+const N_SEGMENTS = 60
+const SMOOTHING = 0.015
+
+phase = SimsFlanaganPhase(name = :earth_to_mars,
+                          transcription = SimsFlanagan(n_segments = N_SEGMENTS,
+                                                       throttle_smoothing = SMOOTHING),
+                          model = PropulsionModel(mu = MU_SUN,
+                                                  Isp = ISP,
+                                                  Tmax = TMAX,
+                                                  g0 = G0),
+                          ephemeris_left = earth_ephemeris,
+                          ephemeris_right = mars_ephemeris,
+                          tspan = (0.0, TOF),
+                          matchpoint_scale = [R_EARTH, R_EARTH, R_EARTH,
+                                              VC_EARTH, VC_EARTH, VC_EARTH, M0])
+
+# Seed the throttles prograde at each end, which is the standard guess for an energy-raising transfer
+_, v_departure, _ = earth_ephemeris(0.0)
+_, v_arrival, _ = mars_ephemeris(TOF)
+u_departure = v_departure / norm(v_departure)
+u_arrival = v_arrival / norm(v_arrival)
+
+# Vary both throttle blocks and the endpoint masses
+Vary(forward_control, phase;
+     guess = 0.5 * u_departure,
+     lower_bound = fill(-2.0, 3),
+     upper_bound = fill(2.0, 3),
+     name = &quot;u_fwd&quot;)
+
+Vary(backward_control, phase;
+     guess = 0.5 * u_arrival,
+     lower_bound = fill(-2.0, 3),
+     upper_bound = fill(2.0, 3),
+     name = &quot;u_bwd&quot;)
+
+Vary(initial_mass, phase;
+     lower_bound = M0,
+     upper_bound = M0,
+     name = &quot;m0&quot;)
+
+Vary(final_mass, phase;
+     guess = 0.85 * M0,
+     lower_bound = 100.0,
+     upper_bound = M0,
+     scale = M0,
+     name = &quot;mf&quot;)
+
+# Constrain the throttle magnitude to the unit ball, at every segment
+thrust_ball(c) = [dot(control(c), control(c))]
+Constraint(thrust_ball, phase; lower_bound = 0.0, upper_bound = 1.0, at = Path())</code></pre><h2 id="The-objective"><a class="docs-heading-anchor" href="#The-objective">The objective</a><a id="The-objective-1"></a><a class="docs-heading-anchor-permalink" href="#The-objective" title="Permalink"></a></h2><p>A segment burns propellant in proportion to its throttle magnitude, so the propellant is the segment magnitudes summed and scaled to kilograms. The magnitude is smoothed by the same <code>throttle_smoothing</code> the transcription burns with, so the objective prices a segment exactly as the match point charges for it.</p><pre><code class="language-julia hljs"># Convert one unit of segment throttle to the propellant it burns
+const KG_PER_THROTTLE = TMAX * (TOF / N_SEGMENTS) / (G0 * ISP)
+
+# Compute the smoothed throttle magnitude of every segment in a block
+throttle_magnitudes(u) = sqrt.(vec(sum(abs2, u, dims = 1)) .+ SMOOTHING^2)
+
+# Define propellant use and its throttle partials
+propellant(c) = KG_PER_THROTTLE * (sum(throttle_magnitudes(forward_control(c))) +
+                                   sum(throttle_magnitudes(backward_control(c))))
+
+@partial(propellant, forward_control) do c
+    u = forward_control(c)
+    KG_PER_THROTTLE .* vec(u ./ throttle_magnitudes(u)&#39;)
+end
+
+@partial(propellant, backward_control) do c
+    u = backward_control(c)
+    KG_PER_THROTTLE .* vec(u ./ throttle_magnitudes(u)&#39;)
+end
+
+Objective(propellant, phase; sense = Min())</code></pre><h2 id="Solve-the-transfer"><a class="docs-heading-anchor" href="#Solve-the-transfer">Solve the transfer</a><a id="Solve-the-transfer-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-the-transfer" title="Permalink"></a></h2><p>The problem solves at the solver&#39;s default settings, so the call names only the iteration limit.</p><pre><code class="language-julia hljs"># Report the transfer setup
+@printf(&quot;m0    = %.1f kg\n&quot;, M0)
+@printf(&quot;Tmax  = %.1f N\n&quot;, TMAX * 1000)
+@printf(&quot;Isp   = %.0f s\n&quot;, ISP)
+@printf(&quot;TOF   = %.2f days   (the Hohmann transfer time)\n&quot;, TOF / 86400)
+@printf(&quot;impulsive Hohmann: dv1 = %.4f km/s, dv2 = %.4f km/s, mf = %.2f kg\n&quot;,
+        DV1, DV2, MF_IMPULSIVE)
+
+# Solve the transfer
+result = solve!(Sequence(phase);
+                method = Optimize(max_iter = 500, print_level = 5))
+
+# Report the delivered mass against the impulsive bound
+mf = final_mass(phase)
+@printf(&quot;\nstatus         : %s\n&quot;, result.info)
+@printf(&quot;delivered mass : %.3f kg   (impulsive bound %.2f kg)\n&quot;, mf, MF_IMPULSIVE)
+@printf(&quot;propellant     : %.3f kg\n&quot;, M0 - mf)
+
+# Report how much of the transfer coasts
+magnitudes(u) = sqrt.(vec(sum(abs2, u, dims = 1)))
+coasting = count(&lt;(0.01), magnitudes(forward_control(phase))) +
+           count(&lt;(0.01), magnitudes(backward_control(phase)))
+@printf(&quot;coasting       : %d of %d segments
+&quot;, coasting, N_SEGMENTS)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Ex_ParameterIdentification/">« Parameter identification</a><a class="docs-footer-nextpage" href="../Ex_ApophisRendezvousSimsFlanagan/">Earth to Apophis rendezvous, Sims-Flanagan »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Friday 25 September 2026 21:14">Friday 25 September 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

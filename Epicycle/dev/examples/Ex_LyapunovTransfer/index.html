@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Earth-Moon Lyapunov transfer · Epicycle.jl</title><meta name="title" content="Earth-Moon Lyapunov transfer · Epicycle.jl"/><meta property="og:title" content="Earth-Moon Lyapunov transfer · Epicycle.jl"/><meta property="twitter:title" content="Earth-Moon Lyapunov transfer · Epicycle.jl"/><meta name="description" content="Documentation for Epicycle.jl."/><meta property="og:description" content="Documentation for Epicycle.jl."/><meta property="twitter:description" content="Documentation for Epicycle.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/examples/Ex_LyapunovTransfer/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/examples/Ex_LyapunovTransfer/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/examples/Ex_LyapunovTransfer/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../packages/">Packages</a></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox" checked/><label class="tocitem" for="menuitem-4"><span class="docs-label">Examples</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><input class="collapse-toggle" id="menuitem-4-1" type="checkbox"/><label class="tocitem" for="menuitem-4-1"><span class="docs-label">Propagation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_PropagationBasics/">Propagation and stopping conditions</a></li><li><a class="tocitem" href="../Ex_ImpulsiveManeuver/">Impulsive maneuvers</a></li><li><a class="tocitem" href="../Ex_SpacecraftHistory/">The spacecraft history</a></li><li><a class="tocitem" href="../Ex_Propagation_Moon/">Propagation about the Moon</a></li><li><a class="tocitem" href="../Ex_Propagation_Mars/">Propagation about Mars</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-2" type="checkbox"/><label class="tocitem" for="menuitem-4-2"><span class="docs-label">Targeting</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_SimpleTarget/">Targeting a single maneuver</a></li><li><a class="tocitem" href="../Ex_HohmannTransfer/">Hohmann transfer</a></li><li><a class="tocitem" href="../Ex_GeoTransfer/">GEO transfer, as an event sequence</a></li><li><a class="tocitem" href="../Ex_GeoTransferTargetBlock/">GEO transfer, in flight order</a></li><li><a class="tocitem" href="../Ex_StationKeeping/">Station keeping</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-3" type="checkbox" checked/><label class="tocitem" for="menuitem-4-3"><span class="docs-label">Optimal control</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_Brachistochrone/">The brachistochrone</a></li><li><a class="tocitem" href="../Ex_HullProblem/">The Hull problem</a></li><li><a class="tocitem" href="../Ex_LinearTangentSteering/">Linear tangent steering</a></li><li><a class="tocitem" href="../Ex_ObstacleAvoidance/">Obstacle avoidance</a></li><li><a class="tocitem" href="../Ex_MoonLanding/">Soft lunar landing</a></li><li><a class="tocitem" href="../Ex_GoddardRocket/">The Goddard rocket</a></li><li><a class="tocitem" href="../Ex_LowThrustOrbitRaising/">Low thrust orbit raising</a></li><li><a class="tocitem" href="../Ex_ForceModelCustomForceModel/">Orbit raising with a custom force model</a></li><li class="is-active"><a class="tocitem" href>Earth-Moon Lyapunov transfer</a><ul class="internal"><li><a class="tocitem" href="#Configuration"><span>Configuration</span></a></li><li><a class="tocitem" href="#Equations-of-motion"><span>Equations of motion</span></a></li><li><a class="tocitem" href="#Configure-the-optimal-control-problem"><span>Configure the optimal control problem</span></a></li><li><a class="tocitem" href="#Solve-the-optimal-control-problem"><span>Solve the optimal control problem</span></a></li></ul></li><li><a class="tocitem" href="../Ex_ReferenceTracking/">Reference tracking with a path bound</a></li><li><a class="tocitem" href="../Ex_ParameterIdentification/">Parameter identification</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-4" type="checkbox"/><label class="tocitem" for="menuitem-4-4"><span class="docs-label">Low thrust and interplanetary</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_MarsTransferSimsFlanagan/">Earth to Mars, Sims-Flanagan</a></li><li><a class="tocitem" href="../Ex_ApophisRendezvousSimsFlanagan/">Earth to Apophis rendezvous, Sims-Flanagan</a></li><li><a class="tocitem" href="../Ex_MixedTranscription/">Two transcriptions in one problem</a></li><li><a class="tocitem" href="../Ex_GravityAssistMGA/">Earth-Earth-Venus gravity assist</a></li><li><a class="tocitem" href="../Ex_GravityAssistMGAManeuver/">Gravity assist with an Epicycle maneuver</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-5" type="checkbox"/><label class="tocitem" for="menuitem-4-5"><span class="docs-label">Orbit determination</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_OrbitDetermination/">Batch least squares</a></li><li><a class="tocitem" href="../Ex_ExtendedKalmanFilter/">Extended Kalman filter</a></li><li><a class="tocitem" href="../Ex_SteppedKalmanFilter/">Stepping the filter</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-6" type="checkbox"/><label class="tocitem" for="menuitem-4-6"><span class="docs-label">Plotting and visualization</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_PlottingResults/">Plotting results</a></li><li><a class="tocitem" href="../Ex_TrajectoryView/">Viewing a trajectory in 3D</a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li><a class="is-disabled">Optimal control</a></li><li class="is-active"><a href>Earth-Moon Lyapunov transfer</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Earth-Moon Lyapunov transfer</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_LyapunovTransfer.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Earth-Moon-Lyapunov-Orbit-Transfer"><a class="docs-heading-anchor" href="#Earth-Moon-Lyapunov-Orbit-Transfer">Earth-Moon Lyapunov Orbit Transfer</a><a id="Earth-Moon-Lyapunov-Orbit-Transfer-1"></a><a class="docs-heading-anchor-permalink" href="#Earth-Moon-Lyapunov-Orbit-Transfer" title="Permalink"></a></h1><p>Transfer from an L1 Lyapunov orbit to the L2 orbit at the same energy, using as little control as the connection allows. In this example we define the state and control structs, write the circular restricted three-body equations of motion and their partials, and create a <code>CollocationPhase</code> using the <code>HermiteSimpson</code> transcription. Then we declare the optimization variables with <code>Vary</code>, pin both ends with <code>Constraint</code>s, and minimize the integrated squared control with <code>Objective</code>.</p><p>The mass ratio, the libration points and both Lyapunov states are JPL&#39;s, and AstroRoutines reproduces the published libration points and Jacobi constants from them. Two orbits of equal energy are joined by their invariant manifolds, so a ballistic connection exists and the cost of the transfer approaches zero.</p><p>References:</p><ul><li>JPL Solar System Dynamics, periodic orbit catalogue, <a href="https://ssd-api.jpl.nasa.gov/doc/periodic_orbits.html">https://ssd-api.jpl.nasa.gov/doc/periodic_orbits.html</a></li><li>Koon, Lo, Marsden and Ross, <em>Chaos</em> 10(2), 2000.</li></ul><pre><code class="language-julia hljs">using Epicycle
+using LinearAlgebra</code></pre><h2 id="Configuration"><a class="docs-heading-anchor" href="#Configuration">Configuration</a><a id="Configuration-1"></a><a class="docs-heading-anchor-permalink" href="#Configuration" title="Permalink"></a></h2><p>Define the Earth-Moon mass ratio and the two orbit states, in normalised units where the Earth and Moon are one unit apart. Each state sits on the x-axis, moving in the +y direction.</p><pre><code class="language-julia hljs"># Define the published values, from JPL&#39;s periodic orbit catalogue
+const MU = 1.215058560962404e-02
+
+const L1_X, L1_VY = 8.1596252146384562e-01, 2.0722124749217649e-01
+const L2_X, L2_VY = 1.1182825695532028e+00, 1.8601928389638619e-01
+const L1_PERIOD, L2_PERIOD = 2.8447547942812985e+00, 3.4205694071950448e+00
+
+const S_L1 = [L1_X, 0.0, 0.0, 0.0, L1_VY, 0.0]
+const S_L2 = [L2_X, 0.0, 0.0, 0.0, L2_VY, 0.0]
+
+# Reproduce the published benchmark values from the mass ratio alone
+println(&quot;published benchmark, reproduced by AstroRoutines&quot;)
+println(&quot;  L1 point          &quot;, round(libration_point(MU, :L1)[1], digits = 12),
+        &quot;   JPL 0.836915125772357&quot;)
+println(&quot;  L2 point          &quot;, round(libration_point(MU, :L2)[1], digits = 12),
+        &quot;   JPL 1.15568216544488&quot;)
+println(&quot;  C of the L1 orbit &quot;, round(jacobi_constant(S_L1, MU), digits = 12),
+        &quot;   JPL 3.15001683280912&quot;)
+println(&quot;  C of the L2 orbit &quot;, round(jacobi_constant(S_L2, MU), digits = 12),
+        &quot;   JPL 3.15000013081292&quot;)
+
+# Create the model, whose only constant is the mass ratio
+struct CRModel
+    mu::Float64
+end
+
+model = CRModel(MU)
+
+# Define the state and the control
+struct CRState{T} &lt;: AbstractState
+    x::T
+    y::T
+    z::T
+    vx::T
+    vy::T
+    vz::T
+end
+
+struct CRControl{T} &lt;: AbstractControl
+    ux::T
+    uy::T
+    uz::T
+end</code></pre><h2 id="Equations-of-motion"><a class="docs-heading-anchor" href="#Equations-of-motion">Equations of motion</a><a id="Equations-of-motion-1"></a><a class="docs-heading-anchor-permalink" href="#Equations-of-motion" title="Permalink"></a></h2><p>The ballistic acceleration is AstroRoutines&#39;, and the control adds to it. The same package supplies the Jacobian, so the state partial is one call.</p><pre><code class="language-julia hljs"># Define the equations of motion
+function cr_dynamics!(dy, y::CRState, u::CRControl, p, t, model)
+    a = cr3bp_accel([y.x, y.y, y.z, y.vx, y.vy, y.vz], model.mu)
+    dy[1] = y.vx
+    dy[2] = y.vy
+    dy[3] = y.vz
+    dy[4] = a[1] + u.ux
+    dy[5] = a[2] + u.uy
+    dy[6] = a[3] + u.uz
+end
+
+# Declare the partial of the equations of motion with respect to the state
+@partial(cr_dynamics!, state) do dF, y, u, p, t, model
+    dF .= cr3bp_jacobian([y.x, y.y, y.z, y.vx, y.vy, y.vz], model.mu)
+end
+
+# Declare the partial of the equations of motion with respect to the control
+@partial(cr_dynamics!, control) do dF, y, u, p, t, model
+    dF[4, 1] = 1.0
+    dF[5, 2] = 1.0
+    dF[6, 3] = 1.0
+end</code></pre><h2 id="Configure-the-optimal-control-problem"><a class="docs-heading-anchor" href="#Configure-the-optimal-control-problem">Configure the optimal control problem</a><a id="Configure-the-optimal-control-problem-1"></a><a class="docs-heading-anchor-permalink" href="#Configure-the-optimal-control-problem" title="Permalink"></a></h2><p>The transfer leaves a point on the L1 orbit and arrives at a point on the L2 orbit. The final time is free, with both endpoints pinned, so shrinking the duration cannot make the cost vanish.</p><pre><code class="language-julia hljs"># Create the collocation phase using the HermiteSimpson transcription
+const TF = (L1_PERIOD + L2_PERIOD) / 2
+
+phase = CollocationPhase(name = :lyapunov_transfer,
+                         transcription = HermiteSimpson(n_steps = 50),
+                         dynamics = cr_dynamics!,
+                         model = model,
+                         state = CRState,
+                         control = CRControl,
+                         tspan = (0.0, TF))
+
+# Declare the state, the control and the final time as optimization variables
+Vary(state, phase;
+     guess = hcat(S_L1, S_L2),
+     lower_bound = [0.70, -0.45, -0.05, -3.0, -3.0, -0.5],
+     upper_bound = [1.30, 0.45, 0.05, 3.0, 3.0, 0.5])
+
+Vary(control, phase;
+     guess = zeros(3, 2),
+     lower_bound = [-0.5, -0.5, -0.1],
+     upper_bound = [0.5, 0.5, 0.1])
+
+Vary(final_time, phase;
+     guess = TF,
+     lower_bound = 0.5 * TF,
+     upper_bound = 4.0 * TF)
+
+# Define the state at each end and the integrated control effort
+posvel(c) = (y = state(c); [y.x, y.y, y.z, y.vx, y.vy, y.vz])
+
+effort(c) = control(c).ux^2 + control(c).uy^2 + control(c).uz^2
+
+# Declare the partials of the constraint and objective functions
+@partial(posvel, state) do c
+    Matrix(1.0I, 6, 6)
+end
+
+@partial(effort, control) do c
+    [2 * control(c).ux  2 * control(c).uy  2 * control(c).uz]
+end
+
+# Constrain departure from the L1 orbit and arrival on the L2 orbit
+Constraint(posvel, phase; equals = S_L1, at = Initial())
+Constraint(posvel, phase; equals = S_L2, at = Final())
+
+# Spend as little control as the connection allows
+Objective(effort, phase; sense = Min(), at = Path())</code></pre><h2 id="Solve-the-optimal-control-problem"><a class="docs-heading-anchor" href="#Solve-the-optimal-control-problem">Solve the optimal control problem</a><a id="Solve-the-optimal-control-problem-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-the-optimal-control-problem" title="Permalink"></a></h2><p>The energy the control supplied is the Jacobi constant&#39;s change across the transfer, which a ballistic arc would leave at zero.</p><pre><code class="language-julia hljs"># Check the declared partials against finite differences
+check_partials(phase)
+
+# Solve the transfer problem
+result = solve!(Sequence(phase); method = Optimize(print_level = 5))
+
+# Report the transfer against the published orbits
+y0 = get_initial_state(phase)
+yf = get_final_state(phase)
+s0 = [y0.x, y0.y, y0.z, y0.vx, y0.vy, y0.vz]
+sf = [yf.x, yf.y, yf.z, yf.vx, yf.vy, yf.vz]
+
+println()
+println(&quot;transfer&quot;)
+println(&quot;  status             &quot;, result.info)
+println(&quot;  transfer time      &quot;, round(get_final_time(phase), digits = 6), &quot; TU  (&quot;,
+        round(get_final_time(phase) * 4.342, digits = 3), &quot; days)&quot;)
+println(&quot;  departure error    &quot;, round(maximum(abs.(s0 .- S_L1)), sigdigits = 3))
+println(&quot;  arrival error      &quot;, round(maximum(abs.(sf .- S_L2)), sigdigits = 3))
+println(&quot;  control effort     &quot;, round(result.objective, sigdigits = 8))
+println(&quot;  C at departure     &quot;, round(jacobi_constant(s0, MU), digits = 9))
+println(&quot;  C at arrival       &quot;, round(jacobi_constant(sf, MU), digits = 9))
+println(&quot;  energy supplied    &quot;, round(jacobi_constant(sf, MU) - jacobi_constant(s0, MU),
+                                       sigdigits = 3))</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Ex_ForceModelCustomForceModel/">« Orbit raising with a custom force model</a><a class="docs-footer-nextpage" href="../Ex_ReferenceTracking/">Reference tracking with a path bound »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Friday 25 September 2026 21:14">Friday 25 September 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

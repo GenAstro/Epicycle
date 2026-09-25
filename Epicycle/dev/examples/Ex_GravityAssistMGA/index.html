@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Earth-Earth-Venus gravity assist · Epicycle.jl</title><meta name="title" content="Earth-Earth-Venus gravity assist · Epicycle.jl"/><meta property="og:title" content="Earth-Earth-Venus gravity assist · Epicycle.jl"/><meta property="twitter:title" content="Earth-Earth-Venus gravity assist · Epicycle.jl"/><meta name="description" content="Documentation for Epicycle.jl."/><meta property="og:description" content="Documentation for Epicycle.jl."/><meta property="twitter:description" content="Documentation for Epicycle.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/examples/Ex_GravityAssistMGA/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/examples/Ex_GravityAssistMGA/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/examples/Ex_GravityAssistMGA/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../packages/">Packages</a></li><li><input class="collapse-toggle" id="menuitem-4" type="checkbox" checked/><label class="tocitem" for="menuitem-4"><span class="docs-label">Examples</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><input class="collapse-toggle" id="menuitem-4-1" type="checkbox"/><label class="tocitem" for="menuitem-4-1"><span class="docs-label">Propagation</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_PropagationBasics/">Propagation and stopping conditions</a></li><li><a class="tocitem" href="../Ex_ImpulsiveManeuver/">Impulsive maneuvers</a></li><li><a class="tocitem" href="../Ex_SpacecraftHistory/">The spacecraft history</a></li><li><a class="tocitem" href="../Ex_Propagation_Moon/">Propagation about the Moon</a></li><li><a class="tocitem" href="../Ex_Propagation_Mars/">Propagation about Mars</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-2" type="checkbox"/><label class="tocitem" for="menuitem-4-2"><span class="docs-label">Targeting</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_SimpleTarget/">Targeting a single maneuver</a></li><li><a class="tocitem" href="../Ex_HohmannTransfer/">Hohmann transfer</a></li><li><a class="tocitem" href="../Ex_GeoTransfer/">GEO transfer, as an event sequence</a></li><li><a class="tocitem" href="../Ex_GeoTransferTargetBlock/">GEO transfer, in flight order</a></li><li><a class="tocitem" href="../Ex_StationKeeping/">Station keeping</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-3" type="checkbox"/><label class="tocitem" for="menuitem-4-3"><span class="docs-label">Optimal control</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_Brachistochrone/">The brachistochrone</a></li><li><a class="tocitem" href="../Ex_HullProblem/">The Hull problem</a></li><li><a class="tocitem" href="../Ex_LinearTangentSteering/">Linear tangent steering</a></li><li><a class="tocitem" href="../Ex_ObstacleAvoidance/">Obstacle avoidance</a></li><li><a class="tocitem" href="../Ex_MoonLanding/">Soft lunar landing</a></li><li><a class="tocitem" href="../Ex_GoddardRocket/">The Goddard rocket</a></li><li><a class="tocitem" href="../Ex_LowThrustOrbitRaising/">Low thrust orbit raising</a></li><li><a class="tocitem" href="../Ex_ForceModelCustomForceModel/">Orbit raising with a custom force model</a></li><li><a class="tocitem" href="../Ex_LyapunovTransfer/">Earth-Moon Lyapunov transfer</a></li><li><a class="tocitem" href="../Ex_ReferenceTracking/">Reference tracking with a path bound</a></li><li><a class="tocitem" href="../Ex_ParameterIdentification/">Parameter identification</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-4" type="checkbox" checked/><label class="tocitem" for="menuitem-4-4"><span class="docs-label">Low thrust and interplanetary</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_MarsTransferSimsFlanagan/">Earth to Mars, Sims-Flanagan</a></li><li><a class="tocitem" href="../Ex_ApophisRendezvousSimsFlanagan/">Earth to Apophis rendezvous, Sims-Flanagan</a></li><li><a class="tocitem" href="../Ex_MixedTranscription/">Two transcriptions in one problem</a></li><li class="is-active"><a class="tocitem" href>Earth-Earth-Venus gravity assist</a><ul class="internal"><li><a class="tocitem" href="#Mission-Models"><span>Mission Models</span></a></li><li><a class="tocitem" href="#Configuration"><span>Configuration</span></a></li><li><a class="tocitem" href="#Build-the-Two-Legs"><span>Build the Two Legs</span></a></li><li><a class="tocitem" href="#Set-the-Initial-Guess"><span>Set the Initial Guess</span></a></li><li><a class="tocitem" href="#Define-the-Optimization-Variables"><span>Define the Optimization Variables</span></a></li><li><a class="tocitem" href="#Constrain-the-Flyby"><span>Constrain the Flyby</span></a></li><li><a class="tocitem" href="#Apply-the-Leg-Constraints"><span>Apply the Leg Constraints</span></a></li><li><a class="tocitem" href="#Define-the-Objective"><span>Define the Objective</span></a></li><li><a class="tocitem" href="#Solve-the-Problem"><span>Solve the Problem</span></a></li></ul></li><li><a class="tocitem" href="../Ex_GravityAssistMGAManeuver/">Gravity assist with an Epicycle maneuver</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-5" type="checkbox"/><label class="tocitem" for="menuitem-4-5"><span class="docs-label">Orbit determination</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_OrbitDetermination/">Batch least squares</a></li><li><a class="tocitem" href="../Ex_ExtendedKalmanFilter/">Extended Kalman filter</a></li><li><a class="tocitem" href="../Ex_SteppedKalmanFilter/">Stepping the filter</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-6" type="checkbox"/><label class="tocitem" for="menuitem-4-6"><span class="docs-label">Plotting and visualization</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../Ex_PlottingResults/">Plotting results</a></li><li><a class="tocitem" href="../Ex_TrajectoryView/">Viewing a trajectory in 3D</a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li><a class="is-disabled">Low thrust and interplanetary</a></li><li class="is-active"><a href>Earth-Earth-Venus gravity assist</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Earth-Earth-Venus gravity assist</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_GravityAssistMGA.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Earth-Earth-Venus-Gravity-Assist"><a class="docs-heading-anchor" href="#Earth-Earth-Venus-Gravity-Assist">Earth-Earth-Venus Gravity Assist</a><a id="Earth-Earth-Venus-Gravity-Assist-1"></a><a class="docs-heading-anchor-permalink" href="#Earth-Earth-Venus-Gravity-Assist" title="Permalink"></a></h1><p>Maximize the mass delivered to Venus using an Earth gravity assist. Two <code>MGAnDSMsPhase</code>s represent the Earth-to-Earth and Earth-to-Venus legs, with one optional deep-space maneuver on each leg.</p><p>The patched-conic model joins Keplerian legs at encounters. At the Earth flyby, the incoming excess velocity turns while retaining its magnitude. The solver varies encounter epochs, excess velocities, and boundary masses.</p><p>The reference solution delivers 91.55 kg after 512.2 days. The paper&#39;s Table 4.5 reports a different local optimum at 540 days.</p><pre><code class="language-julia hljs">using Epicycle</code></pre><h2 id="Mission-Models"><a class="docs-heading-anchor" href="#Mission-Models">Mission Models</a><a id="Mission-Models-1"></a><a class="docs-heading-anchor-permalink" href="#Mission-Models" title="Permalink"></a></h2><p>Define simplified planet, ephemeris, flyby, launch, and arrival models so the example is self-contained. The circular coplanar ephemerides are suitable for demonstrating the transcription, not for mission analysis.</p><h3 id="Planet-data"><a class="docs-heading-anchor" href="#Planet-data">Planet data</a><a id="Planet-data-1"></a><a class="docs-heading-anchor-permalink" href="#Planet-data" title="Permalink"></a></h3><pre><code class="language-julia hljs">const MU_SUN = 1.32712440018e11   # km³/s²  heliocentric gravitational parameter
+const AU     = 1.495978707e8      # km       1 astronomical unit
+const G0     = 9.80665e-3         # km/s²    standard gravity
+
+# Store the constants for a body on a circular heliocentric orbit
+
+struct PlanetData
+    name      ::Symbol
+    mu        ::Float64   # km³/s²  planetary gravitational parameter
+    r_orbit   ::Float64   # km      mean heliocentric orbit radius (circular)
+    r_surface ::Float64   # km      mean equatorial surface radius
+    theta0    ::Float64   # rad     ecliptic longitude at J2000
+end
+
+&quot;&quot;&quot;Circular heliocentric speed for a planet (km/s).&quot;&quot;&quot;
+vc_orbit(p::PlanetData) = sqrt(MU_SUN / p.r_orbit)
+
+&quot;&quot;&quot;Mean motion for a planet (rad/s).&quot;&quot;&quot;
+om_orbit(p::PlanetData) = vc_orbit(p) / p.r_orbit
+
+# Define the Earth and Venus approximations
+const EARTH   = PlanetData(:earth,   3.986004418e5, 1.000 * AU,  6371.0, 0.0           )
+const VENUS   = PlanetData(:venus,   3.24859e5,     0.723 * AU,  6051.8, deg2rad(130.0))</code></pre><h3 id="The-ephemeris"><a class="docs-heading-anchor" href="#The-ephemeris">The ephemeris</a><a id="The-ephemeris-1"></a><a class="docs-heading-anchor-permalink" href="#The-ephemeris" title="Permalink"></a></h3><pre><code class="language-julia hljs">&quot;&quot;&quot;
+    circular_ephemeris(planet::PlanetData) → Function
+
+Returns a closure `eph(t::Float64) → (r, v, a)` representing a body on a
+circular heliocentric orbit in the ecliptic plane.
+
+  r : [3] km     heliocentric position
+  v : [3] km/s   heliocentric velocity
+  a : [3] km/s²  gravitational acceleration (for STM-based propagators)
+
+The planet&#39;s ecliptic longitude at J2000 (t = 0) is `planet.theta0`.
+&quot;&quot;&quot;
+function circular_ephemeris(planet::PlanetData)
+    vc = vc_orbit(planet)
+    om = om_orbit(planet)
+    θ0 = planet.theta0
+    r0 = planet.r_orbit
+    μs = MU_SUN
+    return function(t::Float64)
+        θ = θ0 + om * t
+        r = r0 * [cos(θ),  sin(θ), 0.0]
+        v = vc * [-sin(θ), cos(θ), 0.0]
+        a = -(μs / r0^2) * [cos(θ), sin(θ), 0.0]
+        return r, v, a
+    end
+end</code></pre><h3 id="Flyby-geometry"><a class="docs-heading-anchor" href="#Flyby-geometry">Flyby geometry</a><a id="Flyby-geometry-1"></a><a class="docs-heading-anchor-permalink" href="#Flyby-geometry" title="Permalink"></a></h3><pre><code class="language-julia hljs">function flyby_turn_angle(vinf_in::AbstractVector, vinf_out::AbstractVector)
+    mag_in  = norm(vinf_in)
+    mag_out = norm(vinf_out)
+    (mag_in &lt; 1e-12 || mag_out &lt; 1e-12) &amp;&amp; return 0.0
+    # Keep the acos derivative finite near parallel and antiparallel vectors
+    cos_δ = clamp(dot(vinf_in, vinf_out) / (mag_in * mag_out), -1.0 + 1e-10, 1.0 - 1e-10)
+    return acos(cos_δ)
+end
+
+# Convert flyby turn angle to hyperbolic eccentricity
+function flyby_eccentricity(delta::Real)
+    sin_half = sin(delta / 2)
+    sin_half &lt; 1e-12 &amp;&amp; return Inf   # no deflection → straight-line (e → ∞)
+    return 1.0 / sin_half
+end
+
+# Compute flyby periapsis radius from the excess-velocity turn
+function flyby_rp(vinf_in::AbstractVector, vinf_out::AbstractVector,
+                  planet::PlanetData)
+    vinf_mag = 0.5 * (norm(vinf_in) + norm(vinf_out))
+    δ        = flyby_turn_angle(vinf_in, vinf_out)
+    return flyby_rp(vinf_mag, δ, planet)
+end
+
+function flyby_rp(vinf_mag::Real, delta::Real, planet::PlanetData)
+    vinf_mag &lt; 1e-12 &amp;&amp; return Inf
+    e  = flyby_eccentricity(delta)
+    isinf(e) &amp;&amp; return Inf
+    return planet.mu * (e - 1.0) / vinf_mag^2
+end</code></pre><h3 id="Launch-vehicle-and-orbit-insertion"><a class="docs-heading-anchor" href="#Launch-vehicle-and-orbit-insertion">Launch vehicle and orbit insertion</a><a id="Launch-vehicle-and-orbit-insertion-1"></a><a class="docs-heading-anchor-permalink" href="#Launch-vehicle-and-orbit-insertion" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Define the departure and capture burn relations
+&quot;&quot;&quot;Hyperbolic periapsis speed: sqrt(v∞² + 2μ/r)  [km/s]&quot;&quot;&quot;
+_v_hyp(vinf_mag, mu, r) = sqrt(vinf_mag^2 + 2*mu/r)
+
+&quot;&quot;&quot;Circular orbit speed at radius r: sqrt(μ/r)  [km/s]&quot;&quot;&quot;
+_v_circ(mu, r) = sqrt(mu / r)
+
+&quot;&quot;&quot;ΔV for a hyperbolic departure or capture burn at periapsis  [km/s]&quot;&quot;&quot;
+_dv_burn(vinf_mag, mu, r) = _v_hyp(vinf_mag, mu, r) - _v_circ(mu, r)
+
+# Model launch mass as a function of departure excess velocity
+&quot;&quot;&quot;
+    GALLOPModel
+
+Parameters for the GALLOP launch vehicle model.
+
+Fields:
+  zeta1  — total launch mass budget [kg]
+  zeta2  — upper stage structural mass [kg]  (0 if no upper stage)
+  Isp    — propulsion system Isp [s]
+  g0     — standard gravity [km/s²]
+  r_park — departure parking orbit radius [km]
+  planet — departure planet (supplies μ for the TMI hyperbolic burn)
+&quot;&quot;&quot;
+struct GALLOPModel
+    zeta1  ::Float64
+    zeta2  ::Float64
+    Isp    ::Float64
+    g0     ::Float64
+    r_park ::Float64
+    planet ::PlanetData
+end
+
+&quot;&quot;&quot;
+    lv_m0(model::GALLOPModel, vinf_dep) → m0 [kg]
+
+Heliocentric departure mass delivered to escape trajectory by the launch vehicle.
+&quot;&quot;&quot;
+function lv_m0(model::GALLOPModel, vinf_dep::AbstractVector)
+    ve     = model.Isp * model.g0
+    vinf   = norm(vinf_dep)
+    dv_tmi = _dv_burn(vinf, model.planet.mu, model.r_park)
+    m0star = model.zeta1 * exp(-dv_tmi / ve) - model.zeta2
+    return m0star   # simplified: k_lv = k_adp = 0
+end
+
+&quot;&quot;&quot;
+    lv_dm0_dvinf(model::GALLOPModel, vinf_dep) → 1×3 matrix  [kg/(km/s)]
+
+∂m0/∂v∞_dep_i  (row Jacobian for NLP)
+&quot;&quot;&quot;
+function lv_dm0_dvinf(model::GALLOPModel, vinf_dep::AbstractVector)
+    ve    = model.Isp * model.g0
+    vinf  = norm(vinf_dep)
+    vinf &lt; 1e-12 &amp;&amp; return zeros(1, 3)
+    v_hyp = _v_hyp(vinf, model.planet.mu, model.r_park)
+    m0    = lv_m0(model, vinf_dep)
+    coeff = -(m0 + model.zeta2) / (ve * v_hyp)
+    return reshape(coeff .* vinf_dep, 1, 3)
+end
+
+# Model the propulsive capture at Venus
+&quot;&quot;&quot;
+    OrbitInsertionModel
+
+Parameters for a propulsive orbit insertion burn at arrival.
+
+Fields:
+  Isp    — propulsion system Isp [s]
+  g0     — standard gravity [km/s²]
+  r_park — capture parking orbit radius [km]
+  planet — arrival planet (supplies μ for the capture hyperbolic burn)
+&quot;&quot;&quot;
+struct OrbitInsertionModel
+    Isp    ::Float64
+    g0     ::Float64
+    r_park ::Float64
+    planet ::PlanetData
+end
+
+&quot;&quot;&quot;
+    orbit_insertion_delivered(model, mf_helio, vinf_arr) → m_delivered [kg]
+
+Mass delivered to the capture parking orbit after the insertion burn (Tsiolkovsky).
+&quot;&quot;&quot;
+function orbit_insertion_delivered(model::OrbitInsertionModel,
+                                    mf_helio::Real,
+                                    vinf_arr::AbstractVector)
+    ve     = model.Isp * model.g0
+    vinf   = norm(vinf_arr)
+    dv_moi = _dv_burn(vinf, model.planet.mu, model.r_park)
+    return mf_helio * exp(-dv_moi / ve)
+end
+
+&quot;&quot;&quot;
+    orbit_insertion_dm_dmf(model, vinf_arr) → scalar
+
+∂m_delivered/∂mf_helio
+&quot;&quot;&quot;
+function orbit_insertion_dm_dmf(model::OrbitInsertionModel,
+                                 vinf_arr::AbstractVector)
+    ve     = model.Isp * model.g0
+    vinf   = norm(vinf_arr)
+    dv_moi = _dv_burn(vinf, model.planet.mu, model.r_park)
+    return exp(-dv_moi / ve)
+end
+
+&quot;&quot;&quot;
+    orbit_insertion_dm_dvinf(model, mf_helio, vinf_arr) → 3-vector  [kg/(km/s)]
+
+∂m_delivered/∂v∞_arr_i
+&quot;&quot;&quot;
+function orbit_insertion_dm_dvinf(model::OrbitInsertionModel,
+                                   mf_helio::Real,
+                                   vinf_arr::AbstractVector)
+    ve    = model.Isp * model.g0
+    vinf  = norm(vinf_arr)
+    vinf &lt; 1e-12 &amp;&amp; return zeros(3)
+    v_hyp = _v_hyp(vinf, model.planet.mu, model.r_park)
+    m_del = orbit_insertion_delivered(model, mf_helio, vinf_arr)
+    return (-m_del / (ve * v_hyp)) .* vinf_arr
+end
+using LinearAlgebra, Printf, SNOW</code></pre><h2 id="Configuration"><a class="docs-heading-anchor" href="#Configuration">Configuration</a><a id="Configuration-1"></a><a class="docs-heading-anchor-permalink" href="#Configuration" title="Permalink"></a></h2><p>Define the parking orbits, flyby altitude limit, launch-energy limit, and encounter epochs used to initialize the problem.</p><pre><code class="language-julia hljs">const M0_KG    = 1000.0
+const ISP      = 320.0
+const R_PARK_E = EARTH.r_surface + 300.0
+const R_PARK_V = VENUS.r_surface + 300.0
+const H_P_MIN  = 200.0
+const R_P_MIN  = EARTH.r_surface + H_P_MIN
+const C3_MAX   = 20.0
+
+const T_DEP = 12222.0 * 86400.0                 # 2033-Jun-19
+const T_FLY = T_DEP + 365.0 * 86400.0           # 2034-Jun-19
+const T_ARR = T_FLY + 175.0 * 86400.0           # 2034-Dec-11
+
+const VC_E = vc_orbit(EARTH);  const OM_E = om_orbit(EARTH)
+const VC_V = vc_orbit(VENUS);  const OM_V = om_orbit(VENUS)
+
+earth_eph = circular_ephemeris(EARTH)
+venus_eph = circular_ephemeris(VENUS)
+
+const lv = GALLOPModel(M0_KG, 0.0, ISP, G0, R_PARK_E, EARTH)
+const oi = OrbitInsertionModel(ISP, G0, R_PARK_V, VENUS)</code></pre><h2 id="Build-the-Two-Legs"><a class="docs-heading-anchor" href="#Build-the-Two-Legs">Build the Two Legs</a><a id="Build-the-Two-Legs-1"></a><a class="docs-heading-anchor-permalink" href="#Build-the-Two-Legs" title="Permalink"></a></h2><p>Create one phase from Earth to the Earth flyby and one from the flyby to Venus. Each leg permits one deep-space maneuver.</p><pre><code class="language-julia hljs">trans = MGAnDSMs(n_dsm = 1)
+model = PropulsionModel(mu = MU_SUN, Isp = ISP, g0 = G0)
+
+phase1 = MGAnDSMsPhase(name = :earth_to_flyby, transcription = trans, model = model,
+                       ephemeris_left = earth_eph, ephemeris_right = earth_eph)
+phase2 = MGAnDSMsPhase(name = :flyby_to_venus, transcription = trans, model = model,
+                       ephemeris_left = earth_eph, ephemeris_right = venus_eph)
+phase1._alpha = [0.5, 0.5]          # split the leg at its midpoint
+phase2._alpha = [0.5, 0.5]</code></pre><h2 id="Set-the-Initial-Guess"><a class="docs-heading-anchor" href="#Set-the-Initial-Guess">Set the Initial Guess</a><a id="Set-the-Initial-Guess-1"></a><a class="docs-heading-anchor-permalink" href="#Set-the-Initial-Guess" title="Permalink"></a></h2><p>Initialize the encounter velocities from the reference solution. Use a radial incoming velocity at the flyby to avoid the singular derivative associated with a 180-degree turn.</p><pre><code class="language-julia hljs">r_dep, v_dep, _ = earth_eph(T_DEP)
+r_fly, v_fly, _ = earth_eph(T_FLY)
+r_arr, v_arr, _ = venus_eph(T_ARR)
+vhat(v) = v ./ norm(v)
+
+# Set the excess-velocity guesses at departure, flyby, and arrival
+vinf_dep1 =  3.944 .* vhat(v_dep)
+vinf_arr1 =  3.962 .* vhat(r_fly)
+vinf_dep2 = -3.962 .* vhat(v_fly)
+vinf_arr2 = -3.141 .* vhat(v_arr)
+m0_guess  = lv_m0(lv, vinf_dep1)</code></pre><h2 id="Define-the-Optimization-Variables"><a class="docs-heading-anchor" href="#Define-the-Optimization-Variables">Define the Optimization Variables</a><a id="Define-the-Optimization-Variables-1"></a><a class="docs-heading-anchor-permalink" href="#Define-the-Optimization-Variables" title="Permalink"></a></h2><p>Vary the departure and arrival excess velocities, boundary epochs, and boundary masses for each leg. Scale each quantity by its characteristic orbital value.</p><pre><code class="language-julia hljs">Vary(departure_vinf, phase1; guess = vinf_dep1, lower_bound = fill(-6.0, 3),
+                             upper_bound = fill(6.0, 3), scale = fill(VC_E, 3))
+Vary(arrival_vinf,   phase1; guess = vinf_arr1, lower_bound = fill(-6.0, 3),
+                             upper_bound = fill(6.0, 3), scale = fill(VC_E, 3))
+Vary(initial_time,   phase1; guess = T_DEP, lower_bound = T_DEP - 30 * 86400.0,
+                             upper_bound = T_DEP + 30 * 86400.0, scale = 1 / OM_E)
+Vary(final_time,     phase1; guess = T_FLY, lower_bound = T_DEP + 200 * 86400.0,
+                             upper_bound = T_DEP + 500 * 86400.0, scale = 1 / OM_E)
+Vary(initial_mass,   phase1; guess = m0_guess, lower_bound = 10.0,
+                             upper_bound = M0_KG, scale = M0_KG)
+Vary(final_mass,     phase1; guess = m0_guess, lower_bound = 10.0,
+                             upper_bound = M0_KG, scale = M0_KG)
+
+Vary(departure_vinf, phase2; guess = vinf_dep2, lower_bound = fill(-6.0, 3),
+                             upper_bound = fill(6.0, 3), scale = fill(VC_E, 3))
+Vary(arrival_vinf,   phase2; guess = vinf_arr2, lower_bound = fill(-5.0, 3),
+                             upper_bound = fill(5.0, 3), scale = fill(VC_V, 3))
+Vary(initial_time,   phase2; guess = T_FLY, lower_bound = T_DEP + 200 * 86400.0,
+                             upper_bound = T_DEP + 500 * 86400.0, scale = 1 / OM_E)
+Vary(final_time,     phase2; guess = T_ARR, lower_bound = T_DEP + 300 * 86400.0,
+                             upper_bound = T_DEP + 800 * 86400.0, scale = 1 / OM_V)
+Vary(initial_mass,   phase2; guess = m0_guess, lower_bound = 10.0,
+                             upper_bound = M0_KG, scale = M0_KG)
+Vary(final_mass,     phase2; guess = m0_guess, lower_bound = 10.0,
+                             upper_bound = M0_KG, scale = M0_KG)</code></pre><h2 id="Constrain-the-Flyby"><a class="docs-heading-anchor" href="#Constrain-the-Flyby">Constrain the Flyby</a><a id="Constrain-the-Flyby-1"></a><a class="docs-heading-anchor-permalink" href="#Constrain-the-Flyby" title="Permalink"></a></h2><p>Join the phases at Earth. Epoch and mass remain continuous, incoming and outgoing excess speeds are equal, and periapsis remains above the minimum flyby altitude.</p><pre><code class="language-julia hljs">flyby = Link(phase1, phase2; body = EARTH, name = :earth_flyby)
+
+link_epoch(c1, c2)   = [final_time(c1) - initial_time(c2)]
+link_mass(c1, c2)    = [final_mass(c1) - initial_mass(c2)]
+flyby_speed(c1, c2)  = [dot(arrival_vinf(c1), arrival_vinf(c1)) -
+                        dot(departure_vinf(c2), departure_vinf(c2))]
+flyby_height(c1, c2) = [flyby_rp(arrival_vinf(c1), departure_vinf(c2), EARTH)]
+
+Constraint(link_epoch,   flyby; equals = 0.0,            name = :epoch)
+Constraint(link_mass,    flyby; equals = 0.0,            name = :mass)
+Constraint(flyby_speed,  flyby; equals = 0.0,            name = :speed)
+Constraint(flyby_height, flyby; lower_bound = R_P_MIN,   name = :height)</code></pre><h2 id="Apply-the-Leg-Constraints"><a class="docs-heading-anchor" href="#Apply-the-Leg-Constraints">Apply the Leg Constraints</a><a id="Apply-the-Leg-Constraints-1"></a><a class="docs-heading-anchor-permalink" href="#Apply-the-Leg-Constraints" title="Permalink"></a></h2><p>Limit launch energy, tie departure mass to launch-vehicle performance, and bound the mass delivered after Venus orbit insertion.</p><pre><code class="language-julia hljs">launch_c3(c)     = [dot(departure_vinf(c), departure_vinf(c))]
+launch_mass(c)   = [initial_mass(c) - lv_m0(lv, departure_vinf(c))]
+delivered_mass(c) = [orbit_insertion_delivered(oi, final_mass(c), arrival_vinf(c))]
+
+# Supply launch-energy and launch-mass partials
+@partial(launch_c3, departure_vinf) do c
+    reshape(2 .* departure_vinf(c), 1, 3)
+end
+@partial(launch_mass, initial_mass)   do c; reshape([1.0], 1, 1)                end
+@partial(launch_mass, departure_vinf) do c; -lv_dm0_dvinf(lv, departure_vinf(c)) end
+
+# Supply delivered-mass partials for arrival mass and excess velocity
+@partial(delivered_mass, final_mass) do c
+    reshape([orbit_insertion_dm_dmf(oi, arrival_vinf(c))], 1, 1)
+end
+@partial(delivered_mass, arrival_vinf) do c
+    reshape(orbit_insertion_dm_dvinf(oi, final_mass(c), arrival_vinf(c)), 1, 3)
+end
+
+Constraint(launch_c3,      phase1; lower_bound = 0.0, upper_bound = C3_MAX,
+                                   scale = C3_MAX)
+Constraint(launch_mass,    phase1; equals = 0.0, scale = M0_KG)
+Constraint(delivered_mass, phase2; lower_bound = 50.0, upper_bound = M0_KG,
+                                   scale = M0_KG)</code></pre><h2 id="Define-the-Objective"><a class="docs-heading-anchor" href="#Define-the-Objective">Define the Objective</a><a id="Define-the-Objective-1"></a><a class="docs-heading-anchor-permalink" href="#Define-the-Objective" title="Permalink"></a></h2><p>Maximize the mass remaining in the Venus parking orbit after the capture burn.</p><pre><code class="language-julia hljs">mayer_delivered(c) = orbit_insertion_delivered(oi, final_mass(c), arrival_vinf(c))
+
+# Supply the Mayer-objective gradient as vectors
+@partial(mayer_delivered, final_mass) do c
+    [orbit_insertion_dm_dmf(oi, arrival_vinf(c))]
+end
+@partial(mayer_delivered, arrival_vinf) do c
+    orbit_insertion_dm_dvinf(oi, final_mass(c), arrival_vinf(c))
+end
+
+Objective(mayer_delivered, phase2; sense = Max())
+
+seq = Sequence()
+add_sequence!(seq, phase1)
+add_sequence!(seq, phase2)
+
+# Check all supplied partials before solving
+println(&quot;check_partials, phase 1:&quot;); check_partials(phase1)
+println(&quot;check_partials, phase 2:&quot;); check_partials(phase2)</code></pre><h2 id="Solve-the-Problem"><a class="docs-heading-anchor" href="#Solve-the-Problem">Solve the Problem</a><a id="Solve-the-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-the-Problem" title="Permalink"></a></h2><p>Solve the two-leg trajectory with IPOPT and compare the encounter speeds and duration with the reference solution.</p><pre><code class="language-julia hljs">result = solve!(seq; method = Optimize(max_iter = 500, tol = 1e-6, print_level = 5))
+
+@printf(&quot;status         : %s
+&quot;, result.info)
+@printf(&quot;delivered mass : %.3f kg
+&quot;,
+        orbit_insertion_delivered(oi, phase2.mf_var.value[1], phase2.vinf_arr_var.value))
+@printf(&quot;departure Vinf : %.4f km/s   (truth 3.944)
+&quot;, norm(phase1.vinf_dep_var.value))
+@printf(&quot;flyby Vinf     : %.4f km/s   (truth 3.962)
+&quot;, norm(phase1.vinf_arr_var.value))
+@printf(&quot;arrival Vinf   : %.4f km/s   (truth 3.141)
+&quot;, norm(phase2.vinf_arr_var.value))
+@printf(&quot;duration       : %.1f days   (truth 540)
+&quot;,
+        (phase2.tf_var.value[1] - phase1.t0_var.value[1]) / 86400.0)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Ex_MixedTranscription/">« Two transcriptions in one problem</a><a class="docs-footer-nextpage" href="../Ex_GravityAssistMGAManeuver/">Gravity assist with an Epicycle maneuver »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Friday 25 September 2026 21:14">Friday 25 September 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
