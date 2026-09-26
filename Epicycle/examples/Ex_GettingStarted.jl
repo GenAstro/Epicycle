@@ -8,6 +8,7 @@
 #' `ForceModel` and an `IntegratorConfig`, and end the propagation with a `StopAt` condition.
 
 using Epicycle
+using EpicycleIO
 
 #' ## The spacecraft
 #'
@@ -50,3 +51,10 @@ propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), 5000.0))
 
 # Report the orbit it reached
 println(get_state(sat, Keplerian()))
+
+#' ## Draw the trajectory
+#'
+#' `orbitview` draws the trajectory on a globe in a browser tab.
+
+# Draw the trajectory on the Cesium globe
+orbitview("Getting Started", sat)

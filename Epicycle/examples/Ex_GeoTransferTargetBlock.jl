@@ -10,6 +10,7 @@
 #' evaluates the state produced by the operation immediately before it.
 
 using Epicycle
+using EpicycleIO
 
 #' ## Configuration
 #'
@@ -100,3 +101,10 @@ println("TOI delta-v (km/s): ", round(delta_v(toi)[1], digits = 6))
 println("MCC delta-v (km/s): ", round.(delta_v(mcc)[1:2], digits = 6))
 println("MOI delta-v (km/s): ", round(delta_v(moi)[1], digits = 6))
 println("final sma (km)    : ", round(semi_major_axis(sat), digits = 3))
+
+#' ## Draw the transfer
+#'
+#' `orbitview` draws the transfer on a globe in a browser tab.
+
+# Draw the transfer on the Cesium globe
+orbitview("GEO Transfer Target Block", sat)

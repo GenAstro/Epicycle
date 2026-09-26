@@ -12,6 +12,7 @@
 #' geostationary radius, where the final burn circularizes the orbit.
 
 using Epicycle
+using EpicycleIO
 
 #' ## Configuration
 #'
@@ -125,3 +126,10 @@ result = solve!(seq; method = Optimize(max_iter = 1000,
                                        print_level = 5))
 report_sequence(seq)
 report_solution(seq, result)
+
+#' ## Draw the transfer
+#'
+#' `orbitview` draws the transfer on a globe in a browser tab.
+
+# Draw the transfer on the Cesium globe
+orbitview("GEO Transfer", sat)

@@ -8,6 +8,7 @@
 #' to that apoapsis, and the second maneuver circularizes the orbit.
 
 using Epicycle
+using EpicycleIO
 
 #' ## Configuration
 #'
@@ -82,3 +83,10 @@ add_sequence!(seq,
 result = solve!(seq; method = Optimize(derivatives = :fd, print_level = 5))
 report_sequence(seq)
 report_solution(seq, result)
+
+#' ## Draw the transfer
+#'
+#' `orbitview` draws the transfer on a globe in a browser tab.
+
+# Draw the transfer on the Cesium globe
+orbitview("Hohmann Transfer", sat)

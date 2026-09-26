@@ -8,6 +8,7 @@
 #' trajectory record.
 
 using Epicycle
+using EpicycleIO
 using LinearAlgebra
 
 #' ## Configuration
@@ -85,3 +86,10 @@ times_mjd = [t.mjd for t in times]
 println("Points in the whole trajectory: ", length(positions))
 println("First position (km)           : ", positions[1])
 println("Radius at the end (km)        : ", norm(positions[end]))
+
+#' ## Draw the trajectory
+#'
+#' `orbitview` reads the history and draws it on a globe in a browser tab.
+
+# Draw the trajectory on the Cesium globe
+orbitview("Spacecraft History", sat)
