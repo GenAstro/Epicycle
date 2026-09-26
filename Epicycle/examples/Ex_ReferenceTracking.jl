@@ -13,6 +13,7 @@
 #' The `LGL` transcription is **Enterprise**, provided by the `EpicycleEnterprise` package.
 
 using Epicycle
+using EpicycleIO
 using EpicycleEnterprise
 
 #' ## Configuration
@@ -117,3 +118,25 @@ check_partials(phase)
 result = solve!(Sequence(phase); method = Optimize(print_level = 5))
 println("status    : ", result.info)
 println("cost      : ", round(result.objective, digits = 6), "   (analytic 1.047198)")
+
+#' ## Plot the Solution
+#'
+#' `state` and `control` return the converged mesh, one column per node, and `get_node_times`
+#' the times they sit at.
+
+# Read the converged mesh
+t = get_node_times(phase)
+y = state(phase)
+u = control(phase)
+
+# Plot the tracked state against its reference and the path bound
+bound = 1.0 ./ sqrt.(1.0 .+ 0.5 .* sin.(t))
+xyplot("Reference Tracking", t, y[1, :]; name = "x  tracked")
+xyplot!("Reference Tracking", t, sin.(t); name = "reference")
+xyplot!("Reference Tracking", t,  bound; name = "envelope")
+xyplot!("Reference Tracking", t, -bound; name = "envelope")
+panel!("Reference Tracking"; xaxis_title = "t", legend_orientation = "h")
+
+# Plot the control
+xyplot("Reference Tracking Control", t, u[1, :])
+panel!("Reference Tracking Control"; xaxis_title = "t", yaxis_title = "u")

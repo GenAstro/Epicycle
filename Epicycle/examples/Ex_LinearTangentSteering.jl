@@ -11,6 +11,7 @@
 #' Ho report 0.554 s.
 
 using Epicycle
+using EpicycleIO
 using LinearAlgebra
 
 #' ## Problem Formulation
@@ -196,3 +197,28 @@ result = solve!(Sequence(phase); method = Optimize(print_level = 5))
 println("status : ", result.info)
 println("tf     : ", round(get_final_time(phase), digits = 6),
         " s   (linear tangent law 0.554571 s)")
+
+#' ## Plot the Solution
+#'
+#' `state` and `control` return the converged mesh, one column per node, and `get_node_times`
+#' the times they sit at.
+
+# Read the converged mesh
+t = get_node_times(phase)
+y = state(phase)
+u = control(phase)
+
+# Plot the path
+xyplot("Linear Tangent Steering path", y[1, :], y[3, :])
+panel!("Linear Tangent Steering path"; xaxis_title = "x1", yaxis_title = "x3")
+
+# Plot the states against time
+xyplot("Linear Tangent Steering States", t, y[1, :]; name = "x1")
+xyplot!("Linear Tangent Steering States", t, y[2, :]; name = "x2")
+xyplot!("Linear Tangent Steering States", t, y[3, :]; name = "x3")
+xyplot!("Linear Tangent Steering States", t, y[4, :]; name = "x4")
+panel!("Linear Tangent Steering States"; xaxis_title = "t", legend_orientation = "h")
+
+# Plot the steering control
+xyplot("Linear Tangent Steering Control", t, u[1, :])
+panel!("Linear Tangent Steering Control"; xaxis_title = "t", yaxis_title = "u")

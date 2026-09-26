@@ -12,6 +12,7 @@
 #' of `0.9375`.
 
 using Epicycle
+using EpicycleIO
 
 #' ## Problem Formulation
 #'
@@ -117,3 +118,18 @@ result = solve!(Sequence(phase); method = Optimize(print_level = 5))
 println("status    : ", result.info)
 println("x_f       : ", round(get_final_state(phase).x, digits = 6), "   (analytical 0.25)")
 println("objective : ", round(result.objective, digits = 6), "   (analytical 0.9375)")
+
+#' ## Plot the Solution
+#'
+#' `state` and `control` return the converged mesh, one column per node, and `get_node_times`
+#' the times they sit at.
+
+# Read the converged mesh
+t = get_node_times(phase)
+y = state(phase)
+u = control(phase)
+
+# Plot the state and the control against time
+xyplot("Hull Problem", t, y[1, :]; name = "x  state")
+xyplot!("Hull Problem", t, u[1, :]; name = "u  control")
+panel!("Hull Problem"; xaxis_title = "t", legend_orientation = "h")

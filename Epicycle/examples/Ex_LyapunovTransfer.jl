@@ -22,6 +22,7 @@
 #' - Koon, Lo, Marsden and Ross, *Chaos* 10(2), 2000.
 
 using Epicycle
+using EpicycleIO
 using LinearAlgebra
 
 #' ## Configuration
@@ -183,3 +184,44 @@ println("  C at departure     ", round(jacobi_constant(s0, MU), digits = 9))
 println("  C at arrival       ", round(jacobi_constant(sf, MU), digits = 9))
 println("  energy supplied    ", round(jacobi_constant(sf, MU) - jacobi_constant(s0, MU),
                                        sigdigits = 3))
+
+#' ## Plot the Solution
+#'
+#' `state` and `control` return the converged mesh, one column per node, and `get_node_times`
+#' the times they sit at. The frame rotates with the primaries, so both Lyapunov orbits and the
+#' libration points are fixed in it.
+
+# Read the converged mesh
+t = get_node_times(phase)
+y = state(phase)
+u = control(phase)
+
+# Trace one period of each Lyapunov orbit, uncontrolled, from its published state
+function lyapunov_track(s0, period)
+    eom!(dy, s, p, t) = (dy[1:3] .= s[4:6]; dy[4:6] .= cr3bp_accel(s, MU))
+    sol = solve(ODEProblem(eom!, copy(s0), (0.0, period)), Vern9();
+                reltol = 1e-12, abstol = 1e-12, saveat = period / 400)
+    return [u[1] for u in sol.u], [u[2] for u in sol.u]
+end
+
+l1x, l1y = lyapunov_track(S_L1, L1_PERIOD)
+l2x, l2y = lyapunov_track(S_L2, L2_PERIOD)
+
+# Plot the transfer between the two orbits, with the Moon and the libration points for scale
+xyplot("Lyapunov Transfer", l1x, l1y; name = "L1 orbit")
+xyplot!("Lyapunov Transfer", l2x, l2y; name = "L2 orbit")
+xyplot!("Lyapunov Transfer", y[1, :], y[2, :]; name = "transfer")
+xyplot!("Lyapunov Transfer", [1.0 - MU], [0.0]; name = "Moon", mode = "markers")
+xyplot!("Lyapunov Transfer",
+        [libration_point(MU, :L1)[1], libration_point(MU, :L2)[1]], [0.0, 0.0];
+        name = "L1, L2", mode = "markers")
+panel!("Lyapunov Transfer";
+       xaxis_title = "x  (rotating frame)",
+       yaxis_title = "y  (rotating frame)",
+       yaxis_scaleanchor = "x",
+       legend_orientation = "h")
+
+# Plot the control components against time
+xyplot("Lyapunov Transfer Control", t, u[1, :]; name = "ux")
+xyplot!("Lyapunov Transfer Control", t, u[2, :]; name = "uy")
+panel!("Lyapunov Transfer Control"; xaxis_title = "t", legend_orientation = "h")

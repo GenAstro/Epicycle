@@ -11,6 +11,7 @@
 #' after 1.397 units of time.
 
 using Epicycle
+using EpicycleIO
 
 #' ## Problem Formulation
 #'
@@ -157,3 +158,23 @@ println("altitude   : ", round(yf.h, digits = 6), "   (touchdown 0)")
 println("velocity   : ", round(yf.v, digits = 6), "   (at rest 0)")
 println("final mass : ", round(yf.m, digits = 6), "   (Dymos 0.3953)")
 println("tf         : ", round(get_final_time(phase), digits = 6), "   (Dymos 1.397)")
+
+#' ## Plot the Solution
+#'
+#' `state` and `control` return the converged mesh, one column per node, and `get_node_times`
+#' the times they sit at.
+
+# Read the converged mesh
+t = get_node_times(phase)
+y = state(phase)
+u = control(phase)
+
+# Plot the states against time
+xyplot("Moon Landing States", t, y[1, :]; name = "h  altitude")
+xyplot!("Moon Landing States", t, y[2, :]; name = "v  velocity")
+xyplot!("Moon Landing States", t, y[3, :]; name = "m  mass")
+panel!("Moon Landing States"; xaxis_title = "t", legend_orientation = "h")
+
+# Plot the thrust
+xyplot("Moon Landing Thrust", t, u[1, :])
+panel!("Moon Landing Thrust"; xaxis_title = "t", yaxis_title = "thrust")

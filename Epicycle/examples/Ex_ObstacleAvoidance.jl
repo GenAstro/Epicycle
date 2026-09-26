@@ -11,6 +11,7 @@
 #' value and the constraint does all the work.
 
 using Epicycle
+using EpicycleIO
 using LinearAlgebra
 
 #' ## Problem Formulation
@@ -151,3 +152,32 @@ println("x_f       : ", round(yf.x, digits = 6), "   (target ", XF, ")")
 println("y_f       : ", round(yf.y, digits = 6), "   (target ", YF, ")")
 println("objective : ", round(result.objective, digits = 6),
         "   (constant speed, so V^2 tf = ", round(V^2, digits = 6), ")")
+
+#' ## Plot the Solution
+#'
+#' `state` and `control` return the converged mesh, one column per node, and `get_node_times`
+#' the times they sit at.
+
+# Read the converged mesh
+t = get_node_times(phase)
+y = state(phase)
+u = control(phase)
+
+# Draw the keep-out zones, then the path around them
+circle(xc, yc, r) = (xc .+ r .* cos.(range(0, 2π; length = 200)),
+                     yc .+ r .* sin.(range(0, 2π; length = 200)))
+c1x, c1y = circle(XC1, YC1, sqrt(R2))
+c2x, c2y = circle(XC2, YC2, sqrt(R2))
+
+xyplot("Obstacle Avoidance path", c1x, c1y; name = "keep-out 1")
+xyplot!("Obstacle Avoidance path", c2x, c2y; name = "keep-out 2")
+xyplot!("Obstacle Avoidance path", y[1, :], y[2, :]; name = "route")
+panel!("Obstacle Avoidance path";
+       xaxis_title = "x",
+       yaxis_title = "y",
+       yaxis_scaleanchor = "x",
+       legend_orientation = "h")
+
+# Plot the heading against time
+xyplot("Obstacle Avoidance Heading", t, u[1, :])
+panel!("Obstacle Avoidance Heading"; xaxis_title = "t", yaxis_title = "θ (rad)")

@@ -12,6 +12,7 @@
 #' and boundary conditions.
 
 using Epicycle
+using EpicycleIO
 
 #' ## Problem Formulation
 #'
@@ -262,3 +263,27 @@ result = solve!(seq; method = Optimize(max_iter = 3000, tol = 1e-5, print_level 
 println("status        : ", result.info)
 println("peak altitude : ", round(get_final_state(coast).h, digits = 2),
         " ft   (the same control law flown: ", round(y3[1], digits = 1), " ft)")
+
+#' ## Plot the Solution
+#'
+#' The problem is three linked phases, so the meshes are joined end to end before plotting.
+
+# Read the converged mesh across the three phases
+phases = (boost, singular, coast)
+t = vcat((get_node_times(p) for p in phases)...)
+y = hcat((state(p) for p in phases)...)
+u = hcat((control(p) for p in phases)...)
+
+# Plot each state on its own scale
+xyplot("Goddard Rocket Altitude", t, y[1, :])
+panel!("Goddard Rocket Altitude"; xaxis_title = "t", yaxis_title = "h")
+
+xyplot("Goddard Rocket Velocity", t, y[2, :])
+panel!("Goddard Rocket Velocity"; xaxis_title = "t", yaxis_title = "v")
+
+xyplot("Goddard Rocket Mass", t, y[3, :])
+panel!("Goddard Rocket Mass"; xaxis_title = "t", yaxis_title = "m")
+
+# Plot the thrust, which is full, then singular, then zero
+xyplot("Goddard Rocket Thrust", t, u[1, :])
+panel!("Goddard Rocket Thrust"; xaxis_title = "t", yaxis_title = "thrust")

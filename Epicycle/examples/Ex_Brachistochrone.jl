@@ -10,6 +10,7 @@
 #'
 
 using Epicycle
+using EpicycleIO
 
 #' ## Problem Formulation
 #'
@@ -178,3 +179,30 @@ check_partials(phase)
 result = solve!(Sequence(phase); method = Optimize())
 println("status : ", result.info)
 println("tf     : ", round(get_final_time(phase), digits = 6), " s   (cycloid 0.8245 s)")
+
+#' ## Plot the Solution
+#'
+#' `state` and `control` return the converged mesh, one column per node, and `get_node_times`
+#' the times they sit at.
+
+# Read the converged mesh
+t = get_node_times(phase)
+y = state(phase)
+u = control(phase)
+
+# Plot the path, with y down because gravity accelerates the bead along +y
+xyplot("Brachistochrone path", y[1, :], y[2, :])
+panel!("Brachistochrone path";
+       xaxis_title = "x (m)",
+       yaxis_title = "y (m, positive down)",
+       yaxis_autorange = "reversed")
+
+# Plot the states against time
+xyplot("Brachistochrone States", t, y[1, :]; name = "x  m")
+xyplot!("Brachistochrone States", t, y[2, :]; name = "y  m")
+xyplot!("Brachistochrone States", t, y[3, :]; name = "v  m/s")
+panel!("Brachistochrone States"; xaxis_title = "t (s)", legend_orientation = "h")
+
+# Plot the steering angle
+xyplot("Brachistochrone Steering angle", t, u[1, :])
+panel!("Brachistochrone Steering angle"; xaxis_title = "t (s)", yaxis_title = "θ (rad)")

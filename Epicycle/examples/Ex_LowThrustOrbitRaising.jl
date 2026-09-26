@@ -10,6 +10,7 @@
 #' gravitational parameter of one. CSALT reports a final radius of 1.5230.
 
 using Epicycle
+using EpicycleIO
 using LinearAlgebra
 
 #' ## Problem Formulation
@@ -221,3 +222,49 @@ println("status       : ", result.info)
 println("final radius : ", round(y_final.r, digits = 6), "   (CSALT reference 1.5230)")
 println("final mass   : ", round(y_final.m, digits = 6))
 println("radial speed : ", round(y_final.vr, sigdigits = 3), "   (circular orbit: 0)")
+
+#' ## Plot the Solution
+#'
+#' `state` and `control` return the converged mesh, one column per node, and `get_node_times`
+#' the times they sit at.
+
+# Read the converged mesh
+t = get_node_times(phase)
+y = state(phase)
+u = control(phase)
+
+# Resolve position and thrust into the orbit plane
+px = y[1, :] .* cos.(y[2, :])
+py = y[1, :] .* sin.(y[2, :])
+tx = u[1, :] .* cos.(y[2, :]) .- u[2, :] .* sin.(y[2, :])
+ty = u[1, :] .* sin.(y[2, :]) .+ u[2, :] .* cos.(y[2, :])
+
+# Build one NaN-separated segment per arrow, scaled to a readable fraction of the figure
+span  = max(maximum(px) - minimum(px), maximum(py) - minimum(py))
+scale = 0.06 * span / maximum(hypot.(tx, ty))
+ax, ay = Float64[], Float64[]
+for k in 1:2:length(px)
+    push!(ax, px[k], px[k] + scale * tx[k], NaN)
+    push!(ay, py[k], py[k] + scale * ty[k], NaN)
+end
+
+# Plot the spiral with the thrust direction along it
+xyplot("Orbit Raising path", px, py; name = "trajectory")
+xyplot!("Orbit Raising path", ax, ay; name = "thrust direction")
+panel!("Orbit Raising path";
+       xaxis_title = "x  (canonical)",
+       yaxis_title = "y  (canonical)",
+       yaxis_scaleanchor = "x",
+       legend_orientation = "h")
+
+# Plot the states against time
+xyplot("Orbit Raising States", t, y[1, :]; name = "r  radius")
+xyplot!("Orbit Raising States", t, y[3, :]; name = "vr  radial speed")
+xyplot!("Orbit Raising States", t, y[4, :]; name = "vθ  transverse speed")
+xyplot!("Orbit Raising States", t, y[5, :]; name = "m  mass")
+panel!("Orbit Raising States"; xaxis_title = "t", legend_orientation = "h")
+
+# Plot the thrust direction
+xyplot("Orbit Raising Control", t, u[1, :]; name = "u_r  radial")
+xyplot!("Orbit Raising Control", t, u[2, :]; name = "u_θ  transverse")
+panel!("Orbit Raising Control"; xaxis_title = "t", legend_orientation = "h")
