@@ -26,7 +26,7 @@ To install the latest version of Epicycle, first add the local registry (the app
 ```julia
 using Pkg
 Pkg.Registry.add(
-    RegistrySpec(url = "https://github.com/GenAstro/GenAstro.git")
+    RegistrySpec(url = "https://github.com/GenAstro/GenAstroRegistry.git")
 )
 Pkg.add("Epicycle")
 ```
