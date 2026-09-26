@@ -1,2 +1,151 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Estimation · AstroSolve.jl</title><meta name="title" content="Estimation · AstroSolve.jl"/><meta property="og:title" content="Estimation · AstroSolve.jl"/><meta property="twitter:title" content="Estimation · AstroSolve.jl"/><meta name="description" content="Documentation for AstroSolve.jl."/><meta property="og:description" content="Documentation for AstroSolve.jl."/><meta property="twitter:description" content="Documentation for AstroSolve.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/AstroSolve/estimation/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/AstroSolve/estimation/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/AstroSolve/estimation/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">AstroSolve.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">AstroSolve.jl</a></li><li><a class="tocitem" href="../concepts/">Concepts</a></li><li><a class="tocitem" href="../optimization/">Parameter optimization</a></li><li><a class="tocitem" href="../optimal_control/">Optimal control</a></li><li class="is-active"><a class="tocitem" href>Estimation</a></li><li><a class="tocitem" href="../api/">API reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Estimation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Estimation</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/AstroSolve/docs/src/estimation.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../optimal_control/">« Optimal control</a><a class="docs-footer-nextpage" href="../api/">API reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Saturday 26 September 2026 15:00">Saturday 26 September 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Estimation · AstroSolve.jl</title><meta name="title" content="Estimation · AstroSolve.jl"/><meta property="og:title" content="Estimation · AstroSolve.jl"/><meta property="twitter:title" content="Estimation · AstroSolve.jl"/><meta name="description" content="Documentation for AstroSolve.jl."/><meta property="og:description" content="Documentation for AstroSolve.jl."/><meta property="twitter:description" content="Documentation for AstroSolve.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/AstroSolve/estimation/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/AstroSolve/estimation/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/AstroSolve/estimation/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">AstroSolve.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">AstroSolve.jl</a></li><li><a class="tocitem" href="../concepts/">Concepts</a></li><li><a class="tocitem" href="../optimization/">Parameter optimization</a></li><li><a class="tocitem" href="../optimal_control/">Optimal control</a></li><li class="is-active"><a class="tocitem" href>Estimation</a><ul class="internal"><li><a class="tocitem" href="#Tracking-Scenario"><span>Tracking Scenario</span></a></li><li><a class="tocitem" href="#Measurement-Models-and-Tracking-Data"><span>Measurement Models and Tracking Data</span></a></li><li><a class="tocitem" href="#Build-the-Estimation-Problem"><span>Build the Estimation Problem</span></a></li><li><a class="tocitem" href="#Batch-Least-Squares"><span>Batch Least Squares</span></a></li><li><a class="tocitem" href="#Sequential-Estimation"><span>Sequential Estimation</span></a></li><li><a class="tocitem" href="#Step-the-Filter"><span>Step the Filter</span></a></li><li><a class="tocitem" href="#Evaluating-an-Estimate"><span>Evaluating an Estimate</span></a></li><li><a class="tocitem" href="#Solved-Examples"><span>Solved Examples</span></a></li></ul></li><li><a class="tocitem" href="../api/">API reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Estimation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Estimation</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/AstroSolve/docs/src/estimation.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Estimation"><a class="docs-heading-anchor" href="#Estimation">Estimation</a><a id="Estimation-1"></a><a class="docs-heading-anchor-permalink" href="#Estimation" title="Permalink"></a></h1><p>AstroSolve estimates spacecraft states and other properties from measurement data. <code>Batch</code> fits a complete observation arc with batch least squares. <code>Sequential</code> processes observations with an extended Kalman filter and can apply a Rauch-Tung-Striebel smoother after the forward pass. Both methods solve an <code>ODProblem</code> built from the same propagator, measurement models, and solve-for variables.</p><p>The examples below use simulated data so the estimation error can be checked against truth. The same solve interface accepts observations read from a CCSDS Tracking Data Message.</p><h2 id="Tracking-Scenario"><a class="docs-heading-anchor" href="#Tracking-Scenario">Tracking Scenario</a><a id="Tracking-Scenario-1"></a><a class="docs-heading-anchor-permalink" href="#Tracking-Scenario" title="Permalink"></a></h2><p>The example estimates a Cartesian state from six hours of two-way range and Doppler measurements. Two ground stations track a spacecraft propagated with point-mass gravity.</p><pre><code class="language-julia hljs">using Epicycle
+using LinearAlgebra
+
+goldstone = GroundStation(
+    name = &quot;DSS-14&quot;,
+    body = earth,
+    latitude = 35.4267,
+    longitude = -116.89,
+    altitude = 1.0,
+    min_elevation = 5.0,
+)
+
+canberra = GroundStation(
+    name = &quot;DSS-43&quot;,
+    body = earth,
+    latitude = -35.4,
+    longitude = 148.98,
+    altitude = 0.7,
+    min_elevation = 5.0,
+)
+
+stations = (goldstone, canberra)
+
+forces = ForceModel(PointMassGravity(earth, ()))
+integ = IntegratorConfig(DP8(); dt = 60.0, reltol = 1e-12, abstol = 1e-12)
+propagator() = OrbitPropagator(forces, integ)
+
+epoch = Time(&quot;2020-03-01T00:00:00.000&quot;, TT(), ISOT())
+y_truth = [6878.137, 0.0, 0.0, 0.0, 4.71754, 5.99820]
+
+truth = Spacecraft(
+    state = CartesianState(copy(y_truth)),
+    time = epoch,
+    name = &quot;Sat (truth)&quot;,
+)</code></pre><h2 id="Measurement-Models-and-Tracking-Data"><a class="docs-heading-anchor" href="#Measurement-Models-and-Tracking-Data">Measurement Models and Tracking Data</a><a id="Measurement-Models-and-Tracking-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Measurement-Models-and-Tracking-Data" title="Permalink"></a></h2><p><code>SignalPath</code> identifies the participants in a measurement. The range and Doppler models below use the same station for transmission and reception. <code>MeasurementNoise</code> takes a one-sigma value in the measurement&#39;s units: kilometers for range and kilometers per second for Doppler.</p><pre><code class="language-julia hljs">range_models(sc) = [
+    TwoWayRange(
+        SignalPath(station, sc, station);
+        noise = MeasurementNoise(15.0e-3),
+    ) for station in stations
+]
+
+doppler_models(sc) = [
+    TwoWayDoppler(
+        SignalPath(station, sc, station);
+        noise = MeasurementNoise(2.0e-5),
+    ) for station in stations
+]
+
+tracking(sc) = AbstractMeasurement[range_models(sc); doppler_models(sc)]
+
+records = simulate(
+    tracking(truth),
+    truth,
+    propagator(),
+    30.0:30.0:21600.0;
+    seed = 42,
+)</code></pre><p>Each observation record retains its epoch, measurement type, and participants. The estimator uses those fields to select the matching measurement model and orders records by epoch before processing them.</p><h3 id="CCSDS-Tracking-Data"><a class="docs-heading-anchor" href="#CCSDS-Tracking-Data">CCSDS Tracking Data</a><a id="CCSDS-Tracking-Data-1"></a><a class="docs-heading-anchor-permalink" href="#CCSDS-Tracking-Data" title="Permalink"></a></h3><p><code>TrackingDataFile</code> identifies a tracking file and its format. AstroSolve reads CCSDS TDM KVN files into the same observation records produced by <code>simulate</code>.</p><pre><code class="language-julia hljs">file = TrackingDataFile(&quot;tracking.tdm&quot;, CCSDS_KVN())
+tdm_records, header, segments = read_records(file)</code></pre><p>A TDM may contain segments from several stations. Segment metadata preserves the participant names used to match records to measurement models. <code>solve!</code> also accepts the <code>TrackingDataFile</code> directly and reads it before estimation. <code>write_records</code> writes observation records with a <code>TDMHeader</code> and the corresponding <code>TDMSegmentMeta</code> entries.</p><h2 id="Build-the-Estimation-Problem"><a class="docs-heading-anchor" href="#Build-the-Estimation-Problem">Build the Estimation Problem</a><a id="Build-the-Estimation-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#Build-the-Estimation-Problem" title="Permalink"></a></h2><p><code>Vary</code> declares the quantities to estimate and their a priori uncertainty. A scalar covariance is a variance applied to every component, a vector supplies diagonal variances, and a matrix supplies the complete covariance. These values are variances, unlike the standard deviation passed to <code>MeasurementNoise</code>.</p><p>The setup function below creates a fresh estimate for each method. This matters because a solve updates the varied spacecraft state.</p><pre><code class="language-julia hljs">prior_variance = [1e2, 1e2, 1e2, 1e-2, 1e-2, 1e-2]
+initial_offset = [1.0, -1.0, 0.5, 1e-3, -1e-3, 5e-4]
+
+function estimation_problem(; process_noise = nothing)
+    guess = y_truth .+ initial_offset
+    sat = Spacecraft(
+        state = CartesianState(copy(guess)),
+        time = epoch,
+        name = &quot;Sat (estimate)&quot;,
+    )
+
+    state_variable = Vary(
+        state,
+        sat;
+        guess = guess,
+        covariance = prior_variance,
+        process_noise = process_noise,
+    )
+
+    problem = ODProblem(
+        spacecraft = sat,
+        propagator = propagator(),
+        measurements = tracking(sat),
+        solve_for = [state_variable],
+    )
+
+    return (; problem, sat, state_variable)
+end</code></pre><p>The <code>ODProblem</code> holds the estimated spacecraft, its propagation model, the available measurement models, and the solve-for declarations. Additional estimated properties are added to <code>solve_for</code> with their own <code>Vary</code> declarations.</p><h2 id="Batch-Least-Squares"><a class="docs-heading-anchor" href="#Batch-Least-Squares">Batch Least Squares</a><a id="Batch-Least-Squares-1"></a><a class="docs-heading-anchor-permalink" href="#Batch-Least-Squares" title="Permalink"></a></h2><p>Batch least squares processes every observation on each iteration. <code>n_iters</code> limits the number of linearization and correction cycles, and <code>tol</code> tests the relative correction between iterations.</p><pre><code class="language-julia hljs">batch_case = estimation_problem()
+
+batch_fit = solve!(
+    batch_case.problem,
+    records;
+    method = Batch(n_iters = 10, tol = 1e-9),
+)</code></pre><h3 id="Check-the-Batch-Solution"><a class="docs-heading-anchor" href="#Check-the-Batch-Solution">Check the Batch Solution</a><a id="Check-the-Batch-Solution-1"></a><a class="docs-heading-anchor-permalink" href="#Check-the-Batch-Solution" title="Permalink"></a></h3><p>The result contains the estimated state and parameters, posterior covariance, formal standard deviations, correlation matrix, postfit residuals, and convergence status.</p><pre><code class="language-julia hljs">batch_error = batch_fit.X_hat .- y_truth
+
+println(&quot;converged      : &quot;, batch_fit.converged)
+println(&quot;iterations     : &quot;, batch_fit.iters)
+println(&quot;position error : &quot;, round.(batch_error[1:3] .* 1e3, digits = 2), &quot; m&quot;)
+println(&quot;velocity error : &quot;, round.(batch_error[4:6] .* 1e6, digits = 2), &quot; mm/s&quot;)
+println(&quot;position sigma : &quot;, round.(batch_fit.sigma[1:3] .* 1e3, digits = 2), &quot; m&quot;)
+println(&quot;velocity sigma : &quot;, round.(batch_fit.sigma[4:6] .* 1e6, digits = 2), &quot; mm/s&quot;)</code></pre><p><code>batch_fit.P_hat</code> and <code>batch_fit.sigma</code> cover the solve-for components in <code>batch_fit.solve_for_idx</code>. <code>batch_fit.X_hat</code> is the complete estimated state and parameter vector.</p><h2 id="Sequential-Estimation"><a class="docs-heading-anchor" href="#Sequential-Estimation">Sequential Estimation</a><a id="Sequential-Estimation-1"></a><a class="docs-heading-anchor-permalink" href="#Sequential-Estimation" title="Permalink"></a></h2><p>The extended Kalman filter propagates the state and covariance to each observation and then applies a measurement update. Process noise is attached to the varied quantity because it describes uncertainty added while that quantity is propagated, not uncertainty in an observation.</p><p><code>DiagonalSNC</code> takes one white-noise power spectral density per component. Each value has units of the squared component unit per unit time; the filter accumulates it over each propagation step.</p><pre><code class="language-julia hljs">process_noise = DiagonalSNC([
+    0.0, 0.0, 0.0,
+    1e-12, 1e-12, 1e-12,
+])
+
+sequential_case = estimation_problem(; process_noise = process_noise)
+
+sequential_fit = solve!(
+    sequential_case.problem,
+    records;
+    method = Sequential(iterations = 1, smoother = RTS()),
+)</code></pre><h3 id="Rauch-Tung-Striebel-Smoothing"><a class="docs-heading-anchor" href="#Rauch-Tung-Striebel-Smoothing">Rauch-Tung-Striebel Smoothing</a><a id="Rauch-Tung-Striebel-Smoothing-1"></a><a class="docs-heading-anchor-permalink" href="#Rauch-Tung-Striebel-Smoothing" title="Permalink"></a></h3><p><code>RTS()</code> adds a backward pass after the forward filter. The forward result is available as <code>sequential_fit.ekf</code>; the smoothed states and covariances at each observation epoch are available as <code>sequential_fit.rts</code>. With <code>iterations = 1</code>, the method performs one forward and backward pass. Larger values repeat the process from the revised initial estimate until <code>tol</code> is met or the iteration limit is reached.</p><h3 id="Check-the-Sequential-Solution"><a class="docs-heading-anchor" href="#Check-the-Sequential-Solution">Check the Sequential Solution</a><a id="Check-the-Sequential-Solution-1"></a><a class="docs-heading-anchor-permalink" href="#Check-the-Sequential-Solution" title="Permalink"></a></h3><p>Each forward-filter record contains the predicted and updated state and covariance, state transition matrix, Kalman gain, and prefit and postfit residuals for one observation.</p><pre><code class="language-julia hljs">range_postfit = [
+    update.postfit[1]
+    for (update, observation) in zip(sequential_fit.ekf.records, records)
+    if observation.measurement_type === :RANGE
+]
+
+doppler_postfit = [
+    update.postfit[1]
+    for (update, observation) in zip(sequential_fit.ekf.records, records)
+    if observation.measurement_type === :DOPPLER
+]
+
+settled_rms(values) = begin
+    tail = values[(div(2 * length(values), 3) + 1):end]
+    sqrt(sum(abs2, tail) / length(tail))
+end
+
+println(&quot;range RMS  : &quot;, round(settled_rms(range_postfit) * 1e3, digits = 2), &quot; m&quot;)
+println(&quot;Doppler RMS: &quot;, round(settled_rms(doppler_postfit) * 1e6, digits = 2), &quot; mm/s&quot;)</code></pre><p>The residual records belong to the forward filter. <code>sequential_fit.ekf.P_hat</code> is the covariance at the final observation, while <code>sequential_fit.rts.P_smooth</code> contains the smoothed covariance across the arc.</p><h2 id="Step-the-Filter"><a class="docs-heading-anchor" href="#Step-the-Filter">Step the Filter</a><a id="Step-the-Filter-1"></a><a class="docs-heading-anchor-permalink" href="#Step-the-Filter" title="Permalink"></a></h2><p>The stateful interface exposes the estimate between observations. Use it when an application must record intermediate values, change settings, or perform another action between updates.</p><pre><code class="language-julia hljs">stepped_case = estimation_problem(; process_noise = process_noise)
+
+dyn, meas, obs_times, obs_data, R_per_obs =
+    build_od_closures(records, stepped_case.problem)
+
+ekf = init_ekf(
+    [stepped_case.state_variable],
+    dyn,
+    meas;
+    model = stepped_case.problem,
+    R = R_per_obs[1],
+    t0 = 0.0,
+)
+
+postfit = Vector{Float64}(undef, length(obs_times))
+position_sigma = similar(postfit)
+
+for k in eachindex(obs_times)
+    time_update!(ekf, obs_times[k])
+    update = measurement_update!(ekf, obs_data[k]; R = R_per_obs[k])
+
+    postfit[k] = update.postfit[1]
+    position_sigma[k] = sqrt(current_covariance(ekf)[1, 1])
+end</code></pre><p>The filter starts at the spacecraft epoch, <code>t0 = 0.0</code>, and propagates to the first observation. Starting it at the first observation would associate the a priori state with the wrong epoch.</p><h2 id="Evaluating-an-Estimate"><a class="docs-heading-anchor" href="#Evaluating-an-Estimate">Evaluating an Estimate</a><a id="Evaluating-an-Estimate-1"></a><a class="docs-heading-anchor-permalink" href="#Evaluating-an-Estimate" title="Permalink"></a></h2><p>A completed solve is not enough to establish that an estimate is useful. Check convergence where the method reports it, inspect prefit and postfit residuals for bias and outliers, compare settled residual statistics with the measurement noise, and confirm that the covariance behaves as expected. Results should also be tested against reasonable changes to the a priori state, covariance, and process noise.</p><h2 id="Solved-Examples"><a class="docs-heading-anchor" href="#Solved-Examples">Solved Examples</a><a id="Solved-Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Solved-Examples" title="Permalink"></a></h2><ul><li><a href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_OrbitDetermination.jl">Batch least squares</a> estimates an initial state from a complete tracking arc.</li><li><a href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_ExtendedKalmanFilter.jl">Extended Kalman filter</a> processes range and Doppler data and applies RTS smoothing.</li><li><a href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_SteppedKalmanFilter.jl">Stepped Kalman filter</a> exposes the state, covariance, and residual after every observation.</li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../optimal_control/">« Optimal control</a><a class="docs-footer-nextpage" href="../api/">API reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Saturday 26 September 2026 20:06">Saturday 26 September 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

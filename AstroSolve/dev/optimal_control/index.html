@@ -1,2 +1,194 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Optimal control · AstroSolve.jl</title><meta name="title" content="Optimal control · AstroSolve.jl"/><meta property="og:title" content="Optimal control · AstroSolve.jl"/><meta property="twitter:title" content="Optimal control · AstroSolve.jl"/><meta name="description" content="Documentation for AstroSolve.jl."/><meta property="og:description" content="Documentation for AstroSolve.jl."/><meta property="twitter:description" content="Documentation for AstroSolve.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/AstroSolve/optimal_control/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/AstroSolve/optimal_control/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/AstroSolve/optimal_control/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">AstroSolve.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">AstroSolve.jl</a></li><li><a class="tocitem" href="../concepts/">Concepts</a></li><li><a class="tocitem" href="../optimization/">Parameter optimization</a></li><li class="is-active"><a class="tocitem" href>Optimal control</a></li><li><a class="tocitem" href="../estimation/">Estimation</a></li><li><a class="tocitem" href="../api/">API reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Optimal control</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Optimal control</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/AstroSolve/docs/src/optimal_control.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../optimization/">« Parameter optimization</a><a class="docs-footer-nextpage" href="../estimation/">Estimation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Saturday 26 September 2026 15:00">Saturday 26 September 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Optimal control · AstroSolve.jl</title><meta name="title" content="Optimal control · AstroSolve.jl"/><meta property="og:title" content="Optimal control · AstroSolve.jl"/><meta property="twitter:title" content="Optimal control · AstroSolve.jl"/><meta name="description" content="Documentation for AstroSolve.jl."/><meta property="og:description" content="Documentation for AstroSolve.jl."/><meta property="twitter:description" content="Documentation for AstroSolve.jl."/><meta property="og:url" content="https://GenAstro.github.io/Epicycle/AstroSolve/optimal_control/"/><meta property="twitter:url" content="https://GenAstro.github.io/Epicycle/AstroSolve/optimal_control/"/><link rel="canonical" href="https://GenAstro.github.io/Epicycle/AstroSolve/optimal_control/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">AstroSolve.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">AstroSolve.jl</a></li><li><a class="tocitem" href="../concepts/">Concepts</a></li><li><a class="tocitem" href="../optimization/">Parameter optimization</a></li><li class="is-active"><a class="tocitem" href>Optimal control</a><ul class="internal"><li><a class="tocitem" href="#Collocation:-The-Brachistochrone"><span>Collocation: The Brachistochrone</span></a></li><li><a class="tocitem" href="#Shooting:-An-Earth-to-Mars-Transfer"><span>Shooting: An Earth-to-Mars Transfer</span></a></li><li><a class="tocitem" href="#Link-Multiple-Phases"><span>Link Multiple Phases</span></a></li><li><a class="tocitem" href="#Solved-Examples"><span>Solved Examples</span></a></li></ul></li><li><a class="tocitem" href="../estimation/">Estimation</a></li><li><a class="tocitem" href="../api/">API reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Optimal control</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Optimal control</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/GenAstro/Epicycle/blob/main/AstroSolve/docs/src/optimal_control.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Optimal-Control"><a class="docs-heading-anchor" href="#Optimal-Control">Optimal Control</a><a id="Optimal-Control-1"></a><a class="docs-heading-anchor-permalink" href="#Optimal-Control" title="Permalink"></a></h1><p>Optimal control solves for the state and control histories over one or more trajectory phases. Each phase selects a transcription, declares the quantities the solver may change, and carries its own constraints and objectives. AstroSolve supports collocation and shooting transcriptions through the same <code>Vary</code>, <code>Constraint</code>, <code>Objective</code>, and <code>Sequence</code> interface.</p><p>The first example uses Hermite-Simpson collocation to introduce the complete phase workflow. The second uses Sims-Flanagan multiple shooting and focuses on the quantities that differ from a collocation problem.</p><h2 id="Collocation:-The-Brachistochrone"><a class="docs-heading-anchor" href="#Collocation:-The-Brachistochrone">Collocation: The Brachistochrone</a><a id="Collocation:-The-Brachistochrone-1"></a><a class="docs-heading-anchor-permalink" href="#Collocation:-The-Brachistochrone" title="Permalink"></a></h2><p>The brachistochrone is the minimum-time path between two points under constant gravity. Its state contains horizontal position, downward vertical position, and speed. The control is the path angle. The final time is also a decision variable.</p><h3 id="Define-the-State,-Control,-and-Dynamics"><a class="docs-heading-anchor" href="#Define-the-State,-Control,-and-Dynamics">Define the State, Control, and Dynamics</a><a id="Define-the-State,-Control,-and-Dynamics-1"></a><a class="docs-heading-anchor-permalink" href="#Define-the-State,-Control,-and-Dynamics" title="Permalink"></a></h3><p>A collocation phase uses concrete state and control types. Their fields define the component order used by guesses, bounds, and derivative matrices.</p><pre><code class="language-julia hljs">using Epicycle
+
+struct BrachModel
+    g::Float64
+end
+
+struct BrachState{T} &lt;: AbstractState
+    x::T
+    y::T
+    v::T
+end
+
+struct BrachControl{T} &lt;: AbstractControl
+    theta::T
+end
+
+function brach_dynamics!(dy, y::BrachState, u::BrachControl, p, t, model)
+    dy[1] = y.v * sin(u.theta)
+    dy[2] = y.v * cos(u.theta)
+    dy[3] = model.g * cos(u.theta)
+end</code></pre><p>The dynamics function writes one derivative for each state component. The parameter vector <code>p</code> and time <code>t</code> are present in the interface even when a model does not use them.</p><h3 id="Build-the-Collocation-Phase"><a class="docs-heading-anchor" href="#Build-the-Collocation-Phase">Build the Collocation Phase</a><a id="Build-the-Collocation-Phase-1"></a><a class="docs-heading-anchor-permalink" href="#Build-the-Collocation-Phase" title="Permalink"></a></h3><p><code>CollocationPhase</code> combines the dynamics with a transcription, model, state and control types, and time span. <code>HermiteSimpson(n_steps = 20)</code> supplies the mesh and the defect equations that enforce the dynamics between nodes.</p><pre><code class="language-julia hljs">phase = CollocationPhase(
+    name = :brachistochrone,
+    transcription = HermiteSimpson(n_steps = 20),
+    dynamics = brach_dynamics!,
+    model = BrachModel(9.80665),
+    state = BrachState,
+    control = BrachControl,
+    tspan = (0.0, 1.0),
+)
+
+Vary(state, phase;
+     guess = [0.0 0.5 1.0 1.5 2.0
+              0.0 0.5 1.0 1.5 2.0
+              0.0 1.0 1.5 2.0 2.5],
+     lower_bound = [-Inf, -Inf, 0.0],
+     upper_bound = [Inf, Inf, Inf])
+
+Vary(control, phase;
+     guess = reshape([0.3, 0.5, 0.7, 0.9, 1.0], 1, 5),
+     lower_bound = [-pi / 2],
+     upper_bound = [pi / 2])
+
+Vary(final_time, phase; lower_bound = 0.1, upper_bound = 10.0)</code></pre><p>State and control guesses may contain fewer columns than the transcription mesh; AstroSolve interpolates them to the required nodes. Component bounds apply across the complete history. The final-time guess comes from the end of <code>tspan</code> because <code>Vary(final_time, ...)</code> does not replace it.</p><h3 id="Apply-Constraints-and-the-Objective"><a class="docs-heading-anchor" href="#Apply-Constraints-and-the-Objective">Apply Constraints and the Objective</a><a id="Apply-Constraints-and-the-Objective-1"></a><a class="docs-heading-anchor-permalink" href="#Apply-Constraints-and-the-Objective" title="Permalink"></a></h3><p>Constraint functions read values from the phase context. <code>Initial()</code>, <code>Final()</code>, and <code>Path()</code> place the same function at the start, end, or mesh points of the phase.</p><pre><code class="language-julia hljs">start_state(c) = [state(c).x, state(c).y, state(c).v]
+final_position(c) = [state(c).x, state(c).y]
+speed(c) = [state(c).v]
+duration(c) = final_time(c)
+
+Constraint(start_state, phase; equals = [0.0, 0.0, 0.0], at = Initial())
+Constraint(final_position, phase; equals = [2.0, 2.0], at = Final())
+Constraint(speed, phase; upper_bound = 10.0, at = Path())
+
+Objective(duration, phase; sense = Min())</code></pre><p>The path placement applies the speed limit at every mesh node. With no <code>at</code> keyword, the objective is a terminal term. An objective at <code>Path()</code> is integrated over the phase.</p><h3 id="Supply-and-Check-Derivatives"><a class="docs-heading-anchor" href="#Supply-and-Check-Derivatives">Supply and Check Derivatives</a><a id="Supply-and-Check-Derivatives-1"></a><a class="docs-heading-anchor-permalink" href="#Supply-and-Check-Derivatives" title="Permalink"></a></h3><p><code>@partial</code> associates a derivative with the function and varied quantity it differentiates. A dynamics partial writes into the supplied matrix; a constraint or objective partial returns its matrix.</p><pre><code class="language-julia hljs">@partial(brach_dynamics!, state) do dF, y, u, p, t, model
+    dF[1, 3] = sin(u.theta)
+    dF[2, 3] = cos(u.theta)
+end
+
+@partial(brach_dynamics!, control) do dF, y, u, p, t, model
+    dF[1, 1] = y.v * cos(u.theta)
+    dF[2, 1] = -y.v * sin(u.theta)
+    dF[3, 1] = -model.g * sin(u.theta)
+end
+
+@partial(start_state, state) do c
+    [1.0 0.0 0.0
+     0.0 1.0 0.0
+     0.0 0.0 1.0]
+end
+
+@partial(final_position, state) do c
+    [1.0 0.0 0.0
+     0.0 1.0 0.0]
+end
+
+@partial(speed, state) do c
+    [0.0 0.0 1.0]
+end
+
+@partial(duration, final_time) do c
+    [1.0]
+end
+
+check_partials(phase)</code></pre><p><code>check_partials</code> compares the declared partials with finite differences. It should be run after the phase is fully configured and before a long solve.</p><h3 id="Solve-and-Inspect-the-Trajectory"><a class="docs-heading-anchor" href="#Solve-and-Inspect-the-Trajectory">Solve and Inspect the Trajectory</a><a id="Solve-and-Inspect-the-Trajectory-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-and-Inspect-the-Trajectory" title="Permalink"></a></h3><p>A phase is added to a <code>Sequence</code> and solved with <code>Optimize</code>. The solution remains on the phase, where the state and control histories have one column per transcription node.</p><pre><code class="language-julia hljs">result = solve!(Sequence(phase); method = Optimize())
+
+println(&quot;status: &quot;, result.info)
+println(&quot;time  : &quot;, round(get_final_time(phase), digits = 6), &quot; s&quot;)
+
+times = get_node_times(phase)
+states = state(phase)
+controls = control(phase)</code></pre><p>Check <code>result.info</code> before using the trajectory. The endpoint accessors <code>get_initial_state(phase)</code> and <code>get_final_state(phase)</code> return the declared state type; <code>state(phase)</code> and <code>control(phase)</code> return the complete histories.</p><h2 id="Shooting:-An-Earth-to-Mars-Transfer"><a class="docs-heading-anchor" href="#Shooting:-An-Earth-to-Mars-Transfer">Shooting: An Earth-to-Mars Transfer</a><a id="Shooting:-An-Earth-to-Mars-Transfer-1"></a><a class="docs-heading-anchor-permalink" href="#Shooting:-An-Earth-to-Mars-Transfer" title="Permalink"></a></h2><p>Sims-Flanagan divides a low-thrust transfer into segments, applies one impulse per segment, and propagates from both endpoints to a match point. The phase varies segment controls and endpoint quantities rather than a state and control value at every collocation node.</p><p>This example connects circular, coplanar Earth and Mars ephemerides over the Hohmann transfer time. It minimizes propellant use for a spacecraft with a one-newton engine.</p><h3 id="Build-the-Shooting-Phase"><a class="docs-heading-anchor" href="#Build-the-Shooting-Phase">Build the Shooting Phase</a><a id="Build-the-Shooting-Phase-1"></a><a class="docs-heading-anchor-permalink" href="#Build-the-Shooting-Phase" title="Permalink"></a></h3><p>The phase needs an ephemeris at each endpoint and a propulsion model for its internal propagation. <code>matchpoint_scale</code> makes position, velocity, and mass errors comparable in the continuity equations.</p><pre><code class="language-julia hljs">using LinearAlgebra
+
+const MU_SUN = 1.32712440018e11
+const AU = 1.495978707e8
+const R_EARTH = AU
+const R_MARS = 1.524 * AU
+const VC_EARTH = sqrt(MU_SUN / R_EARTH)
+const VC_MARS = sqrt(MU_SUN / R_MARS)
+const OM_EARTH = VC_EARTH / R_EARTH
+const OM_MARS = VC_MARS / R_MARS
+const M0 = 1500.0
+const ISP = 3000.0
+const TMAX = 1.0e-3
+const G0 = 9.80665e-3
+const TOF = pi * sqrt(((R_EARTH + R_MARS) / 2)^3 / MU_SUN)
+const THETA_MARS_0 = pi - OM_MARS * TOF
+
+function earth_ephemeris(t::Real)
+    theta = OM_EARTH * t
+    r = R_EARTH * [cos(theta), sin(theta), 0.0]
+    v = VC_EARTH * [-sin(theta), cos(theta), 0.0]
+    a = -(MU_SUN / R_EARTH^2) * [cos(theta), sin(theta), 0.0]
+    return r, v, a
+end
+
+function mars_ephemeris(t::Real)
+    theta = THETA_MARS_0 + OM_MARS * t
+    r = R_MARS * [cos(theta), sin(theta), 0.0]
+    v = VC_MARS * [-sin(theta), cos(theta), 0.0]
+    a = -(MU_SUN / R_MARS^2) * [cos(theta), sin(theta), 0.0]
+    return r, v, a
+end
+
+const N_SEGMENTS = 60
+const SMOOTHING = 0.015
+
+transfer = SimsFlanaganPhase(
+    name = :earth_to_mars,
+    transcription = SimsFlanagan(
+        n_segments = N_SEGMENTS,
+        throttle_smoothing = SMOOTHING,
+    ),
+    model = PropulsionModel(mu = MU_SUN, Isp = ISP, Tmax = TMAX, g0 = G0),
+    ephemeris_left = earth_ephemeris,
+    ephemeris_right = mars_ephemeris,
+    tspan = (0.0, TOF),
+    matchpoint_scale = [
+        R_EARTH, R_EARTH, R_EARTH,
+        VC_EARTH, VC_EARTH, VC_EARTH,
+        M0,
+    ],
+)</code></pre><h3 id="Define-the-Shooting-Variables"><a class="docs-heading-anchor" href="#Define-the-Shooting-Variables">Define the Shooting Variables</a><a id="Define-the-Shooting-Variables-1"></a><a class="docs-heading-anchor-permalink" href="#Define-the-Shooting-Variables" title="Permalink"></a></h3><p>The forward and backward control blocks cover the segments propagated from each endpoint. Initial mass is fixed with equal bounds, while final mass remains free.</p><pre><code class="language-julia hljs">_, departure_velocity, _ = earth_ephemeris(0.0)
+_, arrival_velocity, _ = mars_ephemeris(TOF)
+
+Vary(forward_control, transfer;
+     guess = 0.5 * departure_velocity / norm(departure_velocity),
+     lower_bound = fill(-2.0, 3),
+     upper_bound = fill(2.0, 3))
+
+Vary(backward_control, transfer;
+     guess = 0.5 * arrival_velocity / norm(arrival_velocity),
+     lower_bound = fill(-2.0, 3),
+     upper_bound = fill(2.0, 3))
+
+Vary(initial_mass, transfer; lower_bound = M0, upper_bound = M0)
+
+Vary(final_mass, transfer;
+     guess = 0.85 * M0,
+     lower_bound = 100.0,
+     upper_bound = M0,
+     scale = M0)</code></pre><p>The component bounds permit vectors whose magnitude is greater than one. A path constraint is therefore required to enforce the throttle limit on every segment.</p><h3 id="Apply-the-Path-Constraint-and-Objective"><a class="docs-heading-anchor" href="#Apply-the-Path-Constraint-and-Objective">Apply the Path Constraint and Objective</a><a id="Apply-the-Path-Constraint-and-Objective-1"></a><a class="docs-heading-anchor-permalink" href="#Apply-the-Path-Constraint-and-Objective" title="Permalink"></a></h3><p>The objective uses the same smoothed throttle magnitude as the transcription&#39;s mass propagation. Its partials cover both control blocks.</p><pre><code class="language-julia hljs">thrust_ball(c) = [dot(control(c), control(c))]
+Constraint(thrust_ball, transfer;
+           lower_bound = 0.0,
+           upper_bound = 1.0,
+           at = Path())
+
+const KG_PER_THROTTLE = TMAX * (TOF / N_SEGMENTS) / (G0 * ISP)
+
+throttle_magnitudes(u) = sqrt.(vec(sum(abs2, u, dims = 1)) .+ SMOOTHING^2)
+
+propellant(c) = KG_PER_THROTTLE * (
+    sum(throttle_magnitudes(forward_control(c))) +
+    sum(throttle_magnitudes(backward_control(c)))
+)
+
+@partial(propellant, forward_control) do c
+    u = forward_control(c)
+    KG_PER_THROTTLE .* vec(u ./ throttle_magnitudes(u)&#39;)
+end
+
+@partial(propellant, backward_control) do c
+    u = backward_control(c)
+    KG_PER_THROTTLE .* vec(u ./ throttle_magnitudes(u)&#39;)
+end
+
+Objective(propellant, transfer; sense = Min())</code></pre><h3 id="Solve-and-Inspect-the-Transfer"><a class="docs-heading-anchor" href="#Solve-and-Inspect-the-Transfer">Solve and Inspect the Transfer</a><a id="Solve-and-Inspect-the-Transfer-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-and-Inspect-the-Transfer" title="Permalink"></a></h3><p>The shooting phase uses the same sequence and solve interface as the collocation phase. Its results are read through the quantities declared with <code>Vary</code>.</p><pre><code class="language-julia hljs">check_partials(transfer)
+result = solve!(Sequence(transfer);
+                method = Optimize(max_iter = 500, print_level = 5))
+
+println(&quot;status         : &quot;, result.info)
+println(&quot;delivered mass : &quot;, round(final_mass(transfer), digits = 3), &quot; kg&quot;)
+println(&quot;propellant     : &quot;, round(M0 - final_mass(transfer), digits = 3), &quot; kg&quot;)
+
+u_forward = forward_control(transfer)
+u_backward = backward_control(transfer)</code></pre><p>The phase enforces its match-point equations internally. A successful solver status should still be followed by checks of the endpoint conditions, throttle constraint, and quantities used downstream.</p><h2 id="Link-Multiple-Phases"><a class="docs-heading-anchor" href="#Link-Multiple-Phases">Link Multiple Phases</a><a id="Link-Multiple-Phases-1"></a><a class="docs-heading-anchor-permalink" href="#Link-Multiple-Phases" title="Permalink"></a></h2><p>A sequence may contain several phases, and each phase keeps its own transcription. <code>Link</code> identifies two adjacent phases; <code>Constraint(continuity, link)</code> requires their boundary state and time to agree. For shooting phases, the continuity vector also includes mass.</p><p>The <a href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_MixedTranscription.jl">mixed-transcription example</a> uses Sims-Flanagan for the first half of an orbit-raising transfer and Hermite-Simpson for the second. The phases are added to one <code>Sequence</code>, linked by continuity, and solved as one nonlinear program. A custom constraint on the same link can represent a handoff that is not continuous.</p><h2 id="Solved-Examples"><a class="docs-heading-anchor" href="#Solved-Examples">Solved Examples</a><a id="Solved-Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Solved-Examples" title="Permalink"></a></h2><p>The Epicycle examples apply the same interface to several problem classes:</p><ul><li><a href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_Brachistochrone.jl">Brachistochrone</a>: Hermite-Simpson collocation with free final time.</li><li><a href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_HullProblem.jl">Hull problem</a>: terminal and integrated objectives in one phase.</li><li><a href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_GoddardRocket.jl">Goddard rocket</a>: linked collocation phases and a singular arc.</li><li><a href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_LowThrustOrbitRaising.jl">Low-thrust orbit raising</a>: continuous-thrust trajectory optimization.</li><li><a href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_MoonLanding.jl">Soft lunar landing</a>: final-mass maximization with endpoint constraints.</li><li><a href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_MarsTransferSimsFlanagan.jl">Earth-to-Mars transfer</a>: Sims-Flanagan multiple shooting.</li><li><a href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_ApophisRendezvousSimsFlanagan.jl">Earth-to-Apophis rendezvous</a>: low-thrust rendezvous with moving endpoints.</li><li><a href="https://github.com/GenAstro/Epicycle/blob/main/Epicycle/examples/Ex_GravityAssistMGA.jl">Earth-Earth-Venus transfer</a>: linked MGA-nDSM phases with a flyby constraint.</li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../optimization/">« Parameter optimization</a><a class="docs-footer-nextpage" href="../estimation/">Estimation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Saturday 26 September 2026 20:06">Saturday 26 September 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
