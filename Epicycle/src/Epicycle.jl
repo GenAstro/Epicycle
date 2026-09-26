@@ -19,11 +19,13 @@ using Reexport
 @reexport using AstroSolve
 @reexport using EpicycleIO
 
-# Walking a shipped example a step at a time, for someone learning the interface rather than
-# reading it. `Epicycle.example_names()` lists them and `Epicycle.run_example(name)` runs one.
+# Running a shipped example from the REPL.
+# `Epicycle.list_examples()` prints them and `Epicycle.run_example(name)` prints one, runs it,
+# and says where the script is.
 # Qualified rather than exported: a user reaches for this once, not in every script.
 include("examples.jl")
-using .Examples: example_names, run_example, tutorial_names, run_tutorial
+using .Examples: example_names, example_path, example_source, list_examples,
+                 run_example
 
 # Re-export the packages a script needs alongside Epicycle. The four OrdinaryDiffEq solver
 # packages hold every integrator named anywhere in Epicycle (Vern9, Vern7, Tsit5, DP8, RK4);

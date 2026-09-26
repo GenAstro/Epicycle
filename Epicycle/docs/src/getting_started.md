@@ -21,19 +21,19 @@ For complete installation and setup instructions, see the [VS Code Julia Tutoria
 
 ### From the Gen Astro registry
 
-Epicycle is released under the Gen Astro Source Available License, which Julia's General registry
-does not carry, so it is published in the Gen Astro registry. Add that registry once, then install
-as usual:
+To install the latest version of Epicycle, first add the local registry (the app store, for those unfamiliar with Julia), then install as usual:
 
 ```julia
 using Pkg
-Pkg.Registry.add(RegistrySpec(url = "https://github.com/GenAstro/GenAstro.git"))
+Pkg.Registry.add(
+    RegistrySpec(url = "https://github.com/GenAstro/GenAstro.git")
+)
 Pkg.add("Epicycle")
 ```
 
-General is still needed, since Epicycle depends on packages registered there. Without the Gen Astro
-registry the install resolves to Epicycle 0.4.0, the last version General carries, and reports
-nothing about the newer ones.
+!!! note
+    Some packages originally registered in the Julia General registry, including AstroModels, AstroProp, and AstroSolve, have moved to the GenAstro local registry. If you do not add the local registry as shown above, you will install only the first MVP release of Epicycle.
+
 
 The first `using Epicycle` also downloads about 110 MB of SPICE kernels, most of it the DE440
 ephemeris that planet and Moon positions come from. That first load needs a network connection and
@@ -95,7 +95,22 @@ If you encounter installation issues:
 2. Search [Julia Discourse](https://discourse.julialang.org/) for installation help
 3. Open a new issue with your Julia version and error message
 
-### Next Steps
+## Running Examples
+
+Epicycle provides a library runnable examples covering propagation, targeting, optimal control and orbit
+determination.  The code below shows how to run the "getting started" example, and how to get the names of
+all examples to run others in the suite.
+
+```julia
+# Run the example named "Ex_GettingStarted"
+using Epicycle
+Epicycle.run_example("Ex_GettingStarted")
+
+# Print the names of all examples
+Epicycle.list_examples()
+```
+
+## Next Steps
 
 Once installed, explore the documentation:
 - [Examples](examples/Ex_PropagationBasics.md) - Runnable scripts, from propagation to optimal control

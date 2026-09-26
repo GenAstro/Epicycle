@@ -17,7 +17,8 @@ DocMeta.setdocmeta!(Epicycle, :DocTestSetup, :(using Epicycle); recursive=true)
 include("examples.jl")
 
 const EXAMPLE_NAV = example_pages(
-    ["Propagation" => ["Propagation and stopping conditions" => "Ex_PropagationBasics",
+    ["Propagation" => ["Getting started" => "Ex_GettingStarted",
+                       "Propagation and stopping conditions" => "Ex_PropagationBasics",
                        "Impulsive maneuvers" => "Ex_ImpulsiveManeuver",
                        "The spacecraft history" => "Ex_SpacecraftHistory",
                        "Propagation about the Moon" => "Ex_Propagation_Moon",

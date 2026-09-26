@@ -11,6 +11,9 @@ using Test
 # Two files in this directory are not run by anything: UseCase_Propagation_Advanced.jl and
 # Benchmark_Propagation.jl. They predate this file and were never included.
 
+include("test_correctness_examples.jl")
+include("test_robustness_examples.jl")
+
 @testset "Epicycle.jl" begin
     @testset "the umbrella re-exports each layer" begin
         for name in (:Spacecraft,          # AstroModels

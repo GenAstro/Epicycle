@@ -17,12 +17,29 @@ To install the latest version of Epicycle, first add the local registry (the app
 
 ```julia
 using Pkg
-Pkg.Registry.add(RegistrySpec(url = "https://github.com/GenAstro/GenAstro.git"))
+Pkg.Registry.add(
+    RegistrySpec(url = "https://github.com/GenAstro/GenAstro.git")
+)
 Pkg.add("Epicycle")
 ```
 
 !!! note
     Some packages originally registered in the Julia General registry, including AstroModels, AstroProp, and AstroSolve, have moved to the GenAstro local registry. If you do not add the local registry as shown above, you will install only the first MVP release of Epicycle.
+
+## Example Problems
+
+Epicycle provides a library runnable examples covering propagation, targeting, optimal control and orbit
+determination.  The code below shows how to run the "getting started" example, and how to get the names of
+all examples to run others in the suite.
+
+```julia
+# Run the example named "Ex_GettingStarted"
+using Epicycle
+Epicycle.run_example("Ex_GettingStarted")
+
+# Print the names of all examples
+Epicycle.list_examples()
+```
 
 ## Package Architecture
 
