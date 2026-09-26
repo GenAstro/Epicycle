@@ -1264,7 +1264,12 @@ function _add_nonauto_time_correction!(J, p::CollocationPhase, mesh::HermiteSimp
                 b = HS_B[i, p_local]
                 b == 0.0 && continue
                 d_rows = (2(k-1) + i - 1) * ns + 1 : (2(k-1) + i) * ns
-                J[d_rows, 1] .-= h_phys * b * w .* dy_dt
+                # Added, not subtracted, as the note above this function specifies. The sign was
+                # wrong here and no test saw it: every suite that varies a phase time has
+                # autonomous dynamics, where ∂f/∂t is zero and the sign of zero does not matter.
+                # Against central differences the error was exactly twice this term, in both the
+                # t0 and tf columns, for every defect row.
+                J[d_rows, 1] .+= h_phys * b * w .* dy_dt
             end
         end
     end

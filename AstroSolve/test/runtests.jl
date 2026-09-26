@@ -106,6 +106,8 @@ include("test_correctness_oc_manager.jl")
 include("test_correctness_mixed_links.jl")
 
 include("test_correctness_ad_fallback.jl")
+include("test_correctness_ad_jacobian_paths.jl")
+include("test_correctness_show_collocation.jl")
 
 include("test_correctness_solve_vocabulary.jl")
 include("test_correctness_constraint_scale.jl")
