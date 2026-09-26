@@ -9,6 +9,7 @@
 #' smoother to the filtered solution.
 
 using Epicycle
+using EpicycleIO
 using LinearAlgebra
 
 #' ## Configuration
@@ -114,3 +115,47 @@ println("postfit RMS, range  : ", round(settled(range_post) * 1e3, digits = 2),
         " m    (noise 15 m)")
 println("postfit RMS, Doppler: ", round(settled(doppler_post) * 1e6, digits = 2),
         " mm/s (noise 20 mm/s)")
+
+#' ## Plot the Residuals
+#'
+#' Each `EKFRecord` carries the epoch, the postfit residual and the updated covariance, so the
+#' residuals and the formal sigma they should sit inside come from the same record.
+
+# Pair each record with its epoch, station and measurement type
+recs  = fit.ekf.records
+rows  = [(r.t / 3600, r.postfit[1], o.participant_1, o.measurement_type)
+         for (r, o) in zip(recs, records)]
+
+# Add one trace per station, in a function so the loop variables stay out of Main
+function plot_station!(panel, kind, station, colour, scale)
+    sel = [x for x in rows if x[4] === kind && x[3] == station]
+    xyplot!(panel, [x[1] for x in sel], [x[2] * scale for x in sel];
+            mode = "markers", name = station, marker_color = colour)
+end
+
+const STATION_COLOURS = (("DSS-14", "rgb(30,90,200)"), ("DSS-43", "rgb(230,90,30)"))
+
+# Plot the range residuals in metres, one trace per station
+for (station, colour) in STATION_COLOURS
+    plot_station!("EKF Range Residuals", :RANGE, station, colour, 1e3)
+end
+panel!("EKF Range Residuals";
+       xaxis_title = "hours from epoch", yaxis_title = "range residual (m)",
+       legend_orientation = "h")
+
+# Plot the Doppler residuals in millimetres per second, one trace per station
+for (station, colour) in STATION_COLOURS
+    plot_station!("EKF Doppler Residuals", :DOPPLER, station, colour, 1e6)
+end
+panel!("EKF Doppler Residuals";
+       xaxis_title = "hours from epoch", yaxis_title = "Doppler residual (mm/s)",
+       yaxis_range = [-120.0, 120.0],   # six sigma of the 20 mm/s simulated noise
+       legend_orientation = "h")
+
+# Plot the formal position sigma as the filter converges
+t_all = [r.t for r in recs] ./ 3600
+sig_r = [sqrt(r.P_post[1, 1] + r.P_post[2, 2] + r.P_post[3, 3]) * 1e3 for r in recs]
+xyplot("EKF Position Sigma", t_all, sig_r)
+panel!("EKF Position Sigma";
+       xaxis_title = "hours from epoch", yaxis_title = "position sigma (m)",
+       yaxis_type = "log")

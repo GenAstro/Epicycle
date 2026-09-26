@@ -8,6 +8,7 @@
 #' reports the recovered state error and posterior uncertainty.
 
 using Epicycle
+using EpicycleIO
 using LinearAlgebra
 
 #' ## Configuration
@@ -71,7 +72,7 @@ problem = ODProblem(spacecraft = sat,
                     solve_for = [y0])
 
 # Solve with batch least squares
-fit = solve!(problem, records; method = Batch(n_iters = 10, tol = 1e-9))
+fit = solve!(problem, records; method = Batch(n_iters = 10, tol = 1e-9, verbose = true))
 
 # Report the solution, errors, and computed posterior covariance
 err = fit.X_hat .- y_truth
@@ -81,3 +82,26 @@ println("velocity error : ", round.(err[4:6] .* 1e6, digits = 2), " mm/s")
 println("formal sigma   : ", round.(fit.sigma[1:3] .* 1e3, digits = 2), " m")
 println("formal sigma   : ", round.(fit.sigma[4:6] .* 1e6, digits = 2), " mm/s")
 
+#' ## Plot the Residuals
+#'
+#' `fit.residuals` holds one vector per observation, in the order the records were supplied, so
+#' the residuals split by measurement type the same way the records do.
+
+# Split the converged residuals and their times by measurement type
+hours   = [r.t_receive - epoch for r in records] ./ 3600
+resid   = [r[1] for r in fit.residuals]
+is_rng  = [r.measurement_type === :RANGE for r in records]
+
+# Plot the range residuals in metres
+xyplot("Batch Range Residuals", hours[is_rng], resid[is_rng] .* 1e3;
+       mode = "markers", name = "residual")
+panel!("Batch Range Residuals";
+       xaxis_title = "hours from epoch", yaxis_title = "range residual (m)",
+       yaxis_range = [-60.0, 60.0])     # four sigma of the 15 m simulated noise
+
+# Plot the Doppler residuals in millimetres per second
+xyplot("Batch Doppler Residuals", hours[.!is_rng], resid[.!is_rng] .* 1e6;
+       mode = "markers", name = "residual")
+panel!("Batch Doppler Residuals";
+       xaxis_title = "hours from epoch", yaxis_title = "Doppler residual (mm/s)",
+       yaxis_range = [-80.0, 80.0])     # four sigma of the 20 mm/s simulated noise

@@ -14,6 +14,7 @@
 #' The `LGL` transcription is **Enterprise**, provided by the `EpicycleEnterprise` package.
 
 using Epicycle
+using EpicycleIO
 using EpicycleEnterprise
 
 #' ## Configuration
@@ -99,3 +100,18 @@ println("status    : ", result.info)
 println("parameter : ", round(get_param_value(phase)[1], digits = 6), "   (truth 0.1)")
 println("x_f       : ", round(get_final_state(phase).x, digits = 6), "   (truth 0.904837)")
 println("cost      : ", round(result.objective, digits = 8), "   (truth 0.0)")
+
+#' ## Plot the Solution
+#'
+#' `state` and `control` return the converged mesh, one column per node, and `get_node_times`
+#' the times they sit at. The truth decays as `exp(-0.1 t)`, so the fit is plotted against it.
+
+# Read the converged mesh
+t = get_node_times(phase)
+y = state(phase)
+
+# Plot the identified decay against the truth
+xyplot("Parameter Identification", t, y[1, :]; name = "identified")
+xyplot!("Parameter Identification", t, exp.(-0.1 .* t); name = "truth  exp(-0.1 t)")
+panel!("Parameter Identification";
+       xaxis_title = "t", yaxis_title = "x", legend_orientation = "h")

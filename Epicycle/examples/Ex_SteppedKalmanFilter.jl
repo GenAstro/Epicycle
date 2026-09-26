@@ -13,6 +13,7 @@
 #' observation and the next.
 
 using Epicycle
+using EpicycleIO
 using LinearAlgebra
 
 #' ## Configuration
@@ -145,3 +146,33 @@ println("postfit RMS, range  : ", round(settled(range_post) * 1e3, digits = 2),
 println("postfit RMS, Doppler: ", round(settled(doppler_post) * 1e6, digits = 2),
         " mm/s (noise 20 mm/s)")
 println("final sigma, position: ", round(sigma_position[end] * 1e3, digits = 2), " m")
+
+#' ## Plot the Residuals
+#'
+#' The loop above recorded a postfit residual and a position sigma at each observation, so both
+#' plot against the same `obs_times`.
+
+# Split the residuals and their times by measurement type
+hours   = obs_times ./ 3600
+t_rng   = hours[is_range]
+t_dop   = hours[.!is_range]
+
+# Plot the range residuals in metres
+xyplot("Stepped Filter Range Residuals", t_rng, range_post .* 1e3;
+       mode = "markers", name = "postfit")
+panel!("Stepped Filter Range Residuals";
+       xaxis_title = "hours from epoch", yaxis_title = "range residual (m)",
+       yaxis_range = [-90.0, 90.0])     # six sigma of the 15 m simulated noise
+
+# Plot the Doppler residuals in millimetres per second
+xyplot("Stepped Filter Doppler Residuals", t_dop, doppler_post .* 1e6;
+       mode = "markers", name = "postfit")
+panel!("Stepped Filter Doppler Residuals";
+       xaxis_title = "hours from epoch", yaxis_title = "Doppler residual (mm/s)",
+       yaxis_range = [-120.0, 120.0])   # six sigma of the 20 mm/s simulated noise
+
+# Plot the formal position sigma as the filter converges
+xyplot("Stepped Filter Position Sigma", hours, sigma_position .* 1e3)
+panel!("Stepped Filter Position Sigma";
+       xaxis_title = "hours from epoch", yaxis_title = "position sigma (m)",
+       yaxis_type = "log")
