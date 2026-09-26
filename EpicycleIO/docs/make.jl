@@ -27,3 +27,12 @@ makedocs(;
     ],
     warnonly=[:missing_docs, :cross_references],   # doctests and examples are fatal
 )
+
+deploydocs(;
+    repo="github.com/GenAstro/Epicycle",
+    target="build",
+    dirname="EpicycleIO",
+    devbranch="main",
+    push_preview=true,
+    deploy_config=Documenter.GitHubActions()  # Uses GITHUB_TOKEN
+)
