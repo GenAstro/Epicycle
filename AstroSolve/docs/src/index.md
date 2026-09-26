@@ -4,60 +4,46 @@ CurrentModule = AstroSolve
 
 # AstroSolve
 
-AstroSolve provides tools for parameter optimization, optimal control, and orbit estimation.
-Parameter optimization solves for maneuvers, states, epochs, and other adjustable quantities along a
-propagated trajectory. Optimal control supports Hermite-Simpson and Legendre-Gauss-Lobatto
-collocation, Sims-Flanagan low-thrust transcription, EMTG's MGA-nDSM transcription, and
-zero-order-hold finite-burn multiple shooting. Orbit estimation includes batch least squares, an
-extended Kalman filter with UDU-factorized covariance, and a Rauch-Tung-Striebel smoother.
+AstroSolve provides parameter optimization, optimal control, and orbit estimation capablity. Parameter
+optimization adjusts maneuver components, spacecraft states, epochs, model parameters, and other
+finite sets of values to meet mission constraints. The optimal-control subsystem supports methods
+including Hermite-Simpson and Legendre-Gauss-Lobatto collocation, Sims-Flanagan low-thrust
+optimization, EMTG's MGA-nDSM formulation, and zero-order-hold finite-burn multiple shooting.
 Legendre-Gauss-Lobatto collocation and zero-order-hold multiple shooting are available in
 Enterprise.
 
-AstroSolve represents a trajectory as a directed acyclic graph of events and intervals, following
-the approach used in NASA's Copernicus system. Optimization and estimation use the same forms for
-declaring variables and constraints.
+The estimation subsystem provides batch least squares, an extended Kalman filter with
+UDU-factorized covariance, and Rauch-Tung-Striebel smoothing. AstroSolve models two-way range and
+Doppler measurements, simulates tracking data, and reads and writes CCSDS Tracking Data Messages.
 
-Partial derivatives can be supplied analytically or computed with automatic differentiation, and a
-problem can use both sources. Each phase selects its own transcription, so one trajectory can
-combine collocation and shooting methods. Parameter-optimization sequences use finite differences.
+All three problem types use the same concepts for variables, contraints, and objectives wherever 
+logical to configure and solve problems. Trajectories are directed acyclic graphs of events and
+intervals, following the approach used in NASA's Copernicus system. A trajectory may contain
+propagation events, impulsive manuevers, optimal-control phases, branches, merges, or several 
+transcription methods.
 
-References:
-
-- Betts, J. T. (2010), *Practical Methods for Optimal Control and Estimation Using Nonlinear
-  Programming*, 2nd ed., SIAM.
-- Bryson, A. E., and Ho, Y.-C. (1975), *Applied Optimal Control*, Hemisphere.
-- Hughes, S. P. (2026), "A Transcription-Agnostic Formulation for Optimal Control and Estimation
-  in Astrodynamics," AAS/AIAA Astrodynamics Specialist Conference, Vancouver, British Columbia,
-  July 2026.
-- Sims, J., and Flanagan, S. (1999), "Preliminary Design of Low-Thrust Interplanetary Missions,"
-  AAS/AIAA Astrodynamics Specialist Conference, AAS 99-338.
-- Tapley, B. D., Schutz, B. E., and Born, G. H. (2004), *Statistical Orbit Determination*, Elsevier.
-- Williams, J., Falck, R., and Beekman, I. (2018), "Application of Modern Fortran to Spacecraft
-  Trajectory Design and Optimization," AIAA/AAS Space Flight Mechanics Meeting.
-  [Online](https://ntrs.nasa.gov/api/citations/20180000413/downloads/20180000413.pdf)
+Partial derivatives may be supplied analytically or computed with automatic differentiation, and
+both sources may be used within one problem. Parameter-optimization sequences use finite
+differences.
 
 ## Installation
 
-Versions through 0.4.0 are in Julia's General registry. From the next version AstroSolve is
-released under the Gen Astro Source Available License, which General does not carry, so later
-versions come from the Gen Astro registry. Add it once, then install as usual:
+To install the latest version of AstroSovle, first add the local registry (the app store, for those unfamiliar with Julia), then install as usual:
 
 ```julia
 using Pkg
-Pkg.Registry.add(RegistrySpec(url = "https://github.com/GenAstro/GenAstro.git"))
+Pkg.Registry.add(RegistrySpec(url = "https://github.com/GenAstro/GenAstroRegistry.git"))
 Pkg.add("AstroSolve")
 ```
-
-General is still required, since these packages depend on packages registered there. Installing
-without the Gen Astro registry resolves to 0.4.0, the last version General carries, and
-reports nothing about the newer ones.
+!!! note
+    Some packages originally registered in the Julia General registry, including AstroSolve, have moved to the GenAstro local registry. If you do not add the local registry as shown above, you will install only the first MVP release of AstroSolve.
 
 ## Quick Start
 
-A targeting problem uses three functions. `Vary` declares what the solver may change,
-`Constraint` declares what must hold, and `solve!` solves the problem. This example varies one burn
-and constrains the radius reached after the coast. The result is the first burn of a Hohmann
-transfer from 7,000 km to geostationary radius.
+This example below solves the Hohmann transfer from a 7,000 km circular orbit to
+geostationary radius. `Vary` identifies the burn component the solver may change, `Constraint`
+sets the radius that must be reached at apoapsis, and `solve!` runs the optimization.
+Examples that use formal transcriptions, and estimation examples, are documented in later sections. 
 
 ```julia
 using Epicycle
@@ -88,59 +74,41 @@ In the REPL, `?` enters help mode: `?Vary` gives every way a variable is declare
 
 ## Parameter optimization
 
-The unknowns are a finite set of values with propagation between them: the components of a
-maneuver, a state at epoch, or a launch date. A sequence is written either as a `target!` block that
-reads in flight order, as above, or as `Event`s assembled into a `Sequence` when the shape of the
-problem is decided while it is being built. The block is a layer over the events and reaches the
-same solver.
+Parameter optimization adjusts a finite set of variables to meet a set of mission contraints. 
+It supports problems such as targeting an apogee, designing a maneuver sequence,
+selecting an epoch, or identifying a model parameter.  In Epicycle, paramater optimization currenty 
+uses finite differencing for partial derivatives. 
 
-[Parameter optimization](optimization.md) covers variables and bounds, where a constraint may be
-placed, both ways of writing a sequence, and what to check when one does not converge. Five worked
-examples run from a single targeted burn to a three-burn GEO transfer written both ways.
+The [Parameter optimization](optimization.md) guide develops the quick-start problem, then writes a
+three-burn GEO transfer in both supported forms including an Event graph and a simple Domain Specific Language
+simlar to GMAT's Target command. A `target!` defines the event sequence `Event` sequences that defines the
+problem structure including branching and merging elements. The guide also covers bounds, scaling, reports, and convergence.
 
 ## Optimal control
 
-The unknown is a control history rather than a few numbers, so the state and control at every point
-of a discretized arc become variables. A phase holds the dynamics, the state and control types, the
-span, and the transcription that discretizes it.
+Optimal control determines the state and control histories over one or more trajectory phases. It
+supports boundary and path constraints, terminal and integrated objectives, linked phases, and
+problems that combine collocation and shooting methods.
 
-<!-- doc-fragment -->
-```julia
-phase = CollocationPhase(name = :L1_to_L2, transcription = HermiteSimpson(n_steps = 50),
-                         dynamics = cr3bp!, model = μ, state = CRState, control = CRControl,
-                         tspan = (0.0, tf))
-```
+The [Optimal control](optimal_control.md) guide begins with a collocation solution of the
+brachistochrone, then introduces shooting with a Sims-Flanagan interplanetary transfer. It covers
+states, controls, dynamics, bounds, boundary and path constraints, objectives, derivatives, and
+phase links. A mixed-transcription example shows how different methods can be used within one
+trajectory. 
 
-Open Epicycle ships Hermite-Simpson collocation, Sims-Flanagan, and MGA with deep-space
-maneuvers; Enterprise adds Legendre-Gauss-Lobatto collocation and zero-order-hold multiple
-shooting. Naming a different transcription changes nothing else in the problem, and one trajectory
-may use several.
-
-[Optimal control](optimal_control.md) covers the dynamics signature, declared partials and the
-automatic-differentiation fallback, each transcription's own keywords, where constraints and
-objectives attach, and linking phases. Eleven worked examples run, four of them classical problems
-with published answers.
+The section concludes with a library of solved examples. 
 
 ## Estimation
 
-The unknown is a state that was never measured directly, and the data are range and Doppler
-observations taken from the ground. The same `Vary` declares what is estimated, with the covariance
-that says how well it is known going in and how well the data determined it coming out.
+AstroSolve estimates a spacecraft state and other properties from measurement data. It provides
+batch processing for a complete tracking arc, sequential updates as observations arrive, and
+smoothing after the arc is complete.
 
-<!-- doc-fragment -->
-```julia
-y0 = Vary(state, sat; guess = guess,
-          covariance = Diagonal([1e2, 1e2, 1e2, 1e-2, 1e-2, 1e-2]))
-
-fit = solve!(problem, records; method = Batch(n_iters = 10, tol = 1e-9))
-```
-
-`Batch` fits the whole arc at once. `Sequential` runs an extended Kalman filter forward through the
-observations and sweeps a Rauch-Tung-Striebel smoother back over them.
-
-[Estimation](estimation.md) covers measurements and the units that carry them, simulating and
-reading tracking data, both estimators, process noise, and what comes back. Three worked examples
-run.
+The [Estimation](estimation.md) guide builds a tracking problem from simulated range and Doppler
+data. It first fits the complete arc with batch least squares, then processes the same kind of data
+sequentially with an extended Kalman filter and smoother. The guide covers a priori
+covariance, measurement noise, process noise, CCSDS tracking data, residuals, and solution
+covariance.
 
 ## Where to look next
 
@@ -152,4 +120,4 @@ run.
 - [Estimation](estimation.md) covers orbit determination, filtering, and smoothing.
 - [API reference](api.md) lists the exported names and presents the most common interfaces first.
 
-Docstrings carry the rest.
+Docstrings carry the full API reference.
