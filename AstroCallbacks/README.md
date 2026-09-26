@@ -18,7 +18,7 @@ versions come from the Gen Astro registry. Add it once, then install as usual:
 
 ```julia
 using Pkg
-Pkg.Registry.add(RegistrySpec(url = "https://github.com/GenAstro/GenAstro.git"))
+Pkg.Registry.add(RegistrySpec(url = "https://github.com/GenAstro/GenAstroRegistry.git"))
 Pkg.add("AstroCallbacks")
 ```
 
