@@ -1,0 +1,16 @@
+/* Centre the gallery images. A markdown image renders as an <img> in a paragraph, which is
+   left-aligned; raw HTML would centre it but Documenter does not rewrite paths inside raw
+   HTML, so the links break once prettyurls puts the page in its own directory. */
+article img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 90%;
+}
+
+/* Four that render larger than they need to. The selector matches the end of the src, so it
+   holds whatever path prefix Documenter gives the page. */
+article img[src$="Ex_EarthViewWithTrajectory.png"]  { max-width: 63%; }
+article img[src$="Ex_HohmannTransfer.png"]          { max-width: 63%; }
+article img[src$="Ex_SafetyEllipseTransfer.png"]    { max-width: 63%; }
+article img[src$="Ex_GravityAssistMGA.avif"]        { max-width: 63%; }
