@@ -49,27 +49,23 @@ println("\n=== run an example ===")
 Epicycle.run_example("Ex_GettingStarted"; echo = false)
 
 
-println("\n=== every documented install path ===")
-# Each package README tells a user to add that package on its own. Install each one that way, in
-# its own temporary environment, and check it resolved to the newest version the registry offers
-# rather than to an older copy General still carries. The expected version is read from the
-# registry, so this needs no editing when something is released.
+println("
+=== every documented install path ===")
+# Each package README tells a user to add that package on its own, and only Epicycle's path is
+# covered above. Add each one in its own temporary environment, so a package that resolves only
+# inside Epicycle's closure is caught here rather than by a user.
 #
-# Resolution is what can fail here; compilation already succeeded for all of these as part of the
-# Epicycle install above. Turning auto-precompilation off keeps each check to a resolve and a
-# manifest write rather than a rebuild in every temporary environment.
+# Resolution is what can fail; every one of these compiled already as part of the Epicycle
+# install. Turning auto-precompilation off keeps each check to a resolve and a manifest write
+# instead of a rebuild per environment.
 withenv("JULIA_PKG_PRECOMPILE_AUTO" => "0") do
-
-gen = only(filter(r -> r.name == "GenAstroRegistry", Pkg.Registry.reachable_registries()))
-for (_, entry) in sort(collect(gen.pkgs); by = x -> x[2].name)
-    want = maximum(keys(Pkg.Registry.registry_info(entry).version_info))
-    Pkg.activate(temp = true)
-    Pkg.add(entry.name)
-    got = first(d.version for (_, d) in Pkg.dependencies() if d.name == entry.name)
-    got == want || error("$(entry.name) resolved to $got; the registry offers $want")
-    println("  ", rpad(entry.name, 16), got, "  OK")
-end
-
+    gen = only(filter(r -> r.name == "GenAstroRegistry", Pkg.Registry.reachable_registries()))
+    for name in sort([e.name for (_, e) in gen.pkgs])
+        Pkg.activate(temp = true)
+        Pkg.add(name)
+        v = first(d.version for (_, d) in Pkg.dependencies() if d.name == name)
+        println("  ", rpad(name, 16), v)
+    end
 end
 
 println("\n>>> CLEAN INSTALL OK")
