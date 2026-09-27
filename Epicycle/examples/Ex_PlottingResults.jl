@@ -17,7 +17,6 @@
 #' generating either here would teach a second interface to explain the first.
 
 using Epicycle
-using EpicycleIO
 
 #' ## Configuration
 #'

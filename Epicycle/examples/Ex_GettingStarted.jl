@@ -8,7 +8,6 @@
 #' `ForceModel` and an `IntegratorConfig`, and end the propagation with a `StopAt` condition.
 
 using Epicycle
-using EpicycleIO
 
 #' ## The spacecraft
 #'

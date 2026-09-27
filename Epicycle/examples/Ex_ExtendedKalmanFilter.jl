@@ -9,7 +9,6 @@
 #' smoother to the filtered solution.
 
 using Epicycle
-using EpicycleIO
 using LinearAlgebra
 
 #' ## Configuration

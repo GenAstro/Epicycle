@@ -13,7 +13,6 @@
 #' The `LGL` transcription is **Enterprise**, provided by the `EpicycleEnterprise` package.
 
 using Epicycle
-using EpicycleIO
 using EpicycleEnterprise
 
 #' ## Configuration

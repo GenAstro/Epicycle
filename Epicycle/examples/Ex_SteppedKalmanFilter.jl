@@ -13,7 +13,6 @@
 #' observation and the next.
 
 using Epicycle
-using EpicycleIO
 using LinearAlgebra
 
 #' ## Configuration

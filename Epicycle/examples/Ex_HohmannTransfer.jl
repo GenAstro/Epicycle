@@ -8,7 +8,6 @@
 #' to that apoapsis, and the second maneuver circularizes the orbit.
 
 using Epicycle
-using EpicycleIO
 
 #' ## Configuration
 #'

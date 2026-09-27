@@ -11,7 +11,6 @@
 #' Ho report 0.554 s.
 
 using Epicycle
-using EpicycleIO
 using LinearAlgebra
 
 #' ## Problem Formulation

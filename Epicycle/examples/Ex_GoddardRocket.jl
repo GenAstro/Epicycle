@@ -12,7 +12,6 @@
 #' and boundary conditions.
 
 using Epicycle
-using EpicycleIO
 
 #' ## Problem Formulation
 #'

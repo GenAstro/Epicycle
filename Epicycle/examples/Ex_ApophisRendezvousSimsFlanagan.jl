@@ -14,7 +14,6 @@
 #' mass fixed.
 
 using Epicycle
-using EpicycleIO
 using LinearAlgebra
 using Printf
 

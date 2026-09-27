@@ -22,7 +22,6 @@
 #' - Koon, Lo, Marsden and Ross, *Chaos* 10(2), 2000.
 
 using Epicycle
-using EpicycleIO
 using LinearAlgebra
 
 #' ## Configuration

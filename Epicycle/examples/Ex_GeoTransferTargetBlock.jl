@@ -10,7 +10,6 @@
 #' evaluates the state produced by the operation immediately before it.
 
 using Epicycle
-using EpicycleIO
 
 #' ## Configuration
 #'

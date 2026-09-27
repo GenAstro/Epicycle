@@ -10,7 +10,6 @@
 #' gravitational parameter of one. CSALT reports a final radius of 1.5230.
 
 using Epicycle
-using EpicycleIO
 using LinearAlgebra
 
 #' ## Problem Formulation

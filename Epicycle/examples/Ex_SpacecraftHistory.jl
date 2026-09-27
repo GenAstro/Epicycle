@@ -8,7 +8,6 @@
 #' trajectory record.
 
 using Epicycle
-using EpicycleIO
 using LinearAlgebra
 
 #' ## Configuration

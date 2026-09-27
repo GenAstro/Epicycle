@@ -11,7 +11,6 @@
 #' after 1.397 units of time.
 
 using Epicycle
-using EpicycleIO
 
 #' ## Problem Formulation
 #'

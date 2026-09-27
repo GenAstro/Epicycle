@@ -11,7 +11,6 @@
 #' value and the constraint does all the work.
 
 using Epicycle
-using EpicycleIO
 using LinearAlgebra
 
 #' ## Problem Formulation

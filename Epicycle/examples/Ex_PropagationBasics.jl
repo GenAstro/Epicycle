@@ -8,7 +8,6 @@
 #' inspect a state can also stop propagation.
 
 using Epicycle
-using EpicycleIO
 
 #' ## Configuration
 #'

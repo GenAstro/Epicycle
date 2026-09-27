@@ -12,7 +12,6 @@
 #' geostationary radius, where the final burn circularizes the orbit.
 
 using Epicycle
-using EpicycleIO
 
 #' ## Configuration
 #'

@@ -12,7 +12,6 @@
 #' of `0.9375`.
 
 using Epicycle
-using EpicycleIO
 
 #' ## Problem Formulation
 #'

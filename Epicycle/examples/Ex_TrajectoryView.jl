@@ -16,7 +16,6 @@
 #' subject here is the view rather than the targeting. `Ex_HohmannTransfer` solves for them.
 
 using Epicycle
-using EpicycleIO
 using Printf
 
 #' ## Configuration

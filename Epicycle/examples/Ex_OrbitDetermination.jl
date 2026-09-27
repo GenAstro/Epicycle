@@ -8,7 +8,6 @@
 #' reports the recovered state error and posterior uncertainty.
 
 using Epicycle
-using EpicycleIO
 using LinearAlgebra
 
 #' ## Configuration
