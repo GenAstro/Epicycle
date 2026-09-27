@@ -28,12 +28,12 @@ differences.
 
 ## Installation
 
-To install the latest version of AstroSolve, first add the local registry (the app store, for those unfamiliar with Julia), then install as usual:
+To install the latest version of AstroSolve, add both registries (a registry is the app store, for those unfamiliar with Julia), then install as usual:
 
 ```julia
 using Pkg
-Pkg.Registry.add(RegistrySpec(url = "https://github.com/GenAstro/GenAstroRegistry.git"))
-Pkg.add("AstroSolve")
+pkg"registry add General https://github.com/GenAstro/GenAstroRegistry.git"
+pkg"add AstroSolve"
 ```
 !!! note
     Some packages originally registered in the Julia General registry, including AstroSolve, have moved to the GenAstro local registry. If you do not add the local registry as shown above, you will install only the first MVP release of AstroSolve.

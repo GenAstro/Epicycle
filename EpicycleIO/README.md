@@ -18,11 +18,13 @@ as usual:
 
 ```julia
 using Pkg
-Pkg.Registry.add(RegistrySpec(url = "https://github.com/GenAstro/GenAstroRegistry.git"))
-Pkg.add("EpicycleIO")
+pkg"registry add General https://github.com/GenAstro/GenAstroRegistry.git"
+pkg"add EpicycleIO"
 ```
 
-General is still required, since these packages depend on packages registered there.
+General is named in that command for two reasons: the dependencies live there, and Julia
+installs it by itself only while no registry is present at all, so adding the Gen Astro
+registry alone would leave it out.
 
 ## Usage
 

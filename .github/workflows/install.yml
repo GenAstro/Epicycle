@@ -1,0 +1,41 @@
+# Install Epicycle from the published registries on each supported platform.
+#
+# This is deliberately separate from ci.yml. That workflow tests the commit, building from the
+# working tree with Pkg.develop; this one tests what a user gets, which is the last released
+# version and changes only when something is registered. Keeping them apart also keeps three
+# cold installs and three SPICE downloads off every push.
+
+name: Registry install
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly, so a break in a dependency surfaces without anyone pushing.
+    - cron: '0 6 * * 1'
+
+jobs:
+  install:
+    name: ${{ matrix.os }} / julia ${{ matrix.julia }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Report every combination. Knowing which platform or version failed is the whole point,
+      # and the jobs run in parallel, so six cost the same wall-clock as one.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        # 1.12 is what we support. 1.13 is what a Julia installer hands a new user today, so we
+        # need to know whether to warn them off it.
+        julia: ['1.12', '1.13']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.julia }}
+
+      # No cache. A warm depot would hide exactly the failure this job exists to catch.
+      - name: Install from the registry and run an example
+        run: julia --project=@epicycle-install ci/clean_install_test.jl

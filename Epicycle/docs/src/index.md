@@ -17,11 +17,14 @@ To install the latest version of Epicycle, first add the local registry (the app
 
 ```julia
 using Pkg
-Pkg.Registry.add(
-    RegistrySpec(url = "https://github.com/GenAstro/GenAstroRegistry.git")
-)
-Pkg.add("Epicycle")
+pkg"registry add General https://github.com/GenAstro/GenAstroRegistry.git"
+pkg"add Epicycle"
 ```
+
+Both registries go in one command, and General has to be named. Julia installs General by itself
+only while no registry is present at all, so adding the Gen Astro registry on its own would leave
+General out and the dependencies unresolvable. Naming a registry that is already installed prints
+a line saying so and changes nothing.
 
 !!! note
     Some packages originally registered in the Julia General registry, including AstroModels, AstroProp, and AstroSolve, have moved to the GenAstro local registry. If you do not add the local registry as shown above, you will install only the first MVP release of Epicycle.

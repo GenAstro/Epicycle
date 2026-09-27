@@ -28,17 +28,18 @@ The module supports multiple initialization patterns for spacecraft objects, all
 
 Versions through 0.2.0 are in Julia's General registry. From the next version AstroModels is
 released under the Gen Astro Source Available License, which General does not carry, so later
-versions come from the Gen Astro registry. Add it once, then install as usual:
+versions come from the Gen Astro registry. Add both registries once, then install as usual:
 
 ```julia
 using Pkg
-Pkg.Registry.add(RegistrySpec(url = "https://github.com/GenAstro/GenAstroRegistry.git"))
-Pkg.add("AstroModels")
+pkg"registry add General https://github.com/GenAstro/GenAstroRegistry.git"
+pkg"add AstroModels"
 ```
 
-General is still required, since these packages depend on packages registered there. Installing
-without the Gen Astro registry resolves to 0.2.0, the last version General carries, and
-reports nothing about the newer ones.
+General is named in that command for two reasons: the dependencies live there, and Julia
+installs it by itself only while no registry is present at all, so adding the Gen Astro
+registry alone would leave it out. Installing without the Gen Astro registry resolves to 0.2.0,
+the last version General carries, and reports nothing about the newer ones.
 
 ## Documentation
 

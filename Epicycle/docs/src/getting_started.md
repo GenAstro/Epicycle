@@ -3,7 +3,7 @@
 
 ## Installing Julia
 
-Epicycle requires Julia 1.10 or later. For installation instructions, see the [Julia Downloads page](https://julialang.org/install/). Platform-specific guides are available for Windows, macOS, and Linux.
+Epicycle is built and tested on Julia 1.12. For installation instructions, see the [Julia Downloads page](https://julialang.org/install/). Platform-specific guides are available for Windows, macOS and Linux.
 
 ## Installing VS Code
 
@@ -25,11 +25,14 @@ To install the latest version of Epicycle, first add the local registry (the app
 
 ```julia
 using Pkg
-Pkg.Registry.add(
-    RegistrySpec(url = "https://github.com/GenAstro/GenAstroRegistry.git")
-)
-Pkg.add("Epicycle")
+pkg"registry add General https://github.com/GenAstro/GenAstroRegistry.git"
+pkg"add Epicycle"
 ```
+
+Both registries go in one command, and General has to be named. Julia installs General by itself
+only while no registry is present at all, so adding the Gen Astro registry on its own would leave
+General out and the dependencies unresolvable. Naming a registry that is already installed prints
+a line saying so and changes nothing.
 
 !!! note
     Some packages originally registered in the Julia General registry, including AstroModels, AstroProp, and AstroSolve, have moved to the GenAstro local registry. If you do not add the local registry as shown above, you will install only the first MVP release of Epicycle.
@@ -76,8 +79,10 @@ sat = Spacecraft(
 registry has not been added. Run the `Pkg.Registry.add` line above, then `Pkg.Registry.update()`,
 and try again.
 
-Epicycle requires Julia 1.10 or later. On an older release Pkg reports that the julia version
-requirement is not satisfied rather than that the package is missing; check with `julia --version`.
+A run that resolves and installs, then fails while precompiling its dependencies, may be the Julia
+version. Check it with `julia --version`. Epicycle is tested on 1.12, and the package bounds are
+wider than that, so a version Pkg accepts is not necessarily one that builds; the symptom is
+precompilation errors rather than a version message from Pkg.
 
 A dependency conflict in an environment that already holds other packages is usually a version
 bound Epicycle cannot meet. Installing into a fresh environment with `Pkg.activate(temp=true)`
