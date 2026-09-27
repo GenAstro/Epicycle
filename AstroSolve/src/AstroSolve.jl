@@ -61,7 +61,7 @@ export SimsFlanagan, SimsFlanaganPhase, MGAnDSMs, MGAnDSMsPhase
 export state, control, parameter, segment_durations
 export initial_time, final_time, initial_state, final_state
 export departure_vinf, arrival_vinf, initial_mass, final_mass
-export deep_space_dv, arc_fractions, forward_control, backward_control
+export deep_space_dv, arc_fractions, forward_control, backward_control, trajectory
 
 # Reading a solved phase.
 export get_initial_state, get_final_state, get_initial_time, get_final_time

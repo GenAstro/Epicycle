@@ -15,3 +15,7 @@ It is composed from two third-party assets, and it is only as clear as they are.
 ## MainPageTrajectoryGraphic.png
 
 Epicycle's own output, produced by the package's 3D view.
+
+## gallery
+
+Epicycle's own output: each image is what an example script in `Epicycle/examples/` draws.

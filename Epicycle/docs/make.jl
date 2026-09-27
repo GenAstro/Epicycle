@@ -62,7 +62,7 @@ makedocs(;
     format=Documenter.HTML(;
         canonical="https://GenAstro.github.io/Epicycle/",
         edit_link="main",
-        assets=String[],
+        assets=["assets/gallery.css"],
         sidebar_sitename=false,
         collapselevel=1,
     ),
@@ -70,6 +70,7 @@ makedocs(;
         "Home" => "index.md",
         "Getting Started" => "getting_started.md",
         "Packages" => "packages.md",
+        "Gallery" => "gallery.md",
         "Examples" => EXAMPLE_NAV,
     ],
     # Each package's doctests run in its own build, with its own DocTestSetup. The

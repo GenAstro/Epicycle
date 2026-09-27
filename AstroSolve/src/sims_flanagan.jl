@@ -1393,6 +1393,29 @@ end
 # path constraint reads; the thrust ball |u| <= 1 is written with it.
 control(c::SFPathContext)              = c.control
 
+"""
+    trajectory(phase) -> Matrix{Float64}
+
+The solved arc, one column per node, from departure to arrival.
+
+# Arguments
+- `phase::SimsFlanaganPhase`: a phase that has been solved.
+
+# Notes
+The segments propagate from each end to a match point, so the stored halves run in opposite
+directions. This returns them joined in flight order, with the match point appearing once. Rows
+are position and velocity in the frame the phase was built in.
+
+# Returns
+A `6 × n` matrix.
+
+# Example
+```julia
+arc = trajectory(phase)
+```
+"""
+trajectory(p::SimsFlanaganPhase) = hcat(p._states_fwd, p._states_bwd[:, end-1:-1:1])
+
 # Quantities on a Sims-Flanagan phase.
 state(p::SimsFlanaganPhase)            = p._x0
 final_state(p::SimsFlanaganPhase)      = p._xf

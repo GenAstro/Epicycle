@@ -29,3 +29,7 @@ a separate source.
 
 A second copy of these files, plus a `DeepSpace1.glb` that the same source covers, was removed from
 this repository on 2026-09-24. The copies recorded above are the ones that ship.
+
+## gallery
+
+Epicycle's own output: each image is what an example script in `Epicycle/examples/` draws.

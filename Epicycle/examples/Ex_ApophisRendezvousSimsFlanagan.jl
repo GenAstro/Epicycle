@@ -14,6 +14,7 @@
 #' mass fixed.
 
 using Epicycle
+using EpicycleIO
 using LinearAlgebra
 using Printf
 
@@ -185,3 +186,63 @@ coasting = count(<(0.01), magnitudes(forward_control(phase))) +
 @printf("delivered mass : %.3f kg\n", mf)
 @printf("propellant     : %.3f kg\n", M0 - mf)
 @printf("coasting       : %d of %d segments\n", coasting, N_SEGMENTS)
+
+#' ## Plot the Transfer
+#'
+#' `trajectory` returns the solved arc in flight order, and the two controls give one impulse per
+#' segment. Each body's orbit is sampled from the same ephemeris the phase was built with.
+
+# Sample one revolution of each body's orbit
+function orbit_track(ephemeris, a)
+    ts = range(0.0, 2pi * sqrt(a^3 / MU_SUN); length = 400)
+    r  = [ephemeris(t)[1] for t in ts]
+    return [p[1] / AU for p in r], [p[2] / AU for p in r]
+end
+
+earth_x, earth_y = orbit_track(earth_ephemeris, EARTH_A)
+apophis_x, apophis_y = orbit_track(apophis_ephemeris, APOPHIS_A)
+
+# Read the solved arc
+arc   = trajectory(phase)
+arc_x = arc[1, :] ./ AU
+arc_y = arc[2, :] ./ AU
+
+# Place each impulse at the midpoint of the segment it acts on
+u_all = hcat(forward_control(phase), backward_control(phase))
+mid_x = [0.5 * (arc_x[k] + arc_x[k+1]) for k in 1:size(u_all, 2)]
+mid_y = [0.5 * (arc_y[k] + arc_y[k+1]) for k in 1:size(u_all, 2)]
+
+# Build one NaN-separated segment per arrow, scaled to a readable fraction of the figure
+span  = max(maximum(arc_x) - minimum(arc_x), maximum(arc_y) - minimum(arc_y))
+scale = 0.08 * span / maximum(magnitudes(u_all))
+ax, ay = Float64[], Float64[]
+for k in eachindex(mid_x)
+    push!(ax, mid_x[k], mid_x[k] + scale * u_all[1, k], NaN)
+    push!(ay, mid_y[k], mid_y[k] + scale * u_all[2, k], NaN)
+end
+
+# Draw the two orbits, the transfer, and the thrust direction
+xyplot("Apophis Transfer", earth_x, earth_y; name = "Earth orbit", line_dash = "dot")
+xyplot!("Apophis Transfer", apophis_x, apophis_y; name = "Apophis orbit", line_dash = "dot")
+xyplot!("Apophis Transfer", arc_x, arc_y; name = "transfer")
+xyplot!("Apophis Transfer", ax, ay; name = "thrust direction")
+xyplot!("Apophis Transfer", [0.0], [0.0]; name = "Sun", mode = "markers")
+panel!("Apophis Transfer";
+       xaxis_title = "x (AU)", yaxis_title = "y (AU)",
+       yaxis_scaleanchor = "x", legend_orientation = "h")
+
+#' ## Plot the Throttle Profile
+#'
+#' `forward_control` and `backward_control` return one impulse per segment, so their magnitudes
+#' are the throttle profile the optimizer chose. The coasting segments counted above are the ones
+#' that fall to zero.
+
+# Magnitudes of the forward and backward impulses, in segment order
+throttle = vcat(magnitudes(forward_control(phase)),
+                reverse(magnitudes(backward_control(phase))))
+
+# Plot the throttle in segment order, from departure to arrival
+bar("Apophis Throttle", 1:length(throttle), throttle; name = "impulse magnitude")
+panel!("Apophis Throttle";
+       xaxis_title = "segment, departure to arrival",
+       yaxis_title = "impulse magnitude")
