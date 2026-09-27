@@ -3,6 +3,13 @@ on:
   push:
   pull_request:
 
+# Every package's `deploydocs` pushes to the same gh-pages branch. Two runs in flight at once
+# race, the loser's push is rejected with "cannot lock ref", and the docs build is recorded as
+# failed even though the documentation is fine. Queue runs instead of letting them overlap.
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
+
 jobs:
   ci-pipeline:
     name: CI Pipeline - All Phases

@@ -3,7 +3,7 @@
 
 ## Installing Julia
 
-Epicycle is built and tested on Julia 1.12. For installation instructions, see the [Julia Downloads page](https://julialang.org/install/). Platform-specific guides are available for Windows, macOS and Linux.
+Epicycle is built and tested on Julia 1.12 and 1.13, on Windows, macOS and Linux. For installation instructions, see the [Julia Downloads page](https://julialang.org/install/).
 
 ## Installing VS Code
 
@@ -80,9 +80,9 @@ registry has not been added. Run the `Pkg.Registry.add` line above, then `Pkg.Re
 and try again.
 
 A run that resolves and installs, then fails while precompiling its dependencies, may be the Julia
-version. Check it with `julia --version`. Epicycle is tested on 1.12, and the package bounds are
-wider than that, so a version Pkg accepts is not necessarily one that builds; the symptom is
-precompilation errors rather than a version message from Pkg.
+version. Check it with `julia --version`. Epicycle is tested on 1.12 and 1.13, and the package
+bounds are wider than that, so a version Pkg accepts is not necessarily one that builds; the
+symptom is precompilation errors rather than a version message from Pkg.
 
 A dependency conflict in an environment that already holds other packages is usually a version
 bound Epicycle cannot meet. Installing into a fresh environment with `Pkg.activate(temp=true)`
