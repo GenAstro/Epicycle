@@ -98,7 +98,15 @@ them.
 into the same observation records produced by `simulate`.
 
 ```julia
-file = TrackingDataFile("tracking.tdm", CCSDS_KVN())
+file = TrackingDataFile(tempname() * ".tdm", CCSDS_KVN())
+
+write_records(file, records,
+              TDMHeader("2020-03-01T12:00:00", "GEN ASTRO"),
+              [TDMSegmentMeta(time_system = "TT", participant_1 = "DSS-14",
+                              participant_2 = "Sat"),
+               TDMSegmentMeta(time_system = "TT", participant_1 = "DSS-43",
+                              participant_2 = "Sat")])
+
 tdm_records, header, segments = read_records(file)
 ```
 

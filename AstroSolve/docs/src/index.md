@@ -4,7 +4,7 @@ CurrentModule = AstroSolve
 
 # AstroSolve
 
-AstroSolve provides parameter optimization, optimal control, and orbit estimation capablity. Parameter
+AstroSolve provides parameter optimization, optimal control, and orbit estimation capability. Parameter
 optimization adjusts maneuver components, spacecraft states, epochs, model parameters, and other
 finite sets of values to meet mission constraints. The optimal-control subsystem supports methods
 including Hermite-Simpson and Legendre-Gauss-Lobatto collocation, Sims-Flanagan low-thrust
@@ -16,10 +16,10 @@ The estimation subsystem provides batch least squares, an extended Kalman filter
 UDU-factorized covariance, and Rauch-Tung-Striebel smoothing. AstroSolve models two-way range and
 Doppler measurements, simulates tracking data, and reads and writes CCSDS Tracking Data Messages.
 
-All three problem types use the same concepts for variables, contraints, and objectives wherever 
+All three problem types use the same concepts for variables, constraints, and objectives wherever 
 logical to configure and solve problems. Trajectories are directed acyclic graphs of events and
 intervals, following the approach used in NASA's Copernicus system. A trajectory may contain
-propagation events, impulsive manuevers, optimal-control phases, branches, merges, or several 
+propagation events, impulsive maneuvers, optimal-control phases, branches, merges, or several 
 transcription methods.
 
 Partial derivatives may be supplied analytically or computed with automatic differentiation, and
@@ -28,7 +28,7 @@ differences.
 
 ## Installation
 
-To install the latest version of AstroSovle, first add the local registry (the app store, for those unfamiliar with Julia), then install as usual:
+To install the latest version of AstroSolve, first add the local registry (the app store, for those unfamiliar with Julia), then install as usual:
 
 ```julia
 using Pkg
@@ -40,7 +40,7 @@ Pkg.add("AstroSolve")
 
 ## Quick Start
 
-This example below solves the Hohmann transfer from a 7,000 km circular orbit to
+The example below solves the Hohmann transfer from a 7,000 km circular orbit to
 geostationary radius. `Vary` identifies the burn component the solver may change, `Constraint`
 sets the radius that must be reached at apoapsis, and `solve!` runs the optimization.
 Examples that use formal transcriptions, and estimation examples, are documented in later sections. 
@@ -74,15 +74,15 @@ In the REPL, `?` enters help mode: `?Vary` gives every way a variable is declare
 
 ## Parameter optimization
 
-Parameter optimization adjusts a finite set of variables to meet a set of mission contraints. 
+Parameter optimization adjusts a finite set of variables to meet a set of mission constraints. 
 It supports problems such as targeting an apogee, designing a maneuver sequence,
-selecting an epoch, or identifying a model parameter.  In Epicycle, paramater optimization currenty 
+selecting an epoch, or identifying a model parameter.  In Epicycle, parameter optimization currently
 uses finite differencing for partial derivatives. 
 
 The [Parameter optimization](optimization.md) guide develops the quick-start problem, then writes a
-three-burn GEO transfer in both supported forms including an Event graph and a simple Domain Specific Language
-simlar to GMAT's Target command. A `target!` defines the event sequence `Event` sequences that defines the
-problem structure including branching and merging elements. The guide also covers bounds, scaling, reports, and convergence.
+three-burn GEO transfer in both supported forms: an event graph, and a domain-specific language similar to GMAT's
+`Target` command. `target!` defines the `Event` sequence that gives the problem its structure,
+including branching and merging elements. The guide also covers bounds, scaling, reports, and convergence.
 
 ## Optimal control
 

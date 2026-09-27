@@ -54,8 +54,7 @@ has a finite duration, such as a propagation that stops at periapsis or a finite
 
 A phase is an interval event represented by a transcription. It contains the dynamics, time span,
 state, control, and any static parameters needed for that part of the trajectory. A transcription
-may also introduce its own variables and constraints. Sims-Flanagan is one example, discussed
-below.
+may also introduce its own variables and constraints; Sims-Flanagan is one example.
 
 ## Variables, constraints, and objectives
 
