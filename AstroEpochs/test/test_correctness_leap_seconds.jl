@@ -6,16 +6,17 @@
 # Truth, by section:
 #   the list in use        the IERS list as IANA publishes it: the last change is 2017-01-01 to
 #                          37 s, and the list has not expired. Needs the network the first time.
-#   agreement with Tempo   Tempo.jl's built-in table, which is correct through 2017-01-01; every
-#                          date either side of every change must agree.
+#   the built-in table     the IERS list again: the table used offline, adapted from Tempo.jl, has
+#                          every change the list has through 2017-01-01, and every date either side
+#                          of every change reads the same value from both.
 #   the change itself      the definition: TAI − UTC steps at 0h UTC on the date in the list.
 #   a future leap second   a list with one more entry, parsed from text: dates after it read the
 #                          new value, which is the reason for downloading the list at all.
 
 using Test
 using AstroEpochs
-using AstroEpochs: Tempo, leap_second_table, tai_minus_utc, parse_leap_seconds,
-                   offset_utc2tai, offset_tai2utc, LeapSecondTable, _LEAP
+using AstroEpochs: leap_second_table, tai_minus_utc, parse_leap_seconds,
+                   offset_utc2tai, offset_tai2utc, LeapSecondTable, _LEAP, _builtin_leap_table
 
 const _J2000 = 2451545.0
 
@@ -27,17 +28,22 @@ const _J2000 = 2451545.0
     @test issorted(table.starts)
 end
 
-@testset "leap seconds — agree with Tempo either side of every change" begin
-    starts = Tempo.LEAPSECONDS.jd2000
-    # The table lookup agrees exactly. Tempo's offset functions pass the epoch through one
-    # floating-point Julian date and back, which costs up to about 1e-7 s; ours return the
-    # integer offset, so the offsets agree to that rounding and no further.
-    for d in starts, side in (-0.5, 0.5)
+@testset "leap seconds — the built-in table agrees with the IERS list" begin
+    builtin = _builtin_leap_table()
+    list    = leap_second_table()
+    n       = length(builtin.starts)
+    @test builtin.starts == list.starts[1:n]
+    @test builtin.delta  == list.delta[1:n]
+
+    # Either side of every change, the offset read back through the functions a conversion uses is
+    # the table's integer value, in both directions.
+    for (i, d) in enumerate(builtin.starts), side in (-0.5, 0.5)
         utc_days = d + side
-        @test tai_minus_utc(utc_days) == Tempo.leapseconds(utc_days)
-        @test offset_utc2tai(utc_days * 86_400) ≈ Tempo.offset_utc2tai(utc_days * 86_400) atol = 1e-6
-        tai_seconds = utc_days * 86_400 + tai_minus_utc(utc_days)
-        @test offset_tai2utc(tai_seconds) ≈ Tempo.offset_tai2utc(tai_seconds) atol = 1e-6
+        i == 1 && side < 0 && continue          # before 1972 there is no value, and it warns
+        expected = side < 0 ? builtin.delta[i - 1] : builtin.delta[i]
+        @test tai_minus_utc(utc_days) == expected
+        @test offset_utc2tai(utc_days * 86_400) == expected
+        @test offset_tai2utc(utc_days * 86_400 + expected) == -expected
     end
 end
 

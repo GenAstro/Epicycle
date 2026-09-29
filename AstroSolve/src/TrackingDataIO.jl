@@ -23,7 +23,7 @@ module TrackingDataIO
 using Printf
 using AstroEpochs
 using AstroEpochs: Time, UTC, TAI, TT, TDB, TCG, TCB, ISOT
-using AstroEpochs.Tempo: jd2cal
+using AstroEpochs: jd2cal          # AstroEpochs' calendar routine, adapted from Tempo.jl
 
 # =============================================================================
 # 1. Format tag

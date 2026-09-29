@@ -7,11 +7,19 @@ Module containing time system implementations for astronomical times.
 Supports high-precision time representations using dual-float Julian Date
 storage and conversions between scales such as TT, TAI, UTC, TDB, TCB, TCG.
 
-The API is inspired by AstroPy.Time. The numerics are built on Tempo.jl
+The API is inspired by AstroPy.Time. The time-scale offsets and the calendar arithmetic are
+adapted from Tempo.jl (MIT); see THIRD_PARTY_NOTICES.md.
+
+Organization. Every algorithm here is one of two kinds, and each has its own folder:
+- `scales/` changes which clock an instant is measured on: `offsets.jl` (TT, TAI, TCG, TDB, TCB),
+  `leap_seconds.jl` (UTC) and `graph.jl` (which pairs are joined, and how a conversion is routed).
+- `formats/` changes how an instant is written: `calendar.jl` (Gregorian ↔ Julian date) and
+  `formats.jl` (JD, MJD, ISOT).
+This file holds the types, the `Time` struct, its construction, accessors and arithmetic.
 
 Notes
 - Leap seconds come from the IERS leap-second list, downloaded on first use and refreshed when
-  it expires; see `leap_seconds.jl`. Other scale conversions come from Tempo.jl.
+  it expires; see `scales/leap_seconds.jl`.
 - This module currently mixes symbols and instances for time scales and formats.
   Future versions will standardize on typed tags (e.g., TT(), TDB(), JD()) to avoid ambiguity.
 
@@ -33,9 +41,8 @@ Notes
 module AstroEpochs
 
 using Printf
-using Tempo
 
-using EpicycleBase 
+using EpicycleBase
 
 export Time
 export TAI, TT, TDB, UTC, TCB, TCG
@@ -44,11 +51,15 @@ export refresh_leap_seconds!
 
 import Base: +,-
 
-const SECONDS_IN_DAY = 86400.0
-const MJD_EPOCH = Tempo.DJM0 
-const J2000_EPOCH = 2451545.0
+include("constants.jl")
 
-include("leap_seconds.jl")
+# Format transforms that need no Time: the calendar, which the leap-second table also uses.
+include("formats/calendar.jl")
+
+# Scale transforms: the offset functions, then the graph that joins them.
+include("scales/offsets.jl")
+include("scales/leap_seconds.jl")
+include("scales/graph.jl")
 
 abstract type AbstractTimeScale end
 abstract type AbstractTimeFormat end
@@ -228,41 +239,6 @@ Print a type name with parentheses for display.
 """
 _typename_paren(x) = string(nameof(typeof(x)), "()")
 
-# Define supported time scales and formats
-const TIME_FORMATS = Set([:jd, :mjd, :isot])
-const TIME_SCALES = Set([:tt, :tai, :tdb, :utc, :tcg, :tcb])
-
-# Predefined multi-hop paths between Time scales
-const MULTI_HOPS = Dict{Tuple{Symbol, Symbol}, Vector{Symbol}}(
-    (:tai, :tcb) => [:tt, :tdb],
-    (:tai, :tcg) => [:tt],
-    (:tai, :tdb) => [:tt],
-    (:tcb, :tcg) => [:tdb, :tt],
-    (:tcb, :tt)  => [:tdb],
-    (:tcb, :utc) => [:tdb, :tt, :tai],
-    (:tcg, :tdb) => [:tt],
-    (:tcg, :utc) => [:tt, :tai],
-    (:tdb, :utc) => [:tt, :tai],
-    (:tt, :utc)  => [:tai],
-)
-
-"""
-    const OFFSET_TABLE = Dict{Tuple{Symbol, Symbol}, Function}
-
-Maps adjacent pairs time scales to conversion functions.
-"""
-const OFFSET_TABLE = Dict{Tuple{Symbol, Symbol}, Function}(
-    (:tt, :tai)  => Tempo.offset_tt2tai,
-    (:tai, :tt)  => Tempo.offset_tai2tt,
-    (:tt, :tdb)  => Tempo.offset_tt2tdb,
-    (:tdb, :tt)  => Tempo.offset_tdb2tt,
-    (:tai, :utc) => offset_tai2utc,                # leap_seconds.jl: the IERS list, kept current
-    (:utc, :tai) => offset_utc2tai,
-    (:tcg, :tt)  => Tempo.offset_tcg2tt,
-    (:tcb,:tdb)  => Tempo.offset_tcb2tdb,
-    (:tt,:tcg)   => Tempo.offset_tt2tcg,
-    (:tdb,:tcb)  => Tempo.offset_tdb2tcb,
-)
 
 # Marks the constructor that takes Julian-date parts whatever the format; see `_time_jd`.
 struct _JDParts end
@@ -636,48 +612,6 @@ function Base.getproperty(t::Time, name::Symbol)
 
 end
 
-"""
-    _to_mjd(t::Time)
-
-Return time value in Modified Julian Date (MJD) format.
-"""
-@inline function _to_mjd(t::Time)
-    return (t.jd1 - MJD_EPOCH) + t.jd2
-end
-
-"""
-    _to_isot(t::Time)
-
-Return time value in ISOT format rounding to millisecond.
-"""
-function _to_isot(t::Time)
-    jd = t.jd1 + t.jd2
-    y, m, d, fd = Tempo.jd2cal(t.jd1,t.jd2)
-    h, mi, s = Tempo.fd2hms(fd)
-    return @sprintf("%04d-%02d-%02dT%02d:%02d:%06.3f", y, m, d, h, mi, s)
-end
-
-"""
-    _from_format(value::Real, scale::Symbol, format::Symbol) -> Time{T}
-
-Construct a Time{T} from a JD/MJD numeric value, preserving T = typeof(value).
-"""
-function _from_format(value::Real, scale::Symbol, format::Symbol)
-    T = typeof(value)
-    if format == :jd
-        jd1 = floor(T, value)
-        jd2 = T(value - jd1)
-        jd1, jd2 = _rebalance(jd1, jd2)
-        return _time_jd(jd1, jd2, scale, :jd)
-    elseif format == :mjd
-        jd1 = floor(T, value) + T(MJD_EPOCH)
-        jd2 = T(value - floor(T, value))
-        jd1, jd2 = _rebalance(jd1, jd2)
-        return _time_jd(jd1, jd2, scale, :mjd)
-    else
-        throw(ArgumentError("Internal Error: Unsupported time format: $format")) # COV_EXCL_LINE
-    end
-end
 
 """
     function _rebalance(jd1::Real, jd2::Real)
@@ -770,118 +704,7 @@ function Base.:(==)(a::Time, b::Time)
     return va == vb
 end
 
-"""
-    get_conversion_path(from::Symbol, to::Symbol) → Vector{Symbol}
+# Format transforms, which read and write a Time, so they come after it.
+include("formats/formats.jl")
 
-Returns conversion path from `from` to `to` time scales. 
-"""
-function get_conversion_path(from::Symbol, to::Symbol)::Vector{Symbol}
-    if from == to
-        return [from]
-    elseif haskey(MULTI_HOPS, (from, to))
-        return vcat(from, MULTI_HOPS[(from, to)], to)
-    elseif haskey(MULTI_HOPS, (to, from))
-        # reverse the forward path
-        revpath = reverse(MULTI_HOPS[(to, from)])
-        return vcat(from, revpath, to)
-    elseif haskey(OFFSET_TABLE, (from, to))
-        return [from, to]
-    elseif haskey(OFFSET_TABLE, (to, from))
-        return [from, to]  # still valid if OFFSET_TABLE has both directions
-    else
-        tag = s -> _scale_tag_str(s)
-        error("No known time scale conversion path from $(tag(from)) to $(tag(to))")
-    end
 end
-
-"""
-    apply_offsets(jd1, jd2, from::Symbol, to::Symbol)
-
-Applies sequence of scale conversions from `from` to `to`.
-"""
-function apply_offsets(jd1::Real, jd2::Real, from::Symbol, to::Symbol)
-    from === to && return _rebalance(jd1, jd2)
-
-    path = get_conversion_path(from, to)               # small vector; fine
-    T = promote_type(typeof(jd1), typeof(jd2))
-    jd1T = T(jd1); jd2T = T(jd2)
-    J2000_T = T(J2000_EPOCH)
-    inv_SECS_PER_DAY_T = inv(T(SECONDS_IN_DAY))
-
-    # Accumulate in days; rebalance once at the end to reduce churn
-    # TODO. Bug, offset is different for TCB etc. 
-    @inbounds for i in 1:(length(path)-1)
-        src = path[i]; dst = path[i+1]
-        offset_fn = OFFSET_TABLE[(src, dst)]
-        jd = jd1T + jd2T
-        seconds_since_j2000 = (jd - J2000_T) * (1 / inv_SECS_PER_DAY_T)  # == * SECONDS_IN_DAY
-        off_sec_T = convert(T, offset_fn(seconds_since_j2000))
-        jd2T += off_sec_T * inv_SECS_PER_DAY_T
-    end
-
-    return _rebalance(jd1T, jd2T)
-end
-    
-"""
-    _isot_to_date(isostr::String) → Tuple{Int, Int, Int, Int, Int, Real}
-
-Validate and parse an ISO 8601 string of the form `"YYYY-MM-DDTHH:MM:SS.sss"`.
-Returning calendar fields: `(year, month, day, hour, minute, second)`.
-"""
-function _isot_to_date(isostr::String)
-    # Match ISO 8601 format with optional fractional seconds
-    m = match(r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)$", isostr)
-    if m === nothing
-        throw(ArgumentError("Time: Invalid ISO 8601 format: $isostr"))
-    end
-
-    y  = parse(Int, m.captures[1])
-    mth = parse(Int, m.captures[2])
-    d  = parse(Int, m.captures[3])
-    h  = parse(Int, m.captures[4])
-    mi = parse(Int, m.captures[5])
-    s  = parse(Float64, m.captures[6])
-
-    # Semantic range checks
-    if !(1 <= mth <= 12)
-        throw(ArgumentError("Month must be between 1 and 12. Got: $mth"))
-    end
-    if !(1 <= d <= _days_in_month(y, mth))
-        throw(ArgumentError("Time: $isostr is not a date; " *
-                            "$(_MONTH_NAMES[mth]) $y has $(_days_in_month(y, mth)) days."))
-    end
-    if !(0 <= h < 24)
-        throw(ArgumentError("Hour must be between 0 and 23. Got: $h"))
-    end
-    if !(0 <= mi < 60)
-        throw(ArgumentError("Minute must be between 0 and 59. Got: $mi"))
-    end
-    if !(0.0 <= s < 60.0)
-        throw(ArgumentError("Seconds must be >= 0.0 and < 60.0. Got: $s"))
-    end
-    
-    return (y, mth, d, h, mi, s) 
-end
-
-const _MONTH_NAMES = ("January", "February", "March", "April", "May", "June", "July",
-                      "August", "September", "October", "November", "December")
-
-_is_leap_year(y) = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
-_days_in_month(y, m) = m == 2 ? (_is_leap_year(y) ? 29 : 28) : (m in (4, 6, 9, 11) ? 30 : 31)
-
-"""
-    calhms2jd_prec(Y::I, M::I, D::I, h::I, m::I, sec::N) where {I <: Integer, N <: Number}
-
-Convert calendar date and time to Julian Date
-"""
-function calhms2jd_prec(Y::I, M::I, D::I, h::I, m::I, sec::N) where {I <: Integer, N <: Number}
-    # TODO: Submit Patch to Tempo.jl
-    j2000_epoch, daysfrom_j2000 = Tempo.cal2jd(Y, M, D)
-    frac_of_day = Tempo.hms2fd(h, m, sec)
-
-    return Float64(j2000_epoch + daysfrom_j2000), frac_of_day - 0.5
-end
-
-end 
-
-

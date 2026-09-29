@@ -16,11 +16,11 @@ The AstroEpochs module provides time system implementations for astronomical app
 
 ## Acknowledgements
 
-The API for AstroEpochs is inspired by Astropy.Time. The numerics are built on Julia Space Mission Design's Tempo.jl library. AstroEpochs.jl is tested against Astropy.Time. 
+The API for AstroEpochs is inspired by Astropy.Time. The time-scale offsets and calendar arithmetic are adapted from Julia Space Mission Design's Tempo.jl library (MIT); see `THIRD_PARTY_NOTICES.md`. AstroEpochs.jl is tested against Astropy.Time.
 
 ## Comparison with Other Julia Time-Keeping Libraries
 
-Tempo.jl and AstroTime.jl also handle astronomical time in Julia. AstroTime.jl, from the JuliaAstro community, supports six time scales (TAI, TT, TCG, TCB, TDB and UT1) with a separate type for each scale, so a conversion changes the type. Tempo.jl supports UTC, TAI, TT, TDB, TCG and TCB with allocation-free conversions and changes scale without changing the type, which Epicycle's propagation and optimization rely on for performance. AstroEpochs builds on Tempo.jl, keeps the IERS leap-second list current itself, and follows the interface of Astropy's `Time`. 
+Tempo.jl and AstroTime.jl also handle astronomical time in Julia. AstroTime.jl, from the JuliaAstro community, supports six time scales (TAI, TT, TCG, TCB, TDB and UT1) with a separate type for each scale, so a conversion changes the type. Tempo.jl supports UTC, TAI, TT, TDB, TCG and TCB with allocation-free conversions and changes scale without changing the type, which Epicycle's propagation and optimization rely on for performance. AstroEpochs adapts Tempo.jl's offsets and calendar routines, keeps the IERS leap-second list current itself, and follows the interface of Astropy's `Time`. 
 
 ## Quick Start
 
@@ -157,7 +157,7 @@ the first time a session converts to or from UTC and no stored copy exists, and 
 stored copy has passed its expiry date. `refresh_leap_seconds!()` downloads it immediately.
 
 Without a network connection, an expired copy is used with a warning. With no copy at all, the
-table built into Tempo.jl is used, which ends at the 2017-01-01 leap second, also with a warning.
+built-in table is used, which ends at the 2017-01-01 leap second, also with a warning.
 A UTC date before 1972-01-01 has no leap-second value; AstroEpochs uses 0 and warns.
 
 ```@raw html

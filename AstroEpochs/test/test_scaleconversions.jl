@@ -71,7 +71,7 @@ end
     p == [:tcb]
 end
 
-# Lines 443–444: reverse single-edge path (temporarily remove forward edge)
+# get_conversion_path (scales/graph.jl): the reverse single-edge path (temporarily remove the forward edge)
 @test begin
     key_fwd = (:tt, :tai)
     key_rev = (:tai, :tt)

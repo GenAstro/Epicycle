@@ -65,7 +65,7 @@ end
 
 
 
-# Lines 439–440: reverse MULTI_HOPS path
+# get_conversion_path (scales/graph.jl): the reverse MULTI_HOPS path
 #@test begin
 #    p = AstroEpochs.get_conversion_path(:tcb, :tai)  
 #    p == [:tcb, :tdb, :tt, :tai]
