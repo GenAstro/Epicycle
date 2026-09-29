@@ -15,7 +15,8 @@ include("runtests_inputvalidation.jl")
 include("test_differentiation.jl")
 include("test_correctness_date_parts.jl")
 include("test_correctness_leap_seconds.jl")
-include("test_correctness_tempo_parity.jl")
+include("test_correctness_erfa_parity.jl")
+include("test_correctness_astropy_benchmark.jl")
 
 
 

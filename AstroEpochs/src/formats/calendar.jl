@@ -1,14 +1,16 @@
 # Copyright (C) 2026 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 #
-# Adapted from Tempo.jl v1.3.1, src/convert.jl (MIT License).
-# Copyright (c) 2022 Andrea Pasquale and Michele Ceresoli. See THIRD_PARTY_NOTICES.md.
-# Tempo's routines follow the ERFA library (BSD 3-Clause), itself derived from the IAU SOFA
-# library: `cal2jd` from ERFA cal2jd.c and `jd2cal` from ERFA jd2cal.c.
+# The Gregorian calendar and the time of day, ported from ERFA 2.0.1 (BSD 3-Clause; derived from
+# the IAU SOFA library): `cal2jd` from src/cal2jd.c, `jd2cal` from src/jd2cal.c, `d2tf` from
+# src/d2tf.c, and `d2dtf` and `dtf2d` from src/d2dtf.c and src/dtf2d.c. See THIRD_PARTY_NOTICES.md.
+# These are the routines Astropy formats and parses dates with, so an ISOT string here is
+# Astropy's; test_correctness_erfa_parity.jl holds them to pyerfa's own output.
 #
-# Changes from Tempo: the leap-year test is AstroEpochs' own `_is_leap_year`, which Tempo's
-# `isleapyear` duplicated; the arithmetic is unchanged, and test_correctness_tempo_parity.jl
-# holds it to Tempo's own outputs.
+# Two changes from the C: failures throw (the C returns a status), and a date is returned as a
+# tuple rather than through pointers. Day numbers come from `round` and `trunc`, which return plain
+# numbers for dual numbers, so under automatic differentiation the fraction of a day carries the
+# derivative and the calendar date does not.
 
 # ─────────────────────────── Gregorian calendar ────────────────────────────
 #
@@ -17,103 +19,57 @@
 const _MONTH_NAMES = ("January", "February", "March", "April", "May", "June", "July",
                       "August", "September", "October", "November", "December")
 
-const _MONTH_DAYS               = (31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-const _PREVIOUS_MONTH_END       = (0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334)
-const _PREVIOUS_MONTH_END_LEAP  = (0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335)
+const _MONTH_DAYS = (31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
 _is_leap_year(y) = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
 _days_in_month(y, m) = m == 2 ? (_is_leap_year(y) ? 29 : 28) : (m in (4, 6, 9, 11) ? 30 : 31)
 
-"Day of the year, 1 on January 1."
-_day_in_year(month, day, isleap::Bool) =
-    day + (isleap ? _PREVIOUS_MONTH_END_LEAP : _PREVIOUS_MONTH_END)[month]
+# ERFA_DNINT: nearest integer, halves away from zero. Julia's default `round` sends halves to the
+# even neighbour, which differs from ERFA exactly at half-days.
+_dnint(x) = round(x, RoundNearestTiesAway)
 
 """
-    hms2fd(hour, minute, second) -> fraction of a day
+    cal2jd(year, month, day) -> (2400000.5, MJD at 0h)
 
-Hours, minutes and seconds to a day fraction. Throws `DomainError` outside 0-23 h, 0-59 min and
-[0, 60) s.
+ERFA's `eraCal2jd`: a Gregorian date to a two-part Julian date for 0h on that date, split as the
+MJD zero point and the Modified Julian Date. Throws `DomainError` for a year before 4800 BC, a
+month outside 1-12, or a day outside the month.
 """
-function hms2fd(h::Integer, m::Integer, s::Number)
-    if h < 0 || h > 23
-        throw(DomainError(h, "the hour shall be between 0 and 23."))
-    elseif m < 0 || m > 59
-        throw(DomainError(m, "the minutes must be between 0 and 59."))
-    elseif s < 0 || s >= 60
-        throw(DomainError(s, "the seconds must be between 0.0 and 59.99999999999999."))
-    end
-    return ((60 * (60 * h + m)) + s) / 86400
-end
-
-"""
-    fd2hms(fd) -> (hour, minute, second)
-
-A day fraction to hours, minutes and seconds. Throws `DomainError` outside [0, 1] day.
-"""
-function fd2hms(fd::Number)
-    secinday = fd * 86400
-    if secinday < 0 || secinday > 86400
-        throw(DomainError(secinday,
-            "seconds are out of range: they must be between 0 and 86400."))
-    end
-    hours = Int(secinday ÷ 3600)
-    secinday -= 3600 * hours
-    mins = Int(secinday ÷ 60)
-    secinday -= 60 * mins
-    return hours, mins, secinday
-end
-
-"""
-    cal2jd(year, month, day) -> (2451545, days since J2000)
-
-A Gregorian date to a two-part Julian date: J2000's Julian date, 2451545, and the whole number of
-days from J2000 to noon on the date. The sum is the Julian date at noon on the date, so 0h is half
-a day earlier. Years before 1583, months outside 1-12 and days outside the month throw
-`DomainError`.
-
-Reference: Seidelmann (1992), Explanatory Supplement to the Astronomical Almanac, §12.92.
-"""
-function cal2jd(Y::Integer, M::Integer, D::Integer)
-    if Y < 1583
-        throw(DomainError(Y, "the year shall be greater than 1583."))
-    elseif M < 1 || M > 12
-        throw(DomainError(M, "the month shall be between 1 and 12."))
-    end
-
-    isleap = _is_leap_year(Y)
-    ly = (M == 2) && isleap
-    if (D < 1) || (D > (_MONTH_DAYS[M] + ly))
-        throw(DomainError(D, "the day shall be between 1 and $(_MONTH_DAYS[M] + ly)."))
-    end
-
-    Y = Y - 1
-    d1 = 365 * Y + Y ÷ 4 - Y ÷ 100 + Y ÷ 400 - 730120     # J2000 day of the year's start
-    d2 = _day_in_year(M, D, isleap)
-    return 2451545, d1 + d2
+function cal2jd(iy::Integer, im::Integer, id::Integer)
+    iy < -4799 && throw(DomainError(iy, "the year must be 4800 BC (-4799) or later."))
+    (1 <= im <= 12) || throw(DomainError(im, "the month must be between 1 and 12."))
+    ly = (im == 2) && _is_leap_year(iy)
+    (1 <= id <= _MONTH_DAYS[im] + ly) ||
+        throw(DomainError(id, "the day must be between 1 and $(_MONTH_DAYS[im] + ly)."))
+    my    = div(im - 14, 12)
+    iypmy = iy + my
+    djm = div(1461 * (iypmy + 4800), 4) + div(367 * (im - 2 - 12 * my), 12) -
+          div(3 * div(iypmy + 4900, 100), 4) + id - 2432076
+    return MJD_EPOCH, Float64(djm)
 end
 
 """
     jd2cal(dj1, dj2) -> (year, month, day, fraction of day)
 
-A two-part Julian date to a Gregorian date and day fraction. The date may be split between the
-parts in any way; the fraction is summed with compensation, so the split costs no precision.
-Julian dates below -68569.5 (4713 BC January 1) or above 1e9 throw `DomainError`.
-
-References: Seidelmann (1992), §12.92; Klein (2006), A Generalized Kahan-Babuska-Summation
-Algorithm, Computing 76, 279-293, §3.
+ERFA's `eraJd2cal`: a two-part Julian date to a Gregorian date and fraction of a day. The date may
+be split between the parts in any way; the fraction is summed with compensation (Klein 2006), so
+the split costs no precision. Throws `DomainError` below JD -68569.5 (4713 BC January 1) or above
+1e9.
 """
-function jd2cal(dj1::Number, dj2::Number)
+function jd2cal(dj1, dj2)
     dj = dj1 + dj2
-    if dj < -68569.5 || dj > 1e9
-        throw(DomainError(dj, "the Julian Date shall be between -68569.5 and 1e9."))
-    end
+    (dj < -68569.5 || dj > 1e9) &&
+        throw(DomainError(dj, "the Julian Date must be between -68569.5 and 1e9."))
 
-    d1 = round(Int, dj1)
-    d2 = round(Int, dj2)
-    jd = d1 + d2
+    # Separate day and fraction, -0.5 <= fraction < 0.5.
+    d  = _dnint(dj1)
+    f1 = dj1 - d
+    jd = Int(d)
+    d  = _dnint(dj2)
+    f2 = dj2 - d
+    jd += Int(d)
 
-    # Separate day and fraction, and form f1 + f2 + 0.5 by compensated summation.
-    f1, f2 = promote(dj1 - d1, dj2 - d2)
+    # f1 + f2 + 0.5 by compensated summation.
     s  = 0.5 * one(f1)
     cs = zero(f1)
     for x in (f1, f2)
@@ -139,12 +95,12 @@ function jd2cal(dj1::Number, dj2::Number)
     end
 
     # A fraction that rounds to one carries a day.
-    if (f - 1) >= -eps(f) / 4
+    if (f - 1) >= -eps(Float64) / 4
         t = s - 1
         cs += (s - t) - 1
         s = t
         f = s + cs
-        if -eps() / 2 < f
+        if -eps(Float64) / 2 < f
             jd += 1
             f = max(f, zero(f))
         end
@@ -152,14 +108,125 @@ function jd2cal(dj1::Number, dj2::Number)
 
     # The day number as a Gregorian date.
     l = jd + 68569
-    n = (4l) ÷ 146097
-    l -= (146097n + 3) ÷ 4
-    i = (4000 * (l + 1)) ÷ 1461001
-    l -= (1461i) ÷ 4 - 31
-    k = (80l) ÷ 2447
-    D = (l - (2447k) ÷ 80)
-    l = k ÷ 11
-    M = k + 2 - 12l
-    Y = 100 * (n - 49) + i + l
-    return Y, M, D, f
+    n = div(4l, 146097)
+    l -= div(146097n + 3, 4)
+    i = div(4000 * (l + 1), 1461001)
+    l -= div(1461i, 4) - 31
+    k = div(80l, 2447)
+    id = l - div(2447k, 80)
+    l = div(k, 11)
+    im = k + 2 - 12l
+    iy = 100 * (n - 49) + i + l
+    return iy, im, id, f
+end
+
+"""
+    d2tf(ndp, days) -> (sign, hours, minutes, seconds, fraction)
+
+ERFA's `eraD2tf`: an interval in days to hours, minutes, seconds and a fraction of a second in
+units of 10^-ndp, rounded to that resolution. `sign` is `'+'` or `'-'`.
+"""
+function d2tf(ndp::Integer, days)
+    sign = days >= 0 ? '+' : '-'
+    a = SECONDS_IN_DAY * abs(days)
+    if ndp < 0                                  # pre-round if coarser than a second
+        nrs = 1
+        for n in 1:(-ndp)
+            nrs *= (n == 2 || n == 4) ? 6 : 10
+        end
+        rs = Float64(nrs)
+        a = rs * _dnint(a / rs)
+    end
+    nrs = 1
+    for _ in 1:ndp
+        nrs *= 10
+    end
+    rs = Float64(nrs)
+    rm = rs * 60.0
+    rh = rm * 60.0
+    a = _dnint(rs * a)
+    ah = trunc(a / rh); a -= ah * rh
+    am = trunc(a / rm); a -= am * rm
+    as = trunc(a / rs)
+    af = a - as * rs
+    return sign, Int(ah), Int(am), Int(as), Int(af)
+end
+
+# ────────────────────── date and time of day, with leap seconds ─────────────────────
+#
+# On a UTC day that ends with a leap second the day is 86401 s long, and the final minute 61 s.
+# `_leap_seconds_in_day` finds that from the leap-second table: the change in TAI − UTC between 0h
+# today and 0h tomorrow, less any pre-1972 drift (which AstroEpochs does not model, so it is zero).
+
+function _leap_seconds_in_day(iy, im, id)
+    dat0  = _dat(iy, im, id)
+    iy2, im2, id2, _ = jd2cal(sum(cal2jd(iy, im, id)), 1.5)   # tomorrow, from its noon, as ERFA
+    dat24 = _dat(iy2, im2, id2)
+    return dat24 - dat0
+end
+
+"""
+    d2dtf(scale, ndp, d1, d2) -> (year, month, day, hour, minute, second, fraction)
+
+ERFA's `eraD2dtf`: a two-part Julian date in `scale` (`:utc` or another scale symbol) to a
+calendar date and time of day, rounded to `ndp` decimal places of a second. In UTC a time inside a
+leap second is 23:59:60.
+"""
+function d2dtf(scale::Symbol, ndp::Integer, d1, d2)
+    a1, b1 = d1, d2
+    iy1, im1, id1, fd = jd2cal(a1, b1)
+
+    leap = false
+    if scale === :utc
+        dleap = _leap_seconds_in_day(iy1, im1, id1)
+        leap = abs(dleap) > 0.5
+        leap && (fd += fd * dleap / SECONDS_IN_DAY)
+    end
+
+    _, h, m, s, f = d2tf(ndp, fd)
+
+    # Rounded past 24 h: tomorrow's date, or 23:59:60 on a leap-second day.
+    if h > 23
+        iy2, im2, id2, _ = jd2cal(a1 + 1.5, b1 - fd)
+        if !leap
+            iy1, im1, id1, h, m, s = iy2, im2, id2, 0, 0, 0
+        else
+            if s > 0
+                iy1, im1, id1, h, m, s = iy2, im2, id2, 0, 0, 0
+            else
+                h, m, s = 23, 59, 60
+            end
+            if ndp < 0 && s == 60
+                iy1, im1, id1, h, m, s = iy2, im2, id2, 0, 0, 0
+            end
+        end
+    end
+    return iy1, im1, id1, h, m, s, f
+end
+
+"""
+    dtf2d(scale, year, month, day, hour, minute, second) -> (d1, d2)
+
+ERFA's `eraDtf2d`: a calendar date and time of day in `scale` to a two-part Julian date, `d1` the
+JD at 0h and `d2` the fraction of the day. In UTC, on a day that ends with a leap second, the day
+has 86401 s and 23:59 has 61, so 23:59:60.5 is a valid time. Throws `ArgumentError` for an hour,
+minute or second outside the day, which ERFA reports as a status.
+"""
+function dtf2d(scale::Symbol, iy::Integer, im::Integer, id::Integer, ihr::Integer, imn::Integer, sec)
+    dj, w = cal2jd(iy, im, id)
+    dj += w
+    day    = SECONDS_IN_DAY
+    seclim = 60.0
+    if scale === :utc
+        dleap = _leap_seconds_in_day(iy, im, id)
+        day += dleap
+        (ihr == 23 && imn == 59) && (seclim += dleap)
+    end
+    (0 <= ihr <= 23) || throw(ArgumentError("Hour must be between 0 and 23. Got: $ihr"))
+    (0 <= imn <= 59) || throw(ArgumentError("Minute must be between 0 and 59. Got: $imn"))
+    (0 <= sec < seclim) || throw(ArgumentError(
+        "Seconds must be >= 0.0 and < $(seclim == 60.0 ? "60.0" : "$(seclim), this being a " *
+        "leap-second day in UTC"). Got: $sec"))
+    time = (60.0 * (60 * ihr + imn) + sec) / day
+    return dj, time
 end

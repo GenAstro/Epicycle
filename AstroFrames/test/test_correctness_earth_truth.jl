@@ -27,6 +27,14 @@
 # arcseconds of Earth rotation — so a truth source using its own IERS table
 # would measure table drift instead.
 #
+# Each case's epoch is built from `jd_utc`, which is exact, and not from
+# `jd_tdb`. The truth matrices are ERFA's at that UTC (UT1 = UTC + ΔUT1, and TT
+# from UTC), so UTC is what the truth is defined at. `jd_tdb` was written by an
+# earlier AstroEpochs, with a one-term TDB model, and as a single Float64 whose
+# resolution at J2000 is 40 µs, 605 µas of Earth rotation; a test held to
+# 0.05 µas cannot take its epoch from it. It passed only while AstroEpochs
+# inverted its own rounding, and stopped when AstroEpochs moved to ERFA's TDB.
+#
 # Tolerances are not round numbers chosen for comfort. Each is set from the
 # measured agreement and, where a residual is understood, just above the effect
 # that explains it, so a row stays pinned at its explained value rather than
@@ -341,7 +349,7 @@ const _TOL_FK5 = (
     try
         set_frame_theory!(IAU2006())
         for case in _TRUTH
-            t = Time(case.jd_tdb, 0.0, :tdb, :jd)
+            t = Time(case.jd_utc, 0.0, :utc, :jd)       # the epoch the truth is defined at; see above
             m = case.matrices
             for (truth, from, to) in ((m.GCRF_to_CIRS,         GCRF(), CIRS()),
                                       (m.CIRS_to_TIRS,         CIRS(), TIRS()),
@@ -361,7 +369,7 @@ end
     try
         set_frame_theory!(FK5())
         for case in _TRUTH
-            t = Time(case.jd_tdb, 0.0, :tdb, :jd)
+            t = Time(case.jd_utc, 0.0, :utc, :jd)       # the epoch the truth is defined at; see above
             m = case.matrices
             for (truth, from, to, tol) in
                     ((m.ICRF_to_MJ2000Eq,  ICRF(),     MJ2000Eq(), _TOL_FK5.ICRF_to_MJ2000Eq),
@@ -386,7 +394,7 @@ end
     try
         set_frame_theory!(FK5())
         for case in _TRUTH
-            t = Time(case.jd_tdb, 0.0, :tdb, :jd)
+            t = Time(case.jd_utc, 0.0, :utc, :jd)       # the epoch the truth is defined at; see above
             for (ε_truth, src, dst) in ((case.mean_obliquity, MODEq(), MODEc()),
                                         (case.true_obliquity, TODEq(), TODEc()))
                 R = axes_rotation(src, dst, t)[1:3, 1:3]

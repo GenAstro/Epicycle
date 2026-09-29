@@ -7,36 +7,32 @@ Module containing time system implementations for astronomical times.
 Supports high-precision time representations using dual-float Julian Date
 storage and conversions between scales such as TT, TAI, UTC, TDB, TCB, TCG.
 
-The API is inspired by AstroPy.Time. The time-scale offsets and the calendar arithmetic are
-adapted from Tempo.jl (MIT); see THIRD_PARTY_NOTICES.md.
+The API is inspired by Astropy's `Time`, and so are the algorithms: the scale transforms, TDB − TT,
+the calendar and the ISOT formatting are ERFA's, the library Astropy computes time with, and a
+two-part date is normalised as Astropy's is. AstroEpochs agrees with Astropy to the last bit of
+the date across 1600-2500 (test/test_correctness_astropy_benchmark.jl), except UTC before 1972,
+below. See THIRD_PARTY_NOTICES.md for what is adapted from ERFA, Astropy and Tempo.jl.
 
 Organization. Every algorithm here is one of two kinds, and each has its own folder:
 - `scales/` changes which clock an instant is measured on: `offsets.jl` (TT, TAI, TCG, TDB, TCB),
-  `leap_seconds.jl` (UTC) and `graph.jl` (which pairs are joined, and how a conversion is routed).
-- `formats/` changes how an instant is written: `calendar.jl` (Gregorian ↔ Julian date) and
-  `formats.jl` (JD, MJD, ISOT).
+  `tdb.jl` (TDB − TT), `leap_seconds.jl` (UTC) and `graph.jl` (which pairs are joined, and how a
+  conversion is routed).
+- `formats/` changes how an instant is written: `calendar.jl` (Gregorian ↔ Julian date, time of
+  day, leap seconds) and `formats.jl` (JD, MJD, ISOT).
 This file holds the types, the `Time` struct, its construction, accessors and arithmetic.
 
 Notes
 - Leap seconds come from the IERS leap-second list, downloaded on first use and refreshed when
-  it expires; see `scales/leap_seconds.jl`.
+  it expires; see `scales/leap_seconds.jl`. UTC on a day that ends with a leap second is ERFA's
+  quasi-Julian date, whose fraction of the day runs over 86401 s, so 23:59:60.5 is representable.
+- UTC before 1972 uses TAI − UTC = 0 with a warning. Astropy (ERFA) applies the drifting pre-1972
+  offsets, which differ by up to about 10 s; that is a known gap, not modelled here yet.
+- TDB − TT is the Fairhead & Bretagnon series (ERFA `dtdb`) at the geocentre, as Astropy uses for a
+  Time with no location. It agrees with ephemeris-based TDB to a few nanoseconds over 1600-2200.
+  `tdb_minus_tt` in `scales/tdb.jl` is the one function that supplies it, so a topocentric or
+  ephemeris-based model replaces that function and nothing else.
 - This module currently mixes symbols and instances for time scales and formats.
   Future versions will standardize on typed tags (e.g., TT(), TDB(), JD()) to avoid ambiguity.
-
- Current TDB↔TT conversion model
- - Microsecond-level approximation intended for design/trade studies.
- - Not suitable for navigation-grade timing; 
-
- Future work (https://github.com/JuliaAstro/AstroTime.jl/issues/26)
- - Fast (ERFA harmonic series):
-   Implement Δ_tt2tdb_erfa(TT) using the SOFA/ERFA dtdb trigonometric series
-   with identical fundamental arguments and coefficient tables for TT→TDB,
-   and invert TDB→TT via a short fixed-point iteration using the same Δ.
- - High-precision (ephemeris-based):
-   Compute Δ from relativistic terms using Earth barycentric position/velocity
-   (r·v/c^2) and gravitational potential (U/c^2) from ephemeris, with
-   optional topocentric corrections; use the same Δ for forward/inverse to
-   ensure consistency.
 """
 module AstroEpochs
 
@@ -57,6 +53,7 @@ include("constants.jl")
 include("formats/calendar.jl")
 
 # Scale transforms: the offset functions, then the graph that joins them.
+include("scales/tdb.jl")
 include("scales/offsets.jl")
 include("scales/leap_seconds.jl")
 include("scales/graph.jl")
@@ -392,7 +389,7 @@ function Time(isostr::String, scale::Symbol, format::Symbol)
     _validate_inputcoupling(isostr,format)
     
     y, m, d, h, mi, s = _isot_to_date(isostr)
-    jd1, jd2 = calhms2jd_prec(y, m, d, h, mi, s)
+    jd1, jd2 = dtf2d(scale, y, m, d, h, mi, s)          # ERFA, as Astropy parses it
 
     jd1, jd2 = _rebalance(jd1, jd2)
     return _time_jd(jd1, jd2, scale, format)
@@ -554,7 +551,7 @@ Returns
 - Time for scale symbols (converted, preserving current `format`)
 
 Notes
-- Scale conversions are performed through apply_offsets following 
+- Scale conversions are performed through apply_transforms following 
   the configured conversion graph.
 - When converting scales, `jd1/jd2` are rebalanced to keep invariants.
 - Unknown properties throw an error.
@@ -603,7 +600,7 @@ function Base.getproperty(t::Time, name::Symbol)
 
     # Time scale conversion 
     if name in TIME_SCALES
-        newjd1, newjd2 = apply_offsets(t.jd1, t.jd2, t.scale, name)
+        newjd1, newjd2 = apply_transforms(t.jd1, t.jd2, t.scale, name)
         return _time_jd(newjd1, newjd2, name, t.format)
     end
 
@@ -614,33 +611,46 @@ end
 
 
 """
-    function _rebalance(jd1::Real, jd2::Real)
+    _two_sum(a, b) -> (sum, error)
 
-Rebalance `jd1` and `jd2` so that `-0.5 ≤ jd2 ≤ 0.5`, 
-with the remainder placed in `jd1`.
+`a + b` exactly, as the rounded sum and its rounding error (Shewchuk 1997), as Astropy's
+`astropy.time.utils.two_sum`.
 """
-function _rebalance(jd1::T, jd2::T) where {T<:Real}
-    half = T(0.5)
-    oneT = one(T)
-
-    # Shift up/down by whole days until jd2 ∈ [-0.5, 0.5)
-    # TODO. Optimize this for large offsets?
-    while jd2 >= half
-        jd1 += oneT
-        jd2 -= oneT
-    end
-    while jd2 < -half
-        jd1 -= oneT
-        jd2 += oneT
-    end
-
-    return jd1, jd2
+@inline function _two_sum(a, b)
+    x  = a + b
+    eb = x - a
+    ea = x - eb
+    eb = b - eb
+    ea = a - ea
+    return x, ea + eb
 end
 
-""" 
-    function _rebalance(a::Real, b::Real)
+"""
+    _rebalance(jd1, jd2) -> (day, fraction)
 
-# Promote to a common T and reuse the typed method
+The two-part date `jd1 + jd2` as a whole number of days and a fraction in [-0.5, 0.5], the sum
+formed exactly. This is Astropy's `astropy.time.utils.day_frac` (BSD 3-Clause, Copyright (c)
+2011-2026 Astropy Developers; see THIRD_PARTY_NOTICES.md), the normalisation every Astropy Time
+holds its date in, so a Time here splits its date as Astropy's does. Halves round to even, as
+NumPy's `round` does and Julia's does by default.
+"""
+function _rebalance(jd1::T, jd2::T) where {T<:Real}
+    sum12, err12 = _two_sum(jd1, jd2)
+    day = round(sum12)
+    # The remainder can land just outside ±0.5, costing a bit; correct for that, taking care at
+    # exactly ±0.5 where the rounding error decides which way the day should have gone.
+    frac, check = _two_sum(sum12 - day, err12)
+    excess = frac * sign(check) != 0.5 ? round(frac) : round(frac + 2check)
+    day += excess
+    frac = sum12 - day
+    frac += err12
+    return T(day), T(frac)
+end
+
+"""
+    _rebalance(a::Real, b::Real)
+
+Promote to a common type and normalise, as the typed method.
 """
 @inline _rebalance(a::Real, b::Real) = _rebalance(promote(a, b)...)
 

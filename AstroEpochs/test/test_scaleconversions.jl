@@ -20,7 +20,7 @@ end
     # Symbol based construction from UTC
     t_utc = t.utc
     @test isapproxrel(t_utc.jd1, 2458018.0)
-    @test isapproxrel(t_utc.jd2, 0.015682870370370305; atol = 1e-9, rtol = 1e-9)  # Due to using D2000 Ref in conversion
+    @test isapproxrel(t_utc.jd2, 0.015682870370370305; atol = 2.5e-16, rtol = 0.0)
 
     # TT
     t_tt = t.tt
@@ -30,12 +30,12 @@ end
     # TDB
     t_tdb = t.tdb
     @test isapproxrel(t_tdb.jd1, 2458018.0)
-    @test isapproxrel(t_tdb.jd2, 0.016483592271460668; atol = 1e-9, rtol = 1e-9) # Due to lower precision tdb conversion and different model
+    @test isapproxrel(t_tdb.jd2, 0.016483592271460668; atol = 2.5e-16, rtol = 0.0)
 
     # TCB
     t_tcb = t.tcb
     @test isapproxrel(t_tcb.jd1, 2458018.0)
-    @test isapproxrel(t_tcb.jd2, 0.016714209840637442; atol = 1e-9, rtol = 1e-9) # Due to lower precision tdb conversion and different model
+    @test isapproxrel(t_tcb.jd2, 0.016714209840637442; atol = 2.5e-16, rtol = 0.0)
 
     # TCG
     t_tcg = t.tcg
@@ -71,22 +71,19 @@ end
     p == [:tcb]
 end
 
-# get_conversion_path (scales/graph.jl): the reverse single-edge path (temporarily remove the forward edge)
-@test begin
-    key_fwd = (:tt, :tai)
-    key_rev = (:tai, :tt)
-    fwd = haskey(AstroEpochs.OFFSET_TABLE, key_fwd) ? AstroEpochs.OFFSET_TABLE[key_fwd] : nothing
+# get_conversion_path (scales/graph.jl): a direct pair with no transform in that direction has no
+# path. The routing used to return one anyway, from the reverse transform's presence, and the
+# conversion then failed looking up the missing transform; it now says there is no path.
+@testset "a missing transform is no path, not a path that cannot be followed" begin
+    key = (:tt, :tai)
+    saved = AstroEpochs.SCALE_TRANSFORMS[key]
     try
-        if fwd !== nothing
-            delete!(AstroEpochs.OFFSET_TABLE, key_fwd)
-        end
-        p = AstroEpochs.get_conversion_path(:tt, :tai)
-        p == [:tt, :tai]
+        delete!(AstroEpochs.SCALE_TRANSFORMS, key)
+        @test_throws ErrorException AstroEpochs.get_conversion_path(:tt, :tai)
     finally
-        if fwd !== nothing && !haskey(AstroEpochs.OFFSET_TABLE, key_fwd)
-            AstroEpochs.OFFSET_TABLE[key_fwd] = fwd
-        end
+        AstroEpochs.SCALE_TRANSFORMS[key] = saved
     end
+    @test AstroEpochs.get_conversion_path(:tt, :tai) == [:tt, :tai]
 end
 
 # Canonical JD truth data (AstroPy) and named Time instances
@@ -105,14 +102,15 @@ t_tdb = Time(JD_TRUTH, JD2_TDB, TDB(), JD())
 t_tcb = Time(JD_TRUTH, JD2_TCB, TCB(), JD())
 t_tcg = Time(JD_TRUTH, JD2_TCG, TCG(), JD())
 
-# Tolerances (looser for scales involving relativistic offsets/model differences)
+# Tolerances: 2.5e-16 day, about 2e-11 s, two units in the last place of the fraction. AstroEpochs
+# uses Astropy's algorithms, so every scale is held to the same bound.
 JD2_ATOL = Dict(
-    :tai => 1e-9,
-    :utc => 1e-9,
-    :tt  => 1e-9,
-    :tdb => 1e-9,
-    :tcb => 1e-9,
-    :tcg => 1e-9,
+    :tai => 2.5e-16,
+    :utc => 2.5e-16,
+    :tt  => 2.5e-16,
+    :tdb => 2.5e-16,
+    :tcb => 2.5e-16,
+    :tcg => 2.5e-16,
 )
 # Map scale symbol -> canonical jd2 truth
 JD2_MAP = Dict(
@@ -149,7 +147,7 @@ end
             assert_isapprox_scale(t_from_ref.jd1, JD_TRUTH;
                 from=from_sym, to=from_sym, phase=:source_jd1, atol=0.0, rtol=0.0)
             assert_isapprox_scale(t_from_ref.jd2, JD2_MAP[from_sym];
-                from=from_sym, to=from_sym, phase=:source_jd2, atol=JD2_ATOL[from_sym], rtol=1e-12)
+                from=from_sym, to=from_sym, phase=:source_jd2, atol=JD2_ATOL[from_sym], rtol=0.0)
 
             for (to_sym, _) in refs
                 from_sym == to_sym && continue
@@ -158,7 +156,7 @@ end
                 assert_isapprox_scale(t_to.jd1, JD_TRUTH;
                     from=from_sym, to=to_sym, phase=:forward_jd1, atol=0.0, rtol=0.0)
                 assert_isapprox_scale(t_to.jd2, JD2_MAP[to_sym];
-                    from=from_sym, to=to_sym, phase=:forward_jd2, atol=JD2_ATOL[to_sym], rtol=1e-12)
+                    from=from_sym, to=to_sym, phase=:forward_jd2, atol=JD2_ATOL[to_sym], rtol=0.0)
             end
         end
     end

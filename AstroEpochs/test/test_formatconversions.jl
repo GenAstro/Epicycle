@@ -90,35 +90,24 @@ end
     @test isapproxrel(t1.mjd, mjd_ref)
     @test t1.isot == isot_ref
 
-    # Symbol based construction from jd
-    t2 = Time(jd_ref, :tai, :jd)
-    @test isapproxrel(t2.jd, jd_ref)
-    @test isapproxrel(t2.jd1, jd1_ref)
-    @test isapproxrel(t2.jd2, jd2_ref; atol = 1e-9, rtol = 1e-9) # Setting time using a JD limits precision in jd2
-    @test isapproxrel(t2.mjd, mjd_ref)
-    @test t2.isot == isot_ref
-
-    # Type based construction from jd
-    t2 = Time(jd_ref, TAI(), JD())
-    @test isapproxrel(t2.jd, jd_ref)
-    @test isapproxrel(t2.jd1, jd1_ref)
-    @test isapproxrel(t2.jd2, jd2_ref; atol = 1e-9, rtol = 1e-9) # Setting time using a JD limits precision in jd2
-    @test isapproxrel(t2.mjd, mjd_ref)
-    @test t2.isot == isot_ref
-
-    # Symbol based construction from mjd
-    t3 = Time(mjd_ref, :tai, :mjd)
-    @test isapproxrel(t3.jd, jd_ref)
-    @test isapproxrel(t3.jd1, jd1_ref - 0.5)
-    @test isapproxrel(t3.jd2, jd2_ref + 0.5; atol = 1e-11, rtol = 1e-11) # Setting a time in MJD limits precision in jd2
-    @test isapproxrel(t3.mjd, mjd_ref)
-    @test t3.isot == isot_ref
-
-    # Type based construction from mjd
-    t3 = Time(mjd_ref, TAI(), MJD())
-    @test isapproxrel(t3.jd, jd_ref)
-    @test isapproxrel(t3.jd1, jd1_ref - 0.5)
-    @test isapproxrel(t3.jd2, jd2_ref + 0.5; atol = 1e-11, rtol = 1e-11) # Setting a time in MJD limits precision in jd2
-    @test isapproxrel(t3.mjd, mjd_ref)
-    @test t3.isot == isot_ref
+    # Construction from a single JD or MJD value. A single Float64 JD carries the instant only to
+    # about 40 µs, so jd2 differs from the ISOT case; the truth for each is what Astropy gives for
+    # that same value (Astropy 8.0.1), and the split must match it exactly, since both normalise the
+    # date the same way (day_frac).
+    jd2_from_jd  = -0.42876172438263893       # Time(jd_ref,  format="jd",  scale="tai")
+    jd2_from_mjd = -0.42876172453543404       # Time(mjd_ref, format="mjd", scale="tai")
+    for t2 in (Time(jd_ref, :tai, :jd), Time(jd_ref, TAI(), JD()))
+        @test t2.jd1 == jd1_ref
+        @test t2.jd2 == jd2_from_jd
+        @test isapproxrel(t2.jd, jd_ref)
+        @test isapproxrel(t2.mjd, mjd_ref)
+        @test t2.isot == isot_ref
+    end
+    for t3 in (Time(mjd_ref, :tai, :mjd), Time(mjd_ref, TAI(), MJD()))
+        @test t3.jd1 == jd1_ref
+        @test t3.jd2 == jd2_from_mjd
+        @test isapproxrel(t3.jd, jd_ref)
+        @test isapproxrel(t3.mjd, mjd_ref)
+        @test t3.isot == isot_ref
+    end
 end

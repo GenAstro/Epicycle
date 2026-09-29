@@ -3,17 +3,18 @@
 
 # ───────────────────────────── the scale graph ─────────────────────────────
 #
-# Which scales exist, which pairs are joined directly by an offset function, and how a conversion
-# between any two is routed. The offset functions themselves are in offsets.jl (TT, TAI, TCG, TDB,
-# TCB) and leap_seconds.jl (UTC).
+# Which scales exist, which pairs are joined directly by a transform, and how a conversion between
+# any two is routed. The graph and the routes are Astropy's (astropy.time.core MULTI_HOPS), and the
+# transforms are ERFA's: offsets.jl (TT, TAI, TCG, TDB, TCB), tdb.jl (TDB − TT) and
+# leap_seconds.jl (UTC).
 #
-# Adding a scale means: its offset functions to and from one existing scale, their two entries in
-# OFFSET_TABLE, its symbol in TIME_SCALES, and a MULTI_HOPS route to each scale it is not joined to
-# directly. Its tag type goes in AstroEpochs.jl with the others.
+# Adding a scale means: its transforms to and from one existing scale, their two entries in
+# SCALE_TRANSFORMS, its symbol in TIME_SCALES, and a MULTI_HOPS route to each scale it is not joined
+# to directly. Its tag type goes in AstroEpochs.jl with the others.
 
 const TIME_SCALES = Set([:tt, :tai, :tdb, :utc, :tcg, :tcb])
 
-# Predefined multi-hop paths between Time scales
+# Routes between scales that are not joined directly, as in Astropy.
 const MULTI_HOPS = Dict{Tuple{Symbol, Symbol}, Vector{Symbol}}(
     (:tai, :tcb) => [:tt, :tdb],
     (:tai, :tcg) => [:tt],
@@ -28,27 +29,28 @@ const MULTI_HOPS = Dict{Tuple{Symbol, Symbol}, Vector{Symbol}}(
 )
 
 """
-    const OFFSET_TABLE = Dict{Tuple{Symbol, Symbol}, Function}
+    const SCALE_TRANSFORMS = Dict{Tuple{Symbol, Symbol}, Function}
 
-Maps adjacent pairs time scales to conversion functions.
+The transform for each pair of directly joined scales. Each takes a two-part Julian date in the
+first scale and returns it in the second.
 """
-const OFFSET_TABLE = Dict{Tuple{Symbol, Symbol}, Function}(
-    (:tt, :tai)  => offset_tt2tai,
-    (:tai, :tt)  => offset_tai2tt,
-    (:tt, :tdb)  => offset_tt2tdb,
-    (:tdb, :tt)  => offset_tdb2tt,
-    (:tai, :utc) => offset_tai2utc,                # leap_seconds.jl: the IERS list, kept current
-    (:utc, :tai) => offset_utc2tai,
-    (:tcg, :tt)  => offset_tcg2tt,
-    (:tcb,:tdb)  => offset_tcb2tdb,
-    (:tt,:tcg)   => offset_tt2tcg,
-    (:tdb,:tcb)  => offset_tdb2tcb,
+const SCALE_TRANSFORMS = Dict{Tuple{Symbol, Symbol}, Function}(
+    (:tai, :tt)  => taitt,
+    (:tt, :tai)  => tttai,
+    (:tt, :tdb)  => tttdb,
+    (:tdb, :tt)  => tdbtt,
+    (:tt, :tcg)  => tttcg,
+    (:tcg, :tt)  => tcgtt,
+    (:tdb, :tcb) => tdbtcb,
+    (:tcb, :tdb) => tcbtdb,
+    (:utc, :tai) => utctai,                 # leap_seconds.jl: the IERS list, kept current
+    (:tai, :utc) => taiutc,
 )
 
 """
     get_conversion_path(from::Symbol, to::Symbol) → Vector{Symbol}
 
-Returns conversion path from `from` to `to` time scales. 
+Returns conversion path from `from` to `to` time scales.
 """
 function get_conversion_path(from::Symbol, to::Symbol)::Vector{Symbol}
     if from == to
@@ -59,10 +61,8 @@ function get_conversion_path(from::Symbol, to::Symbol)::Vector{Symbol}
         # reverse the forward path
         revpath = reverse(MULTI_HOPS[(to, from)])
         return vcat(from, revpath, to)
-    elseif haskey(OFFSET_TABLE, (from, to))
+    elseif haskey(SCALE_TRANSFORMS, (from, to))
         return [from, to]
-    elseif haskey(OFFSET_TABLE, (to, from))
-        return [from, to]  # still valid if OFFSET_TABLE has both directions
     else
         tag = s -> _scale_tag_str(s)
         error("No known time scale conversion path from $(tag(from)) to $(tag(to))")
@@ -70,29 +70,18 @@ function get_conversion_path(from::Symbol, to::Symbol)::Vector{Symbol}
 end
 
 """
-    apply_offsets(jd1, jd2, from::Symbol, to::Symbol)
+    apply_transforms(jd1, jd2, from::Symbol, to::Symbol) -> (jd1, jd2)
 
-Applies sequence of scale conversions from `from` to `to`.
+Convert a two-part Julian date from scale `from` to scale `to`, one transform per hop of the
+route, then rebalance the parts as a Time holds them.
 """
-function apply_offsets(jd1::Real, jd2::Real, from::Symbol, to::Symbol)
+function apply_transforms(jd1::Real, jd2::Real, from::Symbol, to::Symbol)
     from === to && return _rebalance(jd1, jd2)
-
-    path = get_conversion_path(from, to)               # small vector; fine
     T = promote_type(typeof(jd1), typeof(jd2))
-    jd1T = T(jd1); jd2T = T(jd2)
-    J2000_T = T(J2000_EPOCH)
-    inv_SECS_PER_DAY_T = inv(T(SECONDS_IN_DAY))
-
-    # Accumulate in days; rebalance once at the end to reduce churn
-    # TODO. Bug, offset is different for TCB etc. 
-    @inbounds for i in 1:(length(path)-1)
-        src = path[i]; dst = path[i+1]
-        offset_fn = OFFSET_TABLE[(src, dst)]
-        jd = jd1T + jd2T
-        seconds_since_j2000 = (jd - J2000_T) * (1 / inv_SECS_PER_DAY_T)  # == * SECONDS_IN_DAY
-        off_sec_T = convert(T, offset_fn(seconds_since_j2000))
-        jd2T += off_sec_T * inv_SECS_PER_DAY_T
+    a1, a2 = T(jd1), T(jd2)
+    path = get_conversion_path(from, to)
+    for i in 1:(length(path) - 1)
+        a1, a2 = SCALE_TRANSFORMS[(path[i], path[i + 1])](a1, a2)
     end
-
-    return _rebalance(jd1T, jd2T)
+    return _rebalance(promote(a1, a2)...)
 end

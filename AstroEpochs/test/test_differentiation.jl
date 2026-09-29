@@ -41,8 +41,13 @@ using Zygote
         t = Time(jd1d, jd2d, TDB(), JD())
         @test t.scale == :tdb
         @test t.format == :jd
-        @test t.jd1 === jd1d
-        @test t.jd2 === jd2d
+        # The date is normalised as Astropy's is (day_frac): a whole day and a fraction in
+        # [-0.5, 0.5]. The whole day is a rounded number and carries no derivative, so the
+        # derivative moves to the fraction, and the date as a whole keeps value and derivative.
+        @test t.jd1 isa typeof(jd1d) && t.jd2 isa typeof(jd2d)
+        @test ForwardDiff.value(t.jd1) == round(ForwardDiff.value(jd1d + jd2d))
+        @test ForwardDiff.partials(t.jd1)[1] == 0.0
+        @test ForwardDiff.partials(t.jd2)[1] == 1.0
         @test t.jd === jd1d + jd2d
         # Round-trip through no-op add
         t2 = t + 0.0

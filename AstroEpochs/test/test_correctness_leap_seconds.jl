@@ -16,7 +16,7 @@
 using Test
 using AstroEpochs
 using AstroEpochs: leap_second_table, tai_minus_utc, parse_leap_seconds,
-                   offset_utc2tai, offset_tai2utc, LeapSecondTable, _LEAP, _builtin_leap_table
+                   utctai, taiutc, LeapSecondTable, _LEAP, _builtin_leap_table
 
 const _J2000 = 2451545.0
 
@@ -35,15 +35,20 @@ end
     @test builtin.starts == list.starts[1:n]
     @test builtin.delta  == list.delta[1:n]
 
-    # Either side of every change, the offset read back through the functions a conversion uses is
-    # the table's integer value, in both directions.
-    for (i, d) in enumerate(builtin.starts), side in (-0.5, 0.5)
-        utc_days = d + side
-        i == 1 && side < 0 && continue          # before 1972 there is no value, and it warns
-        expected = side < 0 ? builtin.delta[i - 1] : builtin.delta[i]
-        @test tai_minus_utc(utc_days) == expected
-        @test offset_utc2tai(utc_days * 86_400) == expected
-        @test offset_tai2utc(utc_days * 86_400 + expected) == -expected
+    # Either side of every change, through the transforms a conversion uses (ERFA's utctai and
+    # taiutc): 0h on the day that ends with the leap second, and a quarter-day into the next. At 0h
+    # the UTC and TAI dates differ by the table's value exactly. Later on a leap-second day they
+    # differ by more, because that day's fraction runs over 86401 s; that is ERFA's quasi-JD UTC,
+    # held to Astropy in test_correctness_astropy_benchmark.jl.
+    for (i, d) in enumerate(builtin.starts), (days, idx) in ((-1.0, i - 1), (0.25, i))
+        idx < 1 && continue                     # before 1972 there is no value, and it warns
+        expected = builtin.delta[idx]
+        utc = (_J2000 + d + days, 0.0)            # the date in the large part, as ERFA expects
+        @test tai_minus_utc(d + days) == expected
+        tai = utctai(utc...)
+        @test ((tai[1] - utc[1]) + (tai[2] - utc[2])) * 86_400 ≈ expected atol = 1e-9
+        back = taiutc(tai...)
+        @test ((back[1] - utc[1]) + (back[2] - utc[2])) * 86_400 ≈ 0.0 atol = 1e-9
     end
 end
 

@@ -75,8 +75,9 @@ const _BUILTIN_LEAP_SECONDS = (
 
 "The built-in table, used when no list has ever been downloaded. It never expires."
 function _builtin_leap_table()
-    # cal2jd gives days from J2000 to noon on the date; the change is at 0h, half a day earlier.
-    starts = [Float64(last(cal2jd(y, m, d))) - 0.5 for (y, m, d, _) in _BUILTIN_LEAP_SECONDS]
+    # cal2jd gives 0h on the date as (MJD zero point, MJD); held as days since J2000.
+    starts = [(first(cal2jd(y, m, d)) - J2000_EPOCH) + last(cal2jd(y, m, d))
+              for (y, m, d, _) in _BUILTIN_LEAP_SECONDS]
     delta  = [Δ for (_, _, _, Δ) in _BUILTIN_LEAP_SECONDS]
     return LeapSecondTable(starts, delta, -Inf)
 end
@@ -174,15 +175,69 @@ end
     return 0.0
 end
 
-"UTC → TAI offset in seconds, for a UTC epoch in seconds since J2000."
-offset_utc2tai(seconds) = tai_minus_utc(seconds / SECONDS_IN_DAY)
+"""
+    _dat(year, month, day) -> seconds
 
-"TAI → UTC offset in seconds, for a TAI epoch in seconds since J2000."
-function offset_tai2utc(seconds)
-    tai_days = seconds / SECONDS_IN_DAY
-    utc_days = tai_days
-    for _ in 1:2                    # the step function settles in one iteration; two is safe
-        utc_days = tai_days - tai_minus_utc(utc_days) / SECONDS_IN_DAY
+TAI − UTC at 0h UTC on a Gregorian date, from the leap-second table. It plays the part of ERFA's
+`eraDat`, without the pre-1972 drift terms: before 1972 it warns and returns 0.
+"""
+function _dat(iy, im, id)
+    djm0, djm = cal2jd(iy, im, id)
+    return tai_minus_utc((djm0 - J2000_EPOCH) + djm)
+end
+
+# ─────────────────────────────── UTC ↔ TAI ─────────────────────────────────
+#
+# Ported from ERFA 2.0.1, src/utctai.c and src/taiutc.c (BSD 3-Clause; derived from the IAU SOFA
+# library). See THIRD_PARTY_NOTICES.md.
+#
+# A UTC two-part date is a quasi-Julian date: on a day that ends with a leap second the fraction of
+# the day runs over 86401 SI seconds, so 23:59:60.5 is day fraction 86399.5/86401 and 0h is still a
+# whole day. That is ERFA's and Astropy's representation, and so AstroEpochs'.
+
+"""
+    utctai(utc1, utc2) -> (tai1, tai2)
+
+ERFA's `eraUtctai`: UTC, as a quasi-Julian date, to TAI. The result keeps the split and order of
+the input.
+"""
+function utctai(utc1, utc2)
+    big1 = abs(utc1) >= abs(utc2)
+    u1, u2 = big1 ? (utc1, utc2) : (utc2, utc1)
+
+    iy, im, id, fd = jd2cal(u1, u2)
+    dat0  = _dat(iy, im, id)                                # TAI − UTC at 0h today
+    dat12 = dat0                                            # at 12h: no pre-1972 drift here
+    iyt, imt, idt, _ = jd2cal(u1 + 1.5, u2 - fd)
+    dat24 = _dat(iyt, imt, idt)                             # at 0h tomorrow
+
+    dlod  = 2.0 * (dat12 - dat0)                            # per-day drift, zero after 1972
+    dleap = dat24 - (dat0 + dlod)                           # any leap second at the end of today
+
+    fd *= (SECONDS_IN_DAY + dleap) / SECONDS_IN_DAY         # undo the spread of the leap second
+    fd *= (SECONDS_IN_DAY + dlod) / SECONDS_IN_DAY          # pre-1972 UTC seconds to SI seconds
+
+    z1, z2 = cal2jd(iy, im, id)
+    a2 = z1 - u1
+    a2 += z2
+    a2 += fd + dat0 / SECONDS_IN_DAY
+    return big1 ? (u1, a2) : (a2, u1)
+end
+
+"""
+    taiutc(tai1, tai2) -> (utc1, utc2)
+
+ERFA's `eraTaiutc`: TAI to UTC as a quasi-Julian date, by inverting `utctai` in three iterations.
+The result keeps the split and order of the input.
+"""
+function taiutc(tai1, tai2)
+    big1 = abs(tai1) >= abs(tai2)
+    a1, a2 = big1 ? (tai1, tai2) : (tai2, tai1)
+    u1, u2 = a1, a2
+    for _ in 1:3
+        g1, g2 = utctai(u1, u2)
+        u2 += a1 - g1
+        u2 += a2 - g2
     end
-    return -tai_minus_utc(utc_days)
+    return big1 ? (u1, u2) : (u2, u1)
 end

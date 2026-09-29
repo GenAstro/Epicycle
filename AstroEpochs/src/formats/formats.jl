@@ -24,13 +24,13 @@ end
 """
     _to_isot(t::Time)
 
-Return time value in ISOT format rounding to millisecond.
+Return the time as an ISO 8601 string rounded to the millisecond, by ERFA's `d2dtf` as Astropy
+formats it: the rounding carries into the minute, hour and date, and in UTC a time inside a leap
+second reads 23:59:60.
 """
 function _to_isot(t::Time)
-    jd = t.jd1 + t.jd2
-    y, m, d, fd = jd2cal(t.jd1,t.jd2)
-    h, mi, s = fd2hms(fd)
-    return @sprintf("%04d-%02d-%02dT%02d:%02d:%06.3f", y, m, d, h, mi, s)
+    y, m, d, h, mi, s, f = d2dtf(t.scale, 3, t.jd1, t.jd2)
+    return @sprintf("%04d-%02d-%02dT%02d:%02d:%02d.%03d", y, m, d, h, mi, s, f)
 end
 
 """
@@ -89,21 +89,7 @@ function _isot_to_date(isostr::String)
     if !(0 <= mi < 60)
         throw(ArgumentError("Minute must be between 0 and 59. Got: $mi"))
     end
-    if !(0.0 <= s < 60.0)
-        throw(ArgumentError("Seconds must be >= 0.0 and < 60.0. Got: $s"))
-    end
     
     return (y, mth, d, h, mi, s) 
 end
 
-"""
-    calhms2jd_prec(Y::I, M::I, D::I, h::I, m::I, sec::N) where {I <: Integer, N <: Number}
-
-Convert calendar date and time to Julian Date
-"""
-function calhms2jd_prec(Y::I, M::I, D::I, h::I, m::I, sec::N) where {I <: Integer, N <: Number}
-    j2000_epoch, daysfrom_j2000 = cal2jd(Y, M, D)
-    frac_of_day = hms2fd(h, m, sec)
-
-    return Float64(j2000_epoch + daysfrom_j2000), frac_of_day - 0.5
-end

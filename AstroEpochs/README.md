@@ -11,7 +11,7 @@ The AstroEpochs module provides time system implementations for astronomical app
 
 The API for AstroEpochs is inspired by AstroPy.time which allows for an interface that works across Epicycle components and provides type stability when time systems must change during a simulation. 
 
-Acknowledgement: the time-scale offsets and calendar arithmetic in AstroEpochs are adapted from Julia Space Mission Design's Tempo.jl (MIT), and the calendar routines trace to ERFA. See `THIRD_PARTY_NOTICES.md`.
+Acknowledgement: the time-scale transforms, TDB − TT, calendar and ISOT formatting in AstroEpochs are ported from ERFA (BSD 3-Clause), the library Astropy uses, and the two-part date normalisation from Astropy (BSD 3-Clause). The built-in leap-second table was adapted from Julia Space Mission Design's Tempo.jl (MIT). See `THIRD_PARTY_NOTICES.md`.
 
 **Key Features:**
 - **High-precision storage** using dual Float64 values (`jd1`, `jd2`) to represent Julian Dates
@@ -34,7 +34,7 @@ Full documentation is available at: [AstroEpochs Documentation](https://genastro
 
 ## Comparison with Other Julia Time-Keeping Libraries
 
-Tempo.jl and AstroTime.jl also handle astronomical time in Julia. AstroTime.jl, from the JuliaAstro community, supports six time scales (TAI, TT, TCG, TCB, TDB and UT1) with a separate type for each scale, so a conversion changes the type. Tempo.jl supports UTC, TAI, TT, TDB, TCG and TCB with allocation-free conversions and changes scale without changing the type, which Epicycle's propagation and optimization rely on for performance. AstroEpochs adapts Tempo.jl's offsets and calendar routines, keeps the IERS leap-second list current itself, and follows the interface of Astropy's `Time`.
+Tempo.jl and AstroTime.jl also handle astronomical time in Julia. AstroTime.jl, from the JuliaAstro community, supports six time scales (TAI, TT, TCG, TCB, TDB and UT1) with a separate type for each scale, so a conversion changes the type. Tempo.jl supports UTC, TAI, TT, TDB, TCG and TCB with allocation-free conversions and changes scale without changing the type, which Epicycle's propagation and optimization rely on for performance. AstroEpochs follows the interface of Astropy's `Time` and uses its algorithms (ERFA), agreeing with it to the last bit of the date, and keeps the IERS leap-second list current itself.
 
 ## Contributing
 
