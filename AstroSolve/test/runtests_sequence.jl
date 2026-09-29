@@ -489,8 +489,11 @@ end
         
         # Add a second constraint on SMA at apoapsis
         # A range rather than a target, so the inequality path is covered too.
+        # The burn is along V only, so periapsis stays at 7000 km and a 55000 km
+        # apoapsis needs SMA = 31000 km; the range must contain it or the problem
+        # is infeasible.
         sma_con = Constraint(semi_major_axis, sat;
-                             lower_bound = 26000.0, upper_bound = 30000.0)
+                             lower_bound = 26000.0, upper_bound = 32000.0)
         
         fun_toi() = maneuver!(sat, toi) 
         toi_event = Event(name = "TOI Maneuver", 
@@ -513,10 +516,10 @@ end
         @test isa(result.constraints[1], Float64)
         @test isa(result.constraints[2], Float64)
         
-        # Constraint values should be within reasonable bounds for this problem
-        # (Note: exact values depend on convergence, but should be in expected ranges)
-        @test result.constraints[1] > 20000.0  # Position magnitude reasonable
-        @test result.constraints[2] > 20000.0  # SMA reasonable
+        # The solve must actually meet both constraints. Loose lower bounds here once
+        # let an infeasible solve pass, depending on where IPOPT happened to stop.
+        @test isapprox(result.constraints[1], pos_target; atol = 1e-3)
+        @test 26000.0 <= result.constraints[2] <= 32000.0
     end
     
 end

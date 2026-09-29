@@ -12,7 +12,8 @@
 # So this file solves each problem twice, once with the declared pattern and once with everything
 # declared, and requires the two answers to agree. Identical arithmetic reaches the solver either
 # way; only the amount of it IPOPT is told about differs, so a disagreement is a mistake in the
-# pattern and not a tolerance.
+# pattern and not a tolerance. That holds only where the optimum is unique. Obstacle avoidance has
+# a family of equally optimal paths, and is checked at fixed points instead (the last testset).
 #
 # The problems are the library's own, reached through the phase builders the other correctness files
 # already define, so the shapes are the ones that ship rather than ones invented here. Between them
@@ -31,6 +32,7 @@
 # declared pattern in the same process.
 
 using LinearAlgebra
+using Random
 using EpicycleBase
 using AstroSolve
 using Printf
@@ -92,10 +94,66 @@ end
 @testset "constraint Jacobian sparsity — the declared pattern gives the dense answer" begin
     println()
     _differential("brachistochrone",       () -> (_br_phase(n_steps = 20),))
-    _differential("obstacle avoidance",    () -> (_oa_phase(n_steps = 35),))
     _differential("Hull problem",          () -> (_hu_phase(n_steps = 20),))
     _differential("moon landing",          () -> (_ml_phase(n_steps = 30),))
     _differential("parameter id",          () -> (_pid_phase(n_steps = 20),))
     _differential("AD fallback",           () -> (_ad_phase(:bare; n_steps = 24),))
     println()
+end
+
+# Obstacle avoidance is not in the solve-twice comparison above, because its optimum is not
+# unique. The cost is V² tf whatever the heading does (test_correctness_obstacle_avoidance.jl),
+# so every feasible path is optimal, and two solves that differ only in how much of the Jacobian
+# IPOPT is told about can legitimately stop on different paths. They did: the two solutions
+# differed by 4.4e-2 with identical objectives, on Windows under Julia 1.13, having agreed on
+# Linux under 1.12. Where a solve stops is a property of the platform's floating point, so the
+# comparison was testing that rather than the pattern.
+#
+# So for this problem the check is made where the answer is unique: at a fixed point, before any
+# solve. What the solver receives through the declared pattern has to be the dense Jacobian:
+#
+#   - the pattern is in the order the value vector is filled in, column-major, because SNOW
+#     pairs value k with pattern position k;
+#   - each value `get_jacobian_values!` writes equals the dense entry at its position. The two are
+#     separate fills of the same chunks, which is why comparing them means something;
+#   - the dense Jacobian is zero everywhere the pattern leaves out, so nothing the solver needs
+#     is withheld.
+#
+# At several points inside the variable bounds, for the reason test_correctness_jacobian_sparsity.jl
+# gives: an entry can be zero at one point and not at another.
+@testset "constraint Jacobian sparsity — obstacle avoidance delivers the dense Jacobian" begin
+    seq    = Sequence(_oa_phase(n_steps = 35))
+    @test check_sparsity(seq; verbose = false) == 0
+
+    x0     = AstroSolve.get_decision_vector(seq)
+    lx, ux = AstroSolve.get_variable_bounds(seq)
+    ng     = length(first(AstroSolve.get_constraint_bounds(seq)))
+    nx     = length(x0)
+
+    pattern = AstroSolve.jacobian_pattern(seq, ng, nx; dense = false)
+    index   = AstroSolve.JacobianIndex(pattern, ng, nx)
+    @test issorted(collect(zip(pattern.cols, pattern.rows)))
+
+    # The column of each slot, from the compressed columns.
+    slot_col = similar(index.rowval)
+    for c in 1:nx, k in index.colptr[c]:(index.colptr[c + 1] - 1)
+        slot_col[k] = c
+    end
+    declared = falses(ng, nx)
+    for k in eachindex(index.rowval)
+        declared[index.rowval[k], slot_col[k]] = true
+    end
+
+    rng  = Random.MersenneTwister(20260929)
+    vals = zeros(length(index.rowval))
+    for s in 0:8
+        x = s == 0 ? copy(x0) :
+            clamp.(x0 .+ max.(abs.(x0), 1.0) .* (2 .* rand(rng, nx) .- 1), lx, ux)
+        AstroSolve.evaluate!(seq, x)
+        J = AstroSolve.get_jacobian(seq)
+        AstroSolve.get_jacobian_values!(vals, seq, index)
+
+        @test all(k -> vals[k] == J[index.rowval[k], slot_col[k]], eachindex(vals))
+        @test all(iszero, J[.!declared])
+    end
 end
