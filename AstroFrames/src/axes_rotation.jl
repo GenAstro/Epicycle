@@ -220,9 +220,47 @@ the EOP tables. Earth rotates at 7.3e-5 rad/s, so one second of UT1 error is
 # asserted: a tuple of the date's number type, promoted with the tables' Float64 (a dual date
 # gives dual values). Without it every calculation downstream dispatched dynamically as well.
 @inline _eop_read(theory, fields::NTuple{N, Symbol}, jd_utc::T) where {N, T<:Real} =
-    _eop_values(eop(theory), fields, jd_utc)::NTuple{N, promote_type(Float64, T)}
-_eop_values(table, fields::NTuple{N, Symbol}, jd_utc) where {N} =
-    ntuple(i -> getfield(table, fields[i])(jd_utc), Val(N))
+    _eop_values(eop(theory), Val(fields), jd_utc)::NTuple{N, promote_type(Float64, T)}
+# The field names travel as a type parameter, so each `getfield` inside is a constant and the
+# interpolants are concretely typed. As a runtime tuple they were not, and the read allocated
+# 4.4 KB.
+function _eop_values(table, ::Val{fields}, jd_utc) where {fields}
+    _check_eop_span(table, jd_utc)
+    return ntuple(i -> getfield(table, fields[i])(jd_utc), Val(length(fields)))
+end
+
+# Outside the table SatelliteToolboxTransformations holds the end values, and the rotation stays
+# orthonormal and round-trips while drifting at roughly 250 m a year at LEO. A date past the
+# end is a legitimate mission-design question, so this warns once rather than throwing. The
+# span is the knots of the table's interpolant, which belong to SatelliteToolboxTransformations;
+# if that layout changes the check turns itself off rather than failing.
+@inline function _check_eop_span(table, jd_utc)
+    span = _eop_span(table)
+    span === nothing && return nothing
+    (span[1] <= jd_utc <= span[2]) || _warn_eop_span(span, jd_utc)
+    return nothing
+end
+
+function _eop_span(table)
+    itp = getfield(getfield(table, :x), :interpolation)
+    hasproperty(itp, :t) || return nothing
+    t = itp.t
+    return (Float64(first(t)), Float64(last(t)))
+end
+
+@noinline function _warn_eop_span(span, jd_utc)
+    @warn "AstroFrames: an Earth-fixed transformation at UTC Julian date " *
+          "$(_jd_text(jd_utc)) is outside the loaded EOP table, which runs " *
+          "from $(_jd_text(span[1])) to $(_jd_text(span[2])). The table's " *
+          "end values are held, so UT1 and polar motion are stale and Earth-fixed positions " *
+          "drift, at roughly 250 m a year at LEO past the end. Shown once per session." maxlog = 1
+    return nothing
+end
+
+# A Julian date for a message: the number inside a dual, to the day.
+_jd_text(x) = string(round(Int, _value(x)))
+_value(x::Real) = x
+_value(x) = hasproperty(x, :value) ? _value(x.value) : x
 # `float` rather than the value as given: an integer Julian date is a perfectly
 # reasonable thing to write, and `Time` cannot represent one — it splits the
 # date into two parts and the split is fractional. Without this,
@@ -1491,15 +1529,32 @@ end
 #
 # One conversion, at the boundary. Everything above this line works in plain
 # numbers.
+#
+# Converting the epoch costs several microseconds, more than most rotations, and
+# a rotation between axes fixed relative to one another does not use it. Axes in
+# `_epoch_free` are fixed relative to one another: the celestial frames differ by
+# constant rotations, and the orbit-relative frames depend on their reference
+# orbit, not the date. Every route between two of them stays among them, so the
+# conversion is skipped and the edges get a placeholder of NaNs, which would show
+# at once if one of them read it. For RIC and friends this also stops a dummy
+# epoch such as `0.0` warning about pre-1972 leap seconds.
+
+_epoch_free(::AbstractAxes) = false
+_epoch_free(::Union{ICRF, GCRF, MJ2000Eq, MJ2000Ec, RIC, LVLH, VNB}) = true
+
+const _NO_EPOCH = EpochScales(NaN, NaN, NaN, NaN, NaN)
+
+@inline _scales_for(from, to, epoch) =
+    _epoch_free(from) && _epoch_free(to) ? _NO_EPOCH : _scales(epoch)
 
 axes_rotation(from::AbstractAxes, to::AbstractAxes, t::Time) =
-    axes_rotation(from, to, _scales(t))
+    axes_rotation(from, to, _scales_for(from, to, t))
 
 axes_rotation(from::AbstractAxes, to::AbstractAxes, jd_tdb::Real) =
-    axes_rotation(from, to, _scales(jd_tdb))
+    axes_rotation(from, to, _scales_for(from, to, jd_tdb))
 
 axes_rotation(from::AbstractAxes, to::AbstractAxes, t::Time, p::NamedTuple) =
-    axes_rotation(from, to, _scales(t), p)
+    axes_rotation(from, to, _scales_for(from, to, t), p)
 
 axes_rotation(from::AbstractAxes, to::AbstractAxes, jd_tdb::Real, p::NamedTuple) =
-    axes_rotation(from, to, _scales(jd_tdb), p)
+    axes_rotation(from, to, _scales_for(from, to, jd_tdb), p)
