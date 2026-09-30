@@ -117,25 +117,28 @@ end
     @test occursin("defined by a reference orbit", message)
 end
 
-@testset "VNB works from the origin too, unaccelerated" begin
-    # The state comes from the origin; the acceleration does not, because no
-    # origin carries one. Omitting it is not a gap — it says the reference is
-    # not being accelerated, and VNB about such a reference does not turn.
+@testset "VNB works from the origin too, turning under two-body gravity" begin
+    # The state comes from the origin, and so does an acceleration: two-body
+    # gravity about the body the origin's state is measured from. A spacecraft
+    # origin is accelerating, and VNB turns only at the rate that gives; until
+    # 2026-09-30 it came out non-rotating while RIC about the same origin turned.
     c = Coordinate(_CHIEF, CoordinateSystem(_CHIEF, VNB()))
     @test all(iszero, to_vector(state_of(c)))
 
-    # Supplying it changes the rate and nothing else.
     μ = get_gravparam(earth)
     r = to_vector(state_of(_CHIEF))[1:3]
     accel = (-μ / norm(r)^3) .* r
 
     deputy = _subject([7010.0, 0.0, 0.0, 0.0, 7.546, 0.0])
-    without = to_vector(state_of(Coordinate(deputy, CoordinateSystem(_CHIEF, VNB()))))
-    with    = to_vector(state_of(Coordinate(deputy, CoordinateSystem(_CHIEF, VNB()),
-                                            (; reference_accel = accel))))
+    auto     = to_vector(state_of(Coordinate(deputy, CoordinateSystem(_CHIEF, VNB()))))
+    explicit = to_vector(state_of(Coordinate(deputy, CoordinateSystem(_CHIEF, VNB()),
+                                             (; reference_accel = accel))))
+    still    = to_vector(state_of(Coordinate(deputy, CoordinateSystem(_CHIEF, VNB()),
+                                             (; reference_accel = zeros(3)))))
 
-    @test without[1:3] ≈ with[1:3] atol = 1e-12      # same axes, same position
-    @test !isapprox(without[4:6], with[4:6]; atol = 1e-9)   # different rate
+    @test auto ≈ explicit atol = 1e-12                      # the supplied acceleration is two-body
+    @test auto[1:3] ≈ still[1:3] atol = 1e-12               # same axes, same position
+    @test !isapprox(auto[4:6], still[4:6]; atol = 1e-9)     # a zero acceleration still means non-rotating
 end
 
 @testset "an origin's state belongs to one epoch" begin

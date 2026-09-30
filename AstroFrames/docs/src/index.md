@@ -120,6 +120,16 @@ M = axes_rotation(ICRF(), ITRF(), epoch)
 
 AstroFrames supports two Earth frame theories, IAU 2006/2000A and FK5 (IAU 1976 precession and IAU 1980 nutation), selected with `set_frame_theory!`. IAU 2006 uses `GCRF → CIRS → TIRS → ITRF` and is the default, recommended for most work. FK5 uses `ICRF → MODEq → TODEq → PEF → ITRF` and is supported for consistency with legacy systems. Both apply the IERS celestial pole offsets, so both carry the ICRF to the same ITRF, to within about 0.3 mas: the theory changes the model, not where the Earth is.
 
+The IAU 2006 chain's precession-nutation step needs the celestial intermediate pole (CIP) coordinates X, Y and the CIO locator s, from a series of over a thousand terms. By default they are interpolated from the series evaluated on a cached 30-minute grid, within 6e-5 µas of it, which is fast for epochs close together such as a propagation's steps. For scattered epochs, such as hourly output, evaluating the series at each epoch is about twice as fast:
+
+```julia
+using AstroFrames
+
+set_cip_interpolation!(false)     # evaluate the series at every epoch
+cip_interpolation()               # false
+set_cip_interpolation!(true)      # the default
+```
+
 `MJ2000Eq` is the FK5 mean equator and equinox of J2000. It differs from the ICRF by the IERS frame bias, a constant rotation of about 23 mas (0.75 m at LEO, 4.7 m at GEO), and is used for data that arrives labelled as FK5 J2000. It is not on the path of the FK5 chain: the IERS offsets applied at the nutation step already absorb the bias, so the chain starts at the ICRF. `MJ2000Ec` is the mean ecliptic of J2000, the same frame rotated by the J2000 obliquity.
 
 ```text

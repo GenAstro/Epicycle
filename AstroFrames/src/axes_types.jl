@@ -438,6 +438,8 @@ Moon.
 
 # Examples
 ```julia
+using AstroFrames, AstroUniverse
+
 # Recommended: the origin supplies the body.
 mars_fixed = CoordinateSystem(mars, CelestialBodyFixed())
 
@@ -445,6 +447,7 @@ mars_fixed = CoordinateSystem(mars, CelestialBodyFixed())
 mars_fixed = CoordinateSystem(mars, CelestialBodyFixed(mars))
 
 # Direct axes-pair use (no CoordinateSystem) requires the explicit form:
+jd_tdb = 2460371.0
 M = axes_rotation(ICRF(), CelestialBodyFixed(mars), jd_tdb)
 ```
 """
@@ -510,7 +513,11 @@ out-of-plane force.
 
 # Example
 ```julia
-p = (; reference_state = [-4550.0, 2220.0, 4980.0, -3.10, -6.60, 0.12])
+using AstroFrames, AstroEpochs
+
+epoch = Time("2024-03-01T12:00:00", UTC(), ISOT())
+p = (; reference_state = [-4550.0, 2220.0, 4980.0, -3.10, -6.60, 0.12])   # the chief, ICRF
+separation_icrf = [0.10, -0.25, 0.05, 1.0e-4, 0.0, -2.0e-4]              # deputy − chief
 
 M = axes_rotation(ICRF(), RIC(), epoch, p)
 separation_ric = M * separation_icrf      # relative state, radial/in-track/cross-track
@@ -535,8 +542,13 @@ Needs a reference orbit, passed as `reference_state`; acceleration is optional.
 
 # Example
 ```julia
+using AstroFrames, AstroEpochs
+
+epoch = Time("2024-03-01T12:00:00", UTC(), ISOT())
+state = [-4550.0, 2220.0, 4980.0, -3.10, -6.60, 0.12]    # the reference orbit, ICRF
+
 M = axes_rotation(ICRF(), LVLH(), epoch, (; reference_state = state))
-M[3, :]    # the nadir direction in inertial axes
+M[3, 1:3]    # the nadir direction in inertial axes
 ```
 """
 struct LVLH <: AbstractAxes end
@@ -565,10 +577,19 @@ rate. This form is appropriate for resolving a vector into instantaneous
 along-track, normal, and binormal components. Supplying `reference_accel` in
 km/s² includes the frame rate of an accelerating reference.
 
+When a spacecraft is the coordinate system's origin, as in
+`CoordinateSystem(chief, VNB())`, its state is the reference orbit and its
+acceleration is taken as two-body gravity about the body its state is measured
+from, so the frame turns with the spacecraft as RIC and LVLH do.
+
 Called TNW and NTW elsewhere.
 
 # Example
 ```julia
+using AstroFrames, AstroEpochs
+
+epoch = Time("2024-03-01T12:00:00", UTC(), ISOT())
+state = [-4550.0, 2220.0, 4980.0, -3.10, -6.60, 0.12]    # the reference orbit, ICRF
 p = (; reference_state = state)
 
 M = axes_rotation(ICRF(), VNB(), epoch, p)

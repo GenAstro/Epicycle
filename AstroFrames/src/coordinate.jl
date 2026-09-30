@@ -50,9 +50,20 @@ Types that support AstroFrames conversions implement this method together with
 
 # Example
 ```julia
+using AstroFrames, AstroUniverse, AstroEpochs, AstroStates
+
+struct MySatellite
+    orbit::KeplerianState{Float64}
+    frame::CoordinateSystem
+    epoch::Time{Float64}
+end
 AstroFrames.state_of(sc::MySatellite) = sc.orbit
 AstroFrames.frame_of(sc::MySatellite) = sc.frame
 AstroFrames.epoch_of(sc::MySatellite) = sc.epoch
+
+sat = MySatellite(KeplerianState(7000.0, 0.01, 0.9, 0.1, 0.2, 0.3), EarthICRF,
+                  Time("2024-03-01T12:00:00", UTC(), ISOT()))
+Coordinate(sat, EarthFixed)      # converts like a Spacecraft
 ```
 """
 function state_of end
@@ -334,8 +345,23 @@ function _reference_orbit_from_origin(target::AbstractCoordinateSystem,
 
     reference = axes_rotation(frame_of(origin).axes, ICRF(), epoch) *
                 SVector{6}(_cartesian_vector(origin))
-    return merge(params, (; reference_state = reference))
+    params = merge(params, (; reference_state = reference))
+
+    # And its acceleration, as two-body gravity about the body its state is measured from. A
+    # spacecraft origin is accelerating, and VNB, whose primary axis is the velocity, turns only
+    # at the rate its acceleration gives; without this, VNB about a spacecraft came out
+    # non-rotating while RIC and LVLH about the same spacecraft turned. Two-body gravity is
+    # along the radius, so RIC and LVLH, which use only its cross-radial part, are unchanged. A
+    # caller's own `reference_accel` takes precedence.
+    haskey(params, :reference_accel) && return params
+    μ = _gravitational_parameter(frame_of(origin).origin)
+    μ === nothing && return params
+    r = reference[SOneTo(3)]
+    return merge(params, (; reference_accel = -μ * r / norm(r)^3))
 end
+
+_gravitational_parameter(body) =
+    hasproperty(body, :mu) && body.mu isa Real && body.mu > 0 ? body.mu : nothing
 
 """
     Coordinate(subject, target::AbstractCoordinateSystem)
@@ -366,6 +392,12 @@ rotation is.
 
 # Example
 ```julia
+using AstroFrames, AstroUniverse, AstroEpochs
+
+epoch = Time("2024-03-01T12:00:00", UTC(), ISOT())
+state = [7000.0, 0.0, 0.0, 0.0, 7.5, 1.0]               # km, km/s
+chief = [7000.0, 1.0, 0.0, 0.0, 7.5, 1.0]               # another orbit, ICRF
+
 c    = Coordinate(state, CoordinateSystem(earth, MJ2000Eq()), epoch)
 c_ec = Coordinate(c, CoordinateSystem(earth, MJ2000Ec()))
 c_mo = Coordinate(c, CoordinateSystem(moon,  MoonME()))
@@ -401,6 +433,10 @@ what a conversion does.
 
 # Example
 ```julia
+using AstroFrames, AstroUniverse, AstroEpochs, AstroStates
+
+c = Coordinate([7000.0, 0.0, 0.0, 0.0, 7.5, 1.0], EarthICRF,
+               Time("2024-03-01T12:00:00", UTC(), ISOT()))
 CartesianState(c, CoordinateSystem(earth, ITRF()))
 ```
 """

@@ -10,6 +10,17 @@ using LinearAlgebra
 using ForwardDiff
 using Test
 import SatelliteToolboxTransformations as STB
+using AstroStates: CartesianState, to_vector
+using EpicycleBase: AbstractPoint
+
+# A spacecraft-like origin that carries its own state, for the VNB test below.
+struct _VnbChief <: AbstractPoint
+    x::Vector{Float64}
+    t::Time{Float64}
+end
+AstroFrames.state_of(c::_VnbChief) = CartesianState(c.x)
+AstroFrames.frame_of(::_VnbChief)  = EarthICRF
+AstroFrames.epoch_of(c::_VnbChief) = c.t
 
 @testset "Frame edge cases" begin
 
@@ -122,6 +133,56 @@ import SatelliteToolboxTransformations as STB
             M = axes_rotation(ICRF(), RIC(), e, (; reference_state = [7000.0, 0, 0, 1.0, 0, 0]))
             @test any(isnan, M)
         end
+    end
+
+    @testset "CIP interpolation can be turned off" begin
+        @test cip_interpolation() === true                  # the default
+        t = Time("2024-03-01T07:13:00", UTC(), ISOT())
+        try
+            A = axes_rotation(GCRF(), CIRS(), t)
+            @test set_cip_interpolation!(false) === false
+            @test cip_interpolation() === false
+            B = axes_rotation(GCRF(), CIRS(), t)
+            # The series and its interpolant agree to round-off, 6e-5 µas at worst
+            @test opnorm(Matrix(A - B)[1:3, 1:3]) < 1e-15
+            # With the series, nothing is cached
+            empty!(AstroFrames._CIP_NODES)
+            axes_rotation(GCRF(), CIRS(), t + 0.37)
+            @test isempty(AstroFrames._CIP_NODES)
+            # and the epoch derivative still passes through
+            g = ForwardDiff.derivative(x -> axes_rotation(GCRF(), CIRS(), x)[1, 3], 2460371.3)
+            @test isfinite(g) && g != 0
+        finally
+            set_cip_interpolation!(true)
+        end
+    end
+
+    @testset "VNB about a spacecraft turns with it, as RIC does" begin
+        # The origin supplies its state and two-body acceleration. A deputy 100 m radially outside
+        # a circular chief drifts back along the track at ω × 100 m in both frames.
+        t = Time("2024-03-01T07:13:00", UTC(), ISOT())
+        v = sqrt(earth.mu / 7000)
+        chief  = _VnbChief([7000.0, 0, 0, 0, v, 0], t)
+        deputy = Coordinate([7000.1, 0, 0, 0, v, 0], EarthICRF, t)
+        ω = v / 7000
+        ric = Coordinate(deputy, CoordinateSystem(chief, RIC()))
+        vnb = Coordinate(deputy, CoordinateSystem(chief, VNB()))
+        @test to_vector(ric.state)[5] ≈ -ω * 0.1 rtol = 1e-9     # in-track
+        @test to_vector(vnb.state)[4] ≈ -ω * 0.1 rtol = 1e-9     # along the velocity
+    end
+
+    @testset "restricted axes name the origin they need" begin
+        # One case per axes family: the error names the axes, the origin given, and the fix.
+        for (axes, hint) in ((GCRF(), "Earth"), (CIRS(), "Earth"), (TIRS(), "Earth"), (ITRF(), "Earth"),
+                             (MODEq(), "Earth"), (TODEq(), "Earth"), (MODEc(), "Earth"),
+                             (TODEc(), "Earth"), (PEF(), "Earth"), (TEME(), "Earth"),
+                             (MoonPA(), "Moon"), (MoonME(), "Moon"))
+            err = try; CoordinateSystem(mars, axes); nothing; catch e; e; end
+            @test err isa ArgumentError
+            @test occursin(string(nameof(typeof(axes))), err.msg) && occursin(hint, err.msg)
+        end
+        err = try; CoordinateSystem(mars, CelestialBodyFixed{399}()); nothing; catch e; e; end
+        @test err isa ArgumentError && occursin("399", err.msg)
     end
 
     @testset "epochs of other number types" begin

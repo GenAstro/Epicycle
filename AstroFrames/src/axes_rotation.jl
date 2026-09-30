@@ -83,11 +83,25 @@ do, so an edge must not convert one itself.
 UTC unsplit.
 
 # Example
+A frame of your own reads the scale its model is written in:
 ```julia
-function AstroFrames.axes_rotation(::ICRF, ::MyAxes, e::EpochScales)
+using AstroFrames, AstroEpochs
+
+struct SlowSpin <: AstroFrames.AbstractAxes end    # the ICRF turning 1° a day about z
+AstroFrames.hub_axes(::Type{SlowSpin}) = ICRF()
+
+function AstroFrames.axes_rotation(::ICRF, ::SlowSpin, e::EpochScales)
     days = epoch_tdb(e) - 2451545.0
-    ...
+    θ, ω = deg2rad(days), deg2rad(1) / 86400        # angle, and rate per second
+    c, s = cos(θ), sin(θ)
+    R = [c s 0; -s c 0; 0 0 1]
+    Ṙ = ω * [-s c 0; -c -s 0; 0 0 0]
+    return [R zeros(3, 3); Ṙ R]
 end
+AstroFrames.axes_rotation(a::SlowSpin, ::ICRF, e::EpochScales) =
+    inv(axes_rotation(ICRF(), a, e))
+
+axes_rotation(ICRF(), SlowSpin(), Time("2024-03-01T12:00:00", UTC(), ISOT()))
 ```
 """
 struct EpochScales{T<:Real}
@@ -131,11 +145,12 @@ than 2 ms, while TT and UTC differ by more than a minute; substituting one for
 another rotates a spinning frame by the scale error multiplied by its rate.
 
 # Example
+Inside a frame's `axes_rotation`, as in [`EpochScales`](@ref):
 ```julia
-function AstroFrames.axes_rotation(::ICRF, ::MyAxes, e::EpochScales)
-    days_since_j2000 = epoch_tdb(e) - 2451545.0
-    ...
-end
+using AstroFrames
+
+e = EpochScales(2460371.0008, 2460371.0008, 2460371.0)
+days_since_j2000 = epoch_tdb(e) - 2451545.0
 ```
 """
 @inline epoch_tdb(e::EpochScales) = e.tdb
@@ -158,11 +173,12 @@ why the Earth-orientation series are written against it. See
 
 # Example
 
+Inside a frame's `axes_rotation`, as in [`EpochScales`](@ref):
 ```julia
-function AstroFrames.axes_rotation(::ICRF, ::MyAxes, e::EpochScales)
-    jd = epoch_tt(e)
-    ...
-end
+using AstroFrames
+
+e = EpochScales(2460371.0008, 2460371.0008, 2460371.0)
+centuries_tt = (epoch_tt(e) - 2451545.0) / 36525    # the argument of a precession series
 ```
 """
 @inline epoch_tt(e::EpochScales) = e.tt
@@ -192,11 +208,12 @@ conversion.
 
 # Example
 
+Inside a frame's `axes_rotation`, as in [`EpochScales`](@ref):
 ```julia
-function AstroFrames.axes_rotation(::ICRF, ::MyAxes, e::EpochScales)
-    jd = epoch_utc(e)
-    ...
-end
+using AstroFrames, AstroUniverse
+
+e = EpochScales(2460371.0008, 2460371.0008, 2460371.0)
+eop(IAU2006()).x(epoch_utc(e))       # polar motion x [arcsec], read at the UTC date
 ```
 """
 @inline epoch_utc(e::EpochScales) = e.utc
@@ -911,12 +928,67 @@ axes_rotation(::GCRF, ::ICRF, ::EpochScales) = SMatrix{6,6,Float64,36}(I)
 #
 # The grid values depend only on the grid, so the result depends only on the epoch, not on what
 # was asked for before. They are cached under a lock, and the cache is emptied when it grows past
-# a few months of nodes, so a long run does not grow it without bound.
+# a few years of nodes, so a long run does not grow it without bound.
+#
+# Interpolation pays off for epochs close together, a propagation's steps. An isolated epoch finds
+# no cached nodes and evaluates the series four times, 100-160 µs rather than one evaluation's
+# 43 µs. `set_cip_interpolation!(false)` evaluates the series at every epoch instead.
 
 const _CIP_STEP_DAYS = 1 / 48
 const _CIP_NODES     = Dict{Int, NTuple{3, Float64}}()
 const _CIP_LOCK      = ReentrantLock()
-const _CIP_MAX_NODES = 8192
+const _CIP_MAX_NODES = 65_536                   # 3.7 years of 30-minute nodes, about 3 MB
+const _CIP_INTERPOLATE = Ref(true)
+
+"""
+    cip_interpolation() -> Bool
+
+Whether the IAU 2006 chain interpolates the CIP coordinates and CIO locator from a cached
+30-minute grid (`true`, the default) or evaluates the IAU 2006/2000A series at every epoch.
+
+# Returns
+The current setting. See [`set_cip_interpolation!`](@ref) to change it.
+
+# Example
+```jldoctest
+cip_interpolation()
+
+# output
+true
+```
+"""
+cip_interpolation() = _CIP_INTERPOLATE[]
+
+"""
+    set_cip_interpolation!(on::Bool) -> Bool
+
+Choose how the IAU 2006 chain (`GCRF → CIRS`) obtains the CIP coordinates X, Y and the CIO
+locator s, for the rest of the session.
+
+- `true`, the default: interpolated from the series evaluated on a 30-minute grid in TT, which
+  is cached. Within 6.3e-5 µas of the series. Fast for epochs close together, such as a
+  propagation's steps; an isolated epoch evaluates the series four times, 100-160 µs.
+- `false`: the IAU 2006/2000A series at every epoch, about 43 µs each, and the exact series
+  value. Suits sparse epochs, such as hourly output or a scattered set of observation times.
+
+Both are deterministic: the result depends only on the epoch and the setting.
+
+# Arguments
+- `on::Bool`: `true` to interpolate, `false` to evaluate the series.
+
+# Returns
+The setting now in force.
+
+# Example
+```julia
+set_cip_interpolation!(false)     # sparse epochs: evaluate the series directly
+set_cip_interpolation!(true)      # back to the default
+```
+"""
+function set_cip_interpolation!(on::Bool)
+    _CIP_INTERPOLATE[] = on
+    return on
+end
 
 # Written without `lock(f, l)` and `get!(f, d, k)`: their closures cost an allocation a node.
 function _cip_node(k::Int)
@@ -941,6 +1013,7 @@ four-point Lagrange interpolation on a 30-minute grid; see the note above. A dua
 carries the interpolant's derivative.
 """
 function _cip_iau2006(jd_tt::Real)
+    _CIP_INTERPOLATE[] || return cio_iau2006(jd_tt)
     τ = jd_tt / _CIP_STEP_DAYS
     k = floor(Int, τ)
     u = τ - k                                      # in [0, 1): between nodes k and k + 1
@@ -1310,17 +1383,22 @@ otherwise the extension frame remains unreachable.
 
 # Example
 ```julia
-struct PhobosFixed <: AstroFrames.AbstractAxes end
+using AstroFrames, AstroEpochs
 
-AstroFrames.hub_axes(::Type{PhobosFixed}) = ICRF()
+struct Tilted <: AstroFrames.AbstractAxes end          # the ICRF turned 30° about z
 
-function AstroFrames.axes_rotation(::ICRF, ::PhobosFixed, e::EpochScales)
-    return body_axes_rotation(orientation_model(phobos), 401, epoch_tdb(e))
+AstroFrames.hub_axes(::Type{Tilted}) = ICRF()
+
+function AstroFrames.axes_rotation(::ICRF, ::Tilted, e::EpochScales)
+    c, s = cosd(30), sind(30)
+    R = [c s 0; -s c 0; 0 0 1]
+    return [R zeros(3, 3); zeros(3, 3) R]
 end
-AstroFrames.axes_rotation(a::PhobosFixed, ::ICRF, e::EpochScales) =
+AstroFrames.axes_rotation(a::Tilted, ::ICRF, e::EpochScales) =
     inv(axes_rotation(ICRF(), a, e))
 
-axes_rotation(ITRF(), PhobosFixed(), epoch)    # routes, six edges, unassisted
+epoch = Time("2024-03-01T12:00:00", UTC(), ISOT())
+axes_rotation(ITRF(), Tilted(), epoch)    # routes through the Earth chain, unassisted
 ```
 """
 hub_axes(::Type{<:AbstractAxes}) = nothing
