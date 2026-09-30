@@ -6,7 +6,7 @@ CurrentModule = AstroStates
 
 The AstroStates module provides models, structs, utilities, and conversions for orbital state representations. A state representation is a set of quantities that uniquely define an orbit. Supported forms include Cartesian, Keplerian, Modified Equinoctial, and others.
 
-The module offers multiple interfaces for transforming and storing states. Low‑level conversion functions (e.g., `cart_to_kep.jl`) can be used directly. A type system automatically provides concrete structs for each representation (e.g., `CartesianState`) and converts between all supported permutations. The `OrbitState` utility preserves type stability when the representation may change by storing the numeric state and a type tag in separate fields. The library supports automatic differentiation with ForwardDiff.jl and Zygote.jl.
+The module offers multiple interfaces for transforming and storing states. Low‑level conversion functions (e.g., `cart_to_kep.jl`) can be used directly. A type system automatically provides concrete structs for each representation (e.g., `CartesianState`) and converts between all supported permutations. The `OrbitState` utility preserves type stability when the representation may change by storing the numeric state and a type tag in separate fields. The conversions are differentiable with ForwardDiff.jl.
 
 AstroStates is tested against output from the General Mission Analysis Tool (GMAT) R2022a.
 
@@ -113,91 +113,63 @@ ae = equinoctial_to_alt_equinoctial([7758.763,-0.0047,0.09769,-0.00695,0.16227, 
 The conversions are written to resemble astrodynamics textbooks with the intention that the code can serve as its own math spec. Here is an example from `kep_to_cart.jl`:
 
 ``` julia
-using LinearAlgebra
-
-"""
-    kep_to_cart(state::Vector{<:Real}, μ::Real; tol::Float64=1e-12)
-
-Convert a Keplerian state vector to a Cartesian state vector.
-
-# Arguments
-- `state::Vector{<:Real}`: Keplerian elements `[a, e, i, Ω, ω, ν]`
-- `μ`: Gravitational parameter
-- `tol`: Tolerance for singularities like p ≈ 0 (default: 1e-12)
-- `a`: semi-major axis
-- `e`: eccentricity
-- `i`: inclination
-- `Ω`: right ascension of ascending node
-- `ω`: argument of periapsis
-- `ν`: true anomaly
-
-# Returns
-A 6-element vector `[x, y, z, vx, vy, vz]` representing Cartesian position and velocity.
-
-# Example
-cart = kep_to_cart([7000.0, 0.01, pi/4, 0.0, 0.0, pi/3], 398600.4418)
-
-# Notes
-- Angles must be in radians.
-- Dimensional quantities must be consistent units with μ.
-- Returns a vector of `NaN`s if conversion is undefined.
-"""
-function kep_to_cart(state::Vector{<:Real}, μ::Real; tol::Float64=1e-12)
+function kep_to_cart(state::AbstractVector{<:Real}, μ::Real; tol::Real=1e-12)
     if length(state) != 6
         error("Input vector must have exactly six elements: a, e, i, Ω, ω, ν.")
     end
+    T = float(promote_type(eltype(state), typeof(μ)))
 
     if μ < tol
         @warn "Conversion Failed: μ < tolerance."
-        return fill(NaN, 6)
+        return fill(T(NaN), 6)
     end
 
     # Unpack the elements
     a, e, i, Ω, ω, ν = state
 
-    # Compute semi-latus rectum: p = a * (1 - e²)
-    p = a * (1.0 - e^2)
+    # Semi-latus rectum: p = a * (1 - e²)
+    p = a * (1 - e^2)
 
-    # Check for degenerate orbit (e.g., parabolic or collapsed)
-    if p < tol || abs(1-e) < tol
+    # Degenerate orbit (parabolic or collapsed)
+    if p < tol || abs(1 - e) < tol
         @warn "Conversion Failed: Orbit is parabolic or singular."
-        return fill(NaN, 6)
+        return fill(T(NaN), 6)
     end
 
-    # Compute radial distance: r = p / (1 + e * cos(ν))
-    r = p / (1.0 + e * cos(ν))
+    # Radial distance: r = p / (1 + e cos ν). On a hyperbola the denominator reaches zero at the
+    # asymptote; beyond it r would be negative and the state a mirror image of no real point.
+    denom = 1 + e * cos(ν)
+    if denom <= tol
+        @warn "Conversion Failed: True anomaly $(ν) is at or beyond the asymptote of a hyperbola " *
+              "with eccentricity $(e)."
+        return fill(T(NaN), 6)
+    end
+    r = p / denom
 
-    # Position and velocity in perifocal frame 
+    # Position and velocity in the perifocal frame
     factor = sqrt(μ / p)
-    r̄ₚ = [r * cos(ν), r * sin(ν), 0.0]
-    v̄ₚ = [-factor * sin(ν), factor * (e + cos(ν)), 0.0]
+    sν, cν = sincos(ν)
+    r̄ₚ = SVector{3,T}(r * cν, r * sν, 0)
+    v̄ₚ = SVector{3,T}(-factor * sν, factor * (e + cν), 0)
 
-    # Precompute sines and cosines for rotation matrix
-    cos_Ω, sin_Ω = cos(Ω), sin(Ω)
-    cos_ω, sin_ω = cos(ω), sin(ω)
-    cos_i, sin_i = cos(i), sin(i)
+    # Rotation from perifocal to inertial
+    sΩ, cΩ = sincos(Ω)
+    sω, cω = sincos(ω)
+    si, ci = sincos(i)
+    R = SMatrix{3,3,T}(cω * cΩ - sω * ci * sΩ,  cω * sΩ + sω * ci * cΩ,  sω * si,
+                       -sω * cΩ - cω * ci * sΩ, -sω * sΩ + cω * ci * cΩ, cω * si,
+                       si * sΩ,                 -si * cΩ,                ci)      # column-major
 
-    # Rotation matrix from perifocal to inertial
-    R = [
-        cos_ω * cos_Ω - sin_ω * cos_i * sin_Ω   -sin_ω * cos_Ω - cos_ω * cos_i * sin_Ω   sin_i * sin_Ω;
-        cos_ω * sin_Ω + sin_ω * cos_i * cos_Ω   -sin_ω * sin_Ω + cos_ω * cos_i * cos_Ω  -sin_i * cos_Ω;
-        sin_ω * sin_i                                    cos_ω * sin_i                   cos_i
-    ]
-
-    # Rotate position and velocity from perifocal to inertial frame
     pos = R * r̄ₚ
-    vel = R * v̄ₚ 
-
-    return vcat(pos, vel)
+    vel = R * v̄ₚ
+    return T[pos[1], pos[2], pos[3], vel[1], vel[2], vel[3]]
 end
 ```
 ---
 
 ## Automatic Differentiation 
 
-All functions and conversions in AstroStates are fully differentiable using Julia's automatic differentation libraries ForwardDiff and Zygote. Examples for computing Jacobians are shown below.  
-
-Note: The time to precompile AD interfaces is substantial, but those times are only incurred on the first execution and when included in loops or functions the times are orders of magnitude faster. REPL peformance for these examples is poor for that reason. 
+The conversions are differentiable with ForwardDiff, including at periapsis, apoapsis and a zero node or argument of periapsis. The test suite checks this for every representation: the Jacobian of the conversion from Cartesian times the Jacobian of the conversion back is the identity. Derivatives do not exist at the states where an element is undefined, an exactly circular or exactly equatorial orbit, and there the returned derivative is not meaningful.
 
 ```julia
 using ForwardDiff
@@ -212,21 +184,6 @@ f(x) = to_vector(KeplerianState(CartesianState(x, mu), mu))
 
 # Compute the Jacobian of Keplerian state w/r/t Cartesian State at x
 J = ForwardDiff.jacobian(f, x)
-```
-
-```julia
-using Zygote
-using AstroStates
-
-# State vector and mu
-x = [7000.0, 0.0, 100.0, 0.0, 7.5, 2.5]
-mu = 398600.4418
-
-# Define a function closure that returns a vector  
-f(x) = to_vector(ModifiedEquinoctialState(CartesianState(x, mu), mu))
-
-# Compute the Jacobian of Modified Equinoctial elements w/r/t Cartesian
-J = first(Zygote.jacobian(f, x))  
 ```
 
 ## State Types Reference

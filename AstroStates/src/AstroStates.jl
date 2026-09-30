@@ -101,7 +101,7 @@ Cartesian position and velocity state representation.
   * Range: Any real values.
 
 # Properties
-- `posvel`: Backward-compatible property returning combined state as Vector{Float64}
+- `posvel`: Backward-compatible property returning the combined state as a `Vector{T}`
 
 # Notes
 - Parametric so automatic differentiation and high-precision types are supported.
@@ -123,7 +123,7 @@ cart = CartesianState(pos, vel)
 # Access fields
 x, y, z = cart.position
 vx, vy, vz = cart.velocity
-posvel_vec = cart.posvel  # Returns Vector{Float64}
+posvel_vec = cart.posvel  # Returns a Vector
 ```
 """
 mutable struct CartesianState{T} <: AbstractOrbitState
@@ -327,9 +327,9 @@ Spherical coordinates with azimuth and flight path angle velocity representation
 - `vazi`: Velocity azimuth (rad). Horizontal direction of velocity vector.
   * Range: [0, 2π). Angle east of north in local horizontal plane.
   * vazi = 0: northward velocity. vazi = π/2: eastward velocity.
-- `fpa`: Flight path angle (rad). Elevation of velocity above local horizontal.
-  * Range: [-π/2, π/2]. fpa = 0: horizontal flight. fpa > 0: climbing.
-  * fpa < 0: descending flight. fpa = ±π/2: purely radial motion.
+- `fpa`: Flight path angle (rad), measured from the radial direction (GMAT convention).
+  * Range: [0, π]. fpa = π/2: horizontal flight. fpa < π/2: climbing.
+  * fpa > π/2: descending. fpa = 0 or π: purely radial motion.
 
 # Notes
 - Parametric so automatic differentiation and high-precision types are supported.
@@ -431,7 +431,7 @@ Outgoing asymptote parameters for hyperbolic trajectories.
   * Range: [-π/2, π/2].
 - `bpa`: B-plane angle (rad). 
   * Range: [0, 2π).
-- `ta`: True anomaly at asymptote (rad). 
+- `ta`: True anomaly of the current position (rad).
   * Range: [0, 2π).
 
 # Notes
@@ -485,7 +485,7 @@ Incoming asymptote parameters for hyperbolic trajectories.
   * Range: [-π/2, π/2].
 - `bpa`: B-plane angle (rad). 
   * Range: [0, 2π).
-- `ta`: True anomaly at asymptote (rad). 
+- `ta`: True anomaly of the current position (rad).
   * Range: [0, 2π).
 
 # Notes
@@ -590,16 +590,16 @@ Equinoctial orbital elements representation.
 
 # Fields (all `::T` where `T<:Real`)
 - `a`: Semi-major axis. Defines orbit size and energy.
-  * Range: a ≠ 0. If a > 0: elliptic orbit. If a < 0: hyperbolic orbit.
+  * Range: a > 0. Equinoctial elements here are defined for elliptic orbits only.
 - `h`: Eccentricity vector h-component. h = e⋅sin(ω + Ω).
   * Range: Any real value. Related to eccentricity and orientation.
 - `k`: Eccentricity vector k-component. k = e⋅cos(ω + Ω).
   * Range: Any real value. Related to eccentricity and orientation.
-- `p`: Inclination vector p-component. p = tan(i/2)⋅cos(Ω).
+- `p`: Inclination vector p-component. p = tan(i/2)⋅sin(Ω).
   * Range: Any real value. Related to inclination and node orientation.
-- `q`: Inclination vector q-component. q = tan(i/2)⋅sin(Ω).
+- `q`: Inclination vector q-component. q = tan(i/2)⋅cos(Ω).
   * Range: Any real value. Related to inclination and node orientation.
-- `mlong`: Mean longitude (rad). Ω + ω + ν combined angle measure.
+- `mlong`: Mean longitude (rad), Ω + ω + M, where M is the mean anomaly.
   * Range: [0, 2π). Normalized mean longitude.
 
 # Notes
@@ -641,16 +641,16 @@ Alternate equinoctial elements representation.
 
 # Fields (all `::T` where `T<:Real`)
 - `a`: Semi-major axis. Defines orbit size and energy.
-  * Range: a ≠ 0. If a > 0: elliptic orbit. If a < 0: hyperbolic orbit.
+  * Range: a > 0. Equinoctial elements here are defined for elliptic orbits only.
 - `h`: Eccentricity vector h-component. h = e⋅sin(ω + Ω).
   * Range: Any real value. Related to eccentricity and orientation.
 - `k`: Eccentricity vector k-component. k = e⋅cos(ω + Ω).
   * Range: Any real value. Related to eccentricity and orientation.
-- `altp`: Alternate inclination vector p-component. altp = sin(i/2)⋅cos(Ω).
+- `altp`: Alternate inclination vector p-component. altp = sin(i/2)⋅sin(Ω).
   * Range: Any real value. Alternative inclination parameterization.
-- `altq`: Alternate inclination vector q-component. altq = sin(i/2)⋅sin(Ω).
+- `altq`: Alternate inclination vector q-component. altq = sin(i/2)⋅cos(Ω).
   * Range: Any real value. Alternative inclination parameterization.
-- `mlong`: Mean longitude (rad). Combined angle measure.
+- `mlong`: Mean longitude (rad), Ω + ω + M, where M is the mean anomaly.
   * Range: [0, 2π). Normalized mean longitude.
 
 # Notes
