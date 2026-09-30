@@ -265,9 +265,14 @@ forces = ForceModel(
 )
 ```
 
+The field is evaluated in the body-fixed axes its coefficients were estimated in: the field's
+own if it declares them, otherwise the body's orientation model, and the `orientation` keyword
+overrides both. For the Earth that is the frame theory in force when the force is built.
+
 !!! note "Enterprise"
-    The Enterprise version adds the full gravity fields, `EGM96` and `EGM2008`, evaluated to high
-    degree and order for precision work. You select one the same way — just change `model`:
+    The Enterprise version adds the full gravity fields, `EGM96` and `EGM2008` for the Earth,
+    `GL0660B` for the Moon, `JGM85F01` for Mars, and `IcgemGravity` for any ICGEM file, evaluated
+    to high degree and order for precision work. You select one the same way — just change `model`:
 
     ```@raw html
     <!-- doc-fragment -->
@@ -275,6 +280,7 @@ forces = ForceModel(
     ```julia
     using EpicycleEnterprise
     grav = HarmonicGravity(earth; degree = 70, order = 70, model = EGM96())
+    grav = HarmonicGravity(moon; degree = 100, order = 100, model = GL0660B())
     ```
 
 ### Atmospheric drag
@@ -292,16 +298,28 @@ The open-source version includes the `Exponential` atmosphere — a smooth analy
 that's fast and works well for early analysis.
 
 !!! note "Enterprise"
-    The Enterprise version adds `MSISE00` (NRLMSISE-00), the empirical atmosphere used for
-    operational drag work. It responds to solar and geomagnetic activity, taken from
-    `SpaceIndices` tables:
+    The Enterprise version adds six atmospheres of the Earth, each selected the same way. All but
+    Harris-Priester respond to solar and geomagnetic activity, read from `SpaceIndices` tables.
+
+    | Model | Atmosphere | Altitude | Checked against |
+    |---|---|---|---|
+    | `MSISE00` | NRLMSISE-00 | surface to 1000 km | Orekit, GMAT |
+    | `JB2008` | Jacchia-Bowman 2008 | 90 to 3000 km | Orekit |
+    | `JR1971` | Jacchia-Roberts 1971 | 90 to 3000 km | GMAT's published densities |
+    | `Jacchia1977` | Jacchia 1977 (SAO Special Report 375) | 90 to 2000 km | — |
+    | `HarrisPriester` | Harris-Priester, mean solar activity | 100 to 1000 km | Orekit |
+    | `HarrisPriesterModified` | Harris-Priester, smooth and scaled by F10.7 (Hatten and Russell) | 100 to 1000 km | — |
+
+    Below its lower limit a model stops the propagation with an error naming the limit; above its
+    upper limit the density is zero. `HarrisPriesterModified` is smooth in its first derivatives,
+    which suits an optimizer or a state transition matrix.
 
     ```@raw html
     <!-- doc-fragment -->
     ```
     ```julia
     using EpicycleEnterprise
-    drag = AtmosphericDrag(mars; model = MSISE00())
+    drag = AtmosphericDrag(earth; model = JB2008())
     ```
 
 ### Solar radiation pressure

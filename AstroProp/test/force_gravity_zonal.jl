@@ -18,6 +18,8 @@ using AstroUniverse: earth
 using OrdinaryDiffEqVerner: Vern9
 using LinearAlgebra: norm
 
+@isdefined(GmatEarthAxes) || include("gmat_earth_axes.jl")
+
 # ── 1. Native J2 self-check — closed form, no GMAT ────────────────────────────
 function _j2_closed_form(r, μ, Re, J2)
     rn = norm(r); s = r[3] / rn
@@ -46,7 +48,8 @@ sc = Spacecraft(;
     name  = "LEO",
 )
 
-gravity = HarmonicGravity(earth; degree = 5, order = 0, model = Zonal())   # J2–J5, open
+# In GMAT's Earth axes; see gmat_earth_axes.jl.
+gravity = HarmonicGravity(earth; degree = 5, order = 0, model = Zonal(), orientation = GmatEarthAxes())
 forces  = ForceModel(gravity)
 
 integ = IntegratorConfig(Vern9(); reltol = 1e-12, abstol = 1e-12, dt = 60.0)

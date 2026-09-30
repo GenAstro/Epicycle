@@ -42,8 +42,13 @@ struct ZonalData
     Re_m::Float64        # Rₑ [m]
 end
 
-geopotential_data(::Zonal, body::CelestialBody, degree::Int, order::Int) =
-    ZonalData(_ZONAL_GM_KM3 * 1.0e9, _ZONAL_RE_KM * 1.0e3)
+# Earth's coefficients. The body used to be ignored, so another central body got Earth's field.
+function geopotential_data(::Zonal, body::CelestialBody, degree::Int, order::Int)
+    body.naifid == 399 || throw(ArgumentError(
+        "Zonal() is the Earth's zonal field; got central body $(body.name). " *
+        "Select a gravity field for that body."))
+    return ZonalData(_ZONAL_GM_KM3 * 1.0e9, _ZONAL_RE_KM * 1.0e3)
+end
 
 # Native zonal acceleration (central + J2..Jₙ) in the Earth-fixed frame, SI. Legendre
 # polynomials and their derivatives use stable recurrences:

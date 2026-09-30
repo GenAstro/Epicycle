@@ -18,14 +18,17 @@ The gravity field used by [`HarmonicGravity`](@ref), chosen with its `model` key
 
 # Available models
 - [`Zonal`](@ref) — Earth's zonal harmonics J2–J5. Open.
-- `EGM96`, `EGM2008` — full gravity fields. **Enterprise**.
+- `EGM96`, `EGM2008` for the Earth, `GL0660B` for the Moon, `JGM85F01` for Mars, and
+  `IcgemGravity` for a field in any ICGEM file — full gravity fields. **Enterprise**.
 
 # Writing your own
 Define a type that subtypes `AbstractGeopotential` and give it `max_degree`, `max_order`,
-`geopotential_data`, and `geopotential_accel`. `HarmonicGravity` then works with it unchanged.
+`geopotential_data`, and `geopotential_accel`. `HarmonicGravity` then works with it unchanged. If
+the coefficients are defined in axes other than the body's default orientation, also give it
+[`field_orientation`](@ref).
 
 !!! note "Enterprise"
-    `EGM96` and `EGM2008` come from the `EpicycleEnterprise` package (commercial license). Load it to
+    The full fields come from the `EpicycleEnterprise` package (commercial license). Load it to
     use them; without it, `EGM96()` is undefined. See the Force Models guide for details.
 """
 abstract type AbstractGeopotential end
@@ -38,34 +41,80 @@ function max_order end
 function geopotential_data end
 
 """
-    geopotential_accel(model, data, r_itrf, tsec, degree, order) -> SVector{3}
+    geopotential_accel(model, data, r_fixed, tsec, degree, order) -> SVector{3}
 
-Total gravitational acceleration from the central body in the Earth-fixed frame [m/s²] — the central
-term plus the harmonics up to `degree` and `order`. Each gravity field provides this method, and
-`HarmonicGravity` calls it.
+Total gravitational acceleration from the central body in the field's body-fixed axes [m/s²] — the
+central term plus the harmonics up to `degree` and `order`. `r_fixed` is the position in those
+axes [m]. Each gravity field provides this method, and `HarmonicGravity` calls it.
 """
 function geopotential_accel end
 
+"""
+    field_orientation(model, body) -> AbstractOrientationModel
+
+The body-fixed axes `model`'s coefficients are defined in, which `HarmonicGravity` evaluates it in.
+
+# Notes
+A gravity field is estimated in particular axes, and its coefficients describe the body's mass
+only in those axes; evaluated in others, the field is rotated away from the mass that produced it.
+The default is the body's orientation model, `orientation_model(body)`: the frame theory for the
+Earth (ITRF), `LunarPA()` for the Moon, `IAU2015()` for the planets. A field defined in other axes
+overrides this, as `JGM85F01` does with the IAU 1991 Mars axes.
+
+`HarmonicGravity`'s `orientation` keyword takes precedence over both.
+"""
+field_orientation(::AbstractGeopotential, body) = orientation_model(body)
+
+# ─────────────────────── body-fixed axes, shared with drag ───────────────────
+
+# The rotation `R` and its rate `Ṙ` from a 6×6 body-fixed rotation `[R 0; Ṙ R]`, as static
+# 3×3 matrices.
+@inline function _rotation_blocks(M::AbstractMatrix)
+    R = SMatrix{3,3}(M[1,1], M[2,1], M[3,1], M[1,2], M[2,2], M[3,2], M[1,3], M[2,3], M[3,3])
+    Ṙ = SMatrix{3,3}(M[4,1], M[5,1], M[6,1], M[4,2], M[5,2], M[6,2], M[4,3], M[5,3], M[6,3])
+    return R, Ṙ
+end
+
+# A force's axes must be the body's, checked when the force is built rather than at the first
+# evaluation. AstroUniverse knows which bodies each shipped model orients; a model a user writes
+# is taken at its word, as `set_orientation!` does.
+function _check_axes(axes::AbstractOrientationModel, body::CelestialBody)
+    AstroUniverse._orients(axes, body.naifid) || throw(ArgumentError(
+        "$(axes) does not give the axes of $(body.name) (NAIF $(body.naifid)); pass " *
+        "`orientation` a model of that body, or leave it out for the body's own."))
+    return nothing
+end
+
 # ────────────────────────── spherical-harmonic gravity ───────────────────────
 """
-    HarmonicGravity(body; degree, order, model = Zonal())
+    HarmonicGravity(body; degree, order, model = Zonal(), orientation = nothing)
 
 Gravity from a body's non-spherical field, evaluated to the degree and order you choose.
 
 # Arguments
-- `body::CelestialBody`: the central body (Earth is the tested case).
+- `body::CelestialBody`: the central body.
 - `degree::Int`, `order::Int`: how far to evaluate the field; checked against what the chosen model
   supports.
-- `model::AbstractGeopotential`: which gravity field. Open: [`Zonal`](@ref), the J2–J5 zonal field.
-  Enterprise: `EGM96`, `EGM2008`, the full fields.
+- `model::AbstractGeopotential`: which gravity field. Open: [`Zonal`](@ref), the Earth's J2–J5 zonal
+  field. Enterprise: the full fields of the Earth, the Moon, Mars, and any ICGEM file.
+- `orientation::AbstractOrientationModel`: the body-fixed axes to evaluate the field in. Leave it
+  out to use the axes the field is defined in, [`field_orientation`](@ref)`(model, body)`.
 
 # Notes
-The gravity field and Earth-orientation data are read once, when you construct the force, so set them
-up first. Don't also add `PointMassGravity` for the same body — that counts the central gravity
-twice, and `ForceModel` will stop you.
+The field is evaluated in body-fixed axes and the acceleration rotated back to the propagation
+axes, ICRF. The axes are chosen when you construct the force: the `orientation` keyword if given,
+otherwise the field's own, otherwise the body's orientation model. For the Earth that is the frame
+theory in force at construction, so a GMAT comparison sets `set_frame_theory!(FK5())` first.
+Changing a body's orientation or the frame theory afterwards does not change a force already built.
+
+Pass `orientation` only deliberately. A field's coefficients describe the body's mass in the axes
+they were estimated in, and in other axes the field is rotated away from it.
+
+The gravity field is read once, at construction. Don't also add `PointMassGravity` for the same body
+— that counts the central gravity twice, and `ForceModel` will stop you.
 
 !!! note "Enterprise"
-    `EGM96` and `EGM2008` come from the `EpicycleEnterprise` package (commercial license). The
+    The full fields come from the `EpicycleEnterprise` package (commercial license). The
     open-source version includes `Zonal` (J2–J5); switching to a full field changes only `model` —
     the rest of the call is the same.
 
@@ -76,15 +125,16 @@ grav = HarmonicGravity(earth; degree = 5, order = 0, model = Zonal())     # open
 
 using EpicycleEnterprise
 grav = HarmonicGravity(earth; degree = 70, order = 70, model = EGM96())   # Enterprise, full field
+grav = HarmonicGravity(mars; degree = 50, order = 50, model = JGM85F01()) # in its IAU 1991 axes
 ```
 """
-struct HarmonicGravity{MT<:AbstractGeopotential, GD, EoT} <: OrbitODE
+struct HarmonicGravity{MT<:AbstractGeopotential, GD, OT<:AbstractOrientationModel} <: OrbitODE
     central_body::CelestialBody
     degree::Int
     order::Int
     model::MT
     data::GD
-    eop_data::EoT
+    orientation::OT
     dependencies::Vector{Type{<:AbstractVarTag}}
     num_funs::Int
 end
@@ -103,24 +153,26 @@ function _validate_degree_order(model::AbstractGeopotential, degree::Int, order:
 end
 
 function HarmonicGravity(body::CelestialBody; degree::Int, order::Int,
-                         model::AbstractGeopotential = Zonal())
+                         model::AbstractGeopotential = Zonal(),
+                         orientation::Union{Nothing,AbstractOrientationModel} = nothing)
     _validate_degree_order(model, degree, order)
     data = geopotential_data(model, body, degree, order)
-    eop  = fetch_iers_eop()
-    return HarmonicGravity(body, degree, order, model, data, eop,
+    axes = orientation === nothing ? field_orientation(model, body) : orientation
+    _check_axes(axes, body)
+    return HarmonicGravity(body, degree, order, model, data, axes,
                            Type{<:AbstractVarTag}[PosVel], 6)
 end
 
 function accel_eval!(force::HarmonicGravity, t::Time, x̄::Vector, x̄̇::Vector,
                      sc::Spacecraft, params; jac::Dict = Dict())
-    jd = t.utc.jd
-    R  = r_eci_to_ecef(J2000(), ITRF(), jd, force.eop_data)
-    r_itrf = R * SVector{3}(x̄[1], x̄[2], x̄[3]) .* 1.0e3          # km → m
-    tsec   = (jd - _JD_J2000) * 86400.0
-    a_itrf = geopotential_accel(force.model, force.data, r_itrf, tsec,
-                                force.degree, force.order) ./ 1.0e3   # m/s² → km/s²
-    a_eci  = R' * a_itrf
+    # ICRF to the field's body-fixed axes; for the Earth, the frame theory's ITRF chain.
+    R, _ = _rotation_blocks(body_fixed_rotation(force.orientation, force.central_body.naifid, t))
+    r_fixed = R * SVector{3}(x̄[1], x̄[2], x̄[3]) .* 1.0e3          # km → m
+    tsec    = (t.utc.jd - _JD_J2000) * 86400.0
+    a_fixed = geopotential_accel(force.model, force.data, r_fixed, tsec,
+                                 force.degree, force.order) ./ 1.0e3   # m/s² → km/s²
+    a_icrf  = R' * a_fixed
     x̄̇[1] = x̄[4]; x̄̇[2] = x̄[5]; x̄̇[3] = x̄[6]
-    x̄̇[4] = a_eci[1]; x̄̇[5] = a_eci[2]; x̄̇[6] = a_eci[3]
+    x̄̇[4] = a_icrf[1]; x̄̇[5] = a_icrf[2]; x̄̇[6] = a_icrf[3]
     return x̄̇
 end

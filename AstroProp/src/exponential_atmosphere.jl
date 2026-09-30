@@ -37,11 +37,16 @@ const _EXP_H  = (7.249, 6.349, 6.682, 7.554, 8.382, 7.714, 6.549, 5.799, 5.382, 
                  7.263, 9.473, 12.636, 16.149, 22.523, 29.740, 37.105, 45.546, 53.628,
                  53.298, 58.515, 60.828, 63.822, 71.835, 88.667, 124.64, 181.05, 268.00)
 
-function _geodetic(jd, x̄, eop)
-    R    = r_eci_to_ecef(DCM, J2000(), ITRF(), jd, eop)
+# Geodetic coordinates of an ICRF position [km]: from the ICRF-to-ITRF rotation AtmosphericDrag
+# passes, or from an EOP table by SatelliteToolbox's FK5 route, for a direct call.
+function _geodetic(jd, x̄, R::AbstractMatrix)
+    size(R) == (3, 3) || throw(ArgumentError(
+        "density: earth_axes is the 3×3 ICRF-to-ITRF rotation; got a $(join(size(R), '×')) matrix."))
     ecef = R * SVector{3}(x̄[1], x̄[2], x̄[3])
     return ecef_to_geodetic(ecef .* 1.0e3)          # (lat, lon, alt) [rad, rad, m]
 end
+
+_geodetic(jd, x̄, eop) = _geodetic(jd, x̄, r_eci_to_ecef(DCM, J2000(), ITRF(), jd, eop))
 
 function _exponential_density(h_m::Real)
     h_m ≥ 0 || throw(ArgumentError("altitude must be ≥ 0; got altitude = $h_m m"))
@@ -57,4 +62,4 @@ function _exponential_density(h_m::Real)
     @inbounds return _EXP_RHO0[id] * exp(-(h - _EXP_H0[id]) / _EXP_H[id])
 end
 
-density(::Exponential, jd, x̄, eop) = _exponential_density(_geodetic(jd, x̄, eop)[3])
+density(::Exponential, jd, x̄, earth_axes) = _exponential_density(_geodetic(jd, x̄, earth_axes)[3])
