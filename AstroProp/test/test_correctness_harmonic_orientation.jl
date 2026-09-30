@@ -108,6 +108,8 @@ end
     # around the celestial pole, so the acceleration has a small daily term and a central
     # difference errs by (ωh)²/6. Richardson's combination of two cancels that term.
     D(h) = (f(h) - f(-h)) / 2h                     # h in days; a Time keeps full precision
-    h = 2e-3
-    @test ForwardDiff.derivative(f, 0.0) ≈ (4D(h / 2) - D(h)) / 3 rtol = 1e-5
+    # At h = 2e-3 the differences are near rounding: the extrapolation scattered by 1e-4 across
+    # steps. At 5e-3 it agrees with ForwardDiff to 2e-7, and truncation is still cancelled.
+    h = 5e-3
+    @test ForwardDiff.derivative(f, 0.0) ≈ (4D(h / 2) - D(h)) / 3 rtol = 1e-6
 end

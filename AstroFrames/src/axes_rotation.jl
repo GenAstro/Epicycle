@@ -24,6 +24,7 @@ using SatelliteToolboxTransformations: DCM, r_mj2000_to_gcrf_iau2006, r_gcrf_to_
     nutation_fk5, r_tod_to_teme,
     EARTH_ANGULAR_SPEED
 using AstroEpochs: Time, TDB, JD
+import AstroEpochs     # tai_minus_utc, for an ordinary UTC date
 using AstroUniverse: AbstractFrameTheory, FK5, IAU2006, eop, frame_theory
 
 const _J2000_TDB_JD = 2451545.0
@@ -40,8 +41,17 @@ _et_from_jd_tdb(jd_tdb::Real) = (jd_tdb - _J2000_TDB_JD) * 86400.0
 # methods as plain numbers. That keeps `Time` — which is not `isbits` — out
 # of the inner loop, and stops each edge from repeating the conversion.
 #
-# `ut1` is absent because no edge needs it yet; it arrives with the first
-# Earth-spin edge, and requires EOP.
+# UT1 is not carried: it needs the EOP table, which only the spin edges read.
+# They form it from the two-part UTC here plus the tabulated UT1 − UTC.
+#
+# The UTC carried is an ordinary Julian date, not AstroEpochs' UTC. On a day
+# that ends with a leap second AstroEpochs follows ERFA and spreads the day over
+# 86401 s, so its fraction of the day runs slow by up to a second by evening.
+# The IERS tables and UT1 = UTC + (UT1 − UTC) assume an ordinary day; fed the
+# stretched one, the Earth-fixed frames were up to 490 m off at LEO on every
+# leap-second day. The ordinary UTC is TT less 32.184 s less the TAI − UTC in
+# effect, which is exact everywhere but inside the leap second itself, where
+# ordinary UTC has no value and this reads the first second of the next day.
 
 """
     EpochScales
@@ -58,12 +68,18 @@ and [`epoch_utc`](@ref) rather than accessing the fields directly.
 
 - `tdb` — barycentric dynamical time, Julian date.
 - `tt` — terrestrial time, Julian date.
-- `utc` — coordinated universal time, Julian date.
+- `utc` — coordinated universal time, as an ordinary Julian date (every day
+  86400 s long), the date the IERS tables are indexed by.
+- `utc_hi`, `utc_lo` — the same UTC as a two-part date, `utc_hi + utc_lo`, kept
+  split so the Earth rotation angle does not lose the precision of `Time`.
 
 # Notes
 Built once per transform, at the boundary where a `Time` arrives, and passed
 down as plain numbers. Deriving a scale costs more than most of the rotations
 do, so an edge must not convert one itself.
+
+`EpochScales(tdb, tt, utc)` builds one from three single Julian dates, with the
+UTC unsplit.
 
 # Example
 ```julia
@@ -77,9 +93,24 @@ struct EpochScales{T<:Real}
     tdb::T
     tt::T
     utc::T
+    utc_hi::T
+    utc_lo::T
 end
 
-@inline _scales(t::Time) = EpochScales(t.tdb.jd, t.tt.jd, t.utc.jd)
+EpochScales(tdb::Real, tt::Real, utc::Real) =
+    EpochScales(promote(tdb, tt, utc, utc, zero(utc))...)
+
+# TT − TAI, in seconds.
+const _TT_MINUS_TAI = 32.184
+
+@inline function _scales(t::Time)
+    tt  = t.tt
+    # TAI − UTC in effect: AstroEpochs' own UTC date indexes the leap-second table correctly,
+    # only its fraction of a leap-second day is stretched.
+    dat = AstroEpochs.tai_minus_utc(t.utc.jd - _J2000_TDB_JD)
+    lo  = tt.jd2 - (_TT_MINUS_TAI + dat) / 86_400
+    return EpochScales(promote(t.tdb.jd, tt.jd, tt.jd1 + lo, tt.jd1, lo)...)
+end
 
 """
     epoch_tdb(e::EpochScales)
@@ -144,8 +175,10 @@ Coordinated universal time, as a Julian date.
 - `e::EpochScales` — the epoch bundle handed to a frame's `axes_rotation`.
 
 # Returns
-The UTC Julian date. This is the scale Earth orientation parameters are
-tabulated against, so any frame reading polar motion or UT1−UTC wants it.
+The UTC Julian date, as an ordinary date with every day 86400 s long. This is
+the scale Earth orientation parameters are tabulated against, so any frame
+reading polar motion or UT1−UTC wants it. It is not AstroEpochs' UTC, which on
+a leap-second day spreads the day over 86401 s.
 
 # Notes
 UTC has leap seconds, so an interval computed by subtracting two of these is
@@ -319,8 +352,10 @@ The rotation from ICRF to the fixed axes of body `naifid` that orientation
 # Notes
 Pass a `Time` for the Earth. A single `Float64` Julian date resolves time only to
 about 40 µs, which the Earth turns through in 0.6 mas, about 2 cm on its surface;
-a `Time` holds the date in two parts and loses nothing. Other bodies turn slowly
-enough that the difference does not show.
+a `Time` holds the date in two parts, and the `IAU2006()` chain keeps both to the
+Earth rotation angle. The `FK5()` chain's sidereal time comes from
+SatelliteToolboxTransformations, which takes a single date, so it resolves the
+40 µs. Other bodies turn slowly enough that the difference does not show.
 
 [`axes_rotation`](@ref)`(ICRF(), CelestialBodyFixed{N}(), epoch)` uses the
 model registered for the body; this takes the model as an argument, for a
@@ -699,16 +734,20 @@ This is IAU SOFA's own arrangement, in `eraEra00`.
     # Split at the half day, so the fractional part is exact for the `.5`
     # Julian dates that dominate in practice.
     jd_hi = floor(jd_ut1 - 0.5) + 0.5
-    jd_lo = jd_ut1 - jd_hi
+    return _earth_rotation_angle(jd_hi, jd_ut1 - jd_hi)
+end
 
-    d = jd_ut1 - _J2000_TDB_JD             # elapsed days; only ever times 0.0027…
-    f = mod(jd_hi, one(jd_hi)) + jd_lo     # fractional day, in [0, 1)
-
+# The same from a two-part UT1 date, `jd1 + jd2`, as `eraEra00` takes it. Each part's fraction
+# is taken separately, so a date that arrives split keeps its precision: a single Float64
+# Julian date resolves 40 µs, 1.9 cm at the equator.
+@inline function _earth_rotation_angle(jd1::Real, jd2::Real)
+    d = (jd1 - _J2000_TDB_JD) + jd2        # elapsed days; only ever times 0.0027…
+    f = (jd1 - floor(jd1)) + (jd2 - floor(jd2))     # fractional day, in [0, 2); mod by a dual 1 gives NaN
     return mod2pi(2 * pi * (f + 0.7790572732640 + 0.00273781191135448 * d))
 end
 
 """
-    axes_rotation(::MODEq, ::MODEc, epoch) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::MODEq, ::MODEc, epoch) -> SMatrix{6,6}
 
 Transforms mean equator-of-date axes to mean ecliptic-of-date axes by rotating
 about X through the IAU 1980 mean obliquity ε_A.
@@ -898,11 +937,11 @@ Carries the Earth rotation rate, like its FK5 counterpart `TODEq ↔ PEF`. This
 transformation does not apply polar motion; the `TIRS ↔ ITRF` edge does.
 """
 function axes_rotation(::CIRS, ::TIRS, e::EpochScales)
-    jd_utc = epoch_utc(e)
-    Δut1, lod = _eop_read(IAU2006(), (:Δut1_utc, :lod), jd_utc)
-    jd_ut1 = jd_utc + Δut1 / 86_400
+    Δut1, lod = _eop_read(IAU2006(), (:Δut1_utc, :lod), epoch_utc(e))
     ω = EARTH_ANGULAR_SPEED * (1 - lod / 86_400_000)
-    return _rotation_with_spin(_Rz(_earth_rotation_angle(jd_ut1)), ω)
+    # UT1 as a two-part date, so the angle keeps the precision of the epoch
+    θ = _earth_rotation_angle(e.utc_hi, e.utc_lo + Δut1 / 86_400)
+    return _rotation_with_spin(_Rz(θ), ω)
 end
 
 axes_rotation(::TIRS, ::CIRS, e::EpochScales) =

@@ -316,6 +316,13 @@ end
 
 const _TOL_IAU2006 = 0.05
 
+# The Earth rotation angle from UT1 = jd_utc + dut1_s, exactly, less the same from UT1 rounded to
+# one Float64 as the truth generator formed it; and the frame rotation about Z through an angle.
+_era_big(u) = 2 * BigFloat(pi) * (big"0.7790572732640" + big"1.00273781191135448" * (u - 2451545))
+_era_rounding(jd_utc, dut1_s) = Float64(_era_big(big(jd_utc) + big(dut1_s) / 86400) -
+                                        _era_big(big(Float64(jd_utc + dut1_s / 86400))))
+_Rz(θ) = [cos(θ) sin(θ) 0.0; -sin(θ) cos(θ) 0.0; 0.0 0.0 1.0]
+
 # --- FK5 / IAU-76-80 ---------------------------------------------------------
 #
 # The legacy chain carries three residuals that are understood and deliberately
@@ -351,10 +358,18 @@ const _TOL_FK5 = (
         for case in _TRUTH
             t = Time(case.jd_utc, 0.0, :utc, :jd)       # the epoch the truth is defined at; see above
             m = case.matrices
-            for (truth, from, to) in ((m.GCRF_to_CIRS,         GCRF(), CIRS()),
-                                      (m.CIRS_to_TIRS,         CIRS(), TIRS()),
-                                      (m.TIRS_to_ITRF,         TIRS(), ITRF()),
-                                      (m.GCRF_to_ITRF_iau2006, GCRF(), ITRF()))
+            # The generator formed UT1 as one Float64, UTC + ΔUT1, which rounds it to the 40 µs
+            # spacing of a Julian date: up to 600 µas of Earth rotation. AstroFrames keeps UT1 in
+            # two parts and is exact. The difference is known exactly, so it is taken out of the
+            # truth rather than loosening the tolerance: the angle from the exact UT1 less the
+            # angle from the rounded one, both in BigFloat, applied about the CIP.
+            δ = _era_rounding(case.jd_utc, case.eop.dut1_s)
+            cirs_tirs = _Rz(δ) * m.CIRS_to_TIRS
+            gcrf_itrf = m.TIRS_to_ITRF * cirs_tirs * m.GCRF_to_CIRS
+            for (truth, from, to) in ((m.GCRF_to_CIRS, GCRF(), CIRS()),
+                                      (cirs_tirs,      CIRS(), TIRS()),
+                                      (m.TIRS_to_ITRF, TIRS(), ITRF()),
+                                      (gcrf_itrf,      GCRF(), ITRF()))
                 M = Matrix(axes_rotation(from, to, t)[1:3, 1:3])
                 @test _truth_angle_μas(M, truth) < _TOL_IAU2006
             end
