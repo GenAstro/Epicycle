@@ -357,12 +357,19 @@ end
         try
             AstroUniverse.set_frame_theory!(AstroUniverse.FK5())
             e      = AstroFrames._scales(jd)
-            jd_utc = epoch_utc(e)
-            jd_ut1 = jd_utc + AstroUniverse.eop(AstroUniverse.FK5()).Δut1_utc(jd_utc) / 86_400
+            Δut1   = AstroUniverse.eop(AstroUniverse.FK5()).Δut1_utc(epoch_utc(e))
+
+            # STB's GMST from days since J2000, which is small enough to hold UT1's
+            # precision; `r_teme_to_pef` takes a whole Julian date, which rounds UT1 to
+            # 40 µs, 200 µas at this epoch. What remains is GMST-82's own rounding, about
+            # 1.8 µas, 9e-12 rad.
+            SB     = Base.require(Base.PkgId(
+                Base.UUID("9e17983a-0463-41a7-9a16-1682db6d8b66"), "SatelliteToolboxBase"))
+            θ      = SB.j2000_to_gmst((e.utc_hi - 2451545.0) + (e.utc_lo + Δut1 / 86_400))
+            theirs = [cos(θ) sin(θ) 0.0; -sin(θ) cos(θ) 0.0; 0.0 0.0 1.0]
 
             ours   = axes_rotation(TEME(), PEF(), jd)[1:3, 1:3]
-            theirs = STB.r_teme_to_pef(STB.DCM, jd_ut1)
-            @test maximum(abs.(ours .- theirs)) < 1e-14
+            @test maximum(abs.(ours .- theirs)) < 1e-11
         finally
             AstroUniverse.set_frame_theory!(original)
         end

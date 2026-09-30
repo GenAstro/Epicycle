@@ -22,6 +22,7 @@ using SPICE: pxform as _spice_pxform, sxform as _spice_sxform, namfrm as _spice_
 using SatelliteToolboxTransformations: DCM, r_mj2000_to_gcrf_iau2006, r_gcrf_to_mod_fk5, r_mod_to_tod_fk5, r_tod_to_pef_fk5, r_pef_to_itrf_fk5,
     r_gcrf_to_cirs_iau2006, r_tirs_to_itrf_iau2006, cio_iau2006,
     nutation_fk5, r_tod_to_teme,
+    _nutation_and_equation_of_equinoxes_fk5,     # internal to STB; its own r_tod_to_pef_fk5 uses it
     EARTH_ANGULAR_SPEED
 using AstroEpochs: Time, TDB, JD
 import AstroEpochs     # tai_minus_utc, for an ordinary UTC date
@@ -199,18 +200,6 @@ end
 ```
 """
 @inline epoch_utc(e::EpochScales) = e.utc
-
-"""
-    _ut1(e::EpochScales, jd_utc) -> Real
-
-UT1 Julian date, from UTC plus the tabulated UT1−UTC.
-
-UT1 is derived from the measured offset distributed by the IERS and stored in
-the EOP tables. Earth rotates at 7.3e-5 rad/s, so one second of UT1 error is
-7.3e-5 rad of longitude, or about 460 m at the equator.
-"""
-@inline _ut1(::EpochScales, jd_utc::Real) =
-    jd_utc + first(_eop_read(FK5(), (:Δut1_utc,), jd_utc)) / 86_400
 
 # EOP values at a UTC date, read through a function barrier. `eop(theory)` comes out of an
 # abstractly typed slot in AstroUniverse, so reading its interpolants where it is fetched
@@ -393,10 +382,9 @@ The rotation from ICRF to the fixed axes of body `naifid` that orientation
 # Notes
 Pass a `Time` for the Earth. A single `Float64` Julian date resolves time only to
 about 40 µs, which the Earth turns through in 0.6 mas, about 2 cm on its surface;
-a `Time` holds the date in two parts, and the `IAU2006()` chain keeps both to the
-Earth rotation angle. The `FK5()` chain's sidereal time comes from
-SatelliteToolboxTransformations, which takes a single date, so it resolves the
-40 µs. Other bodies turn slowly enough that the difference does not show.
+a `Time` holds the date in two parts, and both chains keep them to the Earth's
+rotation: the Earth rotation angle for `IAU2006()`, sidereal time for `FK5()`.
+Other bodies turn slowly enough that the difference does not show.
 
 [`axes_rotation`](@ref)`(ICRF(), CelestialBodyFixed{N}(), epoch)` uses the
 model registered for the body; this takes the model as an argument, for a
@@ -841,15 +829,31 @@ This transformation does not apply polar motion; the `PEF ↔ ITRF` edge does.
 `epoch` may be a `Time` or a TDB Julian date.
 """
 function axes_rotation(::TODEq, ::PEF, e::EpochScales)
-    jd_utc = epoch_utc(e)
-    jd_ut1 = _ut1(e, jd_utc)
-    δΔψ, lod = _eop_read(FK5(), (:δΔψ, :lod), jd_utc)
+    Δut1, δΔψ, lod = _eop_read(FK5(), (:Δut1_utc, :δΔψ, :lod), epoch_utc(e))
     δΔψ *= _MILLIARCSEC_TO_RAD
 
     # LOD is distributed in milliseconds; a longer day is a slower Earth.
     ω = EARTH_ANGULAR_SPEED * (1 - lod / 86_400_000)
 
-    return _rotation_with_spin(r_tod_to_pef_fk5(DCM, jd_ut1, e.tt, δΔψ), ω)
+    # GAST = GMST + the equation of the equinoxes. GMST from UT1 in two parts, as for the Earth
+    # rotation angle; SatelliteToolboxTransformations' own `r_tod_to_pef_fk5` takes one date,
+    # which rounds UT1 to 40 µs. The equation of the equinoxes is its own, the same routine that
+    # function calls, and depends on TT only.
+    eqeq = _nutation_and_equation_of_equinoxes_fk5(e.tt, 0, δΔψ)[4]
+    θ = _gmst82(e.utc_hi, e.utc_lo + Δut1 / 86_400) + eqeq
+    return _rotation_with_spin(_Rz(θ), ω)
+end
+
+# IAU 1982 Greenwich mean sidereal time [rad] from a two-part UT1 date, as `eraGmst82` forms it:
+# the day fractions are taken separately so the turns never multiply the date.
+@inline function _gmst82(jd1::Real, jd2::Real)
+    A = 24110.54841 - 86_400 / 2
+    B = 8640184.812866
+    C = 0.093104
+    D = -6.2e-6
+    t = ((jd1 - _J2000_TDB_JD) + jd2) / 36_525
+    f = 86_400 * ((jd1 - floor(jd1)) + (jd2 - floor(jd2)))
+    return mod2pi(2π / 86_400 * ((A + (B + (C + D * t) * t) * t) + f))
 end
 
 function axes_rotation(::PEF, ::TODEq, e::EpochScales)
