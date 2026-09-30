@@ -108,8 +108,8 @@ Both are also the constructor's arguments, in that order.
 
 Some axes types are only physically meaningful at specific origins:
 
-- Earth-restricted (`GCRF`, `CIRS`, `TIRS`, `ITRF`, `MODEq`, `TODEq`, `MODEc`, `TODEc`, `PEF`)
-  — require an Earth origin.
+- Earth-restricted (`GCRF`, `CIRS`, `TIRS`, `ITRF`, `MODEq`, `TODEq`, `MODEc`, `TODEc`, `PEF`,
+  `TEME`) — require an Earth origin.
 - Moon-restricted (`MoonPA`, `MoonME`) — require a Moon origin.
 - `CelestialBodyFixed{OT}` — requires an origin of type `OT` (the body encoded in
   the axes type parameter).

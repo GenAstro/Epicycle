@@ -6,7 +6,7 @@
 #
 # Public entry point:
 #
-#   axes_rotation(source_axes, target_axes, epoch[, params]) -> SMatrix{6,6,Float64,36}
+#   axes_rotation(source_axes, target_axes, epoch[, params]) -> SMatrix{6,6}
 #
 # The 6×6 matrix `M` returned matches the SPICE `sxform` convention:
 #   state_target = M * state_source            (state = [r; v])
@@ -314,7 +314,8 @@ field when `params` does not carry `reference_state`. A pair with no route betwe
 them raises an `ArgumentError` listing the supported edges.
 
 # Returns
-The 6×6 transform as an `SMatrix{6,6,Float64,36}`.
+The 6×6 transform as an `SMatrix{6,6}`, `Float64` for `Float64` inputs; a dual or wider epoch
+or state gives that element type.
 
 # Example
 ```jldoctest
@@ -378,7 +379,7 @@ end
 end
 
 """
-    body_fixed_rotation(model, naifid, epoch) -> SMatrix{6,6,Float64,36}
+    body_fixed_rotation(model, naifid, epoch) -> SMatrix{6,6}
 
 The rotation from ICRF to the fixed axes of body `naifid` that orientation
 `model` defines, at `epoch`.
@@ -548,7 +549,7 @@ end
 # Needs TT only: no EOP, no UT1. `Ṙ` is neglected (see `_rotation_no_rate`).
 
 """
-    axes_rotation(::MJ2000Eq, ::MODEq, epoch) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::MJ2000Eq, ::MODEq, epoch) -> SMatrix{6,6}
 
 IAU-1976 precession from the FK5 mean equator and equinox of J2000 to the
 mean equator and equinox of date.
@@ -646,7 +647,7 @@ const _MILLIARCSEC_TO_RAD = deg2rad(1 / 3_600_000)
 # that dominates the neighbouring edge.
 
 """
-    axes_rotation(::PEF, ::ITRF, epoch) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::PEF, ::ITRF, epoch) -> SMatrix{6,6}
 
 Polar motion from the pseudo Earth-fixed frame to the terrestrial reference
 frame, using the IERS pole coordinates.
@@ -681,7 +682,7 @@ end
 # frame to work in.
 
 """
-    axes_rotation(::TODEq, ::TEME, epoch) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::TODEq, ::TEME, epoch) -> SMatrix{6,6}
 
 True equator and equinox of date to the true-equator, mean-equinox frame, via
 the equation of the equinoxes.
@@ -799,7 +800,7 @@ axes_rotation(::MODEc, ::MODEq, e::EpochScales) =
     _invert_rotation(axes_rotation(MODEq(), MODEc(), e))
 
 """
-    axes_rotation(::TODEq, ::TODEc, epoch) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::TODEq, ::TODEc, epoch) -> SMatrix{6,6}
 
 Transforms true equator-of-date axes to true ecliptic-of-date axes by rotating
 about X through the true obliquity, `ε_A + Δε`. The rotation includes the IERS
@@ -826,7 +827,7 @@ axes_rotation(::TODEc, ::TODEq, e::EpochScales) =
 # the frame with Earth rotation applied and polar motion not.
 
 """
-    axes_rotation(::TODEq, ::PEF, epoch) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::TODEq, ::PEF, epoch) -> SMatrix{6,6}
 
 Earth rotation from the true equator and equinox of date to the pseudo
 Earth-fixed frame, via Greenwich apparent sidereal time.
@@ -868,7 +869,7 @@ end
 # which is a different comparison.
 
 """
-    axes_rotation(::ICRF, ::GCRF, epoch) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::ICRF, ::GCRF, epoch) -> SMatrix{6,6}
 
 Returns the identity transformation because `GCRF` shares its orientation with
 `ICRF` by definition. The frames differ in origin, not in axes.
@@ -881,14 +882,6 @@ axes_rotation(::GCRF, ::ICRF, ::EpochScales) = SMatrix{6,6,Float64,36}(I)
 # Needs TT and the CIP offsets δx, δy from the IAU-2006 EOP series. `Ṙ` is
 # neglected, as for the FK5 precession and nutation edges.
 
-"""
-    axes_rotation(::GCRF, ::CIRS, epoch) -> SMatrix{6,6,Float64,36}
-
-IAU-2006/2010 precession-nutation from the GCRF to the Celestial Intermediate
-Reference System, using the CIO-based formulation.
-
-Applies the IERS CIP offsets from the IAU-2006 EOP series.
-"""
 #
 # The CIP coordinates X, Y and the CIO locator s are interpolated from values on a 30-minute
 # grid in TT rather than evaluated at every epoch. Evaluating them is the IAU 2006/2000A series,
@@ -950,6 +943,14 @@ function _gcrf_to_cirs(x, y, s)
     return _Rz(-s) * D
 end
 
+"""
+    axes_rotation(::GCRF, ::CIRS, epoch) -> SMatrix{6,6}
+
+IAU-2006/2010 precession-nutation from the GCRF to the Celestial Intermediate
+Reference System, using the CIO-based formulation.
+
+Applies the IERS CIP offsets from the IAU-2006 EOP series.
+"""
 function axes_rotation(::GCRF, ::CIRS, e::EpochScales)
     δx, δy = _eop_read(IAU2006(), (:δx, :δy), epoch_utc(e)) .* _MILLIARCSEC_TO_RAD
     x, y, s = _cip_iau2006(e.tt)
@@ -968,7 +969,7 @@ axes_rotation(::CIRS, ::GCRF, e::EpochScales) =
 # is what makes the CIO formulation simpler than GAST.
 
 """
-    axes_rotation(::CIRS, ::TIRS, epoch) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::CIRS, ::TIRS, epoch) -> SMatrix{6,6}
 
 Earth rotation from the Celestial to the Terrestrial Intermediate Reference
 System, via the Earth Rotation Angle.
@@ -994,7 +995,7 @@ axes_rotation(::TIRS, ::CIRS, e::EpochScales) =
 # which is a function of time. `Ṙ` is neglected.
 
 """
-    axes_rotation(::TIRS, ::ITRF, epoch) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::TIRS, ::ITRF, epoch) -> SMatrix{6,6}
 
 Polar motion from the Terrestrial Intermediate Reference System to the
 terrestrial reference frame, IAU-2006 formulation.
@@ -1024,7 +1025,7 @@ axes_rotation(::ITRF, ::TIRS, e::EpochScales) =
 # `Ṙ` is neglected (see `_rotation_no_rate`).
 
 """
-    axes_rotation(::MODEq, ::TODEq, epoch) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::MODEq, ::TODEq, epoch) -> SMatrix{6,6}
 
 IAU-1980 nutation from the mean equator and equinox of date to the true
 equator and equinox of date.
@@ -1062,7 +1063,7 @@ const _M_ICRF_TO_MJ2000EQ = _rotation_no_rate(
 )
 
 """
-    axes_rotation(::ICRF, ::MJ2000Eq, epoch) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::ICRF, ::MJ2000Eq, epoch) -> SMatrix{6,6}
 
 Frame bias between the ICRF and the FK5 mean equator and equinox of J2000.
 

@@ -45,7 +45,7 @@ end
 # rotations the Earth chain needs.
 
 """
-    _rotation_no_rate(R::AbstractMatrix) -> SMatrix{6,6,Float64,36}
+    _rotation_no_rate(R::AbstractMatrix) -> SMatrix{6,6}
 
 Assemble the 6×6 state rotation for a 3×3 rotation `R` whose rate is zero:
 
@@ -77,7 +77,7 @@ function _rotation_no_rate(R::AbstractMatrix)
 end
 
 """
-    _rotation_with_spin(R::AbstractMatrix, ω::Real) -> SMatrix{6,6,Float64,36}
+    _rotation_with_spin(R::AbstractMatrix, ω::Real) -> SMatrix{6,6}
 
 Assemble the 6×6 state rotation for an edge whose target frame **rotates**
 about its own z-axis at rate `ω` [rad/s] relative to the source:
@@ -110,7 +110,7 @@ function _rotation_with_spin(R::AbstractMatrix, ω::Real)
 end
 
 """
-    _rotation_with_rate(R::AbstractMatrix, Ṙ::AbstractMatrix) -> SMatrix{6,6,Float64,36}
+    _rotation_with_rate(R::AbstractMatrix, Ṙ::AbstractMatrix) -> SMatrix{6,6}
 
 Assemble the 6×6 state rotation from a rotation and its time derivative:
 

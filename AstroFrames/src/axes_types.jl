@@ -157,10 +157,10 @@ struct ITRF <: AbstractAxes end
 """
     MJ2000Eq()
 
-Mean equator and equinox of MJ2000Eq (FK5) axes.
+Mean equator and equinox of J2000 (FK5) axes.
 
 Origin-agnostic inertial. The axes describe a fixed spatial orientation
-defined by Earth's mean equator and dynamical equinox at epoch MJ2000Eq.0;
+defined by Earth's mean equator and dynamical equinox at epoch J2000.0;
 they can legally be used with any origin.
 
 # Example
@@ -319,10 +319,12 @@ struct TEME <: AbstractAxes end
 """
     MJ2000Ec()
 
-Mean ecliptic and equinox of MJ2000Eq axes.
+Mean ecliptic and equinox of J2000 axes.
 
 Origin-agnostic inertial. Static rotation from `MJ2000Eq` about the X-axis by
-the mean obliquity of MJ2000Eq (ε₀ = 23.4392911° per IAU 1976/FK5).
+the mean obliquity at J2000 (ε₀ = 23.4392911° per IAU 1976/FK5). This is not SPICE's
+`ECLIPJ2000`, which SPICE builds on its ICRF-aligned `J2000` frame; the two differ by the frame
+bias, about 23 mas.
 
 # Example
 
@@ -412,14 +414,15 @@ struct MoonME <: AbstractAxes end
 """
     CelestialBodyFixed{NAIFID} <: AbstractAxes
 
-Body-fixed rotating axes for Sun, Mercury, Venus, Mars, Jupiter, Saturn,
-Uranus, Neptune, or Pluto, using the IAU 2015 planet-rotation formulas from
-AstroUniverse's `iau2015_orientation`. Type parameter `NAIFID::Int` records
-the intended origin body; the origin-coupling rule requires the coordinate
-system's origin to have a matching NAIF ID.
+Body-fixed rotating axes of a celestial body, using the orientation model the
+body has in AstroUniverse (IAU 2015 by default for the Sun, the planets and
+Pluto). Type parameter `NAIFID::Int` records the intended origin body; the
+origin-coupling rule requires the coordinate system's origin to have a matching
+NAIF ID.
 
-Not applicable to Earth (use IAU 2006 / FK5 Earth-frame edges) or Moon (use
-`MoonPA` / `MoonME`).
+It works for the Earth and the Moon too, through their models, but those have
+named axes that say more: `ITRF` for the Earth, `MoonPA` or `MoonME` for the
+Moon.
 
 # Constructors
 - `CelestialBodyFixed(body)` — explicit form; encodes the body's NAIF ID in the type.
