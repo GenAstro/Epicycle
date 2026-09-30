@@ -92,7 +92,7 @@ end
 # Helper: get state vector from concrete state
 _state_to_vector(cs::CartesianState) = cs.posvel
 _state_to_vector(ks::KeplerianState) = [ks.sma, ks.ecc, ks.inc, ks.raan, ks.aop, ks.ta]
-_state_to_vector(s::SphericalRADECState) = [s.r, s.dec, s.ra, s.v, s.decv, s.rav]
+_state_to_vector(s::SphericalRADECState) = [s.r, s.ra, s.dec, s.v, s.rav, s.decv]
 _state_to_vector(s::SphericalAZIFPAState) = [s.r, s.ra, s.dec, s.v, s.vazi, s.fpa]
 _state_to_vector(ms::ModifiedEquinoctialState) = [ms.p, ms.f, ms.g, ms.h, ms.k, ms.L]
 _state_to_vector(os::OutGoingAsymptoteState) = [os.rp, os.c3, os.rla, os.dla, os.bpa, os.ta]

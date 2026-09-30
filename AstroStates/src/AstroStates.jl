@@ -254,7 +254,7 @@ function show(io::IO, state::KeplerianState)
 end
 
 """
-    SphericalRADECState(r, dec, ra, v, decv, rav)
+    SphericalRADECState(r, ra, dec, v, rav, decv)
 
 Spherical coordinates state with right ascension and declination components.
 
@@ -265,43 +265,44 @@ Spherical coordinates state with right ascension and declination components.
 # Fields (all `::T` where `T<:Real`)
 - `r`: Radial distance from central body center. 
   * Range: r > 0.
-- `dec`: Declination (rad). Elevation angle of position above/below xy-plane.
-  * Range: [-π/2, π/2]. dec = 0: equatorial. dec = ±π/2: polar.
 - `ra`: Right ascension (rad). Azimuthal angle of position in xy-plane.
   * Range: [0, 2π). Measured counterclockwise from +x axis.
-- `v`: Velocity magnitude. 
+- `dec`: Declination (rad). Elevation angle of position above/below xy-plane.
+  * Range: [-π/2, π/2]. dec = 0: equatorial. dec = ±π/2: polar.
+- `v`: Velocity magnitude.
   * Range: v ≥ 0.
-- `decv`: Declination of velocity (rad). Elevation angle of velocity vector.
-  * Range: [-π/2, π/2]. Angle between velocity vector and xy-plane.
 - `rav`: Right ascension of velocity (rad). Azimuthal angle of velocity.
   * Range: [0, 2π). Direction of velocity in xy-plane.
+- `decv`: Declination of velocity (rad). Elevation angle of velocity vector.
+  * Range: [-π/2, π/2]. Angle between velocity vector and xy-plane.
 
 # Notes
 - Parametric so automatic differentiation and high-precision types are supported.
 - Singularities exist at r = 0 or v = 0 due to undefined angles.
+- The element order is GMAT's: RMAG, RA, DEC, VMAG, RAV, DECV.
 
 # Examples
 ```julia
-radec = SphericalRADECState(6778.0, π/4, 0.0, 7.5, 0.0, π/2)
+radec = SphericalRADECState(6778.0, π/4, 0.0, 7.5, 3π/4, 0.0)   # at ra = 45°, moving toward ra = 135°
 ```
 """
 struct SphericalRADECState{T<:Real} <: AbstractOrbitState
     r::T
-    dec::T
     ra::T
+    dec::T
     v::T
-    decv::T
     rav::T
+    decv::T
 end
 
 function show(io::IO, state::SphericalRADECState)
     println(io, "SphericalRADECState:")
     println(io, @sprintf("  r         = %14.6f", state.r))
-    println(io, @sprintf("  dec (deg) = %11.6f", rad2deg(state.dec)))
     println(io, @sprintf("  ra  (deg) = %11.6f", rad2deg(state.ra)))
+    println(io, @sprintf("  dec (deg) = %11.6f", rad2deg(state.dec)))
     println(io, @sprintf("  v         = %11.6f", state.v))
-    println(io, @sprintf("  decv(deg) = %11.6f", rad2deg(state.decv)))
     println(io, @sprintf("  rav (deg) = %11.6f", rad2deg(state.rav)))
+    println(io, @sprintf("  decv(deg) = %11.6f", rad2deg(state.decv)))
 end
 
 """
@@ -922,7 +923,7 @@ and angles in radians.
 | `CartesianState` | x, y, z, vx, vy, vz |
 | `KeplerianState` | sma, ecc, inc, raan, aop, ta |
 | `ModifiedKeplerianState` | rp, ra, inc, raan, aop, ta |
-| `SphericalRADECState` | r, dec, ra, v, decv, rav |
+| `SphericalRADECState` | r, ra, dec, v, rav, decv |
 | `SphericalAZIFPAState` | r, ra, dec, v, vazi, fpa |
 | `ModifiedEquinoctialState` | p, f, g, h, k, L |
 | `EquinoctialState` | a, h, k, p, q, mlong |
@@ -960,7 +961,7 @@ function to_vector(state::KeplerianState)
     [state.sma, state.ecc, state.inc, state.raan, state.aop, state.ta]
 end
 function to_vector(state::SphericalRADECState)
-    [state.r, state.dec, state.ra, state.v, state.decv, state.rav]
+    [state.r, state.ra, state.dec, state.v, state.rav, state.decv]
 end
 function to_vector(state::ModifiedEquinoctialState)
     [state.p, state.f, state.g, state.h, state.k, state.L]
