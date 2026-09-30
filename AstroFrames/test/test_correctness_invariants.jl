@@ -127,23 +127,23 @@ end
         @test (ε_mas - ε₀_mas) ≈ 6.82 atol = 0.05
     end
 
-    @testset "MJ2000Eq ↔ MODEq reproduces the precession rate" begin
+    @testset "ICRF ↔ MODEq reproduces the precession rate" begin
         # Physics, not just structure. General precession is ~50.3"/yr and is
         # zero at the reference epoch by definition, so the rotation angle is
         # a direct check on the model rather than on the plumbing.
-        R2000 = axes_rotation(MJ2000Eq(), MODEq(), 2451545.0)[1:3, 1:3]
+        R2000 = axes_rotation(ICRF(), MODEq(), 2451545.0)[1:3, 1:3]
         @test _rotation_arcsec(R2000) < 1e-6
 
         # 20 years on: 50.3"/yr × 20 ≈ 1006". 1% is loose enough that the
         # rate's own nonlinearity is not being tested, tight enough that a
         # wrong time scale or a factor error fails.
-        R2020 = axes_rotation(MJ2000Eq(), MODEq(), 2458849.5)[1:3, 1:3]
+        R2020 = axes_rotation(ICRF(), MODEq(), 2458849.5)[1:3, 1:3]
         @test _rotation_arcsec(R2020) ≈ 1006.0 rtol = 0.01
 
         for jd in _EPOCHS
-            M = axes_rotation(MJ2000Eq(), MODEq(), jd)
+            M = axes_rotation(ICRF(), MODEq(), jd)
             @test norm(M[1:3,1:3]' * M[1:3,1:3] - I) < _TOL_ORTHONORMAL
-            @test norm(M * axes_rotation(MODEq(), MJ2000Eq(), jd) - I) < _TOL_ROUNDTRIP
+            @test norm(M * axes_rotation(MODEq(), ICRF(), jd) - I) < _TOL_ROUNDTRIP
             @test all(iszero, M[4:6, 1:3])   # Ṙ neglected for precession
         end
     end
@@ -230,8 +230,7 @@ end
         C = axes_rotation(PEF(), ITRF(), jd) *
             axes_rotation(TODEq(), PEF(), jd) *
             axes_rotation(MODEq(), TODEq(), jd) *
-            axes_rotation(MJ2000Eq(), MODEq(), jd) *
-            axes_rotation(ICRF(), MJ2000Eq(), jd)
+            axes_rotation(ICRF(), MODEq(), jd)
         R, Ṙ = C[1:3, 1:3], C[4:6, 1:3]
 
         @test norm(R' * R - I) < 1e-14
@@ -283,20 +282,22 @@ end
               hypot(tbl.x(jdutc), tbl.y(jdutc)) rtol = 1e-6
     end
 
-    @testset "the two theories agree to the frame-bias scale" begin
-        # Cross-family: FK5 and IAU-2006 are different models, so their ITRF
-        # orientations differ — but by how much is a meaningful check. The
-        # FK5 chain refers its precession to MJ2000Eq, which is itself the
-        # frame bias away from ICRF, so the two chains should land about one
-        # frame bias apart and not further.
+    @testset "the two theories agree" begin
+        # Cross-family: FK5 and IAU-2006 are different models, but with the
+        # IERS celestial pole offsets applied both carry the GCRS to the same
+        # ITRF, to a fraction of a milliarcsecond. The FK5 chain starts at the
+        # ICRF because those offsets already absorb the frame bias.
+        #
+        # Until 2026-09-30 the FK5 chain started at MJ2000Eq, applying the
+        # bias a second time, and this test asserted the two landed 20–30 mas
+        # apart, which recorded that error as the expected behaviour.
         jd = 2458849.5
         C6 = axes_rotation(TIRS(), ITRF(), jd) * axes_rotation(CIRS(), TIRS(), jd) *
              axes_rotation(GCRF(), CIRS(), jd) * axes_rotation(ICRF(), GCRF(), jd)
         C5 = axes_rotation(PEF(), ITRF(), jd) * axes_rotation(TODEq(), PEF(), jd) *
-             axes_rotation(MODEq(), TODEq(), jd) * axes_rotation(MJ2000Eq(), MODEq(), jd) *
-             axes_rotation(ICRF(), MJ2000Eq(), jd)
+             axes_rotation(MODEq(), TODEq(), jd) * axes_rotation(ICRF(), MODEq(), jd)
         Δ_mas = _rotation_arcsec(C6[1:3,1:3] * C5[1:3,1:3]') * 1000
-        @test 20.0 < Δ_mas < 30.0
+        @test Δ_mas < 1.0                              # measured 0.21 mas
     end
 
     @testset "obliquity edges reach the ecliptic of date" begin
@@ -378,7 +379,7 @@ end
     @testset "edge_theory declares each edge's theory" begin
         # The mechanism that makes passing the wrong EOP table unreachable:
         # an edge names its theory, and the theory selects the table.
-        @test edge_theory(MJ2000Eq(), MODEq()) === AstroUniverse.FK5()
+        @test edge_theory(ICRF(), MODEq())     === AstroUniverse.FK5()
         @test edge_theory(MODEq(), TODEq())    === AstroUniverse.FK5()
         @test edge_theory(TODEq(), MODEq())    === AstroUniverse.FK5()
         @test edge_theory(TODEq(), PEF())      === AstroUniverse.FK5()
@@ -420,7 +421,7 @@ end
         # otherwise leave the `Time` path almost unexercised.
         jd = 2458849.5
         t  = Time(jd, 0.0, :tdb, :jd)
-        for (a, b) in ((ICRF(), MJ2000Eq()), (MJ2000Eq(), MODEq()),
+        for (a, b) in ((ICRF(), MJ2000Eq()), (ICRF(), MODEq()),
                        (MODEq(), TODEq()),   (TODEq(), PEF()),
                        (PEF(), ITRF()),      (GCRF(), CIRS()),
                        (CIRS(), TIRS()),     (ICRF(), ITRF()))
@@ -437,7 +438,7 @@ end
         # filter reads `edge_theory` for the direction it is walking. A
         # forward-only declaration would silently drop reverse edges out of
         # their own theory's subgraph.
-        for (a, b) in ((MJ2000Eq(), MODEq()), (MODEq(), TODEq()), (TODEq(), PEF()),
+        for (a, b) in ((ICRF(), MODEq()), (MODEq(), TODEq()), (TODEq(), PEF()),
                        (PEF(), ITRF()), (MODEq(), MODEc()), (TODEq(), TODEc()),
                        (TODEq(), TEME()))
             @test edge_theory(a, b) === FK5()
@@ -536,12 +537,12 @@ end
         # instead of TDB must give a different answer, because it is a
         # different instant — 64 s apart at J2000.
         jd    = 2458849.5
-        M_tdb = axes_rotation(MJ2000Eq(), MODEq(), Time(jd, 0.0, :tdb, :jd))
-        M_utc = axes_rotation(MJ2000Eq(), MODEq(), Time(jd, 0.0, :utc, :jd))
+        M_tdb = axes_rotation(ICRF(), MODEq(), Time(jd, 0.0, :tdb, :jd))
+        M_utc = axes_rotation(ICRF(), MODEq(), Time(jd, 0.0, :utc, :jd))
         @test M_tdb != M_utc
 
         # And the bare-number entry point means TDB.
-        @test axes_rotation(MJ2000Eq(), MODEq(), jd) == M_tdb
+        @test axes_rotation(ICRF(), MODEq(), jd) == M_tdb
     end
 
     @testset "I-10 unsupported pair fails loudly" begin

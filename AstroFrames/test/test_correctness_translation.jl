@@ -103,8 +103,7 @@ end
                   axes_rotation(PEF(), ITRF(), _JD) *
                   axes_rotation(TODEq(), PEF(), _JD) *
                   axes_rotation(MODEq(), TODEq(), _JD) *
-                  axes_rotation(MJ2000Eq(), MODEq(), _JD) *
-                  axes_rotation(ICRF(), MJ2000Eq(), _JD)
+                  axes_rotation(ICRF(), MODEq(), _JD)
         finally
             set_frame_theory!(original)
         end
@@ -116,15 +115,21 @@ end
             set_frame_theory!(IAU2006()); M6 = axes_rotation(ICRF(), ITRF(), _JD)
             set_frame_theory!(FK5());     M5 = axes_rotation(ICRF(), ITRF(), _JD)
 
-            # Same endpoints, different chain, therefore different numbers —
-            # which is the theory setting doing its job, not an error.
-            @test !(M5 ≈ M6)
+            # Same endpoints, different chain: each is its own theory's chain,
+            # which is the theory setting doing its job.
+            @test M6 ≈ axes_rotation(TIRS(), ITRF(), _JD) * axes_rotation(CIRS(), TIRS(), _JD) *
+                       axes_rotation(GCRF(), CIRS(), _JD) * axes_rotation(ICRF(), GCRF(), _JD) rtol = 1e-14
+            @test M5 ≈ axes_rotation(PEF(), ITRF(), _JD) * axes_rotation(TODEq(), PEF(), _JD) *
+                       axes_rotation(MODEq(), TODEq(), _JD) * axes_rotation(ICRF(), MODEq(), _JD) rtol = 1e-14
+            @test M5 != M6
 
-            # And the gap is the frame-bias scale: the FK5 chain refers its
-            # precession to MJ2000Eq, itself ~23 mas off ICRF.
+            # And the gap is a fraction of a milliarcsecond: both models, with the
+            # IERS celestial pole offsets, carry the GCRS to the same ITRF. Until
+            # 2026-09-30 this asserted a 20–30 mas gap, the frame bias counted
+            # twice by an FK5 chain that started at MJ2000Eq.
             R = M5[1:3,1:3] * M6[1:3,1:3]'
             v = 0.5 .* (R[3,2]-R[2,3], R[1,3]-R[3,1], R[2,1]-R[1,2])
-            @test 20.0 < rad2deg(asin(sqrt(sum(abs2, v)))) * 3600 * 1000 < 30.0
+            @test 0.0 < rad2deg(asin(sqrt(sum(abs2, v)))) * 3600 * 1000 < 1.0
         finally
             set_frame_theory!(original)
         end

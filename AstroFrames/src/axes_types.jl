@@ -163,6 +163,13 @@ Origin-agnostic inertial. The axes describe a fixed spatial orientation
 defined by Earth's mean equator and dynamical equinox at epoch J2000.0;
 they can legally be used with any origin.
 
+They differ from `ICRF` by the IERS frame bias, a constant rotation of about
+23 mas: 0.75 m at LEO, 4.7 m at GEO. Use them for data that arrives labelled as
+FK5 J2000. The FK5 Earth chain does not pass through them; it starts at the
+ICRF, because the IERS celestial pole offsets it applies already absorb the bias.
+
+See also: [`ICRF`](@ref), [`MJ2000Ec`](@ref).
+
 # Example
 
 ```jldoctest

@@ -528,28 +528,43 @@ function axes_rotation(::MoonME, ::ICRF, e::EpochScales)
     return SMatrix{6,6,Float64,36}(M)
 end
 
-# --- MJ2000Eq ↔ MODEq (IAU-1976 precession) ----------------------------------
+# --- ICRF ↔ MODEq (IAU-1976 precession) --------------------------------------
 #
-# STB names the inertial end of its FK5 precession "GCRF", but its own
-# docstring is explicit that without EOP corrections this is "what is usually
-# called the J2000 reference frame" — our `MJ2000Eq`, not our `GCRF`.
+# The FK5 chain starts at the ICRF, not at MJ2000Eq. The IERS publishes celestial
+# pole offsets dψ, dε for the IAU-1980 nutation measured against the GCRS: with
+# them applied at the nutation edge, precession and nutation carry the GCRS, not
+# the FK5 J2000 frame, to the true equator and equinox of date. The offsets
+# absorb the frame bias. Starting the chain from MJ2000Eq applied the bias a
+# second time, and until 2026-09-30 it did: ICRF → ITRF under FK5 was 23 mas
+# (0.75 m at LEO) from the IAU 2006 chain, and so was TEME → ICRF at the default
+# theory, whose route passes through these edges. Rooted at the ICRF, the two
+# chains agree to about 0.2 mas. This is how Vallado (2013), SatelliteToolbox
+# (whose precession takes "GCRF") and GMAT's own FK5 reduction arrange it.
+#
+# MJ2000Eq, the FK5 mean equator and equinox of J2000, is then a leaf off the
+# ICRF, reached by the constant frame bias alone.
 #
 # Needs TT only: no EOP, no UT1. `Ṙ` is neglected (see `_rotation_no_rate`).
 
 """
-    axes_rotation(::MJ2000Eq, ::MODEq, epoch) -> SMatrix{6,6}
+    axes_rotation(::ICRF, ::MODEq, epoch) -> SMatrix{6,6}
 
-IAU-1976 precession from the FK5 mean equator and equinox of J2000 to the
-mean equator and equinox of date.
+IAU-1976 precession from the ICRF to the mean equator and equinox of date, the
+first edge of the FK5 chain.
 
 Requires no Earth orientation data. `epoch` may be a `Time` or a TDB Julian
 date; the TT needed by the model is derived internally.
+
+# Notes
+The chain starts at the ICRF because the IERS celestial pole offsets applied at
+the nutation edge are referred to the GCRS and absorb the frame bias; see the
+note above this method. MJ2000Eq is reached from the ICRF by the bias alone.
 """
-axes_rotation(::MJ2000Eq, ::MODEq, e::EpochScales) =
+axes_rotation(::ICRF, ::MODEq, e::EpochScales) =
     _rotation_no_rate(r_gcrf_to_mod_fk5(DCM, e.tt))
 
-axes_rotation(::MODEq, ::MJ2000Eq, e::EpochScales) =
-    _invert_rotation(axes_rotation(MJ2000Eq(), MODEq(), e))
+axes_rotation(::MODEq, ::ICRF, e::EpochScales) =
+    _invert_rotation(axes_rotation(ICRF(), MODEq(), e))
 
 # --- Which theory an edge belongs to ----------------------------------------
 #
@@ -584,7 +599,7 @@ merely discouraged.
 
 ```jldoctest
 using AstroUniverse: FK5, IAU2006
-edge_theory(MJ2000Eq(), MODEq()), edge_theory(GCRF(), CIRS()), edge_theory(ICRF(), MJ2000Eq())
+edge_theory(ICRF(), MODEq()), edge_theory(GCRF(), CIRS()), edge_theory(ICRF(), MJ2000Eq())
 
 # output
 (FK5(), IAU2006(), nothing)
@@ -592,8 +607,8 @@ edge_theory(MJ2000Eq(), MODEq()), edge_theory(GCRF(), CIRS()), edge_theory(ICRF(
 """
 edge_theory(::AbstractAxes, ::AbstractAxes) = nothing
 
-edge_theory(::MJ2000Eq, ::MODEq) = FK5()
-edge_theory(::MODEq, ::MJ2000Eq) = FK5()
+edge_theory(::ICRF, ::MODEq)     = FK5()
+edge_theory(::MODEq, ::ICRF)     = FK5()
 edge_theory(::MODEq, ::TODEq)    = FK5()
 edge_theory(::TODEq, ::MODEq)    = FK5()
 edge_theory(::TODEq, ::PEF)      = FK5()
@@ -1180,7 +1195,7 @@ appear here. The test suite checks both conditions.
 """
 const _EDGES = (
     (ICRF(), MJ2000Eq()), (MJ2000Eq(), ICRF()),
-    (MJ2000Eq(), MODEq()), (MODEq(), MJ2000Eq()),
+    (ICRF(), MODEq()),     (MODEq(), ICRF()),
     (MODEq(), TODEq()),    (TODEq(), MODEq()),
     (TODEq(), PEF()),      (PEF(), TODEq()),
     (PEF(), ITRF()),       (ITRF(), PEF()),
@@ -1449,7 +1464,7 @@ function _routed_rotation(source::A1, target::A2, e::EpochScales,
         "No state transform registered from $(A1) to $(A2). " *
         "Supported edges in this release: identity, ICRF ↔ CelestialBodyFixed{N}, " *
         "ICRF ↔ MoonPA, ICRF ↔ MoonME, ICRF ↔ MJ2000Eq, MJ2000Eq ↔ MJ2000Ec, " *
-        "MJ2000Eq ↔ MODEq, MODEq ↔ TODEq, TODEq ↔ PEF, PEF ↔ ITRF, " *
+        "ICRF ↔ MODEq, MODEq ↔ TODEq, TODEq ↔ PEF, PEF ↔ ITRF, " *
         "MODEq ↔ MODEc, TODEq ↔ TODEc, TODEq ↔ TEME, " *
         "ICRF ↔ GCRF, GCRF ↔ CIRS, CIRS ↔ TIRS, TIRS ↔ ITRF. " *
         "ICRF ↔ RIC, ICRF ↔ LVLH, ICRF ↔ VNB. " *

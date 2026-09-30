@@ -32,6 +32,32 @@ import SatelliteToolboxTransformations as STB
         end
     end
 
+    @testset "the FK5 and IAU 2006 chains agree, and the frame bias is applied once" begin
+        # The FK5 chain starts at the ICRF: the IERS celestial pole offsets it applies are referred
+        # to the GCRS and absorb the frame bias. Started from MJ2000Eq, as it was until
+        # 2026-09-30, the bias counted twice and the two chains were 23 mas apart.
+        mas(A, B) = opnorm(Matrix(A)[1:3, 1:3] - Matrix(B)[1:3, 1:3]) * 206264806.2
+        original = frame_theory()
+        try
+            for s in ("2000-01-01T12:00:00", "2016-12-31T23:00:00", "2024-03-01T07:13:00")
+                t = Time(s, UTC(), ISOT())
+                set_frame_theory!(IAU2006())
+                R06  = axes_rotation(ICRF(), ITRF(), t)
+                teme = axes_rotation(TEME(), ICRF(), t)
+                via  = axes_rotation(ITRF(), ICRF(), t) * axes_rotation(TEME(), ITRF(), t)
+                set_frame_theory!(FK5())
+                R80  = axes_rotation(ICRF(), ITRF(), t)
+                @test mas(R80, R06) < 1.0                  # measured 0.008–0.25 mas
+                @test mas(teme, via) < 1.0                 # TEME → ICRF, direct and via ITRF
+                # MJ2000Eq is the FK5 J2000 frame: the ICRF by the constant bias, under either theory
+                @test axes_rotation(MJ2000Eq(), ICRF(), t) == axes_rotation(MJ2000Eq(), ICRF(), 2451545.0)
+                @test 20 < mas(axes_rotation(ICRF(), MJ2000Eq(), t), I(6)) < 25
+            end
+        finally
+            set_frame_theory!(original)
+        end
+    end
+
     @testset "the Earth rotation keeps the two-part precision of Time" begin
         # A single Float64 Julian date resolves 40 µs; a 10 µs step must still turn the Earth.
         t0 = Time(2460400.0, 0.1, TDB(), JD())

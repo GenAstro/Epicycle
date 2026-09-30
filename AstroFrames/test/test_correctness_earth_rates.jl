@@ -139,7 +139,7 @@ end
     # documentation update with it, not slip in.
     edges = ((IAU2006(), GCRF(),     CIRS(),  "precession-nutation"),
              (IAU2006(), TIRS(),     ITRF(),  "polar motion"),
-             (FK5(),     MJ2000Eq(), MODEq(), "precession"),
+             (FK5(),     ICRF(),     MODEq(), "precession"),
              (FK5(),     MODEq(),    TODEq(), "nutation"),
              (FK5(),     PEF(),      ITRF(),  "polar motion"),
              (FK5(),     MODEq(),    MODEc(), "obliquity of date"))
