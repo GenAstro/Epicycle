@@ -1,0 +1,115 @@
+%  Truth for test_correctness_frame_propagation.jl: a translunar trajectory flown by two
+%  propagators in turn.
+%
+%  Leg 1: Earth-centred, point masses Earth, Moon and Sun, from a 300 km perigee until the
+%         spacecraft is 66,100 km from the Moon (the Moon's sphere of influence).
+%  Leg 2: Moon-centred, the same point masses, until lunar periapsis.
+%
+%  The ephemeris is DE440 through SPICE, the file Epicycle itself uses, and the gravitational
+%  parameters are Epicycle's, so the two tools differ only in the integration.
+%
+%  To run: set SolarSystem.SPKFilename to Epicycle's de440.bsp, which AstroUniverse keeps in
+%  its scratch space (list_downloaded_spice_kernels() shows it), and ReportFile.Filename to a
+%  writable path, then run with GmatConsole:
+%      GmatConsole.exe --run gmat_earth_moon_transfer.script
+%  Run from GMAT's bin folder, since the default data paths are relative to it.
+%
+%  GMAT R2026A. Each report line is: TDB Julian date minus 2430000, then position [km] and
+%  velocity [km/s] in EarthMJ2000Eq, EarthICRF, LunaMJ2000Eq and LunaICRF.
+
+%----------------------------------------
+% Solar system and constants
+%----------------------------------------
+SolarSystem.EphemerisSource   = 'SPICE';
+SolarSystem.SPKFilename       = '<path to de440.bsp>';
+SolarSystem.UseTTForEphemeris = false;
+
+Earth.Mu = 398600.4418;
+Luna.Mu  = 4902.8;
+Sun.Mu   = 132712440018;
+
+%----------------------------------------
+% Coordinate systems (EarthMJ2000Eq and EarthICRF are built in)
+%----------------------------------------
+Create CoordinateSystem LunaMJ2000Eq;
+LunaMJ2000Eq.Origin = Luna;
+LunaMJ2000Eq.Axes   = MJ2000Eq;
+
+Create CoordinateSystem LunaICRF;
+LunaICRF.Origin = Luna;
+LunaICRF.Axes   = ICRF;
+
+%----------------------------------------
+% Spacecraft: perigee of a translunar orbit
+%----------------------------------------
+Create Spacecraft Sat;
+Sat.DateFormat       = UTCGregorian;
+Sat.Epoch            = '01 Jan 2026 00:00:00.000';
+Sat.CoordinateSystem = EarthMJ2000Eq;
+Sat.DisplayStateType = Cartesian;
+Sat.X  = 2491.2417;
+Sat.Y  = -5494.0045;
+Sat.Z  = -2864.4918;
+Sat.VX = 10.135904;
+Sat.VY = 3.454066;
+Sat.VZ = 2.190383;
+
+%----------------------------------------
+% Force models and propagators
+%----------------------------------------
+Create ForceModel EarthFM;
+EarthFM.CentralBody             = Earth;
+EarthFM.PointMasses             = {Earth, Luna, Sun};
+EarthFM.Drag                    = None;
+EarthFM.SRP                     = Off;
+EarthFM.RelativisticCorrection  = Off;
+EarthFM.ErrorControl            = RSSStep;
+
+Create ForceModel MoonFM;
+MoonFM.CentralBody              = Luna;
+MoonFM.PointMasses              = {Luna, Earth, Sun};
+MoonFM.Drag                     = None;
+MoonFM.SRP                      = Off;
+MoonFM.RelativisticCorrection   = Off;
+MoonFM.ErrorControl             = RSSStep;
+
+Create Propagator EarthProp;
+EarthProp.FM              = EarthFM;
+EarthProp.Type            = RungeKutta89;
+EarthProp.InitialStepSize = 60;
+EarthProp.Accuracy        = 1e-13;
+EarthProp.MinStep         = 0;
+EarthProp.MaxStep         = 86400;
+EarthProp.MaxStepAttempts = 50;
+
+Create Propagator MoonProp;
+MoonProp.FM              = MoonFM;
+MoonProp.Type            = RungeKutta89;
+MoonProp.InitialStepSize = 60;
+MoonProp.Accuracy        = 1e-13;
+MoonProp.MinStep         = 0;
+MoonProp.MaxStep         = 86400;
+MoonProp.MaxStepAttempts = 50;
+
+%----------------------------------------
+% Report
+%----------------------------------------
+Create ReportFile Truth;
+Truth.Filename     = '<path to report>';
+Truth.Precision    = 16;
+Truth.WriteHeaders = false;
+Truth.LeftJustify  = On;
+Truth.ZeroFill     = Off;
+
+%----------------------------------------
+% Mission
+%----------------------------------------
+BeginMissionSequence;
+
+Report Truth Sat.TDBModJulian Sat.EarthMJ2000Eq.X Sat.EarthMJ2000Eq.Y Sat.EarthMJ2000Eq.Z Sat.EarthMJ2000Eq.VX Sat.EarthMJ2000Eq.VY Sat.EarthMJ2000Eq.VZ Sat.EarthICRF.X Sat.EarthICRF.Y Sat.EarthICRF.Z Sat.EarthICRF.VX Sat.EarthICRF.VY Sat.EarthICRF.VZ Sat.LunaMJ2000Eq.X Sat.LunaMJ2000Eq.Y Sat.LunaMJ2000Eq.Z Sat.LunaMJ2000Eq.VX Sat.LunaMJ2000Eq.VY Sat.LunaMJ2000Eq.VZ Sat.LunaICRF.X Sat.LunaICRF.Y Sat.LunaICRF.Z Sat.LunaICRF.VX Sat.LunaICRF.VY Sat.LunaICRF.VZ;
+
+Propagate EarthProp(Sat) {Sat.Luna.RMAG = 66100};
+Report Truth Sat.TDBModJulian Sat.EarthMJ2000Eq.X Sat.EarthMJ2000Eq.Y Sat.EarthMJ2000Eq.Z Sat.EarthMJ2000Eq.VX Sat.EarthMJ2000Eq.VY Sat.EarthMJ2000Eq.VZ Sat.EarthICRF.X Sat.EarthICRF.Y Sat.EarthICRF.Z Sat.EarthICRF.VX Sat.EarthICRF.VY Sat.EarthICRF.VZ Sat.LunaMJ2000Eq.X Sat.LunaMJ2000Eq.Y Sat.LunaMJ2000Eq.Z Sat.LunaMJ2000Eq.VX Sat.LunaMJ2000Eq.VY Sat.LunaMJ2000Eq.VZ Sat.LunaICRF.X Sat.LunaICRF.Y Sat.LunaICRF.Z Sat.LunaICRF.VX Sat.LunaICRF.VY Sat.LunaICRF.VZ;
+
+Propagate MoonProp(Sat) {Sat.Luna.Periapsis};
+Report Truth Sat.TDBModJulian Sat.EarthMJ2000Eq.X Sat.EarthMJ2000Eq.Y Sat.EarthMJ2000Eq.Z Sat.EarthMJ2000Eq.VX Sat.EarthMJ2000Eq.VY Sat.EarthMJ2000Eq.VZ Sat.EarthICRF.X Sat.EarthICRF.Y Sat.EarthICRF.Z Sat.EarthICRF.VX Sat.EarthICRF.VY Sat.EarthICRF.VZ Sat.LunaMJ2000Eq.X Sat.LunaMJ2000Eq.Y Sat.LunaMJ2000Eq.Z Sat.LunaMJ2000Eq.VX Sat.LunaMJ2000Eq.VY Sat.LunaMJ2000Eq.VZ Sat.LunaICRF.X Sat.LunaICRF.Y Sat.LunaICRF.Z Sat.LunaICRF.VX Sat.LunaICRF.VY Sat.LunaICRF.VZ;

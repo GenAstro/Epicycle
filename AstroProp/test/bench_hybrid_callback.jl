@@ -52,14 +52,15 @@ function AstroProp._build_callback(cond::AstroProp.StopAt, dynsys)
 
     # g(u,t) = calc_value - target. Mutates subject as a side effect (unavoidable
     # given the get_calc(calc) contract; only touches subject.state).
-    function g_at(u)
-        AstroProp._subject_update_from_u!(subject, dynsys, u)
+    start = AstroProp._start_epoch(dynsys.forces, dynsys.spacecraft[1])
+    function g_at(u, t)
+        AstroProp._subject_update_from_u!(subject, dynsys, u, start, t)
         return get_calc(calc) - target
     end
 
     # Per-step: 1 direct u eval, no interpolant.
     function cond_fn(u, t, _integ)
-        g_now = g_at(u)
+        g_now = g_at(u, t)
         if isnan(g_prev[])
             g_prev[] = g_now; t_prev[] = t
             return false
@@ -82,7 +83,7 @@ function AstroProp._build_callback(cond::AstroProp.StopAt, dynsys)
         u_mid  = integ(t_mid)             # Vern9 dense output at t_mid
         while iters < 60
             iters += 1
-            gm = g_at(u_mid)
+            gm = g_at(u_mid, t_mid)
             if abs(gm) < 1e-9 || (th - tl) < 1e-6
                 break
             end

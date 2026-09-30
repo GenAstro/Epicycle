@@ -48,6 +48,16 @@ StopAt(sc, PropDurationDays(), 2.5)
 """
 struct PropDurationDays <: IntegratorTimeCalc end
 
+"""
+    PropEpoch <: IntegratorTimeCalc
+
+An absolute epoch, the target of `StopAt(sc, time)`. It becomes a duration only when the
+propagation starts: from the spacecraft's epoch then, on the integration's dynamical time scale
+(TT about the Earth, TDB otherwise), so a stop built before an earlier propagation still lands on
+its epoch.
+"""
+struct PropEpoch <: IntegratorTimeCalc end
+
 # ============================================================================
 # Propagator and Stopping Condition Definitions
 # ============================================================================
@@ -192,18 +202,9 @@ propagate!(prop, sat, stop_past; direction=:backward)
 ```
 """
 function StopAt(subject::Spacecraft, target_time::Time; direction::Int=0)
-    # Use TT for Earth-centered, TDB for others (matches propagation)
-    center_body = subject.coord_sys.origin
-    
-    # Convert both times to the appropriate dynamical time scale
-    target_dyn = (center_body === earth) ? target_time.tt : target_time.tdb
-    current_dyn = (center_body === earth) ? subject.time.tt : subject.time.tdb
-    
-    # Compute elapsed time in dynamical time seconds (can be negative for past times)
-    elapsed_sec = (target_dyn.jd - current_dyn.jd) * 86400.0
-    
-    # No error for negative - supports backward propagation with direction=:infer
-    return StopAt(subject, PropDurationSeconds(), elapsed_sec, direction, :discrete, 1e-9)
+    # The epoch is kept, and becomes a duration when the propagation starts (see PropEpoch). A
+    # target before the spacecraft's epoch supports backward propagation with direction=:infer.
+    return StopAt(subject, PropEpoch(), target_time, direction, :discrete, 1e-9)
 end
 
 """
@@ -269,20 +270,23 @@ StopAt(quantity::Function, subject, deps...; equals, direction::Int = 0,
            direction = direction, detection = detection, rootfind_tol = rootfind_tol)
 
 """
-   _subject_update_from_u!(subject, dynsys, u)
+   _subject_update_from_u!(subject, dynsys, u, start, t)
 
-Update a subject from the integrator state u (specialize per subject type)
+Update a subject from the integrator state u at elapsed time t (specialize per subject type)
 """
-_subject_update_from_u!(subject, dynsys, u) = error("No _subject_update_from_u! for $(typeof(subject))")
+_subject_update_from_u!(subject, dynsys, u, start, t) =
+    error("No _subject_update_from_u! for $(typeof(subject))")
 
 """
-   _subject_update_from_u!(sc::Spacecraft, dynsys, u)
+   _subject_update_from_u!(sc::Spacecraft, dynsys, u, start::Time, t::Real)
 
-Map Cartesian state slice to spacecraft struct state
+Set the spacecraft to the integrator point `u` at elapsed time `t` [s] from `start`: its epoch,
+and its state converted from the integration frame into its own coordinate system. A stop
+condition reads both; a distance from the Moon needs the Moon where it is at `t`.
 """
-_subject_update_from_u!(sc::Spacecraft, dynsys, u) = begin
-    pv = _posvel_from_u(u, dynsys, sc)
-    set_posvel!(sc, pv)
+_subject_update_from_u!(sc::Spacecraft, dynsys, u, start::Time, t::Real) = begin
+    sc.time = _epoch_at(start, t)
+    _set_posvel_from!(sc, _posvel_from_u(u, dynsys, sc), _integration_frame(dynsys.forces, sc))
     nothing
 end
 
@@ -357,16 +361,18 @@ function _build_hybrid_callback(cond::StopAt, dynsys)
 
     g_prev = Ref(NaN)     # (calc - target) at the previous accepted-step endpoint
     t_prev = Ref(NaN)     # elapsed time at that endpoint
+    start  = _start_epoch(dynsys.forces, dynsys.spacecraft[1])   # the integrator's t = 0
 
-    # g(u) = calc(u) - target. Mutates subject as a side effect via _subject_update_from_u!
-    # (unavoidable given the get_calc(calc) contract; only subject.state is touched).
-    function g_at(u)
-        _subject_update_from_u!(subject, dynsys, u)
+    # g(u, t) = calc - target at the point u, time t. Mutates the subject's state and epoch as a
+    # side effect via _subject_update_from_u! (unavoidable given the get_calc(calc) contract);
+    # _update_structs! sets both when the propagation ends.
+    function g_at(u, t)
+        _subject_update_from_u!(subject, dynsys, u, start, t)
         return get_calc(calc) - target
     end
 
     function cond_fn(u, t, _integ)
-        g_now = g_at(u)
+        g_now = g_at(u, t)
         if isnan(g_prev[])
             g_prev[] = g_now; t_prev[] = t
             return false
@@ -386,7 +392,7 @@ function _build_hybrid_callback(cond::StopAt, dynsys)
         t_mid  = 0.5 * (tl + th)
         u_mid  = integ(t_mid)                   # Vern9 dense output
         for _ in 1:60
-            gm = g_at(u_mid)
+            gm = g_at(u_mid, t_mid)
             (abs(gm) < tol || (th - tl) < 1e-6) && break
             if (gl > 0) == (gm > 0)
                 tl = t_mid; gl = gm
@@ -426,10 +432,11 @@ function _build_continuous_callback(cond::StopAt, dynsys)
     target  = cond.target
     dir     = cond.direction
 
-    calc = make_calc(subject, var)
+    calc  = make_calc(subject, var)
+    start = _start_epoch(dynsys.forces, dynsys.spacecraft[1])   # the integrator's t = 0
 
     function g(u, t, _integ)
-        _subject_update_from_u!(subject, dynsys, u)
+        _subject_update_from_u!(subject, dynsys, u, start, t)
         val = get_calc(calc)
         return _stop_residual(val, target, calc)
     end
@@ -472,9 +479,17 @@ The `direction` keyword controls **time integration direction** (which way time 
 This is different from `StopAt`'s `direction` field, which controls **event crossing direction**
 for state-based stops (increasing/decreasing zero-crossing detection).
 
+The equations of motion are integrated in the force model's frame: its central body with ICRF
+axes. A spacecraft held in another coordinate system is converted into that frame at the start and
+back at the end, so its state and coordinate system after the call are consistent, and stop
+conditions see it in its own coordinate system at the epoch being tested. Its epoch comes back on
+the integration's time scale, TT about the Earth and TDB otherwise. The history segment the call
+adds is stored in the integration frame and labelled with it.
+
 # Returns
-`ODESolution` from DifferentialEquations.jl containing the complete trajectory solution.
-Access final states via `sol.u[end]`, times via `sol.t`, or interpolate at any time.
+`ODESolution` from DifferentialEquations.jl containing the complete trajectory solution, in the
+integration frame. `sol.t` is elapsed seconds from the start epoch. Access final states via
+`sol.u[end]`, times via `sol.t`, or interpolate at any time.
 
 # Examples
 ```julia

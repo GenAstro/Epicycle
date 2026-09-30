@@ -211,10 +211,12 @@ end
 
 @testset "Point Mass Gravity Propagation -Moon" begin
     
-    # Create spacecraft
+    # Create spacecraft. The state is Moon-centred, so it is held in Moon-centred coordinates; the
+    # default Earth-centred label passed here only while propagation ignored the coordinate system.
     sat = Spacecraft(
-        state = CartesianState([11.540658048439733, 2331.8764015262946, 385.6799889600088, -1.8701042509951207, 0.6293064348540126, 0.21705285968096613]), 
-        time = Time("2023-09-21T12:23:12", TDB(), ISOT())
+        state = CartesianState([11.540658048439733, 2331.8764015262946, 385.6799889600088, -1.8701042509951207, 0.6293064348540126, 0.21705285968096613]),
+        time = Time("2023-09-21T12:23:12", TDB(), ISOT()),
+        coord_sys = CoordinateSystem(moon, ICRF()),
         )
 
     # Create force models, integrator, and dynamics system
@@ -527,3 +529,4 @@ include("test_correctness_drag_orientation.jl")
 include("force_srp_spherical.jl")
 include("test_correctness_variational.jl")
 include("test_correctness_quantity_ad.jl")
+include("test_correctness_frame_propagation.jl")

@@ -304,6 +304,88 @@ struct DynSys
     end
 end
 
+# ─────────────────────────────── the integration frame ──────────────────────────────────
+#
+# The forces work in one frame: centred on the force model's central body, with ICRF axes. A
+# spacecraft keeps its state in whatever coordinate system it carries, so the state is converted
+# into the integration frame when a propagation starts, out of it wherever a stop condition reads
+# the spacecraft, and back into the spacecraft's own coordinate system when the propagation ends.
+# Until 2026-09-30 none of this happened: the raw numbers went in and came out, so a spacecraft
+# held in Moon-centred coordinates and propagated by an Earth-centred force model was integrated as
+# if its state were relative to the Earth, with no error.
+#
+# When the two frames are the same, which is the usual case, nothing is converted.
+
+"""
+    _integration_frame(forces, sc) -> CoordinateSystem
+
+The frame the forces integrate `sc` in: the force model's central body with ICRF axes, or the
+spacecraft's own coordinate system when the model has no central body.
+"""
+function _integration_frame(forces::ForceModel, sc::Spacecraft)
+    c  = forces.center
+    cs = sc.coord_sys
+    # The spacecraft's own object when it already is that frame, so its history keeps its label.
+    (c === nothing || (cs.origin === c && _icrf_axes(cs.axes))) && return cs
+    return CoordinateSystem(c, ICRF())
+end
+
+_integration_frame(forces, sc::Spacecraft) = sc.coord_sys     # a force that is not a ForceModel
+
+"""
+    _start_epoch(forces, sc) -> Time
+
+The epoch a propagation counts from, on the dynamical time scale of the integration: TT when the
+central body is the Earth, TDB otherwise. `propagate!`, its time-based stops and `OrbitODEProblem`
+all use this one rule.
+"""
+_start_epoch(forces::ForceModel, sc::Spacecraft) = forces.center === earth ? sc.time.tt : sc.time.tdb
+_start_epoch(forces, sc::Spacecraft) = sc.time.tdb
+
+"""
+    _epoch_at(start, t) -> Time
+
+The epoch `t` seconds after `start`, on `start`'s scale, as a Julian date. Added to the fraction of
+the day, so the two-part date keeps its precision.
+"""
+_epoch_at(start::Time, t::Real) = Time(start.jd1, start.jd2 + t / 86400.0, start.scale, :jd)
+
+"""
+    _same_frame(a, b) -> Bool
+
+Whether two coordinate systems are the same frame: the same origin and the same axes, counting
+`GCRF` as `ICRF`. `CoordinateSystem` is mutable and defines no `==`, so two equal frames built
+separately are not `==`.
+"""
+_same_frame(a, b) = a === b ||
+    (a.origin === b.origin && (typeof(a.axes) === typeof(b.axes) || (_icrf_axes(a.axes) && _icrf_axes(b.axes))))
+
+# GCRF is ICRF's orientation at the Earth; AstroFrames rotates between them by the identity.
+_icrf_axes(axes) = axes isa ICRF || axes isa GCRF
+
+"""
+    _posvel_in(sc, cs) -> Vector
+
+The spacecraft's position and velocity expressed in coordinate system `cs`, at its own epoch.
+"""
+_posvel_in(sc::Spacecraft, cs) =
+    _same_frame(cs, sc.coord_sys) ? to_posvel(sc) : to_vector(CartesianState(sc, cs))
+
+"""
+    _set_posvel_from!(sc, x, cs)
+
+Write `x`, a position and velocity in coordinate system `cs` at the spacecraft's current epoch,
+into the spacecraft in its own coordinate system. Set the epoch first.
+"""
+function _set_posvel_from!(sc::Spacecraft, x::AbstractVector, cs)
+    if _same_frame(cs, sc.coord_sys)
+        set_posvel!(sc, x)
+    else
+        set_posvel!(sc, to_vector(CartesianState(Coordinate(x, cs, sc.time), sc.coord_sys)))
+    end
+    return sc
+end
+
 function _build_odereg(spacecraft_list::Vector{<:Spacecraft})
     reg = Dict{Spacecraft, Dict{Symbol, UnitRange{Int}}}()
     index = 1
@@ -339,45 +421,43 @@ end
 function _build_state(model::ForceModel, spacecraft_list::Vector{<:Spacecraft}, odereg::Dict)
     max_index = maximum([maximum(v[:posvel]) for v in values(odereg)])
 
-    #first_state = CartesianState(spacecraft_list[1].state, model.center.mu).posvel
-    first_state = to_posvel(spacecraft_list[1])
-    state_vector = zeros(eltype(first_state), max_index)
+    # Each spacecraft's state in the integration frame, whatever coordinate system it is held in.
+    states = Dict(sc => _posvel_in(sc, _integration_frame(model, sc)) for sc in spacecraft_list)
+    state_vector = zeros(eltype(states[first(spacecraft_list)]), max_index)
     for sc in spacecraft_list
-        idxs = odereg[sc][:posvel]
-        #state_vector[idxs] .= CartesianState(sc.state, model.center.mu).posvel
-        state_vector[idxs] .= to_posvel(sc)
+        state_vector[odereg[sc][:posvel]] .= states[sc]
     end
     return state_vector
 end
 
-function _update_structs!(forces::ForceModel, sol_u::Vector{<:Real}, odereg::Dict, sol_t::Real = 0.0, full_sol::Union{Nothing,ODESolution} = nothing)
+"""
+    _update_structs!(forces, sol_u, odereg, start_epochs, sol_t = 0.0, full_sol = nothing)
+
+Deliver the end of a propagation to each spacecraft: its epoch, its state converted from the
+integration frame into its own coordinate system, and, if it keeps one, a history segment.
+`start_epochs` are the epochs each spacecraft started from, taken before the solve, because stop
+conditions move `sc.time` while they are evaluated.
+
+The history segment is stored in the integration frame and labelled as such, so no saved point is
+converted; a reader converts what it reads.
+"""
+function _update_structs!(forces::ForceModel, sol_u::Vector{<:Real}, odereg::Dict,
+                          start_epochs::AbstractDict, sol_t::Real = 0.0,
+                          full_sol::Union{Nothing,ODESolution} = nothing)
     for (sc, idx_map) in odereg
-        # Update dynamic state
-        if :posvel in keys(idx_map)
-            # TODO: Fix this to handle type via OrbitState util
-            #sc.state = CartesianState(sol_u[idx_map[:posvel]])
-            set_posvel!(sc, sol_u[idx_map[:posvel]])
-        end
+        cs    = _integration_frame(forces, sc)
+        start = start_epochs[sc]
 
-        # Append to history
-        # Use TT for Earth-centered, TDB for others (matches propagation time scale)
-        center_body = forces.center
-        time_scale = (center_body === earth) ? TT() : TDB()
-        initialtime = (center_body === earth) ? sc.time.tt.jd : sc.time.tdb.jd
-        
         if full_sol !== nothing && sc.save_history
-            # Extract times and states from solution
-            times = [Time(initialtime + t / 86400.0, time_scale, JD()) for t in full_sol.t]
+            times  = [_epoch_at(start, t) for t in full_sol.t]
             states = [CartesianState(copy(u[idx_map[:posvel]])) for u in full_sol.u]
-            
-            # Create HistorySegment and add to spacecraft history
-            segment = HistorySegment(times, states, sc.coord_sys, name="propagate")
-            push_segment!(sc.history, segment)
+            push_segment!(sc.history, HistorySegment(times, states, cs, name = "propagate"))
         end
 
-        # Update current time using appropriate scale
-        finaltime = initialtime + sol_t/86400.0
-        sc.time = Time(finaltime, time_scale, JD())
+        # The epoch first: the conversion into the spacecraft's coordinate system is at the end
+        # epoch, which matters whenever the two origins move relative to each other.
+        sc.time = _epoch_at(start, sol_t)
+        :posvel in keys(idx_map) && _set_posvel_from!(sc, sol_u[idx_map[:posvel]], cs)
     end
 end
 
@@ -396,6 +476,11 @@ function _propagate_dynsys!(model::DynSys, config::IntegratorConfig,
     time_conds = filter(_is_time_condition, stop_conditions)
     state_conds = filter(!_is_time_condition, stop_conditions)
 
+    # The epochs the propagation counts from, taken now: a time-based stop becomes a duration from
+    # them, and stop conditions move `sc.time` while they are evaluated.
+    start_epoch  = _start_epoch(model.forces, model.spacecraft[1])
+    start_epochs = Dict(sc => _start_epoch(model.forces, sc) for sc in model.spacecraft)
+
     # Validate at most one time-based condition
     if length(time_conds) > 1
         error("Multiple time-based stopping conditions not allowed. Found $(length(time_conds)) conditions.")
@@ -406,7 +491,7 @@ function _propagate_dynsys!(model::DynSys, config::IntegratorConfig,
         if isempty(time_conds)
             :forward  # Default for state-based or no conditions
         else
-            _infer_direction(time_conds[1])
+            _infer_direction(time_conds[1], start_epoch)
         end
     else
         direction
@@ -415,7 +500,7 @@ function _propagate_dynsys!(model::DynSys, config::IntegratorConfig,
     # Validate explicit direction matches duration sign
     # Duration sign is semantically meaningful: positive = forward, negative = backward
     if direction != :infer && !isempty(time_conds)
-        target = time_conds[1].target
+        target = _stop_duration(time_conds[1], start_epoch)
         # Check for contradictions between sign and explicit direction
         if target >= 0 && actual_direction == :backward
             error("Duration is positive (forward) but explicit direction is :backward. Use negative duration or direction=:infer.")
@@ -428,7 +513,7 @@ function _propagate_dynsys!(model::DynSys, config::IntegratorConfig,
     tf = if isempty(time_conds)
         actual_direction == :forward ? 1.0e12 : -1.0e12
     else
-        _compute_tf(time_conds[1], actual_direction)
+        _compute_tf(time_conds[1], actual_direction, start_epoch)
     end
     tspan = (0.0, tf)
 
@@ -441,10 +526,6 @@ function _propagate_dynsys!(model::DynSys, config::IntegratorConfig,
     params = (forces = model.forces, odereg = odereg)
     state0 = _build_state(model.forces, model.spacecraft, odereg)
     
-    # Use TT for Earth-centered dynamics, TDB for others
-    center_body = model.forces.center
-    start_epoch = (center_body === earth) ? model.spacecraft[1].time.tt : model.spacecraft[1].time.tdb
-
     actual_direction == :forward || actual_direction == :backward ||
         error("Unknown direction: $actual_direction. Use :forward or :backward.")
 
@@ -458,32 +539,32 @@ function _propagate_dynsys!(model::DynSys, config::IntegratorConfig,
     abstol=config.abstol,
     kwargs...)
 
-    _update_structs!(model.forces, sol.u[end], odereg, sol.t[end], sol)
+    _update_structs!(model.forces, sol.u[end], odereg, start_epochs, sol.t[end], sol)
 
     return sol
 end
 
 # Helper: infer propagation direction from time-based stop condition
-function _infer_direction(stop::StopAt{<:Any, <:IntegratorTimeCalc})
+function _infer_direction(stop::StopAt{<:Any, <:IntegratorTimeCalc}, start::Time)
     # Infer from sign of duration
-    target = stop.target
-    return target >= 0 ? :forward : :backward
+    return _stop_duration(stop, start) >= 0 ? :forward : :backward
+end
+
+# The signed duration [s] of a time-based stop, counted from `start` on its time scale.
+function _stop_duration(stop::StopAt{<:Any, <:IntegratorTimeCalc}, start::Time)
+    var = stop.var
+    var isa PropDurationSeconds && return Float64(stop.target)
+    var isa PropDurationDays    && return Float64(stop.target) * 86400.0
+    var isa PropEpoch           && return (getproperty(stop.target, start.scale) - start) * 86400.0
+    error("Unknown IntegratorTimeCalc type: $(typeof(var))")
 end
 
 # Helper: compute final time from time-based stopping condition
-function _compute_tf(stop::StopAt{<:Any, <:IntegratorTimeCalc}, direction::Symbol)
-    var = stop.var
-    target = stop.target
+function _compute_tf(stop::StopAt{<:Any, <:IntegratorTimeCalc}, direction::Symbol, start::Time)
     stop_dir = stop.direction
-    
+
     # Compute elapsed time in seconds (magnitude)
-    tf_magnitude = if var isa PropDurationSeconds
-        abs(Float64(target))
-    elseif var isa PropDurationDays
-        abs(Float64(target)) * 86400.0
-    else
-        error("Unknown IntegratorTimeCalc type: $(typeof(var))")
-    end
+    tf_magnitude = abs(_stop_duration(stop, start))
     
     # Validate target is non-zero
     if tf_magnitude == 0.0
