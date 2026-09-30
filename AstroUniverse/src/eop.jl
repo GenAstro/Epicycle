@@ -48,7 +48,20 @@ julia> FK5() isa AbstractFrameTheory
 true
 ```
 """
-abstract type AbstractFrameTheory end
+abstract type AbstractFrameTheory <: AbstractOrientationModel end
+
+# A frame theory is Earth's orientation model, but its rotation is the ITRF
+# chain, which reads UT1 and TT and lives in AstroFrames. A TDB Julian date alone
+# cannot give it, so this points there rather than approximating.
+function body_axes_rotation(th::AbstractFrameTheory, naifid::Integer, jd_tdb::Real)
+    throw(ArgumentError(
+        "$(th) is Earth's orientation, the ITRF chain, which needs UT1 and TT as well " *
+        "as TDB. Evaluate it with AstroFrames: `body_fixed_rotation($(th), 399, epoch)` " *
+        "or `axes_rotation(ICRF(), ITRF(), epoch)` with an `AstroEpochs.Time` epoch."))
+end
+
+orientation_parameters(::AbstractFrameTheory) = NamedTuple()
+_orients(::AbstractFrameTheory, naifid) = naifid == 399
 
 """
     FK5()
@@ -132,6 +145,10 @@ Set the Earth precession-nutation theory for this session.
 Changing it changes computed results, because the two theories are different
 physical models. A result that has to be reproducible is recorded with the theory
 that produced it.
+
+The theory is Earth's orientation model, so `set_orientation!(earth, theory)`
+is the same call. It governs Earth frames, the default EOP series, and Earth
+gravity built after it is set.
 
 # Returns
 The installed `theory`.

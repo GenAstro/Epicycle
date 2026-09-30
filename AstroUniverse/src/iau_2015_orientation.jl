@@ -299,8 +299,8 @@ Neptune, Pluto.
   (`ICRS ↔ GCRS ↔ CIRS ↔ TIRS ↔ ITRS`, or the FK5 chain).
 - **Moon (naifid 301).** The IAU stopped publishing a simplified lunar rotation
   model; production lunar work uses SPICE PCK files with full physical
-  librations (`MOON_PA`, `MOON_ME`). Use AstroFrames' SPICE-backed Moon-frame
-  edges.
+  librations. Use [`LunarPA`](@ref) or [`LunarME`](@ref), or AstroFrames'
+  `MoonPA` and `MoonME` axes.
 
 # Arguments
 - `body::CelestialBody`
@@ -339,7 +339,7 @@ function iau2015_orientation(n::Integer, jd::Real)
     elseif n == 301
         throw(ArgumentError(
             "Moon rotation is not covered by the IAU 2015 planet-rotation format. " *
-            "Use SPICE PCK-backed Moon frames (MOON_PA / MOON_ME) via AstroFrames."))
+            "Use LunarPA() or LunarME(), which read the DE440 lunar frames from SPICE."))
     elseif n == 499; return _iau2015_orientation_mars(jd)
     elseif n == 599; return _iau2015_orientation_jupiter(jd)
     elseif n == 699; return _iau2015_orientation_saturn(jd)

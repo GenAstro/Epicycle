@@ -1,7 +1,7 @@
 name = "AstroUniverse"
 uuid = "4bd44dca-1e45-43d2-b940-3f88da59ea6f"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "0.3.0"
+version = "0.4.0"
 
 [deps]
 EpicycleBase = "cbc97457-4cae-4fc4-be5b-ffc98fbd0dcb"
@@ -16,7 +16,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 EpicycleBase = "0.1.1"
-AstroEpochs = "0.5.0"
+AstroEpochs = "0.6"
 SatelliteToolboxTransformations = "0.1, 1"
 SPICE = "0.2"
 Scratch = "1.3"
@@ -25,9 +25,10 @@ julia = "1.10"
 
 [extras]
 AstroEpochs = "241dcde3-d7a4-450d-948f-15f2ea2ba1fa"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "AstroEpochs", "Logging", "LinearAlgebra"]
+test = ["Test", "AstroEpochs", "ForwardDiff", "Logging", "LinearAlgebra"]

@@ -52,17 +52,34 @@ x_moon_from_earth = translate_state(earth, moon, jd_tdb)
 
 ## Body Orientation
 
-The Sun, planets other than Earth, and Pluto use published IAU orientation
-polynomials. A custom body can use a Julia orientation model or a frame supplied
-by a loaded SPICE kernel.
+Every body's orientation is a model named for the publication that defines it.
+The defaults:
+
+| Body | Default | Also shipped |
+|---|---|---|
+| Sun, planets other than Earth, Pluto | `IAU2015()` | `IAU1991()` for Mars |
+| Moon | `LunarPA()`, principal axes (DE440) | `LunarME()`, mean-Earth axes |
+| Earth | the frame theory, `IAU2006()` | `FK5()` |
+
+A custom body can use a Julia orientation model or a frame supplied by a loaded
+SPICE kernel, `SpiceOrientation("…")`.
 
 ```julia
-model = orientation_model(mars)
+model = orientation_model(mars)                       # IAU2015()
 rotation = body_axes_rotation(model, mars.naifid, 2458849.5)
+
+set_orientation!(moon, LunarME())                     # body-fixed Moon coordinates in map axes
 ```
 
-Earth and the Moon use dedicated frame models instead of the planetary
-pole-and-prime-meridian model. AstroFrames provides those frame transformations.
+Earth's orientation is the frame theory, so `set_orientation!(earth, FK5())` and
+`set_frame_theory!(FK5())` are the same call. Its rotation is the ITRF chain,
+which needs UT1 and TT as well as TDB; AstroFrames evaluates it, and its
+`body_fixed_rotation(model, naifid, epoch)` evaluates any model, Earth's
+included.
+
+Data defined in axes other than a body's default, such as a gravity field, name
+their own model rather than changing the body's. `IauPolynomialOrientation()` is
+the former name of `IAU2015()`; it still works and warns once.
 
 ## Earth Orientation
 

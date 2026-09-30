@@ -33,7 +33,8 @@ export Mu
 export IAU2015Orientation, iau2015_orientation
 
 # Body orientation models - how a body is oriented in space, set on the body.
-export AbstractOrientationModel, IauPolynomialOrientation, SpiceOrientation
+export AbstractOrientationModel, IAU2015, IAU1991, LunarPA, LunarME, SpiceOrientation
+export IauPolynomialOrientation   # deprecated for IAU2015; see orientation_models.jl
 export body_axes_rotation, pole_axes_rotation
 export set_orientation!, orientation_model, has_orientation_model
 export orientation_parameters, set_orientation_parameters, set_orientation_parameters!
@@ -1074,16 +1075,18 @@ function set_field!(body::CelestialBody, ::Mu, v::Real)
 end
 
 # ---------------------------------------------------------------------------
-# Earth Orientation Parameters (global service)
-# ---------------------------------------------------------------------------
-
-include("eop.jl")
-
-# ---------------------------------------------------------------------------
-# IAU 2015 planetary orientation (pole + prime meridian + rates)
+# Body orientation: IAU 2015 planetary orientation (pole + prime meridian +
+# rates) and the orientation models. Before eop.jl, because its frame theories
+# are Earth's orientation models.
 # ---------------------------------------------------------------------------
 
 include("iau_2015_orientation.jl")
 include("orientation_models.jl")
+
+# ---------------------------------------------------------------------------
+# Earth Orientation Parameters (global service)
+# ---------------------------------------------------------------------------
+
+include("eop.jl")
 
 end

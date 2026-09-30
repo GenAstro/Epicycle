@@ -45,9 +45,15 @@ An abstract type, so it has no fields of its own. A model must provide:
 The two optional ones are what an estimation reads and writes, and the defaults
 mean a plain struct needs no extra code for them.
 
-Shipped models: [`IauPolynomialOrientation`](@ref) for the Sun, the planets and
-Pluto, and [`SpiceOrientation`](@ref) for a body whose orientation comes from a
-kernel.
+Shipped models, each named for the publication that defines it:
+- [`IAU2015`](@ref), the default for the Sun, the planets and Pluto;
+  [`IAU1991`](@ref) for data defined in the older Mars axes.
+- [`LunarPA`](@ref), the Moon's default, and [`LunarME`](@ref).
+- [`IAU2006`](@ref) and [`FK5`](@ref), the frame theories, which are Earth's
+  models. Their rotation is the ITRF chain in AstroFrames, which needs UT1 and
+  TT as well as TDB, so `body_axes_rotation` raises for them and points there.
+  AstroFrames' `body_fixed_rotation` evaluates any model, these included.
+- [`SpiceOrientation`](@ref), for a body whose orientation comes from a kernel.
 
 # Notes
 Set a model on a body with [`set_orientation!`](@ref); read it back with
@@ -288,7 +294,7 @@ julia> struct Spin <: AbstractOrientationModel
 julia> orientation_parameters(Spin(85.46, -60.36))
 (pole_ra = 85.46, pole_dec = -60.36)
 
-julia> orientation_parameters(IauPolynomialOrientation())
+julia> orientation_parameters(IAU2015())
 NamedTuple()
 ```
 """
@@ -377,11 +383,11 @@ end
 # --- Shipped model: the published polynomials -------------------------------
 
 """
-    IauPolynomialOrientation()
+    IAU2015()
 
-The published orientation for the Sun, the planets and Pluto: pole direction
-and prime meridian as polynomials in time, with the periodic terms where the
-IAU report gives them (Archinal et al., 2018).
+The orientation of the IAU working group's 2015 report for the Sun, the planets
+and Pluto: pole direction and prime meridian as polynomials in time, with the
+periodic terms where the report gives them (Archinal et al., 2018).
 
 This is the default for those bodies, and it applies until
 [`set_orientation!`](@ref) is called. Its coefficients are fixed, so it has no
@@ -397,25 +403,85 @@ axes for these bodies.
 
 Covers NAIF IDs 10, 199, 299, 499, 599, 699, 799, 899 and 999. Earth and the
 Moon are deliberately absent: neither is described by a pole and a prime
-meridian, and both have their own frames.
+meridian, and both have their own models, [`IAU2006`](@ref) or [`FK5`](@ref)
+for Earth and [`LunarPA`](@ref) or [`LunarME`](@ref) for the Moon.
 
 # Example
 ```jldoctest
 julia> using AstroUniverse
 
 julia> orientation_model(jupiter)
-IauPolynomialOrientation()
+IAU2015()
 
-julia> size(body_axes_rotation(IauPolynomialOrientation(), 599, 2458849.5))
+julia> size(body_axes_rotation(IAU2015(), 599, 2458849.5))
 (6, 6)
 ```
 """
-struct IauPolynomialOrientation <: AbstractOrientationModel end
+struct IAU2015 <: AbstractOrientationModel end
 
-function body_axes_rotation(::IauPolynomialOrientation, naifid::Integer, jd_tdb::Real)
+function body_axes_rotation(::IAU2015, naifid::Integer, jd_tdb::Real)
     o = iau2015_orientation(naifid, jd_tdb)
     return pole_axes_rotation(o.ra_pole, o.dec_pole, o.prime_meridian,
                               o.ra_pole_rate, o.dec_pole_rate, o.prime_meridian_rate)
+end
+
+"""
+    IauPolynomialOrientation
+
+Deprecated: the former name of [`IAU2015`](@ref), kept as an alias of the type so
+that code using it as one, `m isa IauPolynomialOrientation` or a method on it,
+still works. Use `IAU2015`; the alias will be removed in a later release.
+"""
+const IauPolynomialOrientation = IAU2015
+
+# --- Shipped model: the IAU 1991 report, for Mars ----------------------------
+
+"""
+    IAU1991()
+
+The orientation of the IAU working group's 1991 report (Davies et al., 1992).
+Implemented for Mars, the body whose gravity fields of that era are defined in
+it; other bodies raise.
+
+For Mars the pole and prime meridian are linear in time:
+
+    α₀ = 317.681° − 0.108° T      δ₀ = 52.886° − 0.061° T      W = 176.868° + 350.8919830° d
+
+with `T` in Julian centuries and `d` in days of TDB past J2000. These are the
+values NAIF's PCK of the 1991 report carries (`preliminary_pck00004.tpc`).
+
+# Notes
+Not the default for any body. Use it where data are defined in these axes, such
+as the JGM85F01 Mars gravity field. [`IAU2015`](@ref)'s Mars prime meridian is
+0.236° from this one at J2000, about 14 km on the surface, mostly because later
+reports moved the longitude origin onto the crater Airy-0.
+
+Differentiable in time.
+
+# Example
+```jldoctest
+julia> using AstroUniverse
+
+julia> size(body_axes_rotation(IAU1991(), 499, 2458849.5))
+(6, 6)
+```
+"""
+struct IAU1991 <: AbstractOrientationModel end
+
+function body_axes_rotation(::IAU1991, naifid::Integer, jd_tdb::Real)
+    naifid == 499 || throw(ArgumentError(
+        "IAU1991() is implemented for Mars (NAIF 499) only; got NAIF $(naifid). " *
+        "Use IAU2015() for the current report."))
+    d = jd_tdb - _J2000_TDB_JD
+    T = d / 36525.0
+    α₀ = deg2rad(317.681 - 0.108 * T)
+    δ₀ = deg2rad(52.886 - 0.061 * T)
+    W  = deg2rad(176.868 + 350.8919830 * d)
+    # Rates per second, the time unit of the derivative block.
+    α̇₀ = deg2rad(-0.108) / _SECONDS_PER_CENTURY
+    δ̇₀ = deg2rad(-0.061) / _SECONDS_PER_CENTURY
+    Ẇ  = deg2rad(350.8919830) / _SECONDS_PER_DAY
+    return pole_axes_rotation(α₀, δ₀, W, α̇₀, δ̇₀, Ẇ)
 end
 
 # --- Shipped model: a SPICE frame -------------------------------------------
@@ -424,15 +490,16 @@ end
     SpiceOrientation(frame_name)
 
 Orientation read from a loaded SPICE frame, such as `"IAU_MARS"` or
-`"MOON_PA"`.
+`"MOON_PA_DE421"`.
 
 Use this for a body whose orientation is published as a kernel. The kernel
 supplies periodic and libration terms without duplicating its coefficients.
 
 # Fields
-- `frame::String` — the SPICE frame name, such as `"IAU_MARS"` or `"MOON_PA"`.
+- `frame::String` — the SPICE frame name, such as `"IAU_MARS"` or `"MOON_PA_DE421"`.
   The kernels defining it must already be loaded; a text PCK defines the
-  `IAU_<BODY>` frames.
+  `IAU_<BODY>` frames. Prefer a versioned name to an alias such as `"MOON_PA"`,
+  which means whatever the last frame kernel loaded says it means.
 
 # Example
 ```julia
@@ -463,9 +530,98 @@ set_orientation_parameters(m::SpiceOrientation, nt::NamedTuple) =
         "see `pole_axes_rotation`."))
 
 function body_axes_rotation(m::SpiceOrientation, naifid::Integer, jd_tdb::Real)
+    _check_spice_date(m, jd_tdb)
     # SPICE ephemeris time is seconds past the J2000 epoch.
     et = (jd_tdb - _J2000_TDB_JD) * _SECONDS_PER_DAY
     return SMatrix{6,6,Float64,36}(sxform("J2000", m.frame, et))
+end
+
+# --- Shipped models: the Moon ------------------------------------------------
+
+"""
+    LunarPA()
+
+The Moon's principal axes from JPL's DE440 ephemeris, including physical
+libration. The default orientation of the Moon, and the kind of axes lunar
+gravity fields are defined in, though usually from an earlier ephemeris.
+
+# Notes
+Read from SPICE by the versioned frame name `MOON_PA_DE440`, not the alias
+`MOON_PA`. Frame kernels all define `MOON_PA`, and whichever is loaded last
+decides what it means; the versioned name means the same frame whatever else is
+loaded. The kernels, `moon_pa_de440_200625.bpc` and `moon_de440_250416.tf`, are
+loaded at startup.
+
+For a frame from another ephemeris, such as the DE421 principal axes some older
+fields use, load its kernels and use [`SpiceOrientation`](@ref) with its
+versioned name, `SpiceOrientation("MOON_PA_DE421")`.
+
+**Not differentiable**, like every model read from SPICE; see
+[`SpiceOrientation`](@ref).
+
+# Example
+```julia
+size(body_axes_rotation(LunarPA(), 301, 2458849.5))   # (6, 6)
+```
+"""
+struct LunarPA <: AbstractOrientationModel end
+
+"""
+    LunarME()
+
+The Moon's mean-Earth/polar axes, the axes of lunar maps and surface
+coordinates, as defined against DE440.
+
+# Notes
+Read from SPICE by the versioned frame name `MOON_ME_DE440_ME421`, a fixed
+rotation from the DE440 principal axes that aligns with the DE421 mean-Earth
+frame. That is the frame the alias `MOON_ME` names in the DE440 frame kernel. It
+differs from [`LunarPA`](@ref) by about 875 m on the surface.
+
+**Not differentiable**, like every model read from SPICE; see
+[`SpiceOrientation`](@ref).
+"""
+struct LunarME <: AbstractOrientationModel end
+
+_spice_frame(::LunarPA) = "MOON_PA_DE440"
+_spice_frame(::LunarME) = "MOON_ME_DE440_ME421"
+
+orientation_parameters(::Union{LunarPA,LunarME}) = NamedTuple()
+
+function body_axes_rotation(m::Union{LunarPA,LunarME}, naifid::Integer, jd_tdb::Real)
+    naifid == 301 || throw(ArgumentError(
+        "$(nameof(typeof(m)))() gives axes of the Moon (NAIF 301); got NAIF $(naifid)."))
+    _check_spice_date(m, jd_tdb)
+    frame = _spice_frame(m)
+    et = (jd_tdb - _J2000_TDB_JD) * _SECONDS_PER_DAY
+    M = try
+        sxform("J2000", frame, et)
+    catch cause
+        # Only SPICE's own failures are about the kernels; anything else is not.
+        cause isa SPICE.SpiceError || rethrow()
+        throw(ArgumentError(
+            "$(nameof(typeof(m)))() reads the SPICE frame $(frame), which needs " *
+            "moon_pa_de440_200625.bpc and moon_de440_250416.tf. Both are loaded at " *
+            "startup; if they were unloaded, reload them with `load_spice_kernel`. An " *
+            "older frame kernel, such as moon_080317.tf, does not define $(frame). The " *
+            "orientation data cover 1550 to 2650.\n\nSPICE reported: " *
+            sprint(showerror, cause)))
+    end
+    return SMatrix{6,6,Float64,36}(M)
+end
+
+# A model read from SPICE takes the date as a plain number. A dual number, from
+# differentiating through the date, cannot pass into SPICE's C interface; say so
+# rather than let the conversion fail somewhere less clear.
+_plain_number(x) = x isa Union{AbstractFloat, Integer, Rational}
+
+function _check_spice_date(m, jd_tdb)
+    _plain_number(jd_tdb) || throw(ArgumentError(
+        "$(nameof(typeof(m))) reads its orientation from SPICE and is not " *
+        "differentiable, so it cannot take a date of type $(typeof(jd_tdb)). A " *
+        "derivative through body-fixed axes needs a model written in Julia; see " *
+        "`pole_axes_rotation`."))
+    return nothing
 end
 
 # --- Which model a body uses ------------------------------------------------
@@ -509,21 +665,54 @@ Setting an orientation is what makes body-fixed axes available for a body
 Epicycle does not ship a model for. Until one is set, asking for those axes
 raises and says so.
 
+Earth's orientation is the frame theory, so for Earth this is
+[`set_frame_theory!`](@ref) under another name: `set_orientation!(earth, FK5())`
+and `set_frame_theory!(FK5())` are the same call, and change Earth frames, the
+EOP series and gravity together. Earth accepts only a frame theory, since a
+pole-and-meridian model in its place would silently replace the ITRF chain.
+
 # Example
 ```julia
 bennu = CelestialBody("Bennu", 4.892e-9, 0.2825, 0.0, 2101955)
 set_orientation!(bennu, MySpinModel(85.46, -60.36, 89.6, 2011.145))
 
 cs = CoordinateSystem(bennu, CelestialBodyFixed())   # now works
+
+set_orientation!(earth, FK5())                       # GMAT's Earth, everywhere
 ```
 """
 function set_orientation!(body, model::AbstractOrientationModel)
     n = _naifid(body)
+    if n == 399
+        model isa AbstractFrameTheory || throw(ArgumentError(
+            "Earth's orientation is its frame theory, IAU2006() or FK5(), which carries " *
+            "the ITRF chain and Earth orientation parameters; got $(model). To evaluate " *
+            "a field in other Earth axes, pass them to that force (for gravity, " *
+            "`HarmonicGravity(...; orientation = model)`) rather than to Earth."))
+        return set_frame_theory!(model)
+    end
+    _orients(model, n) || throw(ArgumentError(
+        "$(model) does not give the axes of NAIF $(n): $(_orients_what(model)). " *
+        "Register a model for this body, or " *
+        "`SpiceOrientation(\"IAU_<NAME>\")` if a kernel defines its frame."))
     lock(_ORIENTATION_LOCK) do
         _ORIENTATION_MODELS[n] = model
     end
     return model
 end
+
+# Which bodies a shipped model can orient, checked when it is registered so a mismatch fails
+# there rather than at the first rotation. Nothing is evaluated, so a SPICE model can be
+# registered before its kernels are loaded. A model a user writes is taken at its word.
+_orients(::AbstractOrientationModel, naifid) = true
+_orients(::IAU2015, naifid) = naifid in _IAU_POLYNOMIAL_BODIES
+_orients(::IAU1991, naifid) = naifid == 499
+_orients(::Union{LunarPA,LunarME}, naifid) = naifid == 301
+
+_orients_what(::IAU2015) = "it covers the Sun, the planets other than the Earth, and Pluto"
+_orients_what(::IAU1991) = "it is implemented for Mars only"
+_orients_what(::Union{LunarPA,LunarME}) = "it gives axes of the Moon only"
+_orients_what(::AbstractOrientationModel) = "it is the Earth's"
 
 """
     orientation_model(body) -> AbstractOrientationModel
@@ -536,10 +725,13 @@ The body's [`AbstractOrientationModel`](@ref) — what was set with
 [`set_orientation!`](@ref), or the shipped default for a body that has one.
 
 # Notes
-The Sun, the planets, and Pluto default to [`IauPolynomialOrientation`](@ref).
-Earth and the Moon have no default and raise pointing at their own frames,
-which carry Earth orientation parameters and lunar libration respectively —
-neither is described by a pole and a prime meridian.
+The defaults:
+- Earth: the frame theory, [`frame_theory`](@ref)`()`, `IAU2006()` unless set
+  otherwise. Its rotation is the ITRF chain, which AstroFrames evaluates.
+- The Moon: [`LunarPA`](@ref), the principal axes, which is what dynamics and
+  gravity use. Maps use [`LunarME`](@ref); set it if body-fixed coordinates
+  should be mean-Earth.
+- The Sun, the other planets and Pluto: [`IAU2015`](@ref).
 
 Any other body raises until a model is registered. Use
 [`has_orientation_model`](@ref) to ask without raising.
@@ -549,33 +741,23 @@ Any other body raises until a model is registered. Use
 julia> using AstroUniverse
 
 julia> orientation_model(mars)
-IauPolynomialOrientation()
+IAU2015()
 
-julia> has_orientation_model(earth)
-false
+julia> orientation_model(moon)
+LunarPA()
 ```
 """
 function orientation_model(body)
     n = _naifid(body)
+    n == 399 && return frame_theory()
     m = lock(_ORIENTATION_LOCK) do
         get(_ORIENTATION_MODELS, n, nothing)
     end
     m === nothing || return m
 
-    n in _IAU_POLYNOMIAL_BODIES && return IauPolynomialOrientation()
+    n in _IAU_POLYNOMIAL_BODIES && return IAU2015()
+    n == 301 && return LunarPA()
 
-    if n == 399
-        throw(ArgumentError(
-            "Earth's rotation is not described by a pole-and-meridian model. " *
-            "Use the Earth frames instead, ITRF and the chain reaching it, which read " *
-            "Earth orientation parameters."))
-    elseif n == 301
-        throw(ArgumentError(
-            "The Moon has its own frames, which carry libration: MoonME for surface " *
-            "and mapping work, MoonPA for gravity and dynamics. They differ by about " *
-            "875 m on the surface, so pick deliberately. To use body-fixed axes " *
-            "anyway, call `set_orientation!(moon, SpiceOrientation(\"MOON_PA\"))`."))
-    end
     throw(ArgumentError(
         "No orientation model for NAIF ID $(n). Bodies outside the Sun, the planets, " *
         "and Pluto need one supplied: `set_orientation!(body, model)`. " *
@@ -595,20 +777,20 @@ Whether `body` can be used with body-fixed axes.
 `true` if a model is set or a shipped default applies, `false` otherwise.
 
 # Notes
-The question [`orientation_model`](@ref) answers by raising. `false` for Earth
-and the Moon, which have their own frames rather than a pole-and-meridian
-model.
+The question [`orientation_model`](@ref) answers by raising. `true` for Earth,
+the Moon, the Sun, the planets and Pluto, which all have defaults.
 
 # Example
 ```jldoctest
 julia> using AstroUniverse
 
 julia> has_orientation_model(mars), has_orientation_model(earth)
-(true, false)
+(true, true)
 ```
 """
 function has_orientation_model(body)
     n = _naifid(body)
+    (n == 399 || n == 301) && return true
     lock(_ORIENTATION_LOCK) do
         haskey(_ORIENTATION_MODELS, n)
     end && return true
@@ -655,6 +837,9 @@ set_orientation_parameters!(bennu, (; pole_ra = 85.51))
 ```
 """
 function set_orientation_parameters!(body, nt::NamedTuple)
+    # Nothing to set writes nothing. For the Earth, rewriting would re-set the frame
+    # theory it just read, which could undo a change made meanwhile on another thread.
+    isempty(nt) && return orientation_model(body)
     updated = set_orientation_parameters(orientation_model(body), nt)
     return set_orientation!(body, updated)
 end

@@ -10,6 +10,7 @@
 # =============================================================================
 
 using AstroUniverse
+using ForwardDiff
 using LinearAlgebra
 using Test
 
@@ -72,7 +73,7 @@ end
 
     @testset "every body it covers produces a proper rotation" begin
         for n in (10, 199, 299, 499, 599, 699, 799, 899, 999)
-            M = body_axes_rotation(IauPolynomialOrientation(), n, _JD_OR)
+            M = body_axes_rotation(IAU2015(), n, _JD_OR)
             R = M[1:3, 1:3]
             @test norm(R' * R - I) < 1e-14
             @test det(R) ≈ 1
@@ -90,7 +91,43 @@ end
     @testset "it has nothing to estimate, which is the honest answer" begin
         # Its coefficients are fixed. Solving for a pole means registering a
         # model that carries the pole as a parameter.
-        @test isempty(orientation_parameters(IauPolynomialOrientation()))
+        @test isempty(orientation_parameters(IAU2015()))
+    end
+
+    @testset "the old name still works, as a type" begin
+        # It was an exported type in 0.3, so code may test or dispatch on it.
+        @test IauPolynomialOrientation === IAU2015
+        @test IauPolynomialOrientation() === IAU2015()
+        @test IAU2015() isa IauPolynomialOrientation
+        _old(::IauPolynomialOrientation) = :dispatched
+        @test _old(IAU2015()) === :dispatched
+    end
+end
+
+@testset "the IAU 1991 model" begin
+    @testset "a proper rotation, with the rate block its derivative" begin
+        M = body_axes_rotation(IAU1991(), 499, _JD_OR)
+        R, Ṙ = M[1:3, 1:3], M[4:6, 1:3]
+        @test norm(R' * R - I) < 1e-14
+        @test det(R) ≈ 1
+        # ForwardDiff through the date: a finite difference on a date near
+        # 2.46e6 resolves only about 40 µs.
+        dR = ForwardDiff.derivative(d -> Matrix(body_axes_rotation(IAU1991(), 499, d)[1:3, 1:3]),
+                                    _JD_OR)
+        @test norm(Ṙ - dR / 86_400) / norm(Ṙ) < 1e-12
+    end
+
+    @testset "Mars only" begin
+        e = try; body_axes_rotation(IAU1991(), 599, _JD_OR); nothing; catch e; e; end
+        @test e isa ArgumentError
+        @test occursin("Mars", e.msg)
+    end
+
+    @testset "0.236° from IAU 2015 at J2000, nearly all of it prime meridian" begin
+        A = body_axes_rotation(IAU1991(), 499, 2451545.0)[1:3, 1:3]
+        B = body_axes_rotation(IAU2015(), 499, 2451545.0)[1:3, 1:3]
+        @test rad2deg(acos((tr(A * B') - 1) / 2)) ≈ 0.236 atol = 0.001
+        @test rad2deg(acos(clamp(dot(A[3, :], B[3, :]), -1, 1))) < 0.001      # poles
     end
 end
 
@@ -107,21 +144,37 @@ end
 
     @testset "defaults are the published models, unasked" begin
         for b in (sun, mercury, venus, mars, jupiter, saturn, uranus, neptune, pluto)
-            @test orientation_model(b) isa IauPolynomialOrientation
+            @test orientation_model(b) isa IAU2015
             @test has_orientation_model(b)
         end
+        @test orientation_model(moon) === LunarPA()
+        @test has_orientation_model(moon) && has_orientation_model(earth)
     end
 
-    @testset "Earth and the Moon say what to use instead" begin
-        # Neither is described by a pole-and-meridian model, and the error has
-        # to point somewhere rather than just refusing.
-        e = try; orientation_model(earth); nothing; catch e; e; end
-        @test e isa ArgumentError
-        @test occursin("ITRF", e.msg)
+    @testset "Earth's orientation is the frame theory, one setting under two names" begin
+        original = frame_theory()
+        try
+            set_frame_theory!(IAU2006())
+            @test orientation_model(earth) === IAU2006()
+            @test set_orientation!(earth, FK5()) === FK5()
+            @test frame_theory() === FK5()
+            @test orientation_model(earth) === FK5()
+            @test orientation_model(399) === FK5()
+        finally
+            set_frame_theory!(original)
+        end
 
-        e = try; orientation_model(moon); nothing; catch e; e; end
+        # Anything else in Earth's place would silently replace the ITRF chain.
+        e = try; set_orientation!(earth, IAU2015()); nothing; catch e; e; end
         @test e isa ArgumentError
-        @test occursin("MoonPA", e.msg)
+        @test occursin("frame theory", e.msg)
+        @test frame_theory() === original
+
+        # The chain needs UT1 and TT, so a TDB date alone points to AstroFrames.
+        e = try; body_axes_rotation(IAU2006(), 399, _JD_OR); nothing; catch e; e; end
+        @test e isa ArgumentError
+        @test occursin("body_fixed_rotation", e.msg)
+        @test FK5() isa AbstractOrientationModel
     end
 
     @testset "a body nobody has heard of names the fix" begin
@@ -153,7 +206,7 @@ end
         finally
             set_orientation!(mars, original)
         end
-        @test orientation_model(mars) isa IauPolynomialOrientation
+        @test orientation_model(mars) isa IAU2015
     end
 end
 
@@ -264,7 +317,7 @@ end
                                     (699, "IAU_SATURN"),  (799, "IAU_URANUS"),
                                     (899, "IAU_NEPTUNE"), (999, "IAU_PLUTO"))
                 A = body_axes_rotation(SpiceOrientation(frame), naifid, _JD_OR)[1:3, 1:3]
-                B = body_axes_rotation(IauPolynomialOrientation(), naifid, _JD_OR)[1:3, 1:3]
+                B = body_axes_rotation(IAU2015(), naifid, _JD_OR)[1:3, 1:3]
                 D = A * B'
                 v = 0.5 .* (D[3,2] - D[2,3], D[1,3] - D[3,1], D[2,1] - D[1,2])
                 @test rad2deg(asin(sqrt(sum(abs2, v)))) * 3600 < 1e-3   # arcseconds
@@ -283,4 +336,98 @@ end
     end
 
     _pck_fetched && unload_spice_kernel(_pck)
+end
+
+@testset "IAU1991 against NAIF's PCK of the 1991 report" begin
+    # preliminary_pck00004.tpc carries the 1991 constants, so SPICE's IAU_MARS
+    # with it loaded is an independent evaluation of the same model. Loaded
+    # alone and unloaded after: its Mars constants would otherwise replace
+    # pck00011's. A failure to fetch skips, as above.
+    name = "preliminary_pck00004.tpc"
+    url  = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/a_old_versions/" * name
+    fetched = try
+        download_spice_kernel(name, url)
+        load_spice_kernel(name)
+        true
+    catch e
+        @info "Could not fetch $(name); skipping the IAU1991 truth check. ($(sprint(showerror, e)))"
+        false
+    end
+    # Recorded as skipped, so an offline run shows it in the summary rather than passing quietly.
+    fetched || @test_skip "IAU1991 against preliminary_pck00004.tpc"
+    if fetched
+        try
+            for jd in (2451545.0, _JD_OR, 2462502.5)          # 2000, the test epoch, 2030
+                A = body_axes_rotation(SpiceOrientation("IAU_MARS"), 499, jd)
+                B = body_axes_rotation(IAU1991(), 499, jd)
+                D = A[1:3, 1:3] * B[1:3, 1:3]'
+                v = 0.5 .* (D[3,2] - D[2,3], D[1,3] - D[3,1], D[2,1] - D[1,2])
+                @test rad2deg(asin(sqrt(sum(abs2, v)))) * 3600 < 1e-3   # arcseconds
+                @test norm(A[4:6, 1:3] - B[4:6, 1:3]) / norm(B[4:6, 1:3]) < 1e-9
+            end
+        finally
+            unload_spice_kernel(name)
+        end
+    end
+end
+
+@testset "the lunar models" begin
+    M = body_axes_rotation(LunarPA(), 301, _JD_OR)
+    @test norm(M[1:3, 1:3]' * M[1:3, 1:3] - I) < 1e-12
+    # They read the versioned DE440 frames, which is what the aliases name in
+    # the frame kernel loaded at startup.
+    @test M == body_axes_rotation(SpiceOrientation("MOON_PA_DE440"), 301, _JD_OR)
+    @test body_axes_rotation(LunarME(), 301, _JD_OR) ==
+          body_axes_rotation(SpiceOrientation("MOON_ME_DE440_ME421"), 301, _JD_OR)
+    # Principal axes and mean-Earth axes: about 875 m apart on the surface.
+    A, B = M[1:3, 1:3], body_axes_rotation(LunarME(), 301, _JD_OR)[1:3, 1:3]
+    @test 800 < acos((tr(A * B') - 1) / 2) * 1737.4e3 < 950
+    @test isempty(orientation_parameters(LunarPA()))
+    e = try; body_axes_rotation(LunarPA(), 499, _JD_OR); nothing; catch e; e; end
+    @test e isa ArgumentError && occursin("Moon", e.msg)
+
+    # A dual date cannot pass into SPICE, and the error says that rather than blaming the kernels.
+    for m in (LunarPA(), LunarME(), SpiceOrientation("MOON_PA_DE440"))
+        e = try
+            ForwardDiff.derivative(d -> body_axes_rotation(m, 301, d)[1, 1], _JD_OR)
+            nothing
+        catch e; e; end
+        @test e isa ArgumentError
+        @test occursin("not differentiable", e.msg) && !occursin("load_spice_kernel", e.msg)
+    end
+
+    # Outside the kernel's coverage, SPICE's failure is reported with what to do about it.
+    e = try; body_axes_rotation(LunarPA(), 301, 1.0e5); nothing; catch e; e; end
+    @test e isa ArgumentError
+    @test occursin("1550 to 2650", e.msg) && occursin("SPICE reported", e.msg)
+
+    # The mean-Earth axes can be the Moon's default instead, for maps and surface work.
+    try
+        @test set_orientation!(moon, LunarME()) === LunarME()
+        @test orientation_model(moon) === LunarME()
+    finally
+        set_orientation!(moon, LunarPA())
+    end
+    @test orientation_model(moon) === LunarPA()
+end
+
+@testset "a shipped model is refused for a body it cannot orient" begin
+    for (body, model, says) in ((moon, IAU2015(), "planets"), (mars, LunarPA(), "Moon only"),
+                                (jupiter, IAU1991(), "Mars only"), (mars, FK5(), "Earth"))
+        before = orientation_model(body)
+        e = try; set_orientation!(body, model); nothing; catch e; e; end
+        @test e isa ArgumentError && occursin(says, e.msg)
+        @test orientation_model(body) === before                  # nothing was registered
+    end
+    try
+        @test set_orientation!(mars, IAU1991()) === IAU1991()
+    finally
+        set_orientation!(mars, IAU2015())
+    end
+end
+
+@testset "setting no parameters writes nothing" begin
+    # For the Earth that would re-set the frame theory it had just read.
+    @test set_orientation_parameters!(earth, (;)) === frame_theory()
+    @test set_orientation_parameters!(mars, (;)) === orientation_model(mars)
 end
