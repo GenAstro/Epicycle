@@ -110,7 +110,10 @@ end
         cart = kep_to_cart(kep, μ)
         kep2 = cart_to_kep(cart, μ)
         cart2 = kep_to_cart(kep2, μ)
-        if !isapproxvec_percent(kep,kep2; tol = 1e-13)
+        # At i = π the node is undefined: Ω is pinned to 0, and ω becomes the longitude of
+        # periapsis measured in the direction of motion, ω - Ω.
+        expected = isapprox(i, pi) ? [sma, ecc, i, 0.0, 1.1 - 0.1, 0.5] : kep
+        if !isapproxvec_percent(expected, kep2; tol = 1e-13)
             println("❌ Conversion failed: cart to kep round trip inclination quadrant test)")
             @test false
         else

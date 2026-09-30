@@ -33,20 +33,16 @@ using LinearAlgebra
         @test all(isnan.(result))
     end
     
-    @testset "Newton-Raphson fails to converge" begin
-        # Lines 63-64: Max iterations reached in conversion from mean to eccentric longitude
-        # This is difficult to trigger naturally - would need pathological values
-        # Create extreme values that might cause convergence issues
-        a = 7000.0
-        h = 0.9  # High eccentricity but < 1
-        k = 0.4
-        p = 0.1
-        q = 0.0
-        λ = 1e10  # Extreme mean longitude value
-        
-        eq = [a, h, k, p, q, λ]
-        result = AstroStates.equinoctial_to_cart(eq, μ; tol=1e-20)  # Very tight tolerance
-        # May or may not trigger, but tests the code path
+    @testset "Kepler's equation converges at high eccentricity and large mean longitude" begin
+        # The solver is a safeguarded Newton; the plain Newton it replaced failed for some mean
+        # anomalies above e = 0.99. Each case must convert and come back to its mean longitude.
+        for (h, k, λ) in ((0.9, 0.4, 1e10), (0.999, 1e-12, 6.7544), (0.0, 0.9999, 0.1), (0.7, -0.7, -3.0))
+            eq = [20000.0, h, k, 0.1, 0.2, λ]
+            cart = AstroStates.equinoctial_to_cart(eq, μ)
+            @test all(isfinite, cart)
+            back = AstroStates.cart_to_equinoctial(cart, μ)
+            @test abs(mod(back[6] - λ + π, 2π) - π) < 1e-8 + 4eps(abs(λ))   # λ = 1e10 carries 2e-6 rad
+        end
     end
     
     @testset "Non-physical radius (r <= 0)" begin

@@ -2,13 +2,13 @@
 # SPDX-License-Identifier: MIT
 
 """
-    outasymptote_to_kep(outasym::Vector{<:Real}, μ::Real; tol::Float64=1e-12)
+    outasymptote_to_kep(outasym::AbstractVector{<:Real}, μ::Real; tol::Real=1e-12)
 
 Convert outgoing asymptote elements to Keplerian elements.
 
 # Arguments
-- `outasym`: Vector{<:Real} of outgoing asymptote elements:
-    - `rₚ`  : periapsis radius [length]
+- `outasym`: outgoing asymptote elements:
+    - `rₚ`  : periapsis radius [length], > 0
     - `C₃`  : characteristic energy [length²/time²]
     - `λₐ` : right ascension of the asymptote [rad]
     - `δₐ` : declination of the asymptote [rad]
@@ -19,10 +19,12 @@ Convert outgoing asymptote elements to Keplerian elements.
 - `tol`: Singularity tolerance (default = 1e-12)
 
 # Returns
-- Keplerian state vector `[a, e, i, Ω, ω, ν]`
+- Keplerian state vector `[a, e, i, Ω, ω, ν]`, angles in the ranges of [`cart_to_kep`](@ref)
 
 # Notes
-- Returns `fill(NaN, 6)` if singularity is detected.
+- Returns `fill(NaN, 6)`, with a warning, when the elements describe no orbit: C₃ ≈ 0
+  (parabolic), rₚ ≤ 0, an elliptic C₃ with rₚ beyond the semi-major axis, a circular orbit, or an
+  asymptote along the z-axis.
 - Angles in radians. Units consistent with `μ`.
 
 # Examples
@@ -31,98 +33,72 @@ outasym = [6778.0, 5.0, 0.0, π/4, π/2, π/2]
 kep = outasymptote_to_kep(outasym, 398600.4418)
 ```
 """
-function outasymptote_to_kep(outasym::Vector{<:Real}, μ::Real; tol::Float64=1e-12)
-    if length(outasym) != 6
-        error("Input must be a 6-element vector: [a, e, i, Ω, ω, ν]")
+outasymptote_to_kep(outasym::AbstractVector{<:Real}, μ::Real; tol::Real=1e-12) =
+    _asymptote_to_kep(outasym, μ, 1, tol)
+
+# The outgoing (dir = 1) and incoming (dir = -1) asymptotes differ only in which side of the
+# asymptote the eccentricity vector lies.
+function _asymptote_to_kep(asym::AbstractVector{<:Real}, μ::Real, dir::Int, tol::Real)
+    if length(asym) != 6
+        error("Input must be a 6-element vector: [rₚ, C₃, λₐ, δₐ, θᵦ, ν]")
     end
+    T = float(promote_type(eltype(asym), typeof(μ)))
 
-    # Unpack outgoing asymptote elements
-    rₚ, c₃, λₐ, δₐ, θᵦ, ν = outasym
+    rₚ, c₃, λₐ, δₐ, θᵦ, ν = asym
 
-    # Compute semi-major axis from energy
-    a = -μ / c₃
-
-    # Compute eccentricity from periapsis radius
-    e = 1 - rₚ / a
-
-    # Parabolic or circular orbits cannot be represented by asymptote parameters
+    # Parabolic orbits cannot be represented by asymptote parameters
     if abs(c₃) < tol
         @warn "Conversion failed: Orbit is nearly parabolic."
-        return fill(NaN, 6)
+        return fill(T(NaN), 6)
+    end
+    if rₚ <= 0
+        @warn "Conversion failed: Periapsis radius $(rₚ) must be positive."
+        return fill(T(NaN), 6)
+    end
+
+    # Semi-major axis from energy, eccentricity from periapsis radius
+    a = -μ / c₃
+    e = 1 - rₚ / a
+    if c₃ < 0 && rₚ > a
+        @warn "Conversion failed: Periapsis radius $(rₚ) exceeds the semi-major axis $(a) of the " *
+              "elliptic orbit that C₃ = $(c₃) gives."
+        return fill(T(NaN), 6)
     end
     if e < tol
         @warn "Conversion failed: Orbit is nearly circular."
-        return fill(NaN, 6)
+        return fill(T(NaN), 6)
     end
 
     # Asymptote direction unit vector
-    ŝ = [cos(δₐ) * cos(λₐ), cos(δₐ) * sin(λₐ), sin(δₐ)]
+    sδ, cδ = sincos(δₐ)
+    sλ, cλ = sincos(λₐ)
+    ŝ = SVector{3,T}(cδ * cλ, cδ * sλ, sδ)
 
-    # Define inertial unit vectors
-    ẑ = [0.0, 0.0, 1.0]  # z-axis
-    x̂ = [1.0, 0.0, 0.0]  # x-axis
-
-    # Ensure asymptote vector is not aligned with z-axis
-    if acos(abs(dot(ŝ, ẑ))) < tol
+    # The B-plane axes need an asymptote off the z-axis
+    sxy = hypot(ŝ[1], ŝ[2])
+    if sxy < tol
         @warn "Conversion failed: Asymptote vector is aligned with z-axis."
-        return fill(NaN, 6)
+        return fill(T(NaN), 6)
     end
 
-    # Build B-plane coordinate frame
-    Ê = cross(ẑ, ŝ) / norm(cross(ẑ, ŝ))
-    N̂ = cross(ŝ, Ê)
+    # B-plane axes, and the angular momentum direction from the B-plane angle
+    Ê = SVector{3,T}(-ŝ[2], ŝ[1], 0) / sxy          # ẑ × ŝ, normalised
+    N̂ = cross(ŝ, Ê)
+    sθ, cθ = sincos(θᵦ)
+    ĥ = cθ * Ê + sθ * N̂                             # sin(π/2 - θᵦ) Ê + cos(π/2 - θᵦ) N̂
 
-    # Angular momentum direction in inertial frame
-    ami = π/2 - θᵦ
-    ĥ = sin(ami) * Ê + cos(ami) * N̂
-
-    # Inclination is angle between angular momentum and z-axis
-    i = acos(clamp(dot(ẑ, ĥ), -1.0, 1.0))
-
-    # Node vector points along line of nodes (intersection of orbit plane with equator)
-    nodevec = cross(ẑ, ĥ)
-    n = norm(nodevec)
-
-    # Determine eccentricity direction unit vector
+    # Eccentricity direction
     if c₃ <= -tol
-        # Elliptical orbit: Eccentricity vector opposite to asymptote
-        ê = -ŝ
+        # Elliptic: the "asymptote" is the apoapsis direction
+        ê = -ŝ
     else
-        # Hyperbolic orbit: Compute ê from turning angle
-        νₘ = acos(clamp(-1 / e, -1.0, 1.0))
-        ô = cross(ĥ, ŝ)  # Orbit-normal vector
-        ê = -sin(νₘ) * ô + cos(νₘ) * ŝ
+        # Hyperbolic: periapsis is the asymptote turned back through the true anomaly of the
+        # asymptote, νₘ = acos(-1/e), written with atan to keep its derivative.
+        νₘ = atan(sqrt(e^2 - 1), -one(T))
+        ô = cross(ĥ, ŝ)
+        ê = -dir * sin(νₘ) * ô + cos(νₘ) * ŝ
     end
 
-    # Compute Ω and ω based on inclination and eccentricity direction
-    if e >= tol && i >= tol && i < π - tol
-        # General inclined case
-        # Note: n = |ẑ × ĥ| = sin(i), so if i >= tol then n >= tol.
-        # Therefore, checking n < tol here is unnecessary (unreachable).
-        # Equatorial cases (i < tol or i >= π - tol) are handled by branches below.
-
-        # Ω from node vector projection on x-axis
-        Ω = acos(clamp(dot(x̂, nodevec) / n, -1.0, 1.0))
-        Ω = nodevec[2] < 0 ? 2π - Ω : Ω
-
-        # ω from projection of eccentricity direction into orbital plane
-        ω = acos(clamp(dot(nodevec / n, ê), -1.0, 1.0))
-        ω = ê[3] < 0 ? 2π - ω : ω
-
-    elseif e >= tol && i < tol
-        # Equatorial prograde orbit
-        Ω = 0.0
-        ω = acos(clamp(ê[1], -1.0, 1.0))
-        ω = ê[2] < 0 ? 2π - ω : ω
-
-    elseif e >= tol && i ≥ π - tol
-        # Equatorial retrograde orbit
-        Ω = 0.0
-        ω = -acos(clamp(ê[1], -1.0, 1.0))
-        ω = ê[2] < 0 ? 2π - ω : ω
-
-    end
-
-    # Return Keplerian state
-    return [a, e, i, Ω, ω, ν]
+    i, Ω, ω, _, _ = _orbit_orientation(ĥ, e * ê, e, tol)
+    return T[a, e, i, Ω, ω, mod(ν, 2 * T(π))]
 end

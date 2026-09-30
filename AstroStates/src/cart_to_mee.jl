@@ -2,18 +2,24 @@
 # SPDX-License-Identifier: MIT
 
 """
-    cart_to_mee(cart::Vector{<:Real}, μ::Real; j::Float64 = 1.0)
+    cart_to_mee(cart::AbstractVector{<:Real}, μ::Real; j::Real = 1.0, tol::Real = 1e-12)
 
 Convert Cartesian state to Modified Equinoctial Elements (MEE).
 
 # Arguments
-- `cart::Vector{<:Real}`: 6-element vector `[x, y, z, vx, vy, vz]`
+- `cart`: 6-element vector `[x, y, z, vx, vy, vz]`
 - `μ::Real`: Gravitational parameter
-- `j::Float64=1.0`: Optional constant (1 for prograde, -1 for retrograde), defaults to `1.0`
-- `tol::Float64`: Optional tolerance for singularity checking
+- `j::Real=1.0`: retrograde factor, 1 for the prograde set and -1 for the retrograde set, which
+  is singular at i = 0 instead of i = π
+- `tol::Real`: tolerance for singularity checking
 
 # Returns
-- A 6-element vector `[p, f, g, h, k, L]` representing the modified equinoctial elements.
+- A 6-element vector `[p, f, g, h, k, L]` representing the modified equinoctial elements, with
+  the true longitude `L` in [0, 2π).
+
+A singular state logs a warning and returns `NaN`s: μ below `tol`, a zero position, velocity or
+angular momentum, or an orbit at the singularity of the chosen set (i = π for `j = 1`, i = 0 for
+`j = -1`).
 
 # Examples
 ```julia
@@ -21,68 +27,61 @@ cart = [6778.0, 0.0, 0.0, 0.0, 7.66, 0.0]
 mee = cart_to_mee(cart, 398600.4418)
 ```
 """
-function cart_to_mee(cart::Vector{<:Real}, μ::Real; j::Float64 = 1.0, tol::Float64 = 1e-12)
+function cart_to_mee(cart::AbstractVector{<:Real}, μ::Real; j::Real = 1.0, tol::Real = 1e-12)
     if length(cart) != 6
         error("Input vector must have exactly six elements: [x, y, z, vx, vy, vz].")
     end
-
-    # Validate j
-    if j ∉ (-1.0, 1.0)
+    if !(j == 1 || j == -1)
         error("Invalid value for j: must be 1.0 or -1.0")
     end
+    T = float(promote_type(eltype(cart), typeof(μ)))
 
-    # Split input vector into position and velocity
-    r̄ = cart[1:3]
-    v̄ = cart[4:6]
+    if μ < tol
+        @warn "Conversion failed: μ < tolerance."
+        return fill(T(NaN), 6)
+    end
+
+    r̄ = SVector{3,T}(cart[1], cart[2], cart[3])
+    v̄ = SVector{3,T}(cart[4], cart[5], cart[6])
     r = norm(r̄)
-   
+    if r < tol || norm(v̄) < tol
+        @warn "Conversion failed: Orbit is singular due to degenerate position or velocity vector."
+        return fill(T(NaN), 6)
+    end
+
     # Angular momentum vector and magnitude
     h̄ = cross(r̄, v̄)
     h = norm(h̄)
-
-    # Unit vectors
-    r̂ = r == 0 ? zeros(3) : r̄ / r
-    if h == 0
-        ĥ = zeros(3)
-        v_hat = zeros(3)
-    else
-        ĥ = h̄ / h
-        v_hat = (r * v̄ - dot(r̄, v̄) * r̄ / r) / h
+    if h < tol
+        @warn "Conversion failed: Orbit is singular due to degenerate angular momentum."
+        return fill(T(NaN), 6)
     end
+    ĥ = h̄ / h
+    r̂ = r̄ / r
 
-    # Eccentricity vector
-    ē = cross(v̄, h̄) / μ - r̂
-
-    # Semi-latus rectum
+    # Eccentricity vector and semi-latus rectum
+    ē = cross(v̄, h̄) / μ - r̂
     p = h^2 / μ
-    if p < 0
-        error("Semi-latus rectum must be greater than 0")
-    end
 
-    # Avoid singularity when computing h and k
-    denom = 1.0 + ĥ[3] * j
+    # The set is singular where its inclination vector is infinite
+    denom = 1 + ĥ[3] * j
     if abs(denom) < tol
         @warn "Singularity computing h and k while computing mee elements"
-        return fill(NaN, 6)
+        return fill(T(NaN), 6)
     end
 
-    # Reference frame for computing f, g, h, k
-    fx = 1 - ĥ[1]^2 / denom
-    fy = -ĥ[1] * ĥ[2] / denom
-    fz = -ĥ[1] * j
-    f̂ = [fx, fy, fz]
-    ĝ = cross(ĥ, f̂)
+    # Equinoctial frame
+    f̂ = SVector{3,T}(1 - ĥ[1]^2 / denom, -ĥ[1] * ĥ[2] / denom, -ĥ[1] * j)
+    ĝ = cross(ĥ, f̂)
 
-    # Compute modified equinoctial elements
-    f = dot(ē, f̂)
-    g = dot(ē, ĝ)
-    h = -ĥ[2] / denom
-    k =  ĥ[1] / denom
+    # Modified equinoctial elements
+    f  = dot(ē, f̂)
+    g  = dot(ē, ĝ)
+    hh = -ĥ[2] / denom
+    k  =  ĥ[1] / denom
 
-    # Compute true longitude L
-    sinl = r̂[2] - v_hat[1]
-    cosl = r̂[1] + v_hat[2]
-    L = mod(atan(sinl, cosl), 2π)
+    # True longitude: the direction of the position in the equinoctial frame
+    L = _plane_angle(r̂, f̂, ĝ)
 
-    return [p, f, g, h, k, L]
+    return T[p, f, g, hh, k, L]
 end

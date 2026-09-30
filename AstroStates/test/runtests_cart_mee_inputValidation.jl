@@ -56,19 +56,15 @@ bad_len = collect(1.0:7.0)
         @info "cart_to_mee keyword j unsupported or unvalidated"
     end
 
-    h_zero_res = cart_to_mee(parallel_cart, mu_pos)
-    @test length(h_zero_res) == 6
-
-    pneg_err = try
-        cart_to_mee(good_cart, mu_neg)
-        nothing
-    catch e
-        e
+    # Degenerate states and a non-positive μ warn and return NaN, as the other converters do
+    @test_logs (:warn, r"degenerate angular momentum") begin
+        @test all(isnan, cart_to_mee(parallel_cart, mu_pos))
     end
-    if pneg_err === nothing
-        @info "p < 0 branch not triggered with negative mu"
-    else
-        @test occursin("Semi-latus rectum", sprint(showerror, pneg_err))
+    @test_logs (:warn, r"μ < tolerance") begin
+        @test all(isnan, cart_to_mee(good_cart, mu_neg))
+    end
+    @test_logs (:warn, r"degenerate position or velocity") begin
+        @test all(isnan, cart_to_mee([0.0, 0, 0, 1, 0, 0], mu_pos))
     end
 
     retrograde_cart = [7000.0, 0.0, 0.0, 0.0, -7.5, 0.0]
@@ -110,14 +106,13 @@ end
     @test occursin("Invalid value for j", sprint(showerror, err_j))
 
 
-    neg_p = copy(valid_mod); neg_p[1] = -10.0
-    throws_msg(mee_to_cart, neg_p, mu;
-        substr = "Semi-latus rectum must be greater than 0")
-
-    zero_p = copy(valid_mod); zero_p[1] = 0.0
-    zres = mee_to_cart(zero_p, mu)
-    @test length(zres) == 6
-    @test all(x -> x == 0.0, zres)
+    # A non-positive semi-latus rectum describes no orbit: a warning and NaN, not zeros
+    for p in (-10.0, 0.0)
+        bad_p = copy(valid_mod); bad_p[1] = p
+        @test_logs (:warn, r"Semi-latus rectum") begin
+            @test all(isnan, mee_to_cart(bad_p, mu))
+        end
+    end
 end
 
 nothing

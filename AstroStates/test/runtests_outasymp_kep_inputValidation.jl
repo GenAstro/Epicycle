@@ -22,7 +22,7 @@ end
 @testset "out_to_kep / out_to_cart input validation" begin
     # out_to_kep: wrong length
     test_throws_msg(outasymptote_to_kep, bad7, mu;
-        substr = "Input must be a 6-element vector: [a, e, i, Ω, ω, ν]")
+        substr = "Input must be a 6-element vector: [rₚ, C₃, λₐ, δₐ, θᵦ, ν]")
 
     # Positive controls (shape only; numeric content not asserted deeply here)
     good_out = [6400.000000000003, -49.8250551875, deg2rad(250.633213963147),
@@ -95,8 +95,7 @@ end
 
 =#
 
-# Equatorial retrograde branch (i ≈ π): expect Ω set to 0.0
-#=
+# Equatorial retrograde branch (i ≈ π): expect Ω set to 0.0, and ω within [0, 2π)
 @testset "outasymptote_to_kep: equatorial retrograde (i≈π) sets Ω=0" begin
     rp = 7000.0
     e = 1.3
@@ -108,6 +107,6 @@ end
     a, e_out, i_out, Ω_out, ω_out, ν_out = kep
     @test isapprox(i_out, π; atol=1e-8)
     @test Ω_out == 0.0
-    @test 0.0 ≤ ω_out ≤ 2π
+    @test 0.0 ≤ ω_out < 2π
+    @test isapprox(kep_to_cart(kep, mu), cart_ret; rtol=1e-12)
 end
-=#

@@ -2,28 +2,28 @@
 # SPDX-License-Identifier: MIT
 
 """
-    equinoctial_to_alt_equinoctial(eq::Vector{<:Real}; tol::Float64 = 1e-12)
+    equinoctial_to_alt_equinoctial(eq::AbstractVector{<:Real}; tol::Real = 1e-12)
 
 Convert equinoctial elements to alternate equinoctial elements.
 
 # Arguments
-- `eq::Vector{<:Real}`: Equinoctial state `[a, h, k, p, q, λ]`
+- `eq::AbstractVector{<:Real}`: Equinoctial state `[a, h, k, p, q, λ]`
     - `a`  : semi-major axis [length]
     - `h`  : e⋅g component of eccentricity vector
     - `k`  : e⋅f component of eccentricity vector
-    - `p`  : tan(i/2)⋅cos(Ω)
-    - `q`  : tan(i/2)⋅sin(Ω)
-    - `λ`  : mean longitude [rad]
-- `tol::Float64`: tolerance for inclination singularity detection (default: 1e-12)
+    - `p`  : tan(i/2)⋅sin(Ω)
+    - `q`  : tan(i/2)⋅cos(Ω)
+    - `λ`  : mean longitude Ω + ω + M [rad]
+- `tol::Real`: tolerance for inclination singularity detection (default: 1e-12)
 
 # Returns
 Alternate equinoctial state `[a, h, k, altp, altq, λ]`
     - `a` : semi-major axis [length]
     - `h` : e⋅g component of eccentricity vector
     - `k` : e⋅f component of eccentricity vector
-    - `altp` : sin(i/2)⋅cos(Ω)
-    - `altq` : sin(i/2)⋅sin(Ω)
-    - `λ` : mean longitude [rad]
+    - `altp` : sin(i/2)⋅sin(Ω)
+    - `altq` : sin(i/2)⋅cos(Ω)
+    - `λ` : mean longitude Ω + ω + M [rad]
 
 # Notes
 - Singular when inclination is near 180°, returns `fill(NaN, 6)` in that case.
@@ -35,7 +35,7 @@ eq = [7000.0, 0.01, 0.0, 0.1, 0.0, π/4]
 alt_eq = equinoctial_to_alt_equinoctial(eq)
 ```
 """
-function equinoctial_to_alt_equinoctial(eq::Vector{<:Real}; tol::Float64 = 1e-12)
+function equinoctial_to_alt_equinoctial(eq::AbstractVector{<:Real}; tol::Real = 1e-12)
     if length(eq) != 6
         error("Input must be a 6-element equinoctial vector: [a, h, k, p, q, λ]")
     end

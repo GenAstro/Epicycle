@@ -2,27 +2,39 @@
 # SPDX-License-Identifier: MIT
 
 """
-    function cart_to_kep(cart::Vector{<:Real}, μ::Real; tol::Float64=1e-12)
+    cart_to_kep(cart::AbstractVector{<:Real}, μ::Real; tol::Real=1e-12)
 
 Convert a Cartesian state vector to Keplerian orbital elements.
 
 # Arguments
-- `cart::Vector{Float64}`: Cartesian state `[x, y, z, vx, vy, vz]`
+- `cart`: Cartesian state `[x, y, z, vx, vy, vz]`
 - `μ::Real`: Gravitational parameter
-- `tol::Float64`: Tolerance for detecting circular or equatorial orbits (default: `1e-12`)
+- `tol::Real`: Tolerance for detecting circular (`e ≤ tol`) and equatorial (`sin i ≤ tol`) orbits
+  (default: `1e-12`)
 
 # Returns
 A vector `[a, e, i, Ω, ω, ν]` where:
-- `a`: semi-major axis
+- `a`: semi-major axis; `Inf` for a parabolic orbit
 - `e`: eccentricity
-- `i`: inclination
-- `Ω`: right ascension of ascending node (RAAN)
-- `ω`: argument of periapsis
-- `ν`: true anomaly
+- `i`: inclination, in [0, π]
+- `Ω`: right ascension of ascending node (RAAN), in [0, 2π)
+- `ω`: argument of periapsis, in [0, 2π)
+- `ν`: true anomaly, in [0, 2π)
+
+The element type follows the inputs, so `Float32` and `ForwardDiff.Dual` states stay so. A
+singular state (zero position, velocity or angular momentum, or μ below `tol`) logs a warning and
+returns `NaN`s.
 
 # Notes
-- Angles must be in radians.
-- Dimensional quantities must use consistent units with μ.
+- Angles are in radians; dimensional quantities must use units consistent with μ.
+- Where an element is undefined it is pinned, as GMAT does:
+  * equatorial orbits (i = 0 or π): Ω = 0, and ω is the longitude of periapsis, measured from +x
+    in the direction of motion;
+  * circular orbits: ω = 0, and ν is the argument of latitude, measured from the ascending node;
+  * circular equatorial orbits: Ω = ω = 0, and ν is the true longitude, measured from +x in the
+    direction of motion.
+- Angles are recovered with `atan(y, x)`, so they keep full precision near 0 and π and have
+  derivatives there.
 
 # Examples
 ```julia
@@ -30,90 +42,46 @@ cart = [6778.0, 0.0, 0.0, 0.0, 7.66, 0.0]
 kep = cart_to_kep(cart, 398600.4418)
 ```
 """
-function cart_to_kep(cart::Vector{<:Real}, μ::Real; tol::Float64=1e-12)
+function cart_to_kep(cart::AbstractVector{<:Real}, μ::Real; tol::Real=1e-12)
     if length(cart) != 6
         error("Input vector must have exactly six elements: [x, y, z, vx, vy, vz].")
     end
+    T = float(promote_type(eltype(cart), typeof(μ)))
 
     if μ < tol
         @warn "Conversion Failed: μ < tolerance."
-        return fill(NaN, 6)
+        return fill(T(NaN), 6)
     end
 
-    # Extract position and velocity vectors from Cartesian state
-    r̄ = cart[1:3]
-    v̄ = cart[4:6]
-    twopi = 2π
+    r̄ = SVector{3,T}(cart[1], cart[2], cart[3])
+    v̄ = SVector{3,T}(cart[4], cart[5], cart[6])
 
-    # Compute position and velocity magnitudes and test for singularity
+    # Position and velocity magnitudes, and the singular states
     r = norm(r̄)
     v = norm(v̄)
     if r < tol || v < tol
         @warn "Conversion failed: Orbit is singular due to degenerate position or velocity vector."
-        return fill(NaN, 6)
+        return fill(T(NaN), 6)
     end
 
-    # Compute angular momentum and energy
+    # Angular momentum and energy
     energy = v^2 / 2 - μ / r
     h̄ = cross(r̄, v̄)
     h = norm(h̄)
     if h < tol
         @warn "Conversion Failed: Orbit is singular due to degenerate angular momentum."
-        return fill(NaN, 6)
+        return fill(T(NaN), 6)
     end
 
-    # Compute inclination
-    i = acos(clamp(h̄[3] / h, -1.0, 1.0))
+    # Eccentricity vector and magnitude
+    ē = ((v^2 - μ / r) * r̄ - dot(r̄, v̄) * v̄) / μ
+    e = norm(ē)
 
-    # Compute node vector
-    z̄ = [0.0, 0.0, 1.0]  # Unit vector along Z-axis (inertial reference)
-    n̄ = cross(z̄, h̄)
-    n = norm(n̄)
+    # Semi-major axis; undefined (infinite) for a parabola
+    a = abs(1 - e) > tol ? -μ / (2 * energy) : T(Inf)
 
-    # Compute eccentricity vector and magnitude
-    rdotv = dot(r̄, v̄)
-    ē = ((v^2 - μ / r) * r̄ - rdotv * v̄) / μ
-    e = norm(ē)
+    i, Ω, ω, p̂, q̂ = _orbit_orientation(h̄, ē, e, tol)
+    ν = _plane_angle(r̄, p̂, q̂)
 
-    # Semi-major axis (a) and semi-latus rectum (p)
-    if abs(1 - e) > tol
-        a = -μ / (2 * energy)  # For elliptical and hyperbolic orbits
-        p = a * (1 - e^2)
-    else
-        a = Inf  # Parabolic case: semi-major axis undefined
-        p = h^2 / μ
-    end
-
-    # Check for special cases and compute Ω, ω, and ν accordingly
-    if i <= tol && e > tol
-        # Elliptical equatorial orbit, set Ω = 0.0, measure ω from x-axis
-        Ω = 0.0
-        ω = acos(clamp(ē[1] / e, -1.0, 1.0))
-        ω = ē[2] < 0 ? twopi - ω : ω
-        ν = acos(clamp(dot(ē, r̄) / (e * r), -1.0, 1.0))
-        ν = rdotv < 0 ? twopi - ν : ν
-    elseif i > tol && e <= tol
-        # Circular inclined orbit, set ω = 0.0, measure ν from ascending node
-        Ω = acos(clamp(n̄[1] / n, -1.0, 1.0))
-        Ω = n̄[2] < 0 ? twopi - Ω : Ω
-        ω = 0.0
-        ν = acos(clamp(dot(n̄ / n, r̄ / r), -1.0, 1.0))
-        ν = r̄[3] < 0 ? twopi - ν : ν
-    elseif i <= tol && e <= tol
-        # Circular equatorial orbit, Ω = ω = 0.0
-        Ω = 0.0
-        ω = 0.0
-        ν = acos(clamp(r̄[1] / r, -1.0, 1.0))
-        ν = r̄[2] < 0 ? twopi - ν : ν
-    else
-        # General orbit (non-circular, inclined)
-        Ω = acos(clamp(n̄[1] / n, -1.0, 1.0))
-        Ω = n̄[2] < 0 ? twopi - Ω : Ω
-        ω = acos(clamp(dot(n̄ / n, ē / e), -1.0, 1.0))
-        ω = ē[3] < 0 ? twopi - ω : ω
-        ν = acos(clamp(dot(ē / e, r̄ / r), -1.0, 1.0))
-        ν = rdotv < 0 ? twopi - ν : ν
-    end
-
-    return [a, e, i, Ω, ω, ν]
+    return T[a, e, i, Ω, ω, ν]
 end

@@ -131,6 +131,10 @@ function _brouwer_short_mean_to_osc(blms::AbstractVector, μ::Real)
     end                                                      # COV_EXCL_STOP
     eccp > 0.99 && error("BrouwerMeanShort: mean ECC must be < 0.99 (got $eccp).")
 
+    # GMAT port, unchanged. Above 175° the theory runs on a pseudostate, i → π - i and Ω → -Ω,
+    # which assumes the field is symmetric about the equator. The odd zonals J3 and J5 are not,
+    # so the pseudostate is an approximation there; it matches GMAT and round-trips to ~1e-7, but
+    # no independent truth has checked it.
     pseudostate = 0
     if incp > deg2rad(175.0)
         incp = π - incp; raanp = -raanp; pseudostate = 1
@@ -238,6 +242,10 @@ function _brouwer_long_mean_to_osc(blml::AbstractVector, μ::Real)
     aopdp    = float(blml[5])
     meanAnom = float(blml[6])
 
+    # GMAT port, unchanged. Above 175° the theory runs on a pseudostate, i → π - i and Ω → -Ω,
+    # which assumes the field is symmetric about the equator. The odd zonals J3 and J5 are not,
+    # so the pseudostate is an approximation there; it matches GMAT and round-trips to ~1e-7, but
+    # no independent truth has checked it.
     pseudostate = 0
     if incdp > deg2rad(175.0)
         incdp = π - incdp; raandp = -raandp; pseudostate = 1

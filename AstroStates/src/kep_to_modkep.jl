@@ -2,12 +2,12 @@
 # SPDX-License-Identifier: MIT
 
 """
-    kep_to_modkep(kep::Vector{<:Real}; tol::Float64 = 1e-12)
+    kep_to_modkep(kep::AbstractVector{<:Real}; tol::Real = 1e-12)
 
 Convert a classical Keplerian state to a Modified Keplerian state.
 
 # Arguments
-- `kep::Vector{<:Real}`: Keplerian state vector `[a, e, i, Ω, ω, ν]`
+- `kep::AbstractVector{<:Real}`: Keplerian state vector `[a, e, i, Ω, ω, ν]`
     - `a`  : semi-major axis 
     - `e`  : eccentricity
     - `i`  : inclination 
@@ -15,7 +15,7 @@ Convert a classical Keplerian state to a Modified Keplerian state.
     - `ω`  : argument of periapsis 
     - `ν`  : true anomaly 
 
-- `tol::Float64`: tolerance for singularity and consistency checks (default = 1e-12)
+- `tol::Real`: tolerance for singularity and consistency checks (default = 1e-12)
 
 # Returns
 Modified Keplerian state `[rₚ, rₐ, i, Ω, ω, ν]` or `fill(NaN, 6)` if invalid.
@@ -30,7 +30,7 @@ kep = [7000.0, 0.01, π/4, 0.0, 0.0, π/3]
 modkep = kep_to_modkep(kep)
 ```
 """
-function kep_to_modkep(kep::Vector{<:Real}; tol::Float64 = 1e-12)
+function kep_to_modkep(kep::AbstractVector{<:Real}; tol::Real = 1e-12)
     if length(kep) != 6
         error("Input vector must contain six elements: [a, e, i, Ω, ω, ν]")
     end

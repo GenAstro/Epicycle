@@ -2,12 +2,12 @@
 # SPDX-License-Identifier: MIT
 
 """
-    modkep_to_kep(modkep::Vector{<:Real}; tol::Float64 = 1e-12)
+    modkep_to_kep(modkep::AbstractVector{<:Real}; tol::Real = 1e-12)
 
 Convert a Modified Keplerian state to a classical Keplerian state.
 
 # Arguments
-- `modkep::Vector{<:Real}`: Modified Keplerian state vector `[rₚ, rₐ, i, Ω, ω, ν]`
+- `modkep::AbstractVector{<:Real}`: Modified Keplerian state vector `[rₚ, rₐ, i, Ω, ω, ν]`
     - `rₚ` : radius of periapsis
     - `rₐ` : radius of apoapsis 
     - `i`  : inclination 
@@ -15,7 +15,7 @@ Convert a Modified Keplerian state to a classical Keplerian state.
     - `ω`  : argument of periapsis 
     - `ν`  : true anomaly
 
-- `tol::Float64`: tolerance for singularity and consistency checks (default = 1e-12)
+- `tol::Real`: tolerance for singularity and consistency checks (default = 1e-12)
 
 # Returns
 A classical Keplerian state `[a, e, i, Ω, ω, ν]` or `fill(NaN, 6)` if invalid.
@@ -30,7 +30,7 @@ modkep = [6778.0, 42164.0, π/6, 0.0, 0.0, 0.0]
 kep = modkep_to_kep(modkep)
 ```
 """
-function modkep_to_kep(modkep::Vector{<:Real}; tol::Float64 = 1e-12)
+function modkep_to_kep(modkep::AbstractVector{<:Real}; tol::Real = 1e-12)
     if length(modkep) != 6
         error("Input vector must contain six elements: [rₚ, rₐ, i, Ω, ω, ν]")
     end
@@ -48,6 +48,13 @@ function modkep_to_kep(modkep::Vector{<:Real}; tol::Float64 = 1e-12)
     end
     if rₚ <= tol || abs(rₐ) <= tol
         @warn "Conversion failed: Singular conic section."
+        return fill(NaN, 6)
+    end
+    # A hyperbola has rₐ = a(1 + e) < 0 with |rₐ| = |a|(e + 1) > rₚ = |a|(e - 1). Equal radii give
+    # e = ∞, and |rₐ| < rₚ gives e < 0.
+    if rₐ < 0 && -rₐ <= rₚ + tol
+        @warn "Conversion failed: Inconsistent Modified Keplerian state. For a hyperbola " *
+              "(rₐ < 0), |rₐ| must exceed rₚ; got rₚ = $(rₚ), rₐ = $(rₐ)."
         return fill(NaN, 6)
     end
 

@@ -4,19 +4,19 @@
 using LinearAlgebra
 
 """
-    sphradec_to_cart(state::Vector{<:Real}) -> Vector{<:Real}
+    sphradec_to_cart(state::AbstractVector{<:Real}) -> Vector
 
 Convert a spherical RA/Dec state `[r, λᵣ, δᵣ, v, λᵥ, δᵥ]` to a Cartesian state
 `[x, y, z, vx, vy, vz]`.
 
 Arguments
-- state::Vector{<:Real}: length-6 vector where:
+- state: length-6 vector, the field order of `SphericalRADECState`, where:
   - r   = position magnitude
   - λᵣ  = right ascension of position (radians)
   - δᵣ  = declination of position (radians)
   - v   = velocity magnitude
-  - λᵥ  = azimuth of velocity direction (radians)
-  - δᵥ  = elevation of velocity direction (radians)
+  - λᵥ  = right ascension of the velocity (radians)
+  - δᵥ  = declination of the velocity (radians)
 
 Returns
 - Vector{<:Real}: length-6 Cartesian state `[x, y, z, vx, vy, vz]`.
@@ -32,7 +32,7 @@ sphradec = [7000.0, 0.0, 0.0, 7.5, π/2, 0.0]
 cart = sphradec_to_cart(sphradec)
 ```
 """
-function sphradec_to_cart(state::Vector{<:Real})
+function sphradec_to_cart(state::AbstractVector{<:Real})
     if length(state) != 6
         error("Input vector must have exactly six elements: [r, λᵣ, δᵣ, v, λᵥ, δᵥ].")
     end
