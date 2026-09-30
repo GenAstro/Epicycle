@@ -3,7 +3,7 @@
 AstroEpochs contains code adapted from the packages below. Each adapted file names its source in
 its header. The adapted code is held to its source's own outputs: `test/test_correctness_erfa_parity.jl`
 compares the ERFA ports with pyerfa exactly, and `test/test_correctness_astropy_benchmark.jl`
-compares the assembled conversions with Astropy at 1668 epochs.
+compares the assembled conversions with Astropy at 1793 epochs.
 
 ## ERFA
 

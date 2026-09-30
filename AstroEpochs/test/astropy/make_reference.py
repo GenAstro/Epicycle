@@ -11,12 +11,13 @@ Run with the Astropy harness (C:\\Users\\steve\\Dev\\TestHarnesses\\astropy):
 Cases, by `kind`:
   random      uniform epochs 1972-2100, as a JD in each scale and as a UTC ISOT string
   leap        either side of every leap second, in UTC and in TAI
-  leap_inst   instants inside a leap second (UTC 23:59:60.x); AstroEpochs cannot represent these
-              yet, so the benchmark reports them as a known gap
+  leap_inst   instants inside a leap second (UTC 23:59:60.x)
   rounding    epochs whose ISOT string rounds up across a second, minute, hour or day
   special     J2000, the 1977 TCG/TCB epoch, MJD 0, and the ends of the range
   pre1972     UTC before 1972-01-01, where Astropy applies the drifting pre-1972 offsets and
               AstroEpochs does not; a known gap by decision
+  mjd         two-part Modified Julian Dates, the first part fractional, in every scale; added
+              after the others, with its own random stream, so the earlier rows are unchanged
 """
 import csv
 import math
@@ -98,15 +99,27 @@ for y in (1600, 1700, 1900, 2200, 2500):
 for s in ("1960-01-01T00:00:00.000", "1965-06-15T12:00:00.000", "1971-12-31T23:59:59.000"):
     add("pre1972", "utc", "isot", s)
 
+# ── two-part MJD ────────────────────────────────────────────────────────────
+# Astropy normalises the two parts before adding the MJD zero point, so a fractional first part
+# costs nothing; AstroEpochs added the zero point first and lost up to 15 us.
+rng = random.Random(20260930)
+mjd_lo, mjd_hi = 41317.0, 88069.0                    # 1972-01-01 to 2100-01-01
+for scale in SCALES:
+    for _ in range(20):
+        add("mjd", scale, "mjd", rng.uniform(mjd_lo, mjd_hi), rng.uniform(-1e-3, 1e-3))
+for v1, v2 in ((0.1, 0.0), (51544.123456789012, 1e-9), (58000.0, 0.123456789),
+               (58000.123456789, 0.0), (51544.75, -0.25)):
+    add("mjd", "tt", "mjd", v1, v2)
+
 # ── evaluate ────────────────────────────────────────────────────────────────
 rows = []
 for kind, scale, fmt, value, value2 in cases:
-    t = Time(value, value2, format="jd", scale=scale) if fmt == "jd" else \
+    t = Time(value, value2, format=fmt, scale=scale) if fmt in ("jd", "mjd") else \
         Time(value, format="isot", scale=scale, precision=3)
     t.precision = 3
     row = {"kind": kind, "in_scale": scale, "in_format": fmt,
-           "in_value": repr(value) if fmt == "jd" else value,
-           "in_value2": repr(value2) if fmt == "jd" else ""}
+           "in_value": repr(value) if fmt != "isot" else value,
+           "in_value2": repr(value2) if fmt != "isot" else ""}
     for s in SCALES:
         ts = getattr(t, s)
         row[f"{s}_jd1"] = repr(float(ts.jd1))

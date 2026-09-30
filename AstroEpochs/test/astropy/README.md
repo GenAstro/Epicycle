@@ -5,7 +5,7 @@ not need Python.
 
 | Script | Writes | Used by |
 |---|---|---|
-| `make_reference.py` | `reference.csv`: 1668 epochs, each with Astropy's two-part JD and ISOT string in every scale | `test_correctness_astropy_benchmark.jl` |
+| `make_reference.py` | `reference.csv`: 1793 epochs, each with Astropy's two-part JD and ISOT string in every scale | `test_correctness_astropy_benchmark.jl` |
 | `make_erfa_parity.py` | printed Julia literals: pyerfa's output for each ported ERFA routine at its edge cases | `test_correctness_erfa_parity.jl` |
 
 Rerun them when AstroEpochs' conversions change on purpose, or to benchmark against a newer Astropy.

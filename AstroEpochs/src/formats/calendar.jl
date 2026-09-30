@@ -157,8 +157,10 @@ end
 # On a UTC day that ends with a leap second the day is 86401 s long, and the final minute 61 s.
 # `_leap_seconds_in_day` finds that from the leap-second table: the change in TAI − UTC between 0h
 # today and 0h tomorrow, less any pre-1972 drift (which AstroEpochs does not model, so it is zero).
+# A day before the table has none: the step to its first value is not a leap second.
 
 function _leap_seconds_in_day(iy, im, id)
+    _in_leap_table(iy, im, id) || return 0.0
     dat0  = _dat(iy, im, id)
     iy2, im2, id2, _ = jd2cal(sum(cal2jd(iy, im, id)), 1.5)   # tomorrow, from its noon, as ERFA
     dat24 = _dat(iy2, im2, id2)

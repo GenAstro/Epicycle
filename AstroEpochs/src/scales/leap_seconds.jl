@@ -22,6 +22,12 @@ using Downloads: download
 using Scratch: @get_scratch!
 
 const LEAP_SECONDS_URL = "https://data.iana.org/time-zones/tzdb/leap-seconds.list"
+
+# Seconds to wait for the list. The automatic download happens inside the first UTC conversion,
+# which must not hang on a network that drops the request; it falls back to a stored or built-in
+# table instead. A refresh the caller asked for can wait longer.
+const _LEAP_DOWNLOAD_TIMEOUT = 10.0
+const _LEAP_REFRESH_TIMEOUT  = 60.0
 const _NTP_EPOCH_JD    = 2415020.5          # 1900-01-01T00:00:00, the list's time origin
 
 struct LeapSecondTable
@@ -101,16 +107,19 @@ function _load_leap_second_table!()
     end
 end
 
-function _fetch_leap_second_table()
-    path   = joinpath(@get_scratch!("leap_seconds"), "leap-seconds.list")
+# Where the downloaded list is kept, across sessions.
+_leap_seconds_path() = joinpath(@get_scratch!("leap_seconds"), "leap-seconds.list")
+
+# The table to use: the stored list while it is current, else a fresh download, else the stored
+# list though expired, else the built-in table. The path, URL and timeout are arguments so the
+# tests can run each branch against a temporary folder and a URL that fails.
+function _fetch_leap_second_table(path = _leap_seconds_path(); url = LEAP_SECONDS_URL,
+                                  timeout = _LEAP_DOWNLOAD_TIMEOUT)
     cached = isfile(path) ? _try_parse(read(path, String)) : nothing
     cached !== nothing && cached.expires > _now_j2000_days() && return cached
 
     fresh = try
-        tmp = download(LEAP_SECONDS_URL, path * ".download")
-        table = parse_leap_seconds(read(tmp, String))
-        mv(tmp, path; force = true)
-        table
+        _download_leap_seconds(path, url, timeout)
     catch e
         e isa InterruptException && rethrow()
         nothing
@@ -119,16 +128,30 @@ function _fetch_leap_second_table()
 
     if cached !== nothing
         @warn "AstroEpochs: the leap-second list expired and could not be refreshed from " *
-              "$(LEAP_SECONDS_URL); using the expired copy. A leap second announced since " *
+              "$(url); using the expired copy. A leap second announced since " *
               "it expired is missing." maxlog = 1
         return cached
     end
-    @warn "AstroEpochs: could not download the leap-second list from $(LEAP_SECONDS_URL); " *
+    @warn "AstroEpochs: could not download the leap-second list from $(url); " *
           "using the built-in table, which ends at 2017-01-01." maxlog = 1
     return _builtin_leap_table()
 end
 
 _try_parse(text) = try parse_leap_seconds(text) catch; nothing end
+
+# Download the list to `path`, parsing it before it replaces the stored copy, and leave no partial
+# file behind if either step fails.
+function _download_leap_seconds(path, url, timeout)
+    tmp = path * ".download"
+    try
+        download(url, tmp; timeout = timeout)
+        table = parse_leap_seconds(read(tmp, String))
+        mv(tmp, path; force = true)
+        return table
+    finally
+        rm(tmp; force = true)
+    end
+end
 
 """
     refresh_leap_seconds!() -> LeapSecondTable
@@ -147,11 +170,12 @@ conversion does, because a caller who asks for a refresh wants to know it did no
 refresh_leap_seconds!()
 ```
 """
-function refresh_leap_seconds!()
-    path = joinpath(@get_scratch!("leap_seconds"), "leap-seconds.list")
-    tmp  = download(LEAP_SECONDS_URL, path * ".download")
-    table = parse_leap_seconds(read(tmp, String))
-    mv(tmp, path; force = true)
+refresh_leap_seconds!() =
+    _refresh_leap_seconds!(_leap_seconds_path(), LEAP_SECONDS_URL, _LEAP_REFRESH_TIMEOUT)
+
+# The table in use changes only once the download has parsed, so a failure leaves it as it was.
+function _refresh_leap_seconds!(path, url, timeout)
+    table = _download_leap_seconds(path, url, timeout)
     lock(_LEAP_LOCK) do
         _LEAP[] = table
     end
@@ -162,17 +186,44 @@ end
 function tai_minus_utc(utc_days)
     table = leap_second_table()
     idx = searchsortedlast(table.starts, utc_days)
-    idx < 1 && return _before_leap_seconds(utc_days)
+    idx < 1 && return _before_leap_seconds()
+    # The built-in table has no expiry (-Inf); using it already warned, when it was loaded.
+    utc_days > table.expires + _DUBIOUS_AFTER_DAYS && isfinite(table.expires) &&
+        _past_leap_seconds(table.expires)
     return table.delta[idx]
 end
 
-# Before 1972 UTC was not an integer offset from TAI, and the list has no value for it. Warns on
-# every call, as Tempo.jl, whose table this was, did. Kept out of `tai_minus_utc` because a logging macro contains a
-# try block, which automatic differentiation cannot compile.
-@noinline function _before_leap_seconds(utc_days)
-    @warn "AstroEpochs: no leap-second data before 1972-01-01; using TAI − UTC = 0 for the " *
-          "UTC date $(utc_days) days from J2000, which can be wrong by up to ten seconds."
+# The warnings are kept out of `tai_minus_utc` because a logging macro contains a try block, which
+# automatic differentiation cannot compile, and each shows once per session: a propagation or an
+# optimisation converts at every step, and a warning per conversion buries everything else.
+
+# Before 1972 UTC was not an integer offset from TAI, and the list has no value for it.
+@noinline function _before_leap_seconds()
+    @warn "AstroEpochs: no leap-second data before 1972-01-01; UTC before then uses " *
+          "TAI − UTC = 0, which can be wrong by up to ten seconds. Shown once per session." maxlog = 1
     return 0.0
+end
+
+# Past the list's expiry a leap second may yet be announced. Every date past it is uncertain, but
+# the list expires only months ahead, so warning there would warn on routine mission planning.
+# ERFA warns for a year more than five past its release ("dubious year"); this warns five years
+# past the list's expiry.
+const _DUBIOUS_AFTER_DAYS = 5 * 365.25
+
+@noinline function _past_leap_seconds(expires)
+    y, m, d, _ = jd2cal(J2000_EPOCH, expires)
+    @warn "AstroEpochs: UTC more than five years after " * @sprintf("%04d-%02d-%02d", y, m, d) *
+          ", when the leap-second list expires, assumes no further leap seconds. Shown once " *
+          "per session." maxlog = 1
+    return nothing
+end
+
+# Whether the leap-second table covers a UTC date. Before it, TAI − UTC is taken as 0, and the step
+# to the table's first value is a jump at 0h on its first date, not a leap second at the end of the
+# day before; treated as a leap second, it made 1971-12-31 a UTC day of 86410 s.
+function _in_leap_table(iy, im, id)
+    djm0, djm = cal2jd(iy, im, id)
+    return (djm0 - J2000_EPOCH) + djm >= first(leap_second_table().starts)
 end
 
 """
@@ -212,7 +263,8 @@ function utctai(utc1, utc2)
     dat24 = _dat(iyt, imt, idt)                             # at 0h tomorrow
 
     dlod  = 2.0 * (dat12 - dat0)                            # per-day drift, zero after 1972
-    dleap = dat24 - (dat0 + dlod)                           # any leap second at the end of today
+    dleap = _in_leap_table(iy, im, id) ?                    # any leap second at the end of today
+            dat24 - (dat0 + dlod) : zero(dat24)
 
     fd *= (SECONDS_IN_DAY + dleap) / SECONDS_IN_DAY         # undo the spread of the leap second
     fd *= (SECONDS_IN_DAY + dlod) / SECONDS_IN_DAY          # pre-1972 UTC seconds to SI seconds

@@ -1,7 +1,7 @@
 # Copyright (C) 2026 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 
-# AstroEpochs against Astropy, across the scales and formats, at 1668 epochs.
+# AstroEpochs against Astropy, across the scales and formats, at 1793 epochs.
 #
 # Truth: Astropy 8.0.1 (pyerfa 2.0.1.5, ERFA 2.0.1), in test/astropy/reference.csv, written by
 # test/astropy/make_reference.py; this file never runs Python. For each case the file has an input
@@ -14,7 +14,8 @@
 #
 # Case kinds (see make_reference.py): random epochs 1972-2100 in every scale; either side of every
 # leap second in UTC and TAI; instants inside a leap second (UTC 23:59:60.x); ISOT strings that
-# round across a second, minute, hour or day; J2000, the 1977 TCG/TCB epoch, MJD 0 and 1600-2500.
+# round across a second, minute, hour or day; J2000, the 1977 TCG/TCB epoch, MJD 0 and 1600-2500;
+# two-part MJDs whose first part is fractional.
 #
 # Known gap, by decision: UTC before 1972, where Astropy applies the drifting pre-1972 offsets and
 # AstroEpochs uses TAI − UTC = 0 (with a warning). Those cases are `@test_broken`, so they show in
@@ -24,8 +25,8 @@
 # times, and the longest (TCB to UTC) has four each way, so a round trip is held to 1e-10 s, about
 # ten units in the last place; the worst measured was 2.9e-11 s.
 #
-# Epochs before 1972 warn on each UTC conversion (see leap_seconds.jl). That warning is tested in
-# the known-gap testset; the two large testsets run with it silenced.
+# Epochs before 1972 warn once per session (see leap_seconds.jl). That warning is tested in the
+# known-gap testset; the two large testsets run with it silenced.
 
 using Test
 using AstroEpochs
@@ -43,9 +44,12 @@ function _read_reference()
     return [Dict(zip(hdr, split(l, ","))) for l in lines[2:end]]
 end
 
-_input_time(r) = r["in_format"] == "jd" ?
-    Time(parse(Float64, r["in_value"]), parse(Float64, r["in_value2"]), _TAGS[Symbol(r["in_scale"])], JD()) :
-    Time(String(r["in_value"]), _TAGS[Symbol(r["in_scale"])], ISOT())
+const _FORMATS = Dict("jd" => JD(), "mjd" => MJD())
+
+_input_time(r) = r["in_format"] == "isot" ?
+    Time(String(r["in_value"]), _TAGS[Symbol(r["in_scale"])], ISOT()) :
+    Time(parse(Float64, r["in_value"]), parse(Float64, r["in_value2"]), _TAGS[Symbol(r["in_scale"])],
+         _FORMATS[r["in_format"]])
 
 _err_s(t, jd1, jd2) = ((t.jd1 - jd1) + (t.jd2 - jd2)) * 86400
 
@@ -53,7 +57,7 @@ const _REFERENCE = _read_reference()
 
 with_logger(NullLogger()) do
 @testset "Astropy benchmark — every scale, every case kind" begin
-    for kind in ("random", "leap", "leap_inst", "rounding", "special")
+    for kind in ("random", "leap", "leap_inst", "rounding", "special", "mjd")
         @testset "$kind" begin
             for r in filter(r -> r["kind"] == kind, _REFERENCE), out in _SCALES
                 t = getproperty(_input_time(r), out)

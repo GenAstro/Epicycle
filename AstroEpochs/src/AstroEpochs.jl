@@ -25,8 +25,11 @@ Notes
 - Leap seconds come from the IERS leap-second list, downloaded on first use and refreshed when
   it expires; see `scales/leap_seconds.jl`. UTC on a day that ends with a leap second is ERFA's
   quasi-Julian date, whose fraction of the day runs over 86401 s, so 23:59:60.5 is representable.
-- UTC before 1972 uses TAI − UTC = 0 with a warning. Astropy (ERFA) applies the drifting pre-1972
-  offsets, which differ by up to about 10 s; that is a known gap, not modelled here yet.
+- UTC before 1972 uses TAI − UTC = 0, with a warning once per session, and steps to 10 s at
+  1972-01-01T00:00:00. Astropy (ERFA) applies the drifting pre-1972 offsets, which differ by up
+  to about 10 s; that is a known gap, not modelled here yet. UTC after the leap-second list's
+  expiry assumes no further leap seconds; more than five years after it, as ERFA does, that
+  warns once per session.
 - TDB − TT is the Fairhead & Bretagnon series (ERFA `dtdb`) at the geocentre, as Astropy uses for a
   Time with no location. It agrees with ephemeris-based TDB to a few nanoseconds over 1600-2200.
   `tdb_minus_tt` in `scales/tdb.jl` is the one function that supplies it, so a topocentric or
@@ -252,7 +255,12 @@ Fields
 - format::Symbol — time format tag, one of: :jd, :mjd, :isot.
 
 # Notes:
-- Invariant: `jd1 + jd2` equals the epoch’s Julian Date. Internally, `_rebalance` keeps `_jd2 ∈ [-0.5, 0.5)`.
+- Invariant: `jd1 + jd2` equals the epoch’s Julian Date. Internally, `_rebalance` keeps `jd1` a whole
+  number of days and `jd2 ∈ [-0.5, 0.5]`, as Astropy does.
+- The numeric type is kept where it can be, but a scale conversion computes in `Float64`, so a
+  `Time{Float32}` comes back as `Time{Float64}` from, for example, `t.tdb`.
+- An ISOT string is validated as ERFA validates it, except that ERFA only warns for a second of 60
+  or more on a day without a leap second (and rolls into the next day), where `Time` throws.
 - Property access performs on-demand conversions:
   - `t.tt`, `t.tdb`, `t.utc`, … return a new Time converted to that scale.
   - `t.jd` and `t.mjd` return numeric date values; `t.isot` returns an ISO 8601 string.
@@ -283,7 +291,7 @@ println(t2.isot)     # ISO 8601 string
 t3 = Time(58000.0, TDB(), MJD())
 println(t3.jd)       # numeric JD
 
-# Construct from ISO string (UTC scale), tagged as MJD format
+# Construct from ISO string (UTC scale)
 t4 = Time("2017-01-01T00:00:00.000", UTC(), ISOT())
 println(t4.jd)       # numeric JD
 
@@ -338,7 +346,13 @@ function Time(val1::Real, val2::Real, scale::Symbol, format::Symbol)
     format === :isot && throw(ArgumentError(
         "Time: an ISOT time is a string, such as Time(\"2024-01-01T00:00:00\", UTC(), ISOT()); " *
         "two numbers are the parts of a Julian date or a Modified Julian Date."))
-    format === :mjd && return _time_jd(val1 + MJD_EPOCH, val2, scale, :mjd)
+    if format === :mjd
+        # Normalise first, then add the zero point to the whole day, as Astropy's TimeMJD does.
+        # Adding it to a fractional first part rounds the fraction at the magnitude of a Julian
+        # date, which cost up to 15 µs.
+        day, frac = _rebalance(val1, val2)
+        return _time_jd(day + MJD_EPOCH, frac, scale, :mjd)
+    end
     return _time_jd(val1, val2, scale, format)
 end
 
@@ -667,14 +681,12 @@ function -(t2::Time, t1::Time)::Real
 end
 
 """
-    -(t::Time{T}, dt::Real) -> Time{PT}
+    -(t::Time, dt::Real) -> Time
 
-Subtract days `dt` from `t` returning new time object.
+Subtract `dt` days from `t`, returning a new time. The numeric type is promoted as for `+`, so
+`dt` may carry derivatives.
 """
-function Base.:-(t::Time{T}, dt::Real) where {T<:Real}
-    δ1, δ2 = _rebalance(-T(dt), zero(T))
-    return _time_jd(getfield(t, :_jd1) + δ1, getfield(t, :_jd2) + δ2, t.scale, t.format)
-end
+Base.:-(t::Time, dt::Real) = t + (-dt)
 
 """
     function +(t::Time, dt::Real)
@@ -701,17 +713,14 @@ end
 """
     ==(a::Time, b::Time)
 
-Equality operator for Time.  Same scale and format, and identical jd1/jd2 values.
+Equality operator for Time: the same scale and format, and the same instant. Both dates are held
+normalised (see `_rebalance`), so the same instant has the same two parts and they are compared
+directly; summing them first would round away differences below about 40 µs.
 """
 function Base.:(==)(a::Time, b::Time)
     a.scale === b.scale || return false
     a.format === b.format || return false
-    Ta = typeof(getfield(a, :_jd1))
-    Tb = typeof(getfield(b, :_jd1))
-    PT = promote_type(Ta, Tb)
-    va = PT(getfield(a, :_jd1)) + PT(getfield(a, :_jd2))
-    vb = PT(getfield(b, :_jd1)) + PT(getfield(b, :_jd2))
-    return va == vb
+    return getfield(a, :_jd1) == getfield(b, :_jd1) && getfield(a, :_jd2) == getfield(b, :_jd2)
 end
 
 # Format transforms, which read and write a Time, so they come after it.
