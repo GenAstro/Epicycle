@@ -295,7 +295,7 @@ function _reexpress(subject, target::AbstractCoordinateSystem, params::NamedTupl
 
     out = axes_rotation(source.axes, target.axes, epoch, params) * SVector{6}(v)
 
-    if source.origin !== target.origin
+    if !_same_origin(source.origin, target.origin)
         out = out + origin_translation(source.origin, target.origin, target.axes, epoch, params)
     end
     return out
@@ -409,3 +409,12 @@ CartesianState(c::Coordinate, target::AbstractCoordinateSystem, params::NamedTup
 
 CartesianState(c::Coordinate, target::AbstractCoordinateSystem) =
     CartesianState(c, target, NamedTuple())
+
+# The default `==` on a struct holding a vector compares that vector by identity, so two
+# coordinates built from the same numbers were unequal.
+Base.:(==)(a::Coordinate, b::Coordinate) =
+    a.coord_sys == b.coord_sys && a.time == b.time && _state_values(a.state) == _state_values(b.state)
+Base.hash(c::Coordinate, h::UInt) = hash(_state_values(c.state), hash(c.coord_sys, hash(c.time, h)))
+
+_state_values(s::AbstractOrbitState) = to_vector(s)
+_state_values(s) = s
