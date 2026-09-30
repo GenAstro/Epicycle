@@ -272,14 +272,16 @@ _value(x) = hasproperty(x, :value) ? _value(x.value) : x
 # `AbstractFloat`, so a date carrying a derivative recursed until the stack
 # overflowed.
 @inline _scales(jd_tdb::Integer) = _scales(float(jd_tdb))
+# `Time` holds Float64 or wider; a Float32 date would otherwise fail deep in the conversion.
+@inline _scales(jd_tdb::Union{Float16, Float32}) = _scales(Float64(jd_tdb))
 @inline _scales(jd_tdb::Real) = _scales(Time(jd_tdb, zero(jd_tdb), :tdb, :jd))
 @inline _scales(e::EpochScales) = e
 
 # --- Identity ---------------------------------------------------------------
 
 """
-    axes_rotation(source_axes, target_axes, epoch) -> SMatrix{6,6,Float64,36}
-    axes_rotation(source_axes, target_axes, epoch, params) -> SMatrix{6,6,Float64,36}
+    axes_rotation(source_axes, target_axes, epoch) -> SMatrix{6,6}
+    axes_rotation(source_axes, target_axes, epoch, params) -> SMatrix{6,6}
 
 The 6×6 transform that takes a Cartesian state expressed in `source_axes` to the
 same state expressed in `target_axes`, as `state_target = M * state_source` with

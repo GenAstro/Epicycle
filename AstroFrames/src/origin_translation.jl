@@ -98,6 +98,17 @@ function _resolve_origin(origin, e::EpochScales)
     return (body, own + rest)
 end
 
+# The TDB date for the ephemeris. SPICE takes a Float64, so a dual date, carrying a derivative,
+# cannot pass; say so, as the lunar axes do, rather than fail inside the conversion.
+@inline function _ephemeris_date(e::EpochScales)
+    t = e.tdb
+    t isa Union{AbstractFloat, Integer} || throw(ArgumentError(
+        "A change of origin reads the ephemeris from SPICE, which is not differentiable, so it " *
+        "cannot take an epoch of type $(typeof(t)). Differentiate with respect to the state " *
+        "instead, or keep the origin unchanged."))
+    return t
+end
+
 function origin_translation(source_origin::AbstractPoint,
                             target_origin::AbstractPoint,
                             axes::AbstractAxes,
@@ -112,7 +123,7 @@ function origin_translation(source_origin::AbstractPoint,
 
         # Both measured from the target's body, then differenced: the source
         # origin seen from the target origin.
-        between = SVector{6}(translate_state(target_body, source_body, e.tdb))
+        between = SVector{6}(translate_state(target_body, source_body, _ephemeris_date(e)))
         return axes_rotation(ICRF(), axes, e, params) *
                (source_offset + between - target_offset)
     end
@@ -120,7 +131,7 @@ function origin_translation(source_origin::AbstractPoint,
     # `translate_state(from, to)` is the state of `to` seen from `from`, so the
     # arguments are reversed here: we want the SOURCE origin seen from the
     # TARGET origin.
-    Δ_icrf = translate_state(target_origin, source_origin, e.tdb)
+    Δ_icrf = translate_state(target_origin, source_origin, _ephemeris_date(e))
 
     # The ephemeris is ICRF; rotate it into the requested axes. Tagging it ICRF
     # rather than passing SPICE's own "J2000" label through is what makes the
