@@ -18,9 +18,9 @@
 # Static rotations ignore the epoch.
 # =============================================================================
 
-using SPICE: pxform as _spice_pxform, sxform as _spice_sxform, namfrm as _spice_namfrm
+using SPICE: pxform as _spice_pxform, sxform as _spice_sxform, namfrm as _spice_namfrm, SpiceError
 using SatelliteToolboxTransformations: DCM, r_mj2000_to_gcrf_iau2006, r_gcrf_to_mod_fk5, r_mod_to_tod_fk5, r_tod_to_pef_fk5, r_pef_to_itrf_fk5,
-    r_gcrf_to_cirs_iau2006, r_tirs_to_itrf_iau2006,
+    r_gcrf_to_cirs_iau2006, r_tirs_to_itrf_iau2006, cio_iau2006,
     nutation_fk5, r_tod_to_teme,
     EARTH_ANGULAR_SPEED
 using AstroEpochs: Time, TDB, JD
@@ -177,14 +177,32 @@ the EOP tables. Earth rotates at 7.3e-5 rad/s, so one second of UT1 error is
 7.3e-5 rad of longitude, or about 460 m at the equator.
 """
 @inline _ut1(::EpochScales, jd_utc::Real) =
-    jd_utc + eop(FK5()).Δut1_utc(jd_utc) / 86_400
+    jd_utc + first(_eop_read(FK5(), (:Δut1_utc,), jd_utc)) / 86_400
+
+# EOP values at a UTC date, read through a function barrier. `eop(theory)` comes out of an
+# abstractly typed slot in AstroUniverse, so reading its interpolants where it is fetched
+# dispatched dynamically on every field, about ten allocations an edge. Passing the table on
+# makes it concrete inside, and every field of an EOP table has the same type, so the values
+# come back as a tuple of numbers. The call across the barrier is still dynamic, so its result is
+# asserted: a tuple of the date's number type, promoted with the tables' Float64 (a dual date
+# gives dual values). Without it every calculation downstream dispatched dynamically as well.
+@inline _eop_read(theory, fields::NTuple{N, Symbol}, jd_utc::T) where {N, T<:Real} =
+    _eop_values(eop(theory), fields, jd_utc)::NTuple{N, promote_type(Float64, T)}
+_eop_values(table, fields::NTuple{N, Symbol}, jd_utc) where {N} =
+    ntuple(i -> getfield(table, fields[i])(jd_utc), Val(N))
 # `float` rather than the value as given: an integer Julian date is a perfectly
 # reasonable thing to write, and `Time` cannot represent one — it splits the
 # date into two parts and the split is fractional. Without this,
 # `axes_rotation(ICRF(), ITRF(), 2451545)` died with `InexactError: Int64(0.5)`
 # several calls down, from a signature that says it takes any `Real`.
-@inline _scales(jd_tdb::Real) = _scales(float(jd_tdb))
-@inline _scales(jd_tdb::AbstractFloat) = _scales(Time(jd_tdb, zero(jd_tdb), :tdb, :jd))
+#
+# Any other number goes to `Time` as it is. It used to go through `float`
+# first, and `float` of a dual number is still a dual number, not an
+# `AbstractFloat`, so a date carrying a derivative recursed until the stack
+# overflowed.
+@inline _scales(jd_tdb::Integer) = _scales(float(jd_tdb))
+@inline _scales(jd_tdb::Real) = _scales(Time(jd_tdb, zero(jd_tdb), :tdb, :jd))
+@inline _scales(e::EpochScales) = e
 
 # --- Identity ---------------------------------------------------------------
 
@@ -275,6 +293,60 @@ end
 @inline _body_fixed_rotation(model::M, naifid, e::EpochScales) where {M<:AbstractOrientationModel} =
     body_axes_rotation(model, naifid, epoch_tdb(e))
 
+# Earth's orientation model is its frame theory, and its body-fixed axes are
+# ITRF, reached by that theory's chain whatever theory is active. The chain
+# reads UT1 and TT, which is why this takes the epoch's scales rather than going
+# through `body_axes_rotation`'s TDB date.
+@inline function _body_fixed_rotation(theory::T, naifid, e::EpochScales) where {T<:AbstractFrameTheory}
+    naifid == 399 || throw(ArgumentError(
+        "$(theory) is the Earth's orientation, whose axes are ITRF; got NAIF $(naifid). " *
+        "Use an orientation model of that body, such as `orientation_model($(naifid))`."))
+    return _routed_rotation(ICRF(), ITRF(), e, theory)
+end
+
+"""
+    body_fixed_rotation(model, naifid, epoch) -> SMatrix{6,6,Float64,36}
+
+The rotation from ICRF to the fixed axes of body `naifid` that orientation
+`model` defines, at `epoch`.
+
+# Arguments
+- `model::AbstractOrientationModel`: any orientation model, including a frame
+  theory for Earth (`IAU2006()` or `FK5()`), whose axes are ITRF.
+- `naifid::Integer`: the body's NAIF ID.
+- `epoch`: an `AstroEpochs.Time`, or a TDB Julian date.
+
+# Notes
+Pass a `Time` for the Earth. A single `Float64` Julian date resolves time only to
+about 40 µs, which the Earth turns through in 0.6 mas, about 2 cm on its surface;
+a `Time` holds the date in two parts and loses nothing. Other bodies turn slowly
+enough that the difference does not show.
+
+[`axes_rotation`](@ref)`(ICRF(), CelestialBodyFixed{N}(), epoch)` uses the
+model registered for the body; this takes the model as an argument, for a
+caller whose data are defined in axes other than the body's default, such as a
+gravity field. For a model other than a frame theory it is
+`body_axes_rotation(model, naifid, jd_tdb)`; for a frame theory it is that
+theory's ICRF-to-ITRF chain, which needs UT1 and TT as well.
+
+The matrix has the block form `[R 0; Ṙ R]`, with `Ṙ` per second.
+
+# Example
+```julia
+using AstroEpochs, AstroUniverse
+t = Time("2024-01-01T00:00:00", UTC(), ISOT())
+body_fixed_rotation(IAU1991(), 499, t)     # Mars, in the axes of the IAU 1991 report
+body_fixed_rotation(FK5(), 399, t)         # ITRF by the FK5 chain, whatever theory is active
+```
+"""
+body_fixed_rotation(model::AbstractOrientationModel, naifid::Integer,
+                    epoch::Union{Time, EpochScales, Real}) =
+    _body_fixed_rotation(model, naifid, _scales(epoch))
+
+body_fixed_rotation(model::AbstractOrientationModel, naifid::Integer, epoch) =
+    throw(ArgumentError("body_fixed_rotation: the epoch is an `AstroEpochs.Time` or a TDB " *
+                        "Julian date; got $(typeof(epoch))."))
+
 function axes_rotation(::CelestialBodyFixed{N}, ::ICRF, e::EpochScales) where {N}
     return _invert_rotation(axes_rotation(ICRF(), CelestialBodyFixed{N}(), e))
 end
@@ -302,7 +374,7 @@ two causes: no frame kernel at all, or a frame kernel with no orientation data
 covering this epoch. They need different fixes, so they get different messages.
 """
 function _lunar_frame_error(frame::AbstractString, et::Real, cause)
-    axes = frame == "MOON_PA" ? "MoonPA" : "MoonME"
+    axes = startswith(frame, "MOON_PA") ? "MoonPA" : "MoonME"
     load = """
                download_spice_kernel("moon_pa_de440_200625.bpc")
                download_spice_kernel("moon_de440_250416.tf")
@@ -311,7 +383,7 @@ function _lunar_frame_error(frame::AbstractString, et::Real, cause)
 
     if _spice_namfrm(String(frame)) == 0
         return ArgumentError(
-            "$(axes) axes need the lunar frame kernels, and none is loaded.
+            "$(axes) axes need the DE440 lunar frame kernel, moon_de440_250416.tf, and it is not loaded.
 " *
             "
 These are loaded for you at startup, so reaching this usually " *
@@ -321,9 +393,9 @@ These are loaded for you at startup, so reaching this usually " *
 " * load *
             "
 
-The frame kernel must be moon_de440_250416.tf. The older " *
-            "moon_080317.tf names the DE421 frame and will not work against " *
-            "DE440 orientation data.
+An older frame kernel, such as moon_080317.tf, does not " *
+            "define the DE440 frames these axes read, so loading one in its " *
+            "place does not help.
 " *
             "
 SPICE reported: $(sprint(showerror, cause))")
@@ -343,11 +415,25 @@ moon_pa_de440_200625.bpc covers 1550 through 2650. If your epoch " *
 SPICE reported: $(sprint(showerror, cause))")
 end
 
+# The versioned frame names, not the aliases MOON_PA and MOON_ME. Every lunar
+# frame kernel defines the aliases, and whichever is loaded last decides what
+# they mean; these name the DE440 frames whatever else is loaded. They are the
+# frames AstroUniverse's LunarPA() and LunarME() read.
+const _MOON_PA = "MOON_PA_DE440"
+const _MOON_ME = "MOON_ME_DE440_ME421"
+
 """`sxform` for the lunar frames, reporting a missing kernel as such."""
 function _lunar_sxform(from::AbstractString, to::AbstractString, et::Real)
+    # A dual number cannot pass into SPICE's C interface; say so, rather than let the
+    # conversion fail and be reported as a missing kernel.
+    et isa Union{AbstractFloat, Integer} || throw(ArgumentError(
+        "MoonPA and MoonME axes are read from SPICE and are not differentiable, so " *
+        "they cannot take an epoch of type $(typeof(et))."))
     try
         return _spice_sxform(String(from), String(to), Float64(et))
     catch cause
+        # Only SPICE's own failures are about the kernels; anything else is not.
+        cause isa SpiceError || rethrow()
         # Which of the two is the lunar frame — the other end is always J2000.
         lunar = from == "J2000" ? to : from
         throw(_lunar_frame_error(lunar, et, cause))
@@ -356,25 +442,25 @@ end
 
 function axes_rotation(::ICRF, ::MoonPA, e::EpochScales)
     et = _et_from_jd_tdb(e.tdb)
-    M = _lunar_sxform("J2000", "MOON_PA", et)
+    M = _lunar_sxform("J2000", _MOON_PA, et)
     return SMatrix{6,6,Float64,36}(M)
 end
 
 function axes_rotation(::MoonPA, ::ICRF, e::EpochScales)
     et = _et_from_jd_tdb(e.tdb)
-    M = _lunar_sxform("MOON_PA", "J2000", et)
+    M = _lunar_sxform(_MOON_PA, "J2000", et)
     return SMatrix{6,6,Float64,36}(M)
 end
 
 function axes_rotation(::ICRF, ::MoonME, e::EpochScales)
     et = _et_from_jd_tdb(e.tdb)
-    M = _lunar_sxform("J2000", "MOON_ME", et)
+    M = _lunar_sxform("J2000", _MOON_ME, et)
     return SMatrix{6,6,Float64,36}(M)
 end
 
 function axes_rotation(::MoonME, ::ICRF, e::EpochScales)
     et = _et_from_jd_tdb(e.tdb)
-    M = _lunar_sxform("MOON_ME", "J2000", et)
+    M = _lunar_sxform(_MOON_ME, "J2000", et)
     return SMatrix{6,6,Float64,36}(M)
 end
 
@@ -496,11 +582,8 @@ rotation applied and polar motion not.
 `epoch` may be a `Time` or a TDB Julian date.
 """
 function axes_rotation(::PEF, ::ITRF, e::EpochScales)
-    table  = eop(FK5())
-    jd_utc = epoch_utc(e)
     # IERS distributes pole coordinates in arcseconds.
-    x_p = table.x(jd_utc) * _ARCSEC_TO_RAD
-    y_p = table.y(jd_utc) * _ARCSEC_TO_RAD
+    x_p, y_p = _eop_read(FK5(), (:x, :y), epoch_utc(e)) .* _ARCSEC_TO_RAD
     return _rotation_no_rate(r_pef_to_itrf_fk5(DCM, x_p, y_p))
 end
 
@@ -532,10 +615,7 @@ Applies the same IERS celestial-pole corrections as the nutation edge, so the
 `TODEq` end matches the one that edge produces.
 """
 function axes_rotation(::TODEq, ::TEME, e::EpochScales)
-    table  = eop(FK5())
-    jd_utc = epoch_utc(e)
-    δΔϵ = table.δΔϵ(jd_utc) * _MILLIARCSEC_TO_RAD
-    δΔψ = table.δΔψ(jd_utc) * _MILLIARCSEC_TO_RAD
+    δΔϵ, δΔψ = _eop_read(FK5(), (:δΔϵ, :δΔψ), epoch_utc(e)) .* _MILLIARCSEC_TO_RAD
     return _rotation_no_rate(r_tod_to_teme(DCM, e.tt, δΔϵ, δΔψ))
 end
 
@@ -586,7 +666,7 @@ end
 
 @inline function _true_obliquity(e::EpochScales)
     _, Δε, _ = nutation_fk5(epoch_tt(e))
-    δΔϵ = eop(FK5()).δΔϵ(epoch_utc(e)) * _MILLIARCSEC_TO_RAD
+    δΔϵ = first(_eop_read(FK5(), (:δΔϵ,), epoch_utc(e))) * _MILLIARCSEC_TO_RAD
     return _mean_obliquity(e) + Δε + δΔϵ
 end
 
@@ -681,13 +761,13 @@ This transformation does not apply polar motion; the `PEF ↔ ITRF` edge does.
 `epoch` may be a `Time` or a TDB Julian date.
 """
 function axes_rotation(::TODEq, ::PEF, e::EpochScales)
-    table  = eop(FK5())
     jd_utc = epoch_utc(e)
     jd_ut1 = _ut1(e, jd_utc)
-    δΔψ    = table.δΔψ(jd_utc) * _MILLIARCSEC_TO_RAD
+    δΔψ, lod = _eop_read(FK5(), (:δΔψ, :lod), jd_utc)
+    δΔψ *= _MILLIARCSEC_TO_RAD
 
     # LOD is distributed in milliseconds; a longer day is a slower Earth.
-    ω = EARTH_ANGULAR_SPEED * (1 - table.lod(jd_utc) / 86_400_000)
+    ω = EARTH_ANGULAR_SPEED * (1 - lod / 86_400_000)
 
     return _rotation_with_spin(r_tod_to_pef_fk5(DCM, jd_ut1, e.tt, δΔψ), ω)
 end
@@ -730,12 +810,71 @@ Reference System, using the CIO-based formulation.
 
 Applies the IERS CIP offsets from the IAU-2006 EOP series.
 """
+#
+# The CIP coordinates X, Y and the CIO locator s are interpolated from values on a 30-minute
+# grid in TT rather than evaluated at every epoch. Evaluating them is the IAU 2006/2000A series,
+# over a thousand terms and 31 µs a call, and a force model asks for them at every step. They
+# change slowly: four-point Lagrange interpolation on the grid is within 6.3e-5 µas of the series
+# over 1950-2050 (the worst of 2000 random epochs), which is round-off, and far inside the
+# 0.05 µas this edge is held to against ERFA. Orekit interpolates these quantities likewise.
+#
+# The grid values depend only on the grid, so the result depends only on the epoch, not on what
+# was asked for before. They are cached under a lock, and the cache is emptied when it grows past
+# a few months of nodes, so a long run does not grow it without bound.
+
+const _CIP_STEP_DAYS = 1 / 48
+const _CIP_NODES     = Dict{Int, NTuple{3, Float64}}()
+const _CIP_LOCK      = ReentrantLock()
+const _CIP_MAX_NODES = 8192
+
+# Written without `lock(f, l)` and `get!(f, d, k)`: their closures cost an allocation a node.
+function _cip_node(k::Int)
+    lock(_CIP_LOCK)
+    try
+        v = get(_CIP_NODES, k, nothing)
+        v === nothing || return v
+        length(_CIP_NODES) >= _CIP_MAX_NODES && empty!(_CIP_NODES)
+        v = cio_iau2006(k * _CIP_STEP_DAYS)
+        _CIP_NODES[k] = v
+        return v
+    finally
+        unlock(_CIP_LOCK)
+    end
+end
+
+"""
+    _cip_iau2006(jd_tt) -> (x, y, s)
+
+The IAU 2006/2000A CIP coordinates and CIO locator [rad] at TT Julian date `jd_tt`, by
+four-point Lagrange interpolation on a 30-minute grid; see the note above. A dual `jd_tt`
+carries the interpolant's derivative.
+"""
+function _cip_iau2006(jd_tt::Real)
+    τ = jd_tt / _CIP_STEP_DAYS
+    k = floor(Int, τ)
+    u = τ - k                                      # in [0, 1): between nodes k and k + 1
+    w = (-u * (u - 1) * (u - 2) / 6,  (u + 1) * (u - 1) * (u - 2) / 2,
+         -(u + 1) * u * (u - 2) / 2,  (u + 1) * u * (u - 1) / 6)
+    n = (_cip_node(k - 1), _cip_node(k), _cip_node(k + 1), _cip_node(k + 2))
+    return ntuple(i -> w[1] * n[1][i] + w[2] * n[2][i] + w[3] * n[3][i] + w[4] * n[4][i], 3)
+end
+
+# The GCRF-to-CIRS matrix from the CIP coordinates and CIO locator, as SatelliteToolbox's
+# `r_gcrf_to_cirs_iau2006` builds it: its series approximation of a = 1 / (1 + cos d), then the
+# rotation by -s about Z.
+function _gcrf_to_cirs(x, y, s)
+    x², y², xy = x^2, y^2, x * y
+    a = 1 / 2 + 1 / 8 * (x² + y²)
+    D = DCM(1 - a * x²,    -a * xy, x,
+               -a * xy, 1 - a * y², y,
+                   -x ,        -y , 1 - a * (x² + y²))
+    return _Rz(-s) * D
+end
+
 function axes_rotation(::GCRF, ::CIRS, e::EpochScales)
-    table  = eop(IAU2006())
-    jd_utc = epoch_utc(e)
-    δx = table.δx(jd_utc) * _MILLIARCSEC_TO_RAD
-    δy = table.δy(jd_utc) * _MILLIARCSEC_TO_RAD
-    return _rotation_no_rate(r_gcrf_to_cirs_iau2006(DCM, e.tt, δx, δy))
+    δx, δy = _eop_read(IAU2006(), (:δx, :δy), epoch_utc(e)) .* _MILLIARCSEC_TO_RAD
+    x, y, s = _cip_iau2006(e.tt)
+    return _rotation_no_rate(_gcrf_to_cirs(x + δx, y + δy, s))
 end
 
 axes_rotation(::CIRS, ::GCRF, e::EpochScales) =
@@ -759,10 +898,10 @@ Carries the Earth rotation rate, like its FK5 counterpart `TODEq ↔ PEF`. This
 transformation does not apply polar motion; the `TIRS ↔ ITRF` edge does.
 """
 function axes_rotation(::CIRS, ::TIRS, e::EpochScales)
-    table  = eop(IAU2006())
     jd_utc = epoch_utc(e)
-    jd_ut1 = jd_utc + table.Δut1_utc(jd_utc) / 86_400
-    ω = EARTH_ANGULAR_SPEED * (1 - table.lod(jd_utc) / 86_400_000)
+    Δut1, lod = _eop_read(IAU2006(), (:Δut1_utc, :lod), jd_utc)
+    jd_ut1 = jd_utc + Δut1 / 86_400
+    ω = EARTH_ANGULAR_SPEED * (1 - lod / 86_400_000)
     return _rotation_with_spin(_Rz(_earth_rotation_angle(jd_ut1)), ω)
 end
 
@@ -785,10 +924,7 @@ This is the edge that distinguishes `TIRS` from `ITRF`: `TIRS` has Earth
 rotation applied and polar motion not.
 """
 function axes_rotation(::TIRS, ::ITRF, e::EpochScales)
-    table  = eop(IAU2006())
-    jd_utc = epoch_utc(e)
-    x_p = table.x(jd_utc) * _ARCSEC_TO_RAD
-    y_p = table.y(jd_utc) * _ARCSEC_TO_RAD
+    x_p, y_p = _eop_read(IAU2006(), (:x, :y), epoch_utc(e)) .* _ARCSEC_TO_RAD
     return _rotation_no_rate(r_tirs_to_itrf_iau2006(DCM, e.tt, x_p, y_p))
 end
 
@@ -820,10 +956,7 @@ result is the corrected IAU-80 nutation rather than the original model.
 `epoch` may be a `Time` or a TDB Julian date.
 """
 function axes_rotation(::MODEq, ::TODEq, e::EpochScales)
-    table = eop(FK5())
-    jd_utc = epoch_utc(e)
-    δΔϵ = table.δΔϵ(jd_utc) * _MILLIARCSEC_TO_RAD
-    δΔψ = table.δΔψ(jd_utc) * _MILLIARCSEC_TO_RAD
+    δΔϵ, δΔψ = _eop_read(FK5(), (:δΔϵ, :δΔψ), epoch_utc(e)) .* _MILLIARCSEC_TO_RAD
     return _rotation_no_rate(r_mod_to_tod_fk5(DCM, e.tt, δΔϵ, δΔψ))
 end
 

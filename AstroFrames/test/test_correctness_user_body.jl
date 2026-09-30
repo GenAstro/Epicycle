@@ -284,7 +284,10 @@ end
     @testset "the SPICE model cannot, which is the point" begin
         # Recorded so nobody builds an estimator on a SPICE-backed frame and
         # finds out late. This is a property of SPICE, not a defect here.
+        # Since AstroUniverse 0.4 it says so, rather than failing in a conversion.
         f = x -> body_axes_rotation(SpiceOrientation("IAU_MARS"), 499, x)[1, 1]
-        @test_throws MethodError ForwardDiff.derivative(f, _JD_UB)
+        e = try; ForwardDiff.derivative(f, _JD_UB); nothing; catch e; e; end
+        @test e isa ArgumentError
+        @test occursin("not differentiable", e.msg)
     end
 end

@@ -107,12 +107,12 @@ end
     # A frame no kernel defines: the message is about the frame kernel.
     e1 = AstroFrames._lunar_frame_error("MOON_NOT_A_FRAME", 0.0, cause)
     @test e1 isa ArgumentError
-    @test occursin("MoonME axes need the lunar frame kernels", e1.msg)
+    @test occursin("MoonME axes need the DE440 lunar frame kernel", e1.msg)
     @test occursin("moon_de440_250416.tf", e1.msg)
     @test occursin("FRAMEDATANOTFOUND", e1.msg)
 
     # A frame that is defined but has no data at the epoch: the message gives the epoch as a date.
-    e2 = AstroFrames._lunar_frame_error("MOON_PA", 0.0, cause)
+    e2 = AstroFrames._lunar_frame_error("MOON_PA_DE440", 0.0, cause)
     @test occursin("MoonPA axes are defined", e2.msg)
     @test occursin("2000-01-01T12:00:00.000 TDB", e2.msg)
     @test occursin("moon_pa_de440_200625.bpc", e2.msg)

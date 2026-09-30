@@ -34,7 +34,7 @@ export CelestialBodyFixed
 export RIC, LVLH, VNB
 export Inertial
 export AbstractCoordinateSystem, CoordinateSystem
-export axes_rotation, origin_translation, edge_theory
+export axes_rotation, origin_translation, edge_theory, body_fixed_rotation
 
 # The extension contract - what you write a frame of your own against.
 export EpochScales, epoch_tdb, epoch_tt, epoch_utc

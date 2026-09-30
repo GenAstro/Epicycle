@@ -141,10 +141,15 @@ end
     end
 end
 
-@testset "past the end of the table, nothing is said" begin
+@testset "past the end of the table, nothing is said about EOP" begin
     # Recording today's behaviour explicitly. When the warning recommended in
     # this file's header is implemented, this test fails — which is the point.
     # Update it then, and update the header with it.
+    #
+    # The leap-second table may speak, as it does before 1972: UTC more than
+    # five years past its list's expiry warns once that no further leap seconds
+    # are assumed. That is not an EOP message, so it is let through.
+    _leap_notice(l) = occursin("leap-second list expires", string(l.message))
     original = frame_theory()
     try
         set_frame_theory!(IAU2006())
@@ -154,7 +159,7 @@ end
             logs, _ = Test.collect_test_logs() do
                 axes_rotation(ICRF(), ITRF(), jd)
             end
-            @test isempty(logs)
+            @test all(_leap_notice, logs)
         end
     finally
         set_frame_theory!(original)

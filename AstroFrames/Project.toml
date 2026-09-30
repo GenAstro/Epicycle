@@ -1,6 +1,6 @@
 name = "AstroFrames"
 uuid = "7b16edaa-6936-47b4-b191-819abb0f77bd"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
 
 [deps]
@@ -14,9 +14,9 @@ SatelliteToolboxTransformations = "6b019ec1-7a1e-4f04-96c7-a9db1ca5514d"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-AstroEpochs = "0.5.0"
+AstroEpochs = "0.6"
 AstroStates = "0.10.0"
-AstroUniverse = "0.3.0"
+AstroUniverse = "0.4"
 EpicycleBase = "0.1.1"
 SPICE = "0.2"
 SatelliteToolboxTransformations = "1.2.0"

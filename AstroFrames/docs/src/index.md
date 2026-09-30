@@ -79,7 +79,7 @@ MoonFixed
 # CoordinateSystem(mars, GCRF())   # GCRF axes require an Earth origin
 ```
 
-Earth and the Moon do not use `CelestialBodyFixed`. Their higher-fidelity frames are `ITRF`, `MoonME`, and `MoonPA`; requesting `CelestialBodyFixed` for either body raises an error.
+`CelestialBodyFixed` for Earth and the Moon uses their orientation models too: for Earth it is `ITRF`, by the active frame theory, and for the Moon it is `MoonPA`, the principal axes, unless `set_orientation!(moon, LunarME())` makes it the mean-Earth axes. Naming `ITRF`, `MoonPA` or `MoonME` directly says which is meant regardless of those settings.
 
 ## Coordinates and Conversions
 

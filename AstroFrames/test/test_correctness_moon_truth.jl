@@ -28,13 +28,19 @@
 # MOON_PA to the DE421 frame, with DE440 orientation data raises loudly —
 # "PCK data required ... for MOON_PA_DE421 were not found".
 #
-# The quiet case is `moon_pa_de421_1900-2050.bpc` *with* `moon_080317.tf`. That
+# The quiet case was `moon_pa_de421_1900-2050.bpc` *with* `moon_080317.tf`. That
 # pair is internally consistent, loads without complaint, and returns a
 # rotation orthonormal to 3e-16 with determinant exactly 1. It differs from
 # DE440 by 0.178 arcsec — 1.5 m on the lunar surface. Every structural check
 # passes, and so does the synchronous-rotation check above, at 8.777° against
-# a 15° bound. Only these rows notice. Both DE421 files are commonly already
-# cached, so this is a live way to be quietly wrong rather than a hypothetical.
+# a 15° bound. Loaded after the DE440 kernels, it redefined the alias MOON_PA,
+# which is what the axes used to read.
+#
+# Since AstroFrames 0.4 the axes read the versioned frames, MOON_PA_DE440 and
+# MOON_ME_DE440_ME421, which no other kernel redefines; the last testset below
+# loads the DE421 pair on top and checks the axes do not move. Without the
+# DE440 kernels at all, the versioned names are undefined and the axes raise,
+# so the case is loud now. These rows still pin the kernel's content.
 #
 # The generator is `generate_moon_truth.jl`, internal SPICE truth tooling.
 #
@@ -243,5 +249,40 @@ end
     # naming a frame Epicycle offers is all a user should have to do.
     for kernel in ("moon_pa_de440_200625.bpc", "moon_de440_250416.tf")
         @test kernel in AstroUniverse.DEFAULT_KERNELS
+    end
+end
+
+@testset "loading the DE421 lunar kernels on top does not move the axes" begin
+    # The quiet case in the header: the DE421 pair, loaded after the DE440 kernels,
+    # redefines the alias MOON_PA. The axes read the versioned DE440 frames, so they
+    # must not move. The alias is checked to have moved, so the test is not vacuous.
+    # A failure to fetch the DE421 files skips, and is recorded as skipped.
+    old = ("moon_080317.tf" =>
+               "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/fk/satellites/moon_080317.tf",
+           "moon_pa_de421_1900-2050.bpc" =>
+               "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/moon_pa_de421_1900-2050.bpc")
+    jd = 2458849.5
+    alias(jd) = body_axes_rotation(SpiceOrientation("MOON_PA"), 301, jd)
+    pa, me, alias_before = axes_rotation(ICRF(), MoonPA(), jd), axes_rotation(ICRF(), MoonME(), jd), alias(jd)
+    @test alias_before == pa                         # with only DE440 loaded, the alias is DE440
+
+    fetched = try
+        foreach(((name, url),) -> download_spice_kernel(name, url), old)
+        true
+    catch e
+        @info "Could not fetch the DE421 lunar kernels; skipping. ($(sprint(showerror, e)))"
+        false
+    end
+    fetched || @test_skip "the DE421 lunar kernels do not move MoonPA or MoonME"
+    if fetched
+        try
+            foreach(((name, _),) -> load_spice_kernel(name), old)
+            @test alias(jd) != alias_before              # the alias now names the DE421 frame
+            @test axes_rotation(ICRF(), MoonPA(), jd) == pa
+            @test axes_rotation(ICRF(), MoonME(), jd) == me
+        finally
+            foreach(((name, _),) -> unload_spice_kernel(name), reverse(old))
+        end
+        @test alias(jd) == alias_before                  # and names DE440 again once they go
     end
 end
