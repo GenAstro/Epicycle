@@ -27,7 +27,16 @@ os = OrbitState(state_vec, Cartesian())
 struct OrbitState{S<:AbstractOrbitStateType, T<:Real, V<:AbstractVector{T}}
     state::V
     statetype::S
+
+    function OrbitState{S,T,V}(state::V, statetype::S) where {S<:AbstractOrbitStateType, T<:Real, V<:AbstractVector{T}}
+        length(state) == 6 || throw(ArgumentError(
+            "An OrbitState holds six numbers; got $(length(state)) for $(nameof(typeof(statetype)))."))
+        return new{S,T,V}(state, statetype)
+    end
 end
+
+OrbitState(state::V, statetype::S) where {S<:AbstractOrbitStateType, T<:Real, V<:AbstractVector{T}} =
+    OrbitState{S,T,V}(state, statetype)
 
 # TODO Add Delaunay, that one was missed. 
 

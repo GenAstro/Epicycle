@@ -123,12 +123,12 @@ using StaticArrays
     
     @testset "Constructor assertions" begin
         # Wrong length for 6-element constructor
-        @test_throws AssertionError CartesianState([1.0, 2.0, 3.0])
-        @test_throws AssertionError CartesianState([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
+        @test_throws ArgumentError CartesianState([1.0, 2.0, 3.0])
+        @test_throws ArgumentError CartesianState([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
         
         # Wrong length for separate vector constructors
-        @test_throws AssertionError CartesianState([1.0, 2.0], [4.0, 5.0, 6.0])
-        @test_throws AssertionError CartesianState([1.0, 2.0, 3.0], [4.0, 5.0])
+        @test_throws ArgumentError CartesianState([1.0, 2.0], [4.0, 5.0, 6.0])
+        @test_throws ArgumentError CartesianState([1.0, 2.0, 3.0], [4.0, 5.0])
     end
     
     @testset "Consistency across constructors" begin

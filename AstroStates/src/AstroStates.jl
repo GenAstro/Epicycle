@@ -138,7 +138,7 @@ end
 Construct CartesianState from 6-element vector [x, y, z, vx, vy, vz].
 """
 function CartesianState(data::AbstractVector{T}) where {T<:Real}
-    @assert length(data) == 6 "CartesianState must be a 6-element vector"
+    length(data) == 6 || throw(ArgumentError("CartesianState must be a 6-element vector; got $(length(data)) elements."))
     CartesianState(SVector{3,T}(data[1], data[2], data[3]), 
                    SVector{3,T}(data[4], data[5], data[6]))
 end
@@ -168,8 +168,8 @@ end
 Construct CartesianState from separate 3-element position and velocity vectors.
 """
 function CartesianState(pos::AbstractVector{T}, vel::AbstractVector{T}) where {T<:Real}
-    @assert length(pos) == 3 "Position vector must have 3 elements"
-    @assert length(vel) == 3 "Velocity vector must have 3 elements"
+    length(pos) == 3 || throw(ArgumentError("Position vector must have 3 elements; got $(length(pos))."))
+    length(vel) == 3 || throw(ArgumentError("Velocity vector must have 3 elements; got $(length(vel))."))
     CartesianState(SVector{3,T}(pos[1], pos[2], pos[3]),
                    SVector{3,T}(vel[1], vel[2], vel[3]))
 end
@@ -1042,7 +1042,7 @@ CartesianState(inasymptote::IncomingAsymptoteState, μ::Real) = CartesianState(
 #KeplerianState(s::Vector{<:Real}, μ::Real) = KeplerianState(s...)
 #KeplerianState(s::Vector{<:Real}) = KeplerianState(s...)
 KeplerianState(s::AbstractVector{T}, μ::Real) where {T<:Real} = begin
-    @assert length(s) == 6
+    length(s) == 6 || throw(ArgumentError("A state vector must have 6 elements; got $(length(s))."))
     KeplerianState{T}(s[1], s[2], s[3], s[4], s[5], s[6])
 end
 KeplerianState(s::AbstractVector{T}) where {T<:Real} = KeplerianState(s, zero(T))
@@ -1065,7 +1065,7 @@ KeplerianState(inasymptote::IncomingAsymptoteState, μ::Real) = KeplerianState(
 #SphericalRADECState(s::Vector{<:Real}, μ::Real) = SphericalRADECState(s...)
 #SphericalRADECState(s::Vector{<:Real}) = SphericalRADECState(s...)
 SphericalRADECState(s::AbstractVector{T}, μ::Real) where {T<:Real} = begin
-    @assert length(s) == 6
+    length(s) == 6 || throw(ArgumentError("A state vector must have 6 elements; got $(length(s))."))
     SphericalRADECState{T}(s[1], s[2], s[3], s[4], s[5], s[6])
 end
 SphericalRADECState(s::AbstractVector{T}) where {T<:Real} = SphericalRADECState(s, zero(T))
@@ -1093,7 +1093,7 @@ SphericalRADECState(b::BrouwerMeanShortState, μ::Real) = SphericalRADECState(Ke
 #SphericalAZIFPAState(s::Vector{<:Real}, μ::Real) = SphericalAZIFPAState(s...)
 #SphericalAZIFPAState(s::Vector{<:Real}) = SphericalAZIFPAState(s...)
 SphericalAZIFPAState(s::AbstractVector{T}, μ::Real) where {T<:Real} = begin
-    @assert length(s) == 6
+    length(s) == 6 || throw(ArgumentError("A state vector must have 6 elements; got $(length(s))."))
     SphericalAZIFPAState{T}(s[1], s[2], s[3], s[4], s[5], s[6])
 end
 SphericalAZIFPAState(s::AbstractVector{T}) where {T<:Real} = SphericalAZIFPAState(s, zero(T))
@@ -1121,7 +1121,7 @@ SphericalAZIFPAState(b::BrouwerMeanShortState, μ::Real) = SphericalAZIFPAState(
 #ModifiedEquinoctialState(s::Vector{<:Real}, μ::Real) = ModifiedEquinoctialState(s...)
 #ModifiedEquinoctialState(s::Vector{<:Real}) = ModifiedEquinoctialState(s...)
 ModifiedEquinoctialState(s::AbstractVector{T}, μ::Real) where {T<:Real} = begin
-    @assert length(s) == 6
+    length(s) == 6 || throw(ArgumentError("A state vector must have 6 elements; got $(length(s))."))
     ModifiedEquinoctialState{T}(s[1], s[2], s[3], s[4], s[5], s[6])
 end
 ModifiedEquinoctialState(s::AbstractVector{T}) where {T<:Real} =
@@ -1148,7 +1148,7 @@ ModifiedEquinoctialState(b::BrouwerMeanShortState, μ::Real) = ModifiedEquinocti
 #OutGoingAsymptoteState(s::Vector{<:Real}, μ::Real) = OutGoingAsymptoteState(s...)
 #OutGoingAsymptoteState(s::Vector{<:Real}) = OutGoingAsymptoteState(s...)
 OutGoingAsymptoteState(s::AbstractVector{T}, μ::Real) where {T<:Real} = begin
-    @assert length(s) == 6
+    length(s) == 6 || throw(ArgumentError("A state vector must have 6 elements; got $(length(s))."))
     OutGoingAsymptoteState{T}(s[1], s[2], s[3], s[4], s[5], s[6])
 end
 OutGoingAsymptoteState(s::AbstractVector{T}) where {T<:Real} = OutGoingAsymptoteState(s, zero(T))
@@ -1178,7 +1178,7 @@ OutGoingAsymptoteState(b::BrouwerMeanShortState, μ::Real) = OutGoingAsymptoteSt
 #IncomingAsymptoteState(s::Vector{<:Real}, μ::Real) = IncomingAsymptoteState(s...)
 #IncomingAsymptoteState(s::Vector{<:Real}) = IncomingAsymptoteState(s...)
 IncomingAsymptoteState(s::AbstractVector{T}, μ::Real) where {T<:Real} = begin
-    @assert length(s) == 6
+    length(s) == 6 || throw(ArgumentError("A state vector must have 6 elements; got $(length(s))."))
     IncomingAsymptoteState{T}(s[1], s[2], s[3], s[4], s[5], s[6])
 end
 IncomingAsymptoteState(s::AbstractVector{T}) where {T<:Real} = IncomingAsymptoteState(s, zero(T))
@@ -1209,7 +1209,7 @@ IncomingAsymptoteState(b::BrouwerMeanShortState, μ::Real) = IncomingAsymptoteSt
 #ModifiedKeplerianState(s::Vector{<:Real}, μ::Real) = ModifiedKeplerianState(s...)
 #ModifiedKeplerianState(s::Vector{<:Real}) = ModifiedKeplerianState(s...)
 ModifiedKeplerianState(s::AbstractVector{T}, μ::Real) where {T<:Real} = begin
-    @assert length(s) == 6
+    length(s) == 6 || throw(ArgumentError("A state vector must have 6 elements; got $(length(s))."))
     ModifiedKeplerianState{T}(s[1], s[2], s[3], s[4], s[5], s[6])
 end
 ModifiedKeplerianState(s::AbstractVector{T}) where {T<:Real} = ModifiedKeplerianState(s, zero(T))
@@ -1234,7 +1234,7 @@ ModifiedKeplerianState(b::BrouwerMeanShortState, μ::Real) = ModifiedKeplerianSt
 #EquinoctialState(s::Vector{<:Real}, μ::Real) = EquinoctialState(s...)
 #EquinoctialState(s::Vector{<:Real}) = EquinoctialState(s...)
 EquinoctialState(s::AbstractVector{T}, μ::Real) where {T<:Real} = begin
-    @assert length(s) == 6
+    length(s) == 6 || throw(ArgumentError("A state vector must have 6 elements; got $(length(s))."))
     EquinoctialState{T}(s[1], s[2], s[3], s[4], s[5], s[6])
 end
 EquinoctialState(s::AbstractVector{T}) where {T<:Real} =
@@ -1260,7 +1260,7 @@ EquinoctialState(b::BrouwerMeanShortState, μ::Real) = EquinoctialState(Kepleria
 #AlternateEquinoctialState(s::Vector{<:Real}, μ::Real) = AlternateEquinoctialState(s...)
 #AlternateEquinoctialState(s::Vector{<:Real}) = AlternateEquinoctialState(s...)
 AlternateEquinoctialState(s::AbstractVector{T}, μ::Real) where {T<:Real} = begin
-    @assert length(s) == 6
+    length(s) == 6 || throw(ArgumentError("A state vector must have 6 elements; got $(length(s))."))
     AlternateEquinoctialState{T}(s[1], s[2], s[3], s[4], s[5], s[6])
 end
 AlternateEquinoctialState(s::AbstractVector{T}) where {T<:Real} =
@@ -1299,5 +1299,50 @@ EquinoctialState(state::AbstractOrbitState, μ::Real) = error("No conversion def
 AlternateEquinoctialState(state::AbstractOrbitState, μ::Real) = error("No conversion defined from $(typeof(state)) to AlternateEquinoctialState")
 OutGoingAsymptoteState(state::AbstractOrbitState, μ::Real) = error("No conversion defined from $(typeof(state)) to OutGoingAsymptoteState")
 IncomingAsymptoteState(state::AbstractOrbitState, μ::Real) = error("No conversion defined from $(typeof(state)) to IncomingAsymptoteState")
+
+# =============================================================================
+# Mixed element types, identity, equality
+# =============================================================================
+
+# Six numbers of mixed types promote to one, as Base's numeric constructors do, so
+# `KeplerianState(7000.0, 0.01, 0, 0, 0, 0)` works. When all six already share a type the
+# default constructor is the more specific method, so this never calls itself.
+for S in (:KeplerianState, :SphericalRADECState, :SphericalAZIFPAState, :ModifiedEquinoctialState,
+          :OutGoingAsymptoteState, :IncomingAsymptoteState, :ModifiedKeplerianState,
+          :EquinoctialState, :AlternateEquinoctialState, :BrouwerMeanLongState,
+          :BrouwerMeanShortState)
+    @eval $S(a::Real, b::Real, c::Real, d::Real, e::Real, f::Real) = $S(promote(a, b, c, d, e, f)...)
+end
+
+function CartesianState(pos::AbstractVector{<:Real}, vel::AbstractVector{<:Real})
+    T = promote_type(eltype(pos), eltype(vel))
+    return CartesianState(convert(AbstractVector{T}, pos), convert(AbstractVector{T}, vel))
+end
+
+KeplerianState(state::KeplerianState) = state
+
+# `CartesianState` is mutable, so without these two equal states compare by identity.
+Base.:(==)(a::CartesianState, b::CartesianState) = a.position == b.position && a.velocity == b.velocity
+Base.hash(s::CartesianState, h::UInt) = hash(s.velocity, hash(s.position, hash(:CartesianState, h)))
+
+"""
+    isapprox(a::AbstractOrbitState, b::AbstractOrbitState; kwargs...) -> Bool
+
+Whether two states of the same representation are approximately equal, comparing their
+[`to_vector`](@ref) values with `isapprox` and the given keywords. Angles are compared as numbers,
+so 0 and 2π differ.
+
+# Example
+```jldoctest
+CartesianState([7000.0, 0, 0, 0, 7.5, 0]) ≈ CartesianState([7000.0 + 1e-9, 0, 0, 0, 7.5, 0])
+
+# output
+true
+```
+"""
+function Base.isapprox(a::AbstractOrbitState, b::AbstractOrbitState; kwargs...)
+    nameof(typeof(a)) === nameof(typeof(b)) || return false
+    return isapprox(to_vector(a), to_vector(b); kwargs...)
+end
 
 end

@@ -658,10 +658,10 @@ brouwer_mean_long_to_kep(mean::AbstractVector, μ::Real) =
 # State-type conversion constructors (pivot through KeplerianState)
 # ============================================================================
 BrouwerMeanLongState(s::AbstractVector{T}, μ::Real) where {T<:Real} =
-    (@assert length(s) == 6; BrouwerMeanLongState{T}(s[1], s[2], s[3], s[4], s[5], s[6]))
+    (length(s) == 6 || throw(ArgumentError("A state vector must have 6 elements; got $(length(s)).")); BrouwerMeanLongState{T}(s[1], s[2], s[3], s[4], s[5], s[6]))
 BrouwerMeanLongState(s::AbstractVector{T}) where {T<:Real} = BrouwerMeanLongState(s, zero(T))
 BrouwerMeanShortState(s::AbstractVector{T}, μ::Real) where {T<:Real} =
-    (@assert length(s) == 6; BrouwerMeanShortState{T}(s[1], s[2], s[3], s[4], s[5], s[6]))
+    (length(s) == 6 || throw(ArgumentError("A state vector must have 6 elements; got $(length(s)).")); BrouwerMeanShortState{T}(s[1], s[2], s[3], s[4], s[5], s[6]))
 BrouwerMeanShortState(s::AbstractVector{T}) where {T<:Real} = BrouwerMeanShortState(s, zero(T))
 
 BrouwerMeanLongState(s::BrouwerMeanLongState, μ::Real)  = s
