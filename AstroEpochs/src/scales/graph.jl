@@ -77,11 +77,51 @@ route, then rebalance the parts as a Time holds them.
 """
 function apply_transforms(jd1::Real, jd2::Real, from::Symbol, to::Symbol)
     from === to && return _rebalance(jd1, jd2)
-    T = promote_type(typeof(jd1), typeof(jd2))
+    # At least Float64: the transforms' constants are Float64, and a loop variable that changed
+    # type part-way would make the whole conversion type-unstable.
+    T = promote_type(typeof(jd1), typeof(jd2), Float64)
     a1, a2 = T(jd1), T(jd2)
-    path = get_conversion_path(from, to)
-    for i in 1:(length(path) - 1)
-        a1, a2 = SCALE_TRANSFORMS[(path[i], path[i + 1])](a1, a2)
+    s = from
+    while s !== to
+        n = _next_scale(s, to)
+        a1, a2 = _hop(s, n, a1, a2)
+        s = n
     end
-    return _rebalance(promote(a1, a2)...)
+    return _rebalance(a1, a2)
+end
+
+# The scale after `from` on the route to `to`: `to` itself where the two are joined directly,
+# otherwise the first scale of the MULTI_HOPS route, read backwards for the reverse direction. The
+# same route `get_conversion_path` gives, found without building it.
+function _next_scale(from::Symbol, to::Symbol)
+    haskey(SCALE_TRANSFORMS, (from, to)) && return to
+    hops = get(MULTI_HOPS, (from, to), nothing)
+    hops === nothing || return first(hops)
+    hops = get(MULTI_HOPS, (to, from), nothing)
+    hops === nothing || return last(hops)
+    return last(get_conversion_path(from, to))          # raises, naming the pair
+end
+
+# One hop by a direct call, so the compiler knows what it returns; looking the transform up in
+# SCALE_TRANSFORMS, a Dict of `Function`s, returned an unknown type and cost an allocation a hop.
+# The pairs are SCALE_TRANSFORMS' own, and a test holds the two to the same set.
+@inline function _hop(from::Symbol, to::Symbol, a1::T, a2::T) where {T<:Real}
+    if from === :tai
+        to === :tt  && return taitt(a1, a2)
+        to === :utc && return taiutc(a1, a2)
+    elseif from === :tt
+        to === :tai && return tttai(a1, a2)
+        to === :tdb && return tttdb(a1, a2)
+        to === :tcg && return tttcg(a1, a2)
+    elseif from === :tdb
+        to === :tt  && return tdbtt(a1, a2)
+        to === :tcb && return tdbtcb(a1, a2)
+    elseif from === :tcg
+        to === :tt  && return tcgtt(a1, a2)
+    elseif from === :tcb
+        to === :tdb && return tcbtdb(a1, a2)
+    elseif from === :utc
+        to === :tai && return utctai(a1, a2)
+    end
+    throw(ArgumentError("No transform joins $(from) to $(to) directly."))   # COV_EXCL_LINE
 end
