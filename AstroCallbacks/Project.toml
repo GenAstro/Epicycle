@@ -17,7 +17,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 [compat]
 EpicycleBase = "0.1.1"
 AstroEpochs = "0.6"
-AstroStates = "0.10.0"
+AstroStates = "0.11"
 AstroUniverse = "0.4"
 AstroFrames = "0.4"
 AstroModels = "0.3.0"
