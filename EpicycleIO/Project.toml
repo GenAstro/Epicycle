@@ -13,7 +13,7 @@ Scratch = "6c6a2e73-6563-6170-7368-637461726353"
 Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
 
 [compat]
-AstroEpochs = "0.5.0"
+AstroEpochs = "0.6"
 AstroModels = "0.3.0"
 JSON = "0.21, 1"
 PlotlyBase = "0.8.22"

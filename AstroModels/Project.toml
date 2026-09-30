@@ -14,10 +14,10 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 EpicycleBase = "0.1.1"
-AstroEpochs = "0.5.0"
+AstroEpochs = "0.6"
 AstroStates = "0.10.0"
-AstroUniverse = "0.3.0"
-AstroFrames = "0.3.0"
+AstroUniverse = "0.4"
+AstroFrames = "0.4"
 StaticArrays = "1"
 julia = "1.10"
 
