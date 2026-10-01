@@ -90,7 +90,14 @@ function _eccentric_anomaly(M, e; tol=1e-14, maxiter=60)
     E = Mr + (sin(Mr) < 0 ? -1 : 1) * oftype(e, 0.85) * e
     for _ in 1:maxiter
         f = E - e * sin(E) - Mr
-        f < 0 ? (lo = E) : (hi = E)
+        # An exact root (f = 0) bounds neither side. Taking it as `hi` left the zero Newton step
+        # on the bracket's edge, where the strict test below replaced the root with a bisection
+        # midpoint, and the iteration stopped up to 1e-13 away.
+        if f < 0
+            lo = E
+        elseif f > 0
+            hi = E
+        end
         step = f / (1 - e * cos(E))
         Enew = E - step
         if !(lo < Enew < hi)
