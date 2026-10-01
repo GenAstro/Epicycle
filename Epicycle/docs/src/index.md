@@ -1,14 +1,24 @@
 # Epicycle: A Framework for Space Mission Design and Navigation
 
+```@raw html
+<div style="float: right; width: 190px; max-width: 40%; margin: 0.2em 0 1em 1.5em; text-align: center;">
+  <a href="assets/EpicycleProductBrochure.pdf" target="_blank" rel="noopener">
+    <img src="assets/EpicycleProductBrochureCover.png" alt="Cover of the Epicycle R2026 Beta product brochure"
+         style="width: 100%; border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);">
+  </a>
+  <a href="assets/EpicycleProductBrochure.pdf" target="_blank" rel="noopener"
+     style="display: block; margin-top: 0.7em; padding: 0.55em 0.8em; border-radius: 6px; background: linear-gradient(135deg, #1a73e8, #4fa3ff); color: #ffffff; font-weight: 600; text-decoration: none; box-shadow: 0 2px 8px rgba(26, 115, 232, 0.45);">
+    Product brochure (PDF)
+  </a>
+</div>
+```
+
 Epicycle is a Julia package framework for astrodynamics, space mission design, and navigation, built with a modular architecture that spans workflows from preliminary mission design through trajectory optimization and orbit determination. It contains coordinate systems, time standards, spacecraft state and ground station models, propagators, targeters, optimal control transcriptions, and batch and sequential estimators.
 
 The ecosystem consists of twelve specialized packages organized in architectural layers, from core abstractions (EpicycleBase) through astronomical models (AstroEpochs, AstroStates, AstroFrames, AstroRoutines, and AstroUniverse) to integrated workflows (AstroManeuvers, AstroProp, AstroCallbacks, EpicycleIO, and AstroSolve). The structure lets users work with low-level utilities independently of the full system, or compose mission-specific analyses using interfaces designed to solve complex problems, fast. 
 
 ```@raw html
-<div style="text-align: center;">
-  <img src="assets/MainPageTrajectoryGraphic.png" width="50%" alt="GEO Transfer Trajectory">
-  <p><em>Example: GEO transfer trajectory with plane change correction, showing 8-event optimization sequence.</em></p>
-</div>
+<div style="clear: both;"></div>
 ```
 
 ## Installation
