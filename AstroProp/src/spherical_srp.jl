@@ -200,9 +200,8 @@ function accel_eval!(force::SolarRadiationPressure, t::Time, x̄::Vector, x̄̇:
     geom === nothing && throw(ArgumentError(
         "sc.srp must be a SphericalSRP for SolarRadiationPressure; got nothing. " *
         "Set sc.srp = SphericalSRP(; c_r, srp_area) before propagating."))
-    jd_tdb = t.tdb.jd
     r_sat  = SVector{3}(x̄[1], x̄[2], x̄[3])
-    r_sun  = SVector{3}(translate(force.central_body, sun, jd_tdb))   # Earth→Sun, km, inertial
+    r_sun  = force_position(params, force.central_body, sun, t)       # Earth→Sun, km, inertial
     RC = geom.c_r * geom.srp_area / total_mass(sc)                    # Cr·A/m [m²/kg]
     Ψ  = force.solar_flux / _C_M_S                                    # N/m²
     F  = _shadow_factor(force.shadow, r_sat, r_sun, force.R_sun, force.R_occ)

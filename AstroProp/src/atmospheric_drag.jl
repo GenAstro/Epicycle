@@ -122,10 +122,10 @@ function accel_eval!(force::AtmosphericDrag, t::Time, x̄::Vector, x̄̇::Vector
     geom === nothing && throw(ArgumentError(
         "sc.drag must be a SphericalDrag for AtmosphericDrag; got nothing. " *
         "Set sc.drag = SphericalDrag(; c_d, drag_area) before propagating."))
-    jd  = t.utc.jd
+    jd  = force_epoch(params, t).utc
     r   = SVector{3}(x̄[1], x̄[2], x̄[3])
     v   = SVector{3}(x̄[4], x̄[5], x̄[6])
-    R, Ṙ = _rotation_blocks(body_fixed_rotation(force.orientation, force.central_body.naifid, t))
+    R, Ṙ = _rotation_blocks(force_rotation(params, force.orientation, force.central_body.naifid, t))
     ρ   = density(force.model, jd, x̄, R)
     BC  = geom.c_d * geom.drag_area / total_mass(sc)         # Cd·A/m [m²/kg]
     # Velocity relative to the co-rotating atmosphere, from the same rotation the density used:

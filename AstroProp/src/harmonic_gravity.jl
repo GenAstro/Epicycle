@@ -166,9 +166,9 @@ end
 function accel_eval!(force::HarmonicGravity, t::Time, x̄::Vector, x̄̇::Vector,
                      sc::Spacecraft, params; jac::Dict = Dict())
     # ICRF to the field's body-fixed axes; for the Earth, the frame theory's ITRF chain.
-    R, _ = _rotation_blocks(body_fixed_rotation(force.orientation, force.central_body.naifid, t))
+    R, _ = _rotation_blocks(force_rotation(params, force.orientation, force.central_body.naifid, t))
     r_fixed = R * SVector{3}(x̄[1], x̄[2], x̄[3]) .* 1.0e3          # km → m
-    tsec    = (t.utc.jd - _JD_J2000) * 86400.0
+    tsec    = (force_epoch(params, t).utc - _JD_J2000) * 86400.0
     a_fixed = geopotential_accel(force.model, force.data, r_fixed, tsec,
                                  force.degree, force.order) ./ 1.0e3   # m/s² → km/s²
     a_icrf  = R' * a_fixed
