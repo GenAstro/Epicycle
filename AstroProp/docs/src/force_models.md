@@ -111,7 +111,15 @@ AtmosphericDrag(earth; model = HarrisPriesterModified(n = 6))    # a polar orbit
 SolarRadiationPressure
 ```
 
-One shadow model ships and is the default: `DualCone`, which models both umbra and penumbra.
+Two shadow models ship. `DualCone`, the default, models both umbra and penumbra exactly.
+`SmoothedConical` replaces the penumbra with a smooth curve that stays within 0.04 of `DualCone`, so
+the SRP acceleration has continuous derivatives through eclipse entry and exit; use it where SRP
+feeds a gradient.
+
+```@docs
+DualCone
+SmoothedConical
+```
 
 ## Spacecraft geometry
 

@@ -326,7 +326,8 @@ that's fast and works well for early analysis.
 
 `SolarRadiationPressure` computes the push of sunlight on the spacecraft. It uses the reflectivity
 and area you set on the spacecraft, and accounts for eclipses with the shadow model you pick.
-`DualCone`, which models both umbra and penumbra, is the default and the only shadow model.
+`DualCone`, which models both umbra and penumbra, is the default. `SmoothedConical` approximates it
+with a smooth penumbra, for SRP inside an optimization or an automatic-differentiation Jacobian.
 
 ```julia
 sat.srp = SphericalSRP(; c_r = 1.3, srp_area = 10.0)

@@ -55,7 +55,7 @@ export PosVel
 export PointMassGravity, accel_eval!
 export HarmonicGravity, AtmosphericDrag, SolarRadiationPressure
 export Zonal, Exponential
-export DualCone
+export DualCone, SmoothedConical
 export AbstractGeopotential, AbstractDensityModel, density
 export geopotential_accel, geopotential_data, max_degree, max_order
 export gravity_center, includes_central
