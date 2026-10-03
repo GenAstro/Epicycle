@@ -49,10 +49,15 @@ names the axes, the supplied origin, and the required origin.
 
 # Example
 ```julia
-AstroFrames.valid_origin(::PhobosFixed, origin) = origin.naifid == 401
+using AstroFrames, AstroUniverse
 
+struct PhobosFixed <: AstroFrames.AbstractAxes end
+AstroFrames.valid_origin(::PhobosFixed, origin) =
+    hasproperty(origin, :naifid) && origin.naifid == 401
+
+phobos = CelestialBody("Phobos", 7.0875e-4, 11.1, 0.0, 401)
 CoordinateSystem(phobos, PhobosFixed())   # fine
-CoordinateSystem(earth,  PhobosFixed())   # ArgumentError, naming the fix
+# CoordinateSystem(earth, PhobosFixed()) throws an ArgumentError naming the fix
 ```
 """
 valid_origin(::AbstractAxes, ::Any) = true

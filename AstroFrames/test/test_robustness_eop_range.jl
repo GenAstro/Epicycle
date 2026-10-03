@@ -21,8 +21,9 @@
 # starts in 1972, so an earlier epoch emits "Leapsecond of date ... not
 # available, returning 0" — four times per call. Noisy, but you find out.
 #
-# **After 2027-08 nothing is said at all.** That is the direction anyone doing
-# mission design goes, and it is silent.
+# **After 2027-08** AstroFrames warns, once per session, naming the date and the
+# table's span. Until 2026-09-30 nothing was said at all, in the direction anyone
+# doing mission design goes.
 #
 # Magnitude: UT1−UTC drifts by roughly half a second per year once the
 # predictions run out, and a second of UT1 is 15 arcseconds of Earth rotation,
@@ -30,14 +31,13 @@
 # to 2035 is a few kilometres out in Earth-fixed coordinates and says nothing
 # about it.
 #
-# **Recommendation, not yet implemented.** Warn once per session when an epoch
-# falls outside the loaded table, naming the span and the epoch asked for. Not
-# an error — extending past the table is legitimate for mission design, and
-# throwing would break studies that are entirely reasonable. But it should be
-# a decision the user makes knowingly rather than one they never learn about.
+# **The warning.** Outside the loaded table, in either direction, AstroFrames
+# warns once per session with the span and the epoch asked for. Not an error —
+# extending past the table is legitimate for mission design, and throwing would
+# break studies that are entirely reasonable. It is a decision the user now makes
+# knowingly.
 #
-# The tests below pin the current behaviour so that implementing the warning
-# fails this file and forces it to be updated deliberately.
+# The tests below pin the frozen values and the warning.
 # =============================================================================
 
 using AstroFrames
@@ -71,9 +71,9 @@ const _EOP_OUTSIDE = (_EOP_BEFORE..., _EOP_AFTER...)
     end
 end
 
-@testset "outside the table, the answer is silently frozen" begin
+@testset "outside the table, the answer is frozen" begin
     # Two epochs a decade apart, both past the end. Polar motion is identical
-    # between them, because both read the table's last row. Nothing warns.
+    # between them, because both read the table's last row.
     original = frame_theory()
     try
         set_frame_theory!(IAU2006())
@@ -141,15 +141,15 @@ end
     end
 end
 
-@testset "past the end of the table, nothing is said about EOP" begin
-    # Recording today's behaviour explicitly. When the warning recommended in
-    # this file's header is implemented, this test fails — which is the point.
-    # Update it then, and update the header with it.
+@testset "past the end of the table, the EOP warning is given" begin
+    # This was the tripwire: until 2026-09-30 nothing was said, and this test
+    # recorded that. Now every epoch past the end warns about the EOP table.
     #
-    # The leap-second table may speak, as it does before 1972: UTC more than
-    # five years past its list's expiry warns once that no further leap seconds
-    # are assumed. That is not an EOP message, so it is let through.
+    # The leap-second table may speak too: UTC more than five years past its
+    # list's expiry warns once that no further leap seconds are assumed. That is
+    # not an EOP message, so it is let through alongside.
     _leap_notice(l) = occursin("leap-second list expires", string(l.message))
+    _eop_notice(l)  = occursin("outside the loaded EOP table", string(l.message))
     original = frame_theory()
     try
         set_frame_theory!(IAU2006())
@@ -159,7 +159,8 @@ end
             logs, _ = Test.collect_test_logs() do
                 axes_rotation(ICRF(), ITRF(), jd)
             end
-            @test all(_leap_notice, logs)
+            @test any(_eop_notice, logs)
+            @test all(l -> _eop_notice(l) || _leap_notice(l), logs)
         end
     finally
         set_frame_theory!(original)
@@ -183,4 +184,14 @@ end
     finally
         set_frame_theory!(original)
     end
+end
+
+@testset "outside the table, AstroFrames warns" begin
+    span = AstroFrames._eop_span(eop(IAU2006()))
+    @test span !== nothing
+    @test span[1] < 2451545.0 < span[2]
+    # The logger in @test_logs keeps its own once-per-session count, so this sees the message
+    # even though the tests above have already triggered it.
+    @test_logs (:warn, r"outside the loaded EOP table") AstroFrames._check_eop_span(eop(IAU2006()), span[2] + 100)
+    @test_logs AstroFrames._check_eop_span(eop(IAU2006()), 2451545.0)
 end

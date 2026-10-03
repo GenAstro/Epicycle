@@ -32,9 +32,34 @@
 
 function _orbit_relative_missing(frame, field, why)
     return ArgumentError(
-        "$(frame) axes need `$(field)` in params: $(why). " *
-        "Pass it as `axes_rotation(source, $(frame)(), epoch, (; reference_state))`. " *
-        "The reference orbit comes from the caller; AstroFrames does not propagate.")
+        "$(frame) axes need `$(field)`: $(why). Make a spacecraft the coordinate system's " *
+        "origin, `CoordinateSystem(chief, $(frame)())`, and its state is used; or pass the " *
+        "reference orbit yourself, `Coordinate(c, cs, (; reference_state = x))` with `x` the " *
+        "reference position and velocity in ICRF. AstroFrames does not propagate.")
+end
+
+# A key that starts `reference` but is not one of the two read here is almost certainly a
+# misspelling, and ignoring it silently left a frame without the acceleration its author meant to
+# give. Other keys pass: params travel the whole route, and a frame of the user's own may read
+# keys of its own.
+function _check_reference_keys(p::NamedTuple, frame)
+    for k in keys(p)
+        k in (:reference_state, :reference_accel) && continue
+        startswith(String(k), "reference") && throw(ArgumentError(
+            "$(frame) axes: unknown parameter `$(k)`. The reference orbit is given by " *
+            "`reference_state` and, optionally, `reference_accel`."))
+    end
+    return nothing
+end
+
+# A reference orbit at the origin, or moving along its own radius, has no plane, and the frame's
+# axes come out NaN. Kept as NaN, as the state conversions do, so an optimiser can step back; but
+# said once, since otherwise nothing names the cause.
+@noinline function _warn_degenerate_reference(frame)
+    @warn "AstroFrames: the reference orbit for $(frame) axes has zero angular momentum (zero " *
+          "position, zero velocity, or velocity along the radius), so the axes are undefined " *
+          "and come out NaN. Shown once per session." maxlog = 1
+    return nothing
 end
 
 """
@@ -113,19 +138,32 @@ the orbit plane under out-of-plane forces. Velocity-primary frames require
 acceleration to determine their rate.
 """
 @inline function _reference(p::NamedTuple, frame)
+    _check_reference_keys(p, frame)
     haskey(p, :reference_state) || throw(_orbit_relative_missing(
         frame, :reference_state, "the frame is defined by a reference orbit"))
     s = p.reference_state
+    length(s) == 6 || throw(ArgumentError(
+        "$(frame) axes: `reference_state` is a position and velocity, six numbers in km and " *
+        "km/s; got $(length(s))."))
     r = SVector{3}(s[1], s[2], s[3])
     v = SVector{3}(s[4], s[5], s[6])
-    a = haskey(p, :reference_accel) ? SVector{3}(p.reference_accel) : zero(SVector{3,Float64})
+    iszero(cross(r, v)) && _warn_degenerate_reference(frame)
+    if haskey(p, :reference_accel)
+        acc = p.reference_accel
+        length(acc) == 3 || throw(ArgumentError(
+            "$(frame) axes: `reference_accel` is an acceleration, three numbers in km/s²; got " *
+            "$(length(acc))."))
+        a = SVector{3}(acc[1], acc[2], acc[3])
+    else
+        a = zero(SVector{3,Float64})
+    end
     return r, v, a
 end
 
 # --- RIC: radial, in-track, cross-track -------------------------------------
 
 """
-    axes_rotation(::ICRF, ::RIC, epoch, params) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::ICRF, ::RIC, epoch, params) -> SMatrix{6,6}
 
 Radial / in-track / cross-track axes of a reference orbit, in that order.
 
@@ -157,7 +195,7 @@ end
 # --- LVLH: local vertical, local horizontal ---------------------------------
 
 """
-    axes_rotation(::ICRF, ::LVLH, epoch, params) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::ICRF, ::LVLH, epoch, params) -> SMatrix{6,6}
 
 Local-vertical / local-horizontal axes of a reference orbit.
 
@@ -185,7 +223,7 @@ end
 # --- VNB: velocity, normal, binormal ----------------------------------------
 
 """
-    axes_rotation(::ICRF, ::VNB, epoch, params) -> SMatrix{6,6,Float64,36}
+    axes_rotation(::ICRF, ::VNB, epoch, params) -> SMatrix{6,6}
 
 Velocity / normal / binormal axes of a reference orbit.
 

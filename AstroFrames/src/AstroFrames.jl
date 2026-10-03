@@ -38,6 +38,7 @@ export axes_rotation, origin_translation, edge_theory, body_fixed_rotation
 
 # The extension contract - what you write a frame of your own against.
 export EpochScales, epoch_tdb, epoch_tt, epoch_utc
+export cip_interpolation, set_cip_interpolation!
 export hub_axes, valid_origin, needs_reference_orbit
 
 # Conversion for callers with no Spacecraft - a state, its frame, its epoch.
@@ -108,8 +109,8 @@ Both are also the constructor's arguments, in that order.
 
 Some axes types are only physically meaningful at specific origins:
 
-- Earth-restricted (`GCRF`, `CIRS`, `TIRS`, `ITRF`, `MODEq`, `TODEq`, `MODEc`, `TODEc`, `PEF`)
-  — require an Earth origin.
+- Earth-restricted (`GCRF`, `CIRS`, `TIRS`, `ITRF`, `MODEq`, `TODEq`, `MODEc`, `TODEc`, `PEF`,
+  `TEME`) — require an Earth origin.
 - Moon-restricted (`MoonPA`, `MoonME`) — require a Moon origin.
 - `CelestialBodyFixed{OT}` — requires an origin of type `OT` (the body encoded in
   the axes type parameter).
@@ -132,7 +133,7 @@ cs_mars = CoordinateSystem(mars, CelestialBodyFixed())
 #   "ITRF axes require an Earth origin (use `earth`); got Sun."
 ```
 """
-mutable struct CoordinateSystem{O<:AbstractPoint, A<:AbstractAxes} <: AbstractCoordinateSystem
+struct CoordinateSystem{O<:AbstractPoint, A<:AbstractAxes} <: AbstractCoordinateSystem
     origin::O
     axes::A
 
@@ -163,6 +164,22 @@ _origin_display(origin) = (:name in propertynames(origin)) ? origin.name : strin
 
 # Safe property accessor for `show`
 @inline _maybe_get(x, s::Symbol) = (s in propertynames(x)) ? getfield(x, s) : nothing
+
+# Two origins are the same point when they are the same object, or bodies with the same NAIF ID:
+# a copied `earth` is still the Earth. Anything else, a spacecraft, is itself only.
+@inline function _same_origin(a, b)
+    a === b && return true
+    na, nb = _naifid_of(a), _naifid_of(b)
+    return na !== nothing && na == nb
+end
+
+_origin_key(o) = (n = _naifid_of(o); n === nothing ? objectid(o) : n)
+
+# Equal when the origins are the same point and the axes the same axes. A coordinate system is
+# immutable, so one built twice is also `===`; this makes a copied body's frames equal too.
+Base.:(==)(a::CoordinateSystem, b::CoordinateSystem) =
+    _same_origin(a.origin, b.origin) && a.axes == b.axes
+Base.hash(cs::CoordinateSystem, h::UInt) = hash(cs.axes, hash(_origin_key(cs.origin), hash(:CoordinateSystem, h)))
 
 """
     Base.show(io::IO, ::MIME"text/plain", cs::CoordinateSystem)

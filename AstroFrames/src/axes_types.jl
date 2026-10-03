@@ -157,11 +157,18 @@ struct ITRF <: AbstractAxes end
 """
     MJ2000Eq()
 
-Mean equator and equinox of MJ2000Eq (FK5) axes.
+Mean equator and equinox of J2000 (FK5) axes.
 
 Origin-agnostic inertial. The axes describe a fixed spatial orientation
-defined by Earth's mean equator and dynamical equinox at epoch MJ2000Eq.0;
+defined by Earth's mean equator and dynamical equinox at epoch J2000.0;
 they can legally be used with any origin.
+
+They differ from `ICRF` by the IERS frame bias, a constant rotation of about
+23 mas: 0.75 m at LEO, 4.7 m at GEO. Use them for data that arrives labelled as
+FK5 J2000. The FK5 Earth chain does not pass through them; it starts at the
+ICRF, because the IERS celestial pole offsets it applies already absorb the bias.
+
+See also: [`ICRF`](@ref), [`MJ2000Ec`](@ref).
 
 # Example
 
@@ -319,10 +326,12 @@ struct TEME <: AbstractAxes end
 """
     MJ2000Ec()
 
-Mean ecliptic and equinox of MJ2000Eq axes.
+Mean ecliptic and equinox of J2000 axes.
 
 Origin-agnostic inertial. Static rotation from `MJ2000Eq` about the X-axis by
-the mean obliquity of MJ2000Eq (ε₀ = 23.4392911° per IAU 1976/FK5).
+the mean obliquity at J2000 (ε₀ = 23.4392911° per IAU 1976/FK5). This is not SPICE's
+`ECLIPJ2000`, which SPICE builds on its ICRF-aligned `J2000` frame; the two differ by the frame
+bias, about 23 mas.
 
 # Example
 
@@ -412,14 +421,15 @@ struct MoonME <: AbstractAxes end
 """
     CelestialBodyFixed{NAIFID} <: AbstractAxes
 
-Body-fixed rotating axes for Sun, Mercury, Venus, Mars, Jupiter, Saturn,
-Uranus, Neptune, or Pluto, using the IAU 2015 planet-rotation formulas from
-AstroUniverse's `iau2015_orientation`. Type parameter `NAIFID::Int` records
-the intended origin body; the origin-coupling rule requires the coordinate
-system's origin to have a matching NAIF ID.
+Body-fixed rotating axes of a celestial body, using the orientation model the
+body has in AstroUniverse (IAU 2015 by default for the Sun, the planets and
+Pluto). Type parameter `NAIFID::Int` records the intended origin body; the
+origin-coupling rule requires the coordinate system's origin to have a matching
+NAIF ID.
 
-Not applicable to Earth (use IAU 2006 / FK5 Earth-frame edges) or Moon (use
-`MoonPA` / `MoonME`).
+It works for the Earth and the Moon too, through their models, but those have
+named axes that say more: `ITRF` for the Earth, `MoonPA` or `MoonME` for the
+Moon.
 
 # Constructors
 - `CelestialBodyFixed(body)` — explicit form; encodes the body's NAIF ID in the type.
@@ -428,6 +438,8 @@ Not applicable to Earth (use IAU 2006 / FK5 Earth-frame edges) or Moon (use
 
 # Examples
 ```julia
+using AstroFrames, AstroUniverse
+
 # Recommended: the origin supplies the body.
 mars_fixed = CoordinateSystem(mars, CelestialBodyFixed())
 
@@ -435,6 +447,7 @@ mars_fixed = CoordinateSystem(mars, CelestialBodyFixed())
 mars_fixed = CoordinateSystem(mars, CelestialBodyFixed(mars))
 
 # Direct axes-pair use (no CoordinateSystem) requires the explicit form:
+jd_tdb = 2460371.0
 M = axes_rotation(ICRF(), CelestialBodyFixed(mars), jd_tdb)
 ```
 """
@@ -500,7 +513,11 @@ out-of-plane force.
 
 # Example
 ```julia
-p = (; reference_state = [-4550.0, 2220.0, 4980.0, -3.10, -6.60, 0.12])
+using AstroFrames, AstroEpochs
+
+epoch = Time("2024-03-01T12:00:00", UTC(), ISOT())
+p = (; reference_state = [-4550.0, 2220.0, 4980.0, -3.10, -6.60, 0.12])   # the chief, ICRF
+separation_icrf = [0.10, -0.25, 0.05, 1.0e-4, 0.0, -2.0e-4]              # deputy − chief
 
 M = axes_rotation(ICRF(), RIC(), epoch, p)
 separation_ric = M * separation_icrf      # relative state, radial/in-track/cross-track
@@ -525,8 +542,13 @@ Needs a reference orbit, passed as `reference_state`; acceleration is optional.
 
 # Example
 ```julia
+using AstroFrames, AstroEpochs
+
+epoch = Time("2024-03-01T12:00:00", UTC(), ISOT())
+state = [-4550.0, 2220.0, 4980.0, -3.10, -6.60, 0.12]    # the reference orbit, ICRF
+
 M = axes_rotation(ICRF(), LVLH(), epoch, (; reference_state = state))
-M[3, :]    # the nadir direction in inertial axes
+M[3, 1:3]    # the nadir direction in inertial axes
 ```
 """
 struct LVLH <: AbstractAxes end
@@ -555,10 +577,19 @@ rate. This form is appropriate for resolving a vector into instantaneous
 along-track, normal, and binormal components. Supplying `reference_accel` in
 km/s² includes the frame rate of an accelerating reference.
 
+When a spacecraft is the coordinate system's origin, as in
+`CoordinateSystem(chief, VNB())`, its state is the reference orbit and its
+acceleration is taken as two-body gravity about the body its state is measured
+from, so the frame turns with the spacecraft as RIC and LVLH do.
+
 Called TNW and NTW elsewhere.
 
 # Example
 ```julia
+using AstroFrames, AstroEpochs
+
+epoch = Time("2024-03-01T12:00:00", UTC(), ISOT())
+state = [-4550.0, 2220.0, 4980.0, -3.10, -6.60, 0.12]    # the reference orbit, ICRF
 p = (; reference_state = state)
 
 M = axes_rotation(ICRF(), VNB(), epoch, p)
