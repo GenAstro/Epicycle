@@ -18,9 +18,10 @@ Epicycle's own output, produced by the package's 3D view.
 
 ## EpicycleProductBrochure.pdf
 
-The Gen Astro product brochure for the R2026 beta, linked from the documentation index. Images are
-resampled to 150 dpi to keep the file near 2 MB. Replace it under the same name so links already
-sent keep working. It shows the VS Code, Cesium, Plotly and Julia logos to name the tools Epicycle
+The Gen Astro product brochure for the R2026 beta, linked from the documentation index. The large
+images are re-encoded as JPEG at quality 85, keeping their transparency masks, the small icons and
+the text as they are, which brings the 16.6 MB export to 3.0 MB. Replace it under the same name so
+links already sent keep working. It shows the VS Code, Cesium, Plotly and Julia logos to name the tools Epicycle
 works with; where the background photography comes from is recorded with the brochure's source
 files, not here.
 
