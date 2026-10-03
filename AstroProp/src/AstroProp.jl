@@ -210,6 +210,7 @@ struct ForceModel{N} <: OrbitODE
     center::Union{CelestialBody, Nothing}
 end
 
+include("discontinuities.jl")
 include("orbit_propagator.jl")
 include("jacobian_config.jl")
 include("orbit_ode_problem.jl")
@@ -447,6 +448,10 @@ function _propagate_dynsys!(model::DynSys, config::IntegratorConfig,
     # Use TT for Earth-centered dynamics, TDB for others
     center_body = model.forces.center
     start_epoch = (center_body === earth) ? model.spacecraft[1].time.tt : model.spacecraft[1].time.tdb
+
+    # End a step at every kink in a force, such as a shadow boundary; see discontinuities.jl.
+    posvels = [odereg[sc][:posvel][1:6] for sc in model.spacecraft]
+    callbackset = _with_callback(callbackset, _kink_callback(model.forces, start_epoch, posvels))
 
     actual_direction == :forward || actual_direction == :backward ||
         error("Unknown direction: $actual_direction. Use :forward or :backward.")

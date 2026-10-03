@@ -113,6 +113,10 @@ Reads reflectivity ``C_r`` and area ``A`` from the spacecraft's `SphericalSRP`, 
 spacecraft — set `sc.srp` before propagating. The Sun's position is looked up from the ephemeris
 via `AstroUniverse.translate(body, sun, jd_tdb)` in km, inertial.
 
+With `DualCone` the acceleration has a kink at each edge of the penumbra, and `propagate!` ends a
+step at each one rather than stepping across it, so the integration error stays what the tolerance
+asks for through eclipses. `SmoothedConical` has no kinks and needs no such steps.
+
 Cross-validated against GMAT (`SRPModel = Spherical`); see `test/force_srp_spherical.jl`.
 
 # Examples
@@ -173,9 +177,12 @@ function _shadow_factor(::DualCone, r_sat, r_sun, R_sun, R_occ)
     elseif c < (a - b)
         return 1.0 - b^2 / a^2            # occulting body fully within the Sun disk
     else                                  # penumbra
+        # On the penumbra's edges x/a and (c − x)/b reach ±1 and a² − x² reaches 0, where round-off
+        # can step outside the domain; a step landed on the edge by the shadow events puts it there.
         x = (c^2 + a^2 - b^2) / (2.0 * c)
-        y = sqrt(a^2 - x^2)
-        area = a^2 * acos(x / a) + b^2 * acos((c - x) / b) - c * y
+        y = sqrt(max(a^2 - x^2, zero(x)))
+        area = a^2 * acos(clamp(x / a, -one(x), one(x))) +
+               b^2 * acos(clamp((c - x) / b, -one(x), one(x))) - c * y
         return 1.0 - area / (π * a^2)
     end
 end

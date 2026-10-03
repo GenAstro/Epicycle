@@ -74,12 +74,14 @@ const _APC = AstroProp
         s1 = sc()
         y1 = propagate!(OrbitPropagator(forces, integ), s1,
                         StopAt(s1, PropDurationSeconds(), 7200.0)).u[end]
-        # The same right-hand side with no context: each force computes its own values.
+        # The same right-hand side with no context: each force computes its own values. It ends
+        # steps at the shadow boundaries as propagate! does, so the steps are the same.
         s2 = sc()
         y0 = collect(to_posvel(s2))
         start = s2.time.tt
         f!(dy, y, _p, τ) = _APC._eval_all!(forces, start + τ / 86400.0, y, dy, s2)
         y2 = _APC.solve(_APC.ODEProblem(f!, y0, (0.0, 7200.0)), Vern9();
+                        callback = _APC._kink_callback(forces, start, (1:6,)),
                         reltol = 1e-12, abstol = 1e-12, dt = 60.0).u[end]
         @test y1 == y2
     end

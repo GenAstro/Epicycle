@@ -131,6 +131,7 @@ function solve(prob::OrbitODEProblem)
 
         ode = ODEProblem(plain_rhs!, y0, tspan)
         sol = CommonSolve.solve(ode, integ.integrator;
+                                    callback = _kink_callback(prop.forces, start_epoch, (1:6,)),
                                     reltol = integ.reltol,
                                     abstol = integ.abstol,
                                     save_everystep = prob.dense,
@@ -208,6 +209,7 @@ function _augmented_solve(prob::OrbitODEProblem, y0, tspan, start_epoch)
 
     ode = ODEProblem(augmented_rhs!, z0, tspan)
     sol = CommonSolve.solve(ode, integ.integrator;
+                                callback = _kink_callback(forces, start_epoch, (1:6,)),
                                 reltol = integ.reltol,
                                 abstol = integ.abstol,
                                 save_everystep = prob.dense,
