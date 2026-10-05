@@ -50,6 +50,10 @@ function geopotential_data(::Zonal, body::CelestialBody, degree::Int, order::Int
     return ZonalData(_ZONAL_GM_KM3 * 1.0e9, _ZONAL_RE_KM * 1.0e3)
 end
 
+# EGM96's coefficients, so EGM96's radius and tide system.
+field_radius(::Zonal, data::ZonalData) = data.Re_m / 1.0e3
+tide_system(::Zonal, data::ZonalData)  = :tide_free
+
 # Native zonal acceleration (central + J2..Jₙ) in the Earth-fixed frame, SI. Legendre
 # polynomials and their derivatives use stable recurrences:
 #   Pₙ  = ((2n-1) u Pₙ₋₁ - (n-1) Pₙ₋₂) / n

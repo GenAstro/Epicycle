@@ -686,9 +686,9 @@ function set_orientation!(body, model::AbstractOrientationModel)
     if n == 399
         model isa AbstractFrameTheory || throw(ArgumentError(
             "Earth's orientation is its frame theory, IAU2006() or FK5(), which carries " *
-            "the ITRF chain and Earth orientation parameters; got $(model). To evaluate " *
-            "a field in other Earth axes, pass them to that force (for gravity, " *
-            "`HarmonicGravity(...; orientation = model)`) rather than to Earth."))
+            "the ITRF chain and Earth orientation parameters; got $(model). A gravity field " *
+            "estimated in other Earth axes states them itself (for an ICGEM file, " *
+            "`IcgemGravity(file; orientation = model)`) rather than through Earth."))
         return set_frame_theory!(model)
     end
     _orients(model, n) || throw(ArgumentError(

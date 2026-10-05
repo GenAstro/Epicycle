@@ -7,9 +7,8 @@
 # there: the epoch in TDB, TT and UTC, the central body's rotation into its fixed axes, and the
 # positions of the Sun and Moon. Each force used to compute its own. Converting TT to TDB runs the
 # full TDB−TT series, and with gravity, drag, relativity, third bodies, SRP and tides each doing
-# it, time conversion was a third of the right-hand side in the one-day LEO benchmark
-# (EpicycleEnterprise/benchmark/full_force), and the Earth's rotation, computed three times,
-# another quarter.
+# it, time conversion was a third of the right-hand side in the one-day LEO full-force benchmark,
+# and the Earth's rotation, computed three times, another quarter.
 #
 # `_build_odes!` hands the forces a `ForceContext` in `params`, reset at each evaluation. A force
 # asks it through `force_epoch`, `force_rotation`, `force_position` and `force_state`, which
@@ -53,7 +52,9 @@ _context(params::NamedTuple, t::Time) =
         params.context : nothing
 _context(params, t) = nothing
 
-_epoch_scales(t::Time) = EpochScales(t.tdb.jd, t.tt.jd, t.utc.jd)
+# AstroFrames' own conversion, which carries UTC in two parts, so a rotation from the context is the
+# one `body_fixed_rotation(model, naifid, t)` gives, to the bit.
+_epoch_scales(t::Time) = AstroFrames._scales(t)
 
 """
     force_epoch(params, t::Time) -> EpochScales

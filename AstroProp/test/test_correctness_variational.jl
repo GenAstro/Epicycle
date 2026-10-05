@@ -290,4 +290,30 @@ end
     @test only_p.S_p[mv] ≈ result.S_p[mv] rtol = 1e-9
 end
 
+# The forces take the state the variational right-hand side passes them, a view into the augmented
+# state; harmonic gravity, drag and SRP once accepted only a Vector and failed here.
+@testset "OrbitODEProblem — STM with a field, drag and SRP against finite differences" begin
+    sc(state = CartesianState(_jac_state())) =
+        Spacecraft(state = state, time = _ode_epoch(), mass = 1000.0,
+                   drag = SphericalDrag(c_d = 2.2, drag_area = 10.0),
+                   srp = SphericalSRP(c_r = 1.8, srp_area = 10.0))
+    prop = OrbitPropagator(ForceModel(HarmonicGravity(earth; degree = 4, order = 0, model = Zonal()),
+                                      AtmosphericDrag(earth; model = Exponential()),
+                                      SolarRadiationPressure(earth)), _ode_integ())
+    duration = 2700.0
+    y0 = _jac_state()
+    result = AstroProp.solve(OrbitODEProblem(prop, sc(); duration_s = duration,
+                                             stm = STMConfig(Φ = true)))
+    final(state) = AstroProp.solve(
+        OrbitODEProblem(prop, sc(CartesianState(state)); duration_s = duration)).y_final
+    @test result.y_final ≈ final(y0) rtol = 1e-10
+    Φ_fd = zeros(6, 6)
+    for j in 1:6
+        h = j <= 3 ? 1e-3 : 1e-6                                  # km, km/s
+        e = zeros(6); e[j] = h
+        Φ_fd[:, j] = (final(y0 .+ e) .- final(y0 .- e)) ./ (2h)
+    end
+    @test result.Φ ≈ Φ_fd rtol = 1e-6
+end
+
 nothing

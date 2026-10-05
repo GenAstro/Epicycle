@@ -58,6 +58,7 @@ export Zonal, Exponential
 export DualCone, SmoothedConical
 export AbstractGeopotential, AbstractDensityModel, density
 export geopotential_accel, geopotential_data, max_degree, max_order
+export AbstractTideModel, field_radius, tide_system, atmosphere_body
 export gravity_center, includes_central
 export SphericalDrag, SphericalSRP, total_mass
 
@@ -293,6 +294,12 @@ function _find_center(forces::Tuple)
     return centers[1]
 end
 
+# The epoch a propagation's equations of motion are integrated from, in the time scale they are
+# integrated in: TT about the Earth, TDB about any other body, where the dynamics and the ephemeris
+# are barycentric. Every path that integrates, `propagate!` and `OrbitODEProblem`, starts here, so
+# its elapsed seconds are seconds of that scale and the forces' time arguments are exact.
+_dynamical_epoch(forces::ForceModel, t::Time) = forces.center === earth ? t.tt : t.tdb
+
 # The spacecraft and forces of one propagation, as the engine below consumes them. Internal:
 # `propagate!(::OrbitPropagator, ...)` builds one per call.
 struct DynSys
@@ -445,9 +452,8 @@ function _propagate_dynsys!(model::DynSys, config::IntegratorConfig,
     params = (forces = model.forces, odereg = odereg, context = ForceContext())
     state0 = _build_state(model.forces, model.spacecraft, odereg)
     
-    # Use TT for Earth-centered dynamics, TDB for others
     center_body = model.forces.center
-    start_epoch = (center_body === earth) ? model.spacecraft[1].time.tt : model.spacecraft[1].time.tdb
+    start_epoch = _dynamical_epoch(model.forces, model.spacecraft[1].time)
 
     # End a step at every kink in a force, such as a shadow boundary; see discontinuities.jl.
     posvels = [odereg[sc][:posvel][1:6] for sc in model.spacecraft]

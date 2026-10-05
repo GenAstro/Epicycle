@@ -38,7 +38,9 @@ sensitivity propagation.
 # Fields
 - `prop::OrbitPropagator`
 - `sc::Spacecraft`
-- `duration_s::Float64` — propagation duration [s], from the spacecraft's epoch
+- `duration_s::Float64` — propagation duration [s], from the spacecraft's epoch, in the time
+  scale the orbit is integrated in: TT about the Earth, TDB about any other body, as
+  `propagate!` integrates
 - `stm::Union{STMConfig, Nothing}`
 - `dense::Bool` — retain the integrator's dense interpolant in
   `PropagationResult.sol` (`save_everystep = dense`,
@@ -115,7 +117,9 @@ function solve(prob::OrbitODEProblem)
     # elements when that is what the spacecraft carries.
     y0          = collect(to_posvel(sc))
     tspan       = (0.0, prob.duration_s)
-    start_epoch = sc.time
+    # TT about the Earth, TDB about any other body, as propagate! integrates. The spacecraft's own
+    # scale, usually UTC, is not uniform across a leap second and is not the dynamics' time.
+    start_epoch = _dynamical_epoch(prop.forces, sc.time)
     integ       = prop.integ
 
     if prob.stm === nothing

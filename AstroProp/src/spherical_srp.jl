@@ -201,7 +201,9 @@ function _shadow_factor(m::SmoothedConical, r_sat, r_sun, R_sun, R_occ)
     return floor + (1 - floor) * F
 end
 
-function accel_eval!(force::SolarRadiationPressure, t::Time, x̄::Vector, x̄̇::Vector,
+_sun_centred(force::SolarRadiationPressure) = force.central_body.naifid == sun.naifid
+
+function accel_eval!(force::SolarRadiationPressure, t::Time, x̄::AbstractVector, x̄̇::AbstractVector,
                      sc::Spacecraft, params; jac::Dict = Dict())
     geom = sc.srp
     geom === nothing && throw(ArgumentError(
@@ -211,7 +213,9 @@ function accel_eval!(force::SolarRadiationPressure, t::Time, x̄::Vector, x̄̇:
     r_sun  = force_position(params, force.central_body, sun, t)       # Earth→Sun, km, inertial
     RC = geom.c_r * geom.srp_area / total_mass(sc)                    # Cr·A/m [m²/kg]
     Ψ  = force.solar_flux / _C_M_S                                    # N/m²
-    F  = _shadow_factor(force.shadow, r_sat, r_sun, force.R_sun, force.R_occ)
+    # About the Sun there is no shadow: the light source cannot occult itself.
+    F  = _sun_centred(force) ? one(eltype(r_sat)) :
+         _shadow_factor(force.shadow, r_sat, r_sun, force.R_sun, force.R_occ)
     R_ss  = r_sat - r_sun
     d     = norm(R_ss)
     F_srp = F * RC * Ψ * (force.nominal_sun / d)^2 / 1.0e3            # → km/s², away from Sun

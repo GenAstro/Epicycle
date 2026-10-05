@@ -75,6 +75,36 @@ end
         @test err < 2e-3
     end
 
+    @testset "no step straddles a kink on steps of an hour (GEO)" begin
+        # GEO near the equinox, entering the shadow about three hours in. At 1e-9 Vern9 takes steps
+        # of over an hour; a look-ahead capped at 900 s let two of them straddle both edges.
+        t0 = Time("2024-03-20T00:00:00", UTC(), ISOT())
+        ŝ = let s = _APS.force_position(nothing, earth, sun, t0.tt); s / norm(s) end
+        z = SVector(0.0, 0.0, 1.0)
+        e1 = let c = SVector(z[2]*ŝ[3] - z[3]*ŝ[2], z[3]*ŝ[1] - z[1]*ŝ[3], z[1]*ŝ[2] - z[2]*ŝ[1]); c / norm(c) end
+        a = 42164.0; θ = -π/2 - 0.8
+        r = a * (cos(θ) * (-ŝ) + sin(θ) * e1)
+        v = sqrt(earth.mu / a) * let c = SVector(z[2]*r[3] - z[3]*r[2], z[3]*r[1] - z[1]*r[3], z[1]*r[2] - z[2]*r[1]); c / norm(c) end
+        sc = Spacecraft(; state = CartesianState(vcat(r, v)), time = t0, mass = 1000.0,
+                        srp = SphericalSRP(c_r = 1.8, srp_area = 10.0))
+        geo = propagate!(OrbitPropagator(ForceModel(PointMassGravity(earth, (sun,)), srp),
+                                         IntegratorConfig(Vern9(); reltol = 1e-9, abstol = 1e-9, dt = 60.0)),
+                         sc, StopAt(sc, PropDurationSeconds(), 30 * 3600.0))
+        e0 = t0.tt
+        gk(i) = (out = zeros(2);
+                 rr = SVector{3}(geo.u[i][1], geo.u[i][2], geo.u[i][3]);
+                 _APS._kink_values!(out, 0, srp, rr, _APS.force_position(nothing, earth, sun, e0 + geo.t[i] / 86400.0)); out)
+        G = [gk(i) for i in eachindex(geo.t)]
+        # A kink function changes at about the orbit rate, 7.3e-5 rad/s; within 0.1 s of a kink it
+        # is under 1e-5, so a crossing with both ends beyond that was stepped across.
+        straddled = count(i -> any(j -> sign(G[i][j]) != sign(G[i+1][j]) &&
+                                        min(abs(G[i][j]), abs(G[i+1][j])) > 1e-5, 1:2),
+                          1:length(G)-1)
+        @test maximum(diff(geo.t)) > 900.0          # the steps the old cap could not see across
+        @test any(i -> any(j -> sign(G[i][j]) != sign(G[i+1][j]), 1:2), 1:length(G)-1)   # it crosses
+        @test straddled == 0
+    end
+
     @testset "no callback without kinks" begin
         @test _APS._kink_callback(ForceModel(PointMassGravity(earth, ())), epoch0, (1:6,)) === nothing
         smooth = SolarRadiationPressure(earth; shadow = SmoothedConical())

@@ -258,7 +258,7 @@ propagate!(prop, sat, StopAt(position_z, sat, EarthMJ2000Ec; equals = 0.0))
 
 Its first arguments are the same as every other spec's, and the goal is a
 keyword as it is for a constraint, so the two read alike. Builds a
-[`Calc`](@ref) and defers to the positional constructor.
+`Calc` (from AstroCallbacks) and defers to the positional constructor.
 
 An angular quantity is unwrapped before the root is bracketed; see
 `_stop_residual`.

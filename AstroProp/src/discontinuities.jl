@@ -8,18 +8,20 @@
 # lies inside the other (the umbra, or an annular eclipse). The penumbra is a few seconds wide in
 # LEO. A step whose stages straddle a kink commits an error its error estimate does not see: in a
 # one-day LEO full-force case Vern9 was 4 to 40 cm from its converged answer at tolerances from
-# 1e-9 to 1e-12, and 0.1 to 4 mm with the shadow taken out (EpicycleEnterprise/benchmark/full_force).
+# 1e-9 to 1e-12, and 0.1 to 4 mm with the shadow taken out (the full-force benchmark).
 #
 # Locating the kink after the fact does not help. A continuous callback finds the root on the
 # interpolant of a step that already straddles it, and that interpolant carries the same error.
 # The step has to end at the kink instead. So after each accepted step a predictor looks across the
 # step the integrator proposes next, and 5 % beyond, for a zero of each kink function and adds its
 # time as a tstop: that step ends at the kink and the next starts there, and no step straddles it.
-# A kink beyond the look-ahead is found at a later step, and one within _KINK_MIN_GAP of a stop
-# already pending is that stop, so each gets one.
+# The look-ahead covers the whole proposed step however long it is; a kink missed by a shorter
+# look-ahead would be straddled by the step. One within _KINK_MIN_GAP of a stop already pending is
+# that stop, so each gets one.
 #
 # The predictor integrates two-body motion plus the rest of the acceleration, taken as the constant
-# the last step measured, with RK4 at sixteen sub-steps, and the Sun moving linearly across the
+# the last step measured, with RK4 at sub-steps of at most _KINK_MAX_SUBSTEP (at least
+# _KINK_SAMPLES of them, at most _KINK_MAX_SAMPLES), and the Sun moving linearly across the
 # look-ahead. Over a LEO step that places a shadow edge to within milliseconds. A kink nearer than
 # _KINK_MIN_GAP is taken as reached: a step landing a hair short of one would otherwise get a stop
 # a fraction of a millisecond on, and the step size would take several steps to grow back, while
@@ -42,11 +44,12 @@ _kink_values!(out, i, ::OrbitODE, r, r_sun) = i
 _shadow_kinks(::AbstractShadowModel) = ()
 _shadow_kinks(::DualCone) = ((a, b, c) -> c - (a + b), (a, b, c) -> c - abs(b - a))
 
-_n_kinks(f::SolarRadiationPressure) = length(_shadow_kinks(f.shadow))
+# About the Sun there is no shadow, so no edges to stop at.
+_n_kinks(f::SolarRadiationPressure) = _sun_centred(f) ? 0 : length(_shadow_kinks(f.shadow))
 
 function _kink_values!(out, i, f::SolarRadiationPressure, r, r_sun)
     kinks = _shadow_kinks(f.shadow)
-    isempty(kinks) && return i
+    (isempty(kinks) || _sun_centred(f)) && return i
     R_ss = r .- r_sun
     a = asin(f.R_sun / norm(R_ss))
     b = asin(f.R_occ / norm(r))
@@ -58,7 +61,9 @@ function _kink_values!(out, i, f::SolarRadiationPressure, r, r_sun)
     return i
 end
 
-const _KINK_SAMPLES = 16          # predictor sub-steps over the look-ahead
+const _KINK_SAMPLES = 16          # fewest predictor sub-steps over the look-ahead
+const _KINK_MAX_SUBSTEP = 60.0    # s; longest predictor sub-step while under _KINK_MAX_SAMPLES
+const _KINK_MAX_SAMPLES = 1024    # most predictor sub-steps over the look-ahead
 const _KINK_MIN_GAP = 0.05        # s; a kink nearer than this is taken as reached
 
 # The callback that ends a step at every kink of every force, for each spacecraft whose position
@@ -87,7 +92,7 @@ function _kink_callback(forces::ForceModel, start_epoch, posvels)
             deleteat!(stops, i)
             abs(resume_dt[]) > abs(get_proposed_dt(integrator)) && set_proposed_dt!(integrator, resume_dt[])
         end
-        H = dir * clamp(1.05 * abs(get_proposed_dt(integrator)), 1e-3, 900.0)
+        H = dir * max(1.05 * abs(get_proposed_dt(integrator)), 1e-3)
         tend = last(integrator.sol.prob.tspan)
         dir * (t0 + H - tend) > 0 && (H = tend - t0)
         abs(H) < 1e-6 && return
@@ -96,7 +101,8 @@ function _kink_callback(forces::ForceModel, start_epoch, posvels)
         s1 = SVector{3}(force_position(nothing, center, sun, start_epoch + (t0 + H) / 86400.0))
         u, uprev = integrator.u, integrator.uprev
         hprev = t0 - integrator.tprev
-        h = H / _KINK_SAMPLES
+        n = clamp(ceil(Int, abs(H) / _KINK_MAX_SUBSTEP), _KINK_SAMPLES, _KINK_MAX_SAMPLES)
+        h = H / n
         for p in posvels
             r = SVector{3}(u[p[1]], u[p[2]], u[p[3]])
             v = SVector{3}(u[p[4]], u[p[5]], u[p[6]])
@@ -110,7 +116,7 @@ function _kink_callback(forces::ForceModel, start_epoch, posvels)
             acc(x) = two_body(x) + δa
             kinks!(g0, r, s0)
             τ0 = 0.0
-            for k in 1:_KINK_SAMPLES
+            for k in 1:n
                 # One RK4 step of the predictor.
                 k1r = v;              k1v = acc(r)
                 k2r = v + h/2 * k1v;  k2v = acc(r + h/2 * k1r)
@@ -123,7 +129,7 @@ function _kink_callback(forces::ForceModel, start_epoch, posvels)
                 for j in 1:nk
                     if sign(g0[j]) != sign(g1[j]) && g1[j] != 0
                         # Linear interpolation of the root on this sub-step: the kink function is
-                        # smooth, and a sub-step is a sixteenth of the look-ahead.
+                        # smooth, and a sub-step is short.
                         τ = τ0 + (τ1 - τ0) * g0[j] / (g0[j] - g1[j])
                         if abs(τ) > _KINK_MIN_GAP &&
                            all(k -> abs(k - (t0 + τ)) > _KINK_MIN_GAP, stops)
