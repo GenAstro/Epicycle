@@ -5,8 +5,9 @@ what Astropy gives for it in every scale, as a two-part Julian date and as an IS
 millisecond precision. test_correctness_astropy_benchmark.jl reads the file, so the suite never
 runs Python.
 
-Run with the Astropy harness (C:\\Users\\steve\\Dev\\TestHarnesses\\astropy):
-    uv run --project C:\\Users\\steve\\Dev\\TestHarnesses\\astropy python test/astropy/make_reference.py
+Run from the AstroEpochs folder, with Astropy 8.0.1, pyerfa 2.0.1.5 and astropy-iers-data
+0.2026.9.28 installed:
+    python test/astropy/make_reference.py
 
 Cases, by `kind`:
   random      uniform epochs 1972-2100, as a JD in each scale and as a UTC ISOT string
