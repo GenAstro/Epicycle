@@ -68,6 +68,8 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "Verification" => "verification.md",
+        "Benchmarks" => "benchmarks.md",
         "Getting Started" => "getting_started.md",
         "Packages" => "packages.md",
         "Gallery" => "gallery.md",

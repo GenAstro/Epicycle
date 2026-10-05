@@ -10,6 +10,10 @@
      style="display: block; margin-top: 0.7em; padding: 0.55em 0.8em; border-radius: 6px; background: linear-gradient(135deg, #1a73e8, #4fa3ff); color: #ffffff; font-weight: 600; text-decoration: none; box-shadow: 0 2px 8px rgba(26, 115, 232, 0.45);">
     Product brochure (PDF)
   </a>
+  <a href="verification/"
+     style="display: block; margin-top: 0.5em; padding: 0.55em 0.8em; border-radius: 6px; background: linear-gradient(135deg, #0b8043, #34a853); color: #ffffff; font-weight: 600; text-decoration: none; box-shadow: 0 2px 8px rgba(11, 128, 67, 0.45);">
+    Verification results
+  </a>
 </div>
 ```
 
@@ -199,7 +203,8 @@ integration runs on macOS, Linux, and Windows, with package-level line coverage 
 Numerical results are compared with trusted tools and published solutions. Astrodynamics and
 mission analysis calculations are tested against NASA's General Mission Analysis Tool (GMAT), time
 conversions against Astropy, and optimal-control results against NASA's Collocation Stand-Alone
-Library and Toolkit (CSALT) and OpenMDAO's Dymos.
+Library and Toolkit (CSALT) and OpenMDAO's Dymos. The [Verification](verification.md) page gives the test
+cases and the agreement measured, package by package.
 
 Orbit determination, variational propagation, and the new browser-based graphics system are alpha
 capabilities. They are tested and available for evaluation, but need further development and
