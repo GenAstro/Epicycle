@@ -39,8 +39,9 @@ function AstroProp._build_callback(cond::AstroProp.StopAt, dynsys)
     dir     = cond.direction
     calc    = AstroProp.make_calc(subject, var)
 
+    start = AstroProp._start_epoch(dynsys.forces, dynsys.spacecraft[1])
     function cond_fn(u, t, integ)
-        AstroProp._subject_update_from_u!(subject, dynsys, u)
+        AstroProp._subject_update_from_u!(subject, dynsys, u, start, t)
         val = get_calc(calc)
         return dir < 0 ? val <= target :
                dir > 0 ? val >= target :

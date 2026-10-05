@@ -74,7 +74,7 @@ end
 Results of a `solve(OrbitODEProblem(...))` call.
 
 # Fields
-- `y_final::Vector{Float64}` — state at t_f
+- `y_final::Vector{Float64}` — state at t_f, in the spacecraft's coordinate system
 - `Φ::Union{Matrix{Float64}, Nothing}` — STM (nothing if not requested)
 - `S_p::Dict{ModelVariable, Vector{Float64}}` — parameter sensitivities
 - `sol::Any` — raw `ODESolution` if `prob.dense == true`, otherwise
@@ -104,6 +104,13 @@ PropagationResult(y_final::Vector{T},
 Integrate the orbit ODE and, if `prob.stm` is set, the augmented sensitivity
 equations alongside it.
 
+The state is integrated in the force model's frame, its central body with ICRF
+axes, from the spacecraft's epoch on the dynamical scale (TT for the Earth, TDB
+otherwise). `y_final` is returned in the spacecraft's own coordinate system. A
+spacecraft held in another frame may differ from the integration frame by its
+origin only when an STM or sensitivities are requested, and not at all when
+`dense = true`; otherwise this throws an `ArgumentError`.
+
 The plain-propagation path (no STM) is a thin wrapper around the ODE solver.
 The augmented path propagates `z = [y; vec(Φ); S_p_1; ...; S_p_n]` with a
 single ODE solve; A and B_i blocks are recomputed at each step via
@@ -112,41 +119,70 @@ single ODE solve; A and B_i blocks are recomputed at each step via
 function solve(prob::OrbitODEProblem)
     sc          = prob.sc
     prop        = prob.prop
-    # Cartesian position and velocity whatever representation the spacecraft stores, since
-    # the force models integrate [r; v]. `sc.state.state` would hand them Keplerian
-    # elements when that is what the spacecraft carries.
-    y0          = collect(to_posvel(sc))
+    cs          = _integration_frame(prop.forces, sc)
+    _check_problem_frame(prob, cs)
+    # Cartesian position and velocity in the integration frame, whatever representation and
+    # coordinate system the spacecraft stores, since the force models integrate [r; v] there.
+    y0          = collect(_posvel_in(sc, cs))
     tspan       = (0.0, prob.duration_s)
     # TT about the Earth, TDB about any other body, as propagate! integrates. The spacecraft's own
     # scale, usually UTC, is not uniform across a leap second and is not the dynamics' time.
-    start_epoch = _dynamical_epoch(prop.forces, sc.time)
-    integ       = prop.integ
+    start_epoch = _start_epoch(prop.forces, sc)
 
-    if prob.stm === nothing
-        # ------------------------------------------------------------------
-        # Plain propagation
-        # ------------------------------------------------------------------
-        params = (context = ForceContext(),)
-        function plain_rhs!(dy, y, _p, t_rel)
-            t = start_epoch + t_rel / 86400.0
-            _reset!(params.context, t)
-            _eval_all!(prop.forces, t, y, dy, sc, params)   # accelerations summed across forces
-        end
+    result = prob.stm === nothing ? _plain_solve(prob, y0, tspan, start_epoch) :
+                                    _augmented_solve(prob, y0, tspan, start_epoch)
+    _same_frame(cs, sc.coord_sys) && return result
 
-        ode = ODEProblem(plain_rhs!, y0, tspan)
-        sol = CommonSolve.solve(ode, integ.integrator;
-                                    callback = _kink_callback(prop.forces, start_epoch, (1:6,)),
-                                    reltol = integ.reltol,
-                                    abstol = integ.abstol,
-                                    save_everystep = prob.dense,
-                                    dense          = prob.dense)
-        u = sol.u[end]
-        return PropagationResult{eltype(u)}(u, nothing,
-                                            Dict{ModelVariable, Vector{eltype(u)}}(),
-                                            prob.dense ? sol : nothing)
-    else
-        return _augmented_solve(prob, y0, tspan, start_epoch)
+    # Back into the spacecraft's coordinate system. `_check_problem_frame` has allowed only an
+    # origin change here, which leaves Φ and the sensitivities as they are: the offset between the
+    # two origins depends on time alone.
+    tf = Coordinate(result.y_final, cs, _epoch_at(start_epoch, prob.duration_s))
+    y_final = to_vector(CartesianState(tf, sc.coord_sys))
+    return PropagationResult(convert(typeof(result.y_final), y_final), result.Φ, result.S_p, result.sol)
+end
+
+# What `solve` can hand back when the spacecraft is held in another frame than the integration
+# frame. Its final state converts; the dense solution is the integrator's own and would be read as
+# the spacecraft's, and the STM and sensitivities carry over only when the axes agree.
+function _check_problem_frame(prob::OrbitODEProblem, cs)
+    own = prob.sc.coord_sys
+    _same_frame(cs, own) && return nothing
+    prob.dense && throw(ArgumentError(
+        "OrbitODEProblem: `dense = true` needs the spacecraft in the integration frame, " *
+        "$(_frame_name(cs)); it is held in $(_frame_name(own))."))
+    prob.stm !== nothing && !_icrf_axes(own.axes) && throw(ArgumentError(
+        "OrbitODEProblem: an STM or sensitivities need the spacecraft in ICRF axes; it is held " *
+        "in $(_frame_name(own)). Convert the spacecraft to $(_frame_name(cs)) first."))
+    return nothing
+end
+
+_frame_name(cs) = string(_origin_name(cs.origin), " ", nameof(typeof(cs.axes)))
+_origin_name(o) = hasproperty(o, :name) ? o.name : string(o)
+
+# Plain propagation, no STM: a thin wrapper around the ODE solver.
+function _plain_solve(prob::OrbitODEProblem, y0, tspan, start_epoch)
+    sc    = prob.sc
+    prop  = prob.prop
+    integ = prop.integ
+
+    params = (context = ForceContext(),)
+    function plain_rhs!(dy, y, _p, t_rel)
+        t = start_epoch + t_rel / 86400.0
+        _reset!(params.context, t)
+        _eval_all!(prop.forces, t, y, dy, sc, params)   # accelerations summed across forces
     end
+
+    ode = ODEProblem(plain_rhs!, y0, tspan)
+    sol = CommonSolve.solve(ode, integ.integrator;
+                                callback = _kink_callback(prop.forces, start_epoch, (1:6,)),
+                                reltol = integ.reltol,
+                                abstol = integ.abstol,
+                                save_everystep = prob.dense,
+                                dense          = prob.dense)
+    u = sol.u[end]
+    return PropagationResult{eltype(u)}(u, nothing,
+                                        Dict{ModelVariable, Vector{eltype(u)}}(),
+                                        prob.dense ? sol : nothing)
 end
 
 function _augmented_solve(prob::OrbitODEProblem, y0, tspan, start_epoch)
