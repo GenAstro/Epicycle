@@ -23,8 +23,9 @@ makedocs(;
         sidebar_sitename=false,
     ),
     pages=[
-        "index.md",
+        "AstroProp" => "index.md",
         "Force Models" => "force_models.md",
+        "API Reference" => "api.md",
     ],
     warnonly=[:missing_docs, :cross_references],   # doctests and examples are fatal
     checkdocs=:none        # Skip docstring completeness checks

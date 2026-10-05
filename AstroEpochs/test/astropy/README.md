@@ -9,12 +9,11 @@ not need Python.
 | `make_erfa_parity.py` | printed Julia literals: pyerfa's output for each ported ERFA routine at its edge cases | `test_correctness_erfa_parity.jl` |
 
 Rerun them when AstroEpochs' conversions change on purpose, or to benchmark against a newer Astropy.
-They run in the Astropy harness at `C:\Users\steve\Dev\TestHarnesses\astropy`, from the AstroEpochs
-folder:
+They need Python with the versions below installed, and run from the AstroEpochs folder:
 
 ```
-uv run --project C:\Users\steve\Dev\TestHarnesses\astropy python test/astropy/make_reference.py
-uv run --project C:\Users\steve\Dev\TestHarnesses\astropy python test/astropy/make_erfa_parity.py
+python test/astropy/make_reference.py
+python test/astropy/make_erfa_parity.py
 ```
 
 `make_reference.py` turns off Astropy's automatic IERS download, so the leap-second table is the

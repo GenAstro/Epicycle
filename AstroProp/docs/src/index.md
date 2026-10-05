@@ -14,6 +14,9 @@ Versions through 0.4.0 are in Julia's General registry. From the next version As
 released under the Gen Astro Source Available License, which General does not carry, so later
 versions come from the Gen Astro registry. Add both registries once, then install as usual:
 
+```@raw html
+<!-- doc-fragment -->
+```
 ```julia
 using Pkg
 pkg"registry add General https://github.com/GenAstro/GenAstroRegistry.git"
@@ -155,33 +158,17 @@ prop = OrbitPropagator(forces, integ)
 
 ### Force Model Configuration
 
-The force model defines the dynamics for propagation. You build it by composing forces in a `ForceModel` — gravity, atmospheric drag, solar radiation pressure, and any others the sections below describe. Each force is configured independently and summed to give the total acceleration.  
-
-**Basic usage:**
-
-```julia
-# Earth-centered with perturbations from Moon and Sun
-gravity = PointMassGravity(earth, (moon, sun))
-forces = ForceModel(gravity)
-```
-
-**Components:**
-
-- **Central body**: The primary gravitational body (e.g., `earth`, `mars`, `sun`)
-- **Perturbing bodies**: Tuple of additional bodies whose gravity affects the trajectory (e.g., `(moon, sun)`)
-
-**Common configurations:**
+A force model is the set of forces acting on the spacecraft, summed by `ForceModel`. The simplest
+is point-mass gravity:
 
 ```julia
-# LEO - Earth only (fast, low-fidelity)
-gravity_leo = PointMassGravity(earth, ())
-
-# LEO/MEO - Earth with Moon and Sun (standard accuracy)
-gravity_standard = PointMassGravity(earth, (moon, sun))
-
-# Interplanetary - Sun-centered with planetary perturbations
-gravity_interplanetary = PointMassGravity(sun, (earth, mars, jupiter))
+forces = ForceModel(PointMassGravity(earth, (moon, sun)))     # the Earth, with the Moon and Sun
 ```
+
+Gravity fields, drag, solar radiation pressure, tides and relativity, the full models for the
+Earth, Mars and the Moon, and how to write a force of your own are on the
+[Force Models](force_models.md) page.
+
 ### Integrator Selection
 
 AstroProp leverages Julia's DifferentialEquations.jl ecosystem, providing access to a wide range of high-performance numerical integrators. The choice of integrator and its parameters affects both the accuracy and speed of your propagation.
@@ -230,149 +217,6 @@ integ_precise = IntegratorConfig(Vern9(); dt=10.0, reltol=1e-12, abstol=1e-12)
 
 !!! tip "Starting Point"
     If you're unsure, start with `Tsit5()` with `dt=10.0`, `reltol=1e-9`, and `abstol=1e-9`. Adjust based on your accuracy requirements and performance needs.
-
-## Force Models
-
-You build a force model by constructing individual forces and adding them to a `ForceModel`. The
-`ForceModel` sums the forces to apply the total acceleration during numerical integration. The
-sections below describe how to configure each force and which forces are available in the
-open-source and Enterprise versions.
-
-### Gravity
-
-Gravity is provided by `PointMassGravity` and `HarmonicGravity`. `PointMassGravity` treats the
-central body and any additional bodies — the Moon, the Sun, the planets — as point masses.
-`HarmonicGravity` adds the central body's non-spherical gravity field, evaluated to the degree and
-order you specify.
-
-```julia
-grav = PointMassGravity(earth, (moon, sun))                            # central body + third bodies
-grav = HarmonicGravity(earth; degree = 5, order = 0, model = Zonal())  # zonal gravity field, J2–J5
-```
-
-You pick the gravity field with the `model` keyword. The open-source version includes `Zonal` — the
-J2 through J5 zonal harmonics, which capture the dominant flattening of the Earth and cover most
-low-Earth-orbit analysis.
-
-To add the Sun and Moon alongside a spherical-harmonic Earth field, use `PointMassGravity` with
-`include_center = false` so it contributes only those bodies — the Earth's gravity comes from
-`HarmonicGravity`, and isn't counted twice:
-
-```julia
-forces = ForceModel(
-    HarmonicGravity(earth; degree = 5, order = 0, model = Zonal()),
-    PointMassGravity(earth, (moon, sun); include_center = false),   # Sun & Moon only
-)
-```
-
-The field is evaluated in the body-fixed axes its coefficients were estimated in: the field's
-own if it declares them, otherwise the body's orientation model, and the `orientation` keyword
-overrides both. For the Earth that is the frame theory in force when the force is built.
-
-!!! note "Enterprise"
-    The Enterprise version adds the full gravity fields, `EGM96` and `EGM2008` for the Earth,
-    `GL0660B` for the Moon, `JGM85F01` for Mars, and `IcgemGravity` for any ICGEM file, evaluated
-    to high degree and order for precision work. You select one the same way — just change `model`:
-
-    ```@raw html
-    <!-- doc-fragment -->
-    ```
-    ```julia
-    using EpicycleEnterprise
-    grav = HarmonicGravity(earth; degree = 70, order = 70, model = EGM96())
-    grav = HarmonicGravity(moon; degree = 100, order = 100, model = GL0660B())
-    ```
-
-### Atmospheric drag
-
-`AtmosphericDrag` computes drag from the spacecraft's velocity relative to the rotating atmosphere.
-It uses the drag coefficient and area you set on the spacecraft, and gets the local air density from
-the atmosphere model you pick.
-
-```julia
-sat.drag = SphericalDrag(; c_d = 2.2, drag_area = 10.0)   # drag properties, on the spacecraft
-drag    = AtmosphericDrag(earth; model = Exponential())    # atmosphere model, on the force
-```
-
-The open-source version includes the `Exponential` atmosphere — a smooth analytic density profile
-that's fast and works well for early analysis.
-
-!!! note "Enterprise"
-    The Enterprise version adds six atmospheres of the Earth, each selected the same way. All but
-    Harris-Priester respond to solar and geomagnetic activity, read from `SpaceIndices` tables.
-
-    | Model | Atmosphere | Altitude | Checked against |
-    |---|---|---|---|
-    | `MSISE00` | NRLMSISE-00 | surface to 1000 km | Orekit, GMAT |
-    | `JB2008` | Jacchia-Bowman 2008 | 90 to 3000 km | Orekit |
-    | `JR1971` | Jacchia-Roberts 1971 | 90 to 3000 km | GMAT's published densities |
-    | `Jacchia1977` | Jacchia 1977 (SAO Special Report 375) | 90 to 2000 km | — |
-    | `HarrisPriester` | Harris-Priester, mean solar activity | 100 to 1000 km | Orekit |
-    | `HarrisPriesterModified` | Harris-Priester, smooth and scaled by F10.7 (Hatten and Russell) | 100 to 1000 km | — |
-
-    Below its lower limit a model stops the propagation with an error naming the limit; above its
-    upper limit the density is zero. `HarrisPriesterModified` is smooth in its first derivatives,
-    which suits an optimizer or a state transition matrix.
-
-    ```@raw html
-    <!-- doc-fragment -->
-    ```
-    ```julia
-    using EpicycleEnterprise
-    drag = AtmosphericDrag(earth; model = JB2008())
-    ```
-
-### Solar radiation pressure
-
-`SolarRadiationPressure` computes the push of sunlight on the spacecraft. It uses the reflectivity
-and area you set on the spacecraft, and accounts for eclipses with the shadow model you pick.
-`DualCone`, which models both umbra and penumbra, is the default and the only shadow model.
-
-```julia
-sat.srp = SphericalSRP(; c_r = 1.3, srp_area = 10.0)
-srp    = SolarRadiationPressure(earth; shadow = DualCone())
-```
-
-Once you've built the forces you want, add them to a `ForceModel`:
-
-```julia
-forces = ForceModel(grav, drag, srp)
-```
-
-### Writing a force
-
-A force of your own is a subtype of `OrbitODE` with one method of `accel_eval!`, and a
-`ForceModel` sums it with the built-in forces. The method writes the force's acceleration in
-km/s² to rows 4 to 6 of `dy`. Each force receives `dy` filled with zeros and the forces are summed
-afterwards, so assigning the acceleration and adding it give the same result. Rows 1 to 3 are
-written by the propagator. The example below adds a constant acceleration along the velocity,
-such as a low-thrust engine held prograde, to point-mass gravity.
-
-```julia
-using AstroEpochs, AstroStates, AstroUniverse, AstroModels, AstroProp
-using LinearAlgebra: norm
-import AstroProp: accel_eval!
-
-# A constant acceleration along the velocity vector, in km/s².
-struct AlongTrackThrust <: OrbitODE
-    accel::Float64
-end
-
-# Rows 4 to 6 only. Leave the element types open so the Jacobian can be taken through it.
-function accel_eval!(f::AlongTrackThrust, t, y, dy, sc, params)
-    v = y[4:6]
-    dy[4:6] .= f.accel .* v ./ norm(v)
-    return dy
-end
-
-sat = Spacecraft(state = CartesianState([7000.0, 0.0, 0.0, 0.0, 7.546, 0.0]),
-                 time  = Time("2020-01-01T00:00:00", UTC(), ISOT()))
-forces = ForceModel(PointMassGravity(earth, ()), AlongTrackThrust(1.0e-7))
-prop   = OrbitPropagator(forces, IntegratorConfig(Tsit5(); dt = 60.0, reltol = 1e-10, abstol = 1e-10))
-
-# A day of thrusting raises the orbit.
-propagate!(prop, sat, StopAt(sat, PropDurationDays(), 1.0))
-```
 
 ## Stopping Conditions
 
@@ -443,10 +287,12 @@ propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), -3600.0); direction=:in
 **Absolute Time Stops:**
 
 ```julia
-
 # Propagate to a future epoch
 sat = Spacecraft(
     time=Time("2015-09-21T12:23:12", TAI(), ISOT()),
+    mass=1000.0,
+    drag=SphericalDrag(c_d=2.2, drag_area=10.0),
+    srp=SphericalSRP(c_r=1.8, srp_area=10.0),
 )
 target = Time("2015-09-22T12:00:00", UTC(), ISOT())
 propagate!(prop, sat, StopAt(sat, target))
@@ -523,32 +369,7 @@ This ensures the correct dynamical time scale is used in the integration of the 
 !!! note "Force Model Central Body"
     The integration time scale is determined by the central body in your dynamics model. You can express spacecraft states in any coordinate or time system and AstroProp will still use the appropriate dynamical time scale for the integration of the equations of motion under the hood. 
 
-## Core Functions
+## Reference
 
-```@docs
-OrbitPropagator
-IntegratorConfig
-propagate!
-StopAt
-```
-
-## API Reference
-
-The core API is documented in the sections above; this reference sweeps up the remaining public
-symbols. The `Filter` excludes the symbols already given a dedicated `@docs` block (here and on the
-[Force Models](force_models.md) page) so nothing is documented twice.
-
-```@autodocs
-Modules = [AstroProp]
-Order = [:type, :function, :macro, :constant]
-Public = true
-Filter = t -> !(t in (
-    PointMassGravity, HarmonicGravity, AbstractGeopotential, Zonal,
-    AtmosphericDrag, AbstractDensityModel, Exponential, SolarRadiationPressure,
-    OrbitPropagator, IntegratorConfig, propagate!, StopAt,
-))
-```
-# Index
-
-```@index
-```
+Every public name, with its full signature, is in the [API Reference](api.md). The forces and
+their models are described on the [Force Models](force_models.md) page.

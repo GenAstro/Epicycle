@@ -81,9 +81,8 @@ function compute_point_mass_gravity!(
     pert_bodies::Tuple{Vararg{CelestialBody}};
     include_center::Bool = true,
     tol::Real = 1e-12,
+    params = nothing,
 ) where T
-    t_tdb  = t.tdb
-    jd_tdb = t_tdb.jd
     r̄ = posvel[1:3]
     r = norm(r̄)
 
@@ -94,7 +93,7 @@ function compute_point_mass_gravity!(
     acc = include_center ? _gravity_accel(center.mu, r̄) : zeros(T, 3)
 
     for pert in pert_bodies
-        r̄ₖ = translate(center, pert, jd_tdb)
+        r̄ₖ = force_position(params, center, pert, t)
         r̄ᵣ = r̄ₖ - r̄
         rᵣ = norm(r̄ᵣ)
         if rᵣ < tol
@@ -117,7 +116,7 @@ Evaluate the acceleration due to point-mass gravity from central and perturbing 
 function accel_eval!(model::PointMassGravity, t::Time, x̄::AbstractVector,
                         x̄̇::AbstractVector, sc::Spacecraft, params)
     compute_point_mass_gravity!(t, x̄, x̄̇, model.central_body, model.pert_bodies;
-                                include_center = model.include_center)
+                                include_center = model.include_center, params = params)
     return x̄̇
 end
 

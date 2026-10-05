@@ -9,9 +9,8 @@
 const _C_M_S = 2.99792458e8        # speed of light [m/s]
 
 # ─────────────────────────────── shadow model ────────────────────────────────
-# The type of the `shadow` keyword. `DualCone` is the one eclipse model and the only one supported,
-# so the type is internal: a second model is a `_shadow_factor` method on a new subtype, and becomes
-# supported when it ships with tests.
+# The type of the `shadow` keyword. Each eclipse model is a subtype with a `_shadow_factor` method.
+# The type stays internal: a model becomes supported when it ships with tests.
 abstract type AbstractShadowModel end
 
 """
@@ -26,6 +25,58 @@ SolarRadiationPressure(earth; shadow = DualCone())
 ```
 """
 struct DualCone <: AbstractShadowModel end
+
+"""
+    SmoothedConical(; sharpness = 3.25)
+
+A dual-cone shadow whose penumbra is a smooth logistic curve rather than the exact overlap of two
+disks, so the lighting factor and every derivative of it are continuous through eclipse entry and
+exit. Use it where SRP feeds a gradient: optimal control, targeting with automatic-differentiation
+partials, or a state transition matrix propagated across an eclipse boundary.
+
+The lighting factor is
+
+```math
+F = \\frac{1}{1 + e^{-k u}}, \\qquad u = \\frac{\\alpha_D - \\alpha_B}{\\alpha_S}
+```
+
+where ``\\alpha_S`` and ``\\alpha_B`` are the apparent radii of the Sun and the occulting body seen
+from the spacecraft, ``\\alpha_D`` is the angle between them, and ``k`` is `sharpness`. The curve is
+centred where the Sun's centre sits on the body's limb and scaled by the Sun's apparent radius, so it
+tracks the [`DualCone`](@ref) penumbra at any altitude. With the default `sharpness = 3.25` the
+lighting factor is within 0.04 of `DualCone` at LEO and at GEO, and the two agree to within 1e-6
+once the Sun's centre is more than about four of its apparent radii from the body's limb.
+
+# Arguments
+- `sharpness::Real`: ``k``, the slope of the transition in units of the Sun's apparent radius. Must
+  be positive. Larger values approach `DualCone` and steepen the derivative.
+
+# Notes
+The logistic form follows Aziz et al., "A Smoothed Eclipse Model for Solar Electric Propulsion
+Trajectory Optimization" (2019), which centres the curve on the outer edge of the penumbra with a
+fixed width in radians. That form, as published, reports half sunlight where `DualCone` has full
+sunlight at GEO, so this model centres and scales the curve on the penumbra instead.
+
+The model assumes the occulting body looks larger than the Sun, which holds out to roughly 1.4
+million km from the Earth. Beyond that, where the body only partly covers the Sun, the lighting factor
+does not fall below the annular value ``1 - \\alpha_B^2/\\alpha_S^2``.
+
+# Examples
+```julia
+SolarRadiationPressure(earth; shadow = SmoothedConical())
+```
+"""
+struct SmoothedConical <: AbstractShadowModel
+    sharpness::Float64
+
+    function SmoothedConical(sharpness::Real)
+        sharpness > 0 || throw(ArgumentError(
+            "sharpness must be positive; got sharpness = $sharpness"))
+        return new(Float64(sharpness))
+    end
+end
+
+SmoothedConical(; sharpness::Real = 3.25) = SmoothedConical(sharpness)
 
 
 # ─────────────────────────── solar radiation pressure ────────────────────────
@@ -50,8 +101,8 @@ speed of light, and ``r_{\\mathrm{AU}}`` is `nominal_sun`.
 # Arguments
 - `body::CelestialBody`: positional, required — the central body whose shadow can eclipse the
   spacecraft.
-- `shadow`: the eclipse model. [`DualCone`](@ref), umbra and penumbra, is the default and the
-  only model.
+- `shadow`: the eclipse model. [`DualCone`](@ref), umbra and penumbra, is the default.
+  [`SmoothedConical`](@ref) is a differentiable approximation of it for gradient-based work.
 - `solar_flux::Real`: the solar irradiance at 1 AU, W/m². Must be positive. Default `1367.0`
   (GMAT `SRP.Flux`).
 - `nominal_sun::Real`: the reference Sun distance used for 1/r² scaling, km. Must be positive.
@@ -61,6 +112,10 @@ speed of light, and ``r_{\\mathrm{AU}}`` is `nominal_sun`.
 Reads reflectivity ``C_r`` and area ``A`` from the spacecraft's `SphericalSRP`, and mass from the
 spacecraft — set `sc.srp` before propagating. The Sun's position is looked up from the ephemeris
 via `AstroUniverse.translate(body, sun, jd_tdb)` in km, inertial.
+
+With `DualCone` the acceleration has a kink at each edge of the penumbra, and `propagate!` ends a
+step at each one rather than stepping across it, so the integration error stays what the tolerance
+asks for through eclipses. `SmoothedConical` has no kinks and needs no such steps.
 
 Cross-validated against GMAT (`SRPModel = Spherical`); see `test/force_srp_spherical.jl`.
 
@@ -122,25 +177,45 @@ function _shadow_factor(::DualCone, r_sat, r_sun, R_sun, R_occ)
     elseif c < (a - b)
         return 1.0 - b^2 / a^2            # occulting body fully within the Sun disk
     else                                  # penumbra
+        # On the penumbra's edges x/a and (c − x)/b reach ±1 and a² − x² reaches 0, where round-off
+        # can step outside the domain; a step landed on the edge by the shadow events puts it there.
         x = (c^2 + a^2 - b^2) / (2.0 * c)
-        y = sqrt(a^2 - x^2)
-        area = a^2 * acos(x / a) + b^2 * acos((c - x) / b) - c * y
+        y = sqrt(max(a^2 - x^2, zero(x)))
+        area = a^2 * acos(clamp(x / a, -one(x), one(x))) +
+               b^2 * acos(clamp((c - x) / b, -one(x), one(x))) - c * y
         return 1.0 - area / (π * a^2)
     end
 end
 
-function accel_eval!(force::SolarRadiationPressure, t::Time, x̄::Vector, x̄̇::Vector,
+# The logistic written so that neither branch overflows: deep in the umbra x is a few hundred.
+# Both branches are the same function, so the value and its derivatives are continuous.
+@inline _logistic(x) = x ≥ 0 ? 1 / (1 + exp(-x)) : exp(x) / (1 + exp(x))
+
+function _shadow_factor(m::SmoothedConical, r_sat, r_sun, R_sun, R_occ)
+    R_ss = r_sat .- r_sun
+    a = asin(R_sun / norm(R_ss))          # apparent radius of the Sun
+    b = asin(R_occ / norm(r_sat))         # apparent radius of the occulting body
+    c = _angle_between(R_ss, r_sat)       # apparent separation
+    F = _logistic(m.sharpness * (c - b) / a)
+    floor = max(zero(F), 1 - b^2 / a^2)   # annular eclipse: the body cannot cover the whole Sun
+    return floor + (1 - floor) * F
+end
+
+_sun_centred(force::SolarRadiationPressure) = force.central_body.naifid == sun.naifid
+
+function accel_eval!(force::SolarRadiationPressure, t::Time, x̄::AbstractVector, x̄̇::AbstractVector,
                      sc::Spacecraft, params; jac::Dict = Dict())
     geom = sc.srp
     geom === nothing && throw(ArgumentError(
         "sc.srp must be a SphericalSRP for SolarRadiationPressure; got nothing. " *
         "Set sc.srp = SphericalSRP(; c_r, srp_area) before propagating."))
-    jd_tdb = t.tdb.jd
     r_sat  = SVector{3}(x̄[1], x̄[2], x̄[3])
-    r_sun  = SVector{3}(translate(force.central_body, sun, jd_tdb))   # Earth→Sun, km, inertial
+    r_sun  = force_position(params, force.central_body, sun, t)       # Earth→Sun, km, inertial
     RC = geom.c_r * geom.srp_area / total_mass(sc)                    # Cr·A/m [m²/kg]
     Ψ  = force.solar_flux / _C_M_S                                    # N/m²
-    F  = _shadow_factor(force.shadow, r_sat, r_sun, force.R_sun, force.R_occ)
+    # About the Sun there is no shadow: the light source cannot occult itself.
+    F  = _sun_centred(force) ? one(eltype(r_sat)) :
+         _shadow_factor(force.shadow, r_sat, r_sun, force.R_sun, force.R_occ)
     R_ss  = r_sat - r_sun
     d     = norm(R_ss)
     F_srp = F * RC * Ψ * (force.nominal_sun / d)^2 / 1.0e3            # → km/s², away from Sun

@@ -4,7 +4,8 @@ Prints the Julia literals in test_correctness_erfa_parity.jl. The inputs are cho
 each routine has: half-days (where rounding direction matters), both orders of a two-part date,
 leap-second days, and times that round across a day.
 
-    uv run --project C:\\Users\\steve\\Dev\\TestHarnesses\\astropy python test/astropy/make_erfa_parity.py
+Run from the AstroEpochs folder, with pyerfa 2.0.1.5 installed:
+    python test/astropy/make_erfa_parity.py
 """
 import erfa
 from astropy.utils import iers

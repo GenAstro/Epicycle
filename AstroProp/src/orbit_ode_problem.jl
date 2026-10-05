@@ -38,7 +38,9 @@ sensitivity propagation.
 # Fields
 - `prop::OrbitPropagator`
 - `sc::Spacecraft`
-- `duration_s::Float64` — propagation duration [s], from the spacecraft's epoch
+- `duration_s::Float64` — propagation duration [s], from the spacecraft's epoch, in the time
+  scale the orbit is integrated in: TT about the Earth, TDB about any other body, as
+  `propagate!` integrates
 - `stm::Union{STMConfig, Nothing}`
 - `dense::Bool` — retain the integrator's dense interpolant in
   `PropagationResult.sol` (`save_everystep = dense`,
@@ -115,20 +117,25 @@ function solve(prob::OrbitODEProblem)
     # elements when that is what the spacecraft carries.
     y0          = collect(to_posvel(sc))
     tspan       = (0.0, prob.duration_s)
-    start_epoch = sc.time
+    # TT about the Earth, TDB about any other body, as propagate! integrates. The spacecraft's own
+    # scale, usually UTC, is not uniform across a leap second and is not the dynamics' time.
+    start_epoch = _dynamical_epoch(prop.forces, sc.time)
     integ       = prop.integ
 
     if prob.stm === nothing
         # ------------------------------------------------------------------
         # Plain propagation
         # ------------------------------------------------------------------
+        params = (context = ForceContext(),)
         function plain_rhs!(dy, y, _p, t_rel)
             t = start_epoch + t_rel / 86400.0
-            _eval_all!(prop.forces, t, y, dy, sc)     # accelerations summed across forces
+            _reset!(params.context, t)
+            _eval_all!(prop.forces, t, y, dy, sc, params)   # accelerations summed across forces
         end
 
         ode = ODEProblem(plain_rhs!, y0, tspan)
         sol = CommonSolve.solve(ode, integ.integrator;
+                                    callback = _kink_callback(prop.forces, start_epoch, (1:6,)),
                                     reltol = integ.reltol,
                                     abstol = integ.abstol,
                                     save_everystep = prob.dense,
@@ -169,13 +176,15 @@ function _augmented_solve(prob::OrbitODEProblem, y0, tspan, start_epoch)
         end
     end
 
+    params = (context = ForceContext(),)
     function augmented_rhs!(dz, z, _p, t_rel)
         t = start_epoch + t_rel / 86400.0
         y = @view z[1:n_y]
 
         # Nominal dynamics
         dy = @view dz[1:n_y]
-        _eval_all!(forces, t, y, dy, sc)              # accelerations summed across forces
+        _reset!(params.context, t)
+        _eval_all!(forces, t, y, dy, sc, params)      # accelerations summed across forces
 
         # Jacobian blocks A = ∂f/∂y  and  B_i = ∂f/∂p_i
         eval_jacobian!(jac_result, forces, y, sc, t)
@@ -204,6 +213,7 @@ function _augmented_solve(prob::OrbitODEProblem, y0, tspan, start_epoch)
 
     ode = ODEProblem(augmented_rhs!, z0, tspan)
     sol = CommonSolve.solve(ode, integ.integrator;
+                                callback = _kink_callback(forces, start_epoch, (1:6,)),
                                 reltol = integ.reltol,
                                 abstol = integ.abstol,
                                 save_everystep = prob.dense,
