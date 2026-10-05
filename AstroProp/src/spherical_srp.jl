@@ -165,10 +165,13 @@ Base.show(io::IO, f::SolarRadiationPressure) = show(io, MIME"text/plain"(), f)
     return 2.0 * atan(norm(u1 .- u2), norm(u1 .+ u2))
 end
 
+# Inside the occulting body the apparent radius is capped at π/2, a point in full shadow. A trial
+# step of an adaptive integrator can put a stage there, and asin of a ratio above 1 threw a
+# DomainError where the integrator would have rejected the step.
 function _shadow_factor(::DualCone, r_sat, r_sun, R_sun, R_occ)
     R_ss = r_sat .- r_sun
-    a = asin(R_sun / norm(R_ss))          # apparent radius of the Sun
-    b = asin(R_occ / norm(r_sat))         # apparent radius of the occulting body
+    a = asin(min(R_sun / norm(R_ss), one(R_sun)))   # apparent radius of the Sun
+    b = asin(min(R_occ / norm(r_sat), one(R_occ)))  # apparent radius of the occulting body; π/2 inside it
     c = _angle_between(R_ss, r_sat)       # apparent separation
     if c ≥ (b + a)
         return 1.0                        # full sun
@@ -193,8 +196,8 @@ end
 
 function _shadow_factor(m::SmoothedConical, r_sat, r_sun, R_sun, R_occ)
     R_ss = r_sat .- r_sun
-    a = asin(R_sun / norm(R_ss))          # apparent radius of the Sun
-    b = asin(R_occ / norm(r_sat))         # apparent radius of the occulting body
+    a = asin(min(R_sun / norm(R_ss), one(R_sun)))   # apparent radius of the Sun
+    b = asin(min(R_occ / norm(r_sat), one(R_occ)))  # apparent radius of the occulting body; π/2 inside it
     c = _angle_between(R_ss, r_sat)       # apparent separation
     F = _logistic(m.sharpness * (c - b) / a)
     floor = max(zero(F), 1 - b^2 / a^2)   # annular eclipse: the body cannot cover the whole Sun

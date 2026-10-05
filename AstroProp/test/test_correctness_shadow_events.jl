@@ -105,6 +105,20 @@ end
         @test straddled == 0
     end
 
+    @testset "a trial step inside the Earth is rejected, not an error" begin
+        # The default initial step is 5000 s; its first trial puts a stage inside the Earth, where
+        # the apparent radius of the Earth was asin of a ratio above 1, a DomainError.
+        for shadow in (DualCone(), SmoothedConical())
+            sc = _shadow_sc()
+            f = ForceModel(PointMassGravity(earth, ()), SolarRadiationPressure(earth; shadow = shadow))
+            propagate!(OrbitPropagator(f, IntegratorConfig(Vern9(); reltol = 1e-10, abstol = 1e-10)),
+                       sc, StopAt(sc, PropDurationSeconds(), 6 * 3600.0))
+            @test norm(to_vector(sc.state)[1:3]) > 6378.0
+        end
+        @test _APS._shadow_factor(DualCone(), SVector(3000.0, 0.0, 0.0), SVector(-1.496e8, 0.0, 0.0),
+                                  srp.R_sun, srp.R_occ) == 0.0
+    end
+
     @testset "no callback without kinks" begin
         @test _APS._kink_callback(ForceModel(PointMassGravity(earth, ())), epoch0, (1:6,)) === nothing
         smooth = SolarRadiationPressure(earth; shadow = SmoothedConical())

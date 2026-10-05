@@ -51,8 +51,8 @@ function _kink_values!(out, i, f::SolarRadiationPressure, r, r_sun)
     kinks = _shadow_kinks(f.shadow)
     (isempty(kinks) || _sun_centred(f)) && return i
     R_ss = r .- r_sun
-    a = asin(f.R_sun / norm(R_ss))
-    b = asin(f.R_occ / norm(r))
+    a = asin(min(f.R_sun / norm(R_ss), one(f.R_sun)))
+    b = asin(min(f.R_occ / norm(r), one(f.R_occ)))
     c = _angle_between(R_ss, r)
     for g in kinks
         i += 1
