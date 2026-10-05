@@ -55,7 +55,7 @@ export PosVel
 export PointMassGravity, accel_eval!
 export HarmonicGravity, AtmosphericDrag, SolarRadiationPressure
 export Zonal, Exponential
-export DualCone
+export DualCone, SmoothedConical
 export AbstractGeopotential, AbstractDensityModel, density
 export geopotential_accel, geopotential_data, max_degree, max_order
 export gravity_center, includes_central
@@ -144,6 +144,7 @@ abstract type AbstractGravityForce <: OrbitODE end
 # external_force.jl is intentionally not included until the AstroForceModels,
 # SatelliteToolboxGravityModels and ForwardDiff version conflict is resolved upstream.
 # The file remains in the source tree.
+include("force_context.jl")
 include("point_mass_gravity.jl")
 include("harmonic_gravity.jl")
 include("zonal_gravity.jl")
@@ -209,6 +210,7 @@ struct ForceModel{N} <: OrbitODE
     center::Union{CelestialBody, Nothing}
 end
 
+include("discontinuities.jl")
 include("orbit_propagator.jl")
 include("jacobian_config.jl")
 include("orbit_ode_problem.jl")
@@ -316,11 +318,13 @@ end
 
 function _build_odes!(model::ForceModel, start_epoch, du, u, p, t, spacecraft_list::Vector{<:Spacecraft})
     odereg = p[:odereg]
+    # One epoch for every force and spacecraft, and the context the forces share at it.
+    current_time = start_epoch + t/86400.0
+    haskey(p, :context) && _reset!(p.context, current_time)
     for sc in spacecraft_list
         idxs = odereg[sc][:posvel]
         posvel = u[idxs[1:6]]
 
-        current_time = start_epoch + t/86400.0
         acc = zeros(eltype(posvel), 6)
         a_sum = zeros(eltype(posvel), 3)
         for force in model.forces
@@ -438,12 +442,16 @@ function _propagate_dynsys!(model::DynSys, config::IntegratorConfig,
        CallbackSet(state_conds...)
 
     odereg = _build_odereg(model.spacecraft)
-    params = (forces = model.forces, odereg = odereg)
+    params = (forces = model.forces, odereg = odereg, context = ForceContext())
     state0 = _build_state(model.forces, model.spacecraft, odereg)
     
     # Use TT for Earth-centered dynamics, TDB for others
     center_body = model.forces.center
     start_epoch = (center_body === earth) ? model.spacecraft[1].time.tt : model.spacecraft[1].time.tdb
+
+    # End a step at every kink in a force, such as a shadow boundary; see discontinuities.jl.
+    posvels = [odereg[sc][:posvel][1:6] for sc in model.spacecraft]
+    callbackset = _with_callback(callbackset, _kink_callback(model.forces, start_epoch, posvels))
 
     actual_direction == :forward || actual_direction == :backward ||
         error("Unknown direction: $actual_direction. Use :forward or :backward.")

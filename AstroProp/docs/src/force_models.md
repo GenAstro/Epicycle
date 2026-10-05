@@ -111,7 +111,20 @@ AtmosphericDrag(earth; model = HarrisPriesterModified(n = 6))    # a polar orbit
 SolarRadiationPressure
 ```
 
-One shadow model ships and is the default: `DualCone`, which models both umbra and penumbra.
+Two shadow models ship. `DualCone`, the default, models both umbra and penumbra exactly.
+`SmoothedConical` replaces the penumbra with a smooth curve that stays within 0.04 of `DualCone`, so
+the SRP acceleration has continuous derivatives through eclipse entry and exit; use it where SRP
+feeds a gradient.
+
+`DualCone`'s acceleration has a kink at each edge of the penumbra, a few seconds apart in LEO. A step
+that straddles one commits an error the integrator's error estimate does not see, so `propagate!`
+predicts each edge and ends a step on it. In a one-day LEO case with the full force model that took
+Vern9 at 1e-11 from 15 cm to 3 mm of its converged answer, for about 12 % more steps.
+
+```@docs
+DualCone
+SmoothedConical
+```
 
 ## Spacecraft geometry
 

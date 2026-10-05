@@ -234,20 +234,21 @@ end
 # fd_differentiate_wrt — AstroProp-level FD oracle for testing
 # ---------------------------------------------------------------------------
 
-function _eval_all!(fm::OrbitODE, t, y, acc, sc)
+function _eval_all!(fm::OrbitODE, t, y, acc, sc, params = [])
     fill!(acc, 0.0)
-    accel_eval!(fm, t, y, acc, sc, [])
+    accel_eval!(fm, t, y, acc, sc, params)
 end
 
 # Accelerations summed and kinematics written once, as `propagate!` assembles them. Each force's
 # `accel_eval!` overwrites the rows it writes, so calling them into one buffer keeps only the last.
-function _eval_all!(fm::ForceModel, t, y, acc, sc)
+# `params` may carry a ForceContext already reset to `t`; see force_context.jl.
+function _eval_all!(fm::ForceModel, t, y, acc, sc, params = [])
     fill!(acc, 0.0)
     acc[1:3] .= y[4:6]
     one = zeros(eltype(acc), length(acc))
     for force in fm.forces
         fill!(one, 0.0)
-        accel_eval!(force, t, y, one, sc, [])
+        accel_eval!(force, t, y, one, sc, params)
         acc[4:6] .+= one[4:6]
     end
     return acc

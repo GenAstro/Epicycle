@@ -122,13 +122,16 @@ function solve(prob::OrbitODEProblem)
         # ------------------------------------------------------------------
         # Plain propagation
         # ------------------------------------------------------------------
+        params = (context = ForceContext(),)
         function plain_rhs!(dy, y, _p, t_rel)
             t = start_epoch + t_rel / 86400.0
-            _eval_all!(prop.forces, t, y, dy, sc)     # accelerations summed across forces
+            _reset!(params.context, t)
+            _eval_all!(prop.forces, t, y, dy, sc, params)   # accelerations summed across forces
         end
 
         ode = ODEProblem(plain_rhs!, y0, tspan)
         sol = CommonSolve.solve(ode, integ.integrator;
+                                    callback = _kink_callback(prop.forces, start_epoch, (1:6,)),
                                     reltol = integ.reltol,
                                     abstol = integ.abstol,
                                     save_everystep = prob.dense,
@@ -169,13 +172,15 @@ function _augmented_solve(prob::OrbitODEProblem, y0, tspan, start_epoch)
         end
     end
 
+    params = (context = ForceContext(),)
     function augmented_rhs!(dz, z, _p, t_rel)
         t = start_epoch + t_rel / 86400.0
         y = @view z[1:n_y]
 
         # Nominal dynamics
         dy = @view dz[1:n_y]
-        _eval_all!(forces, t, y, dy, sc)              # accelerations summed across forces
+        _reset!(params.context, t)
+        _eval_all!(forces, t, y, dy, sc, params)      # accelerations summed across forces
 
         # Jacobian blocks A = ∂f/∂y  and  B_i = ∂f/∂p_i
         eval_jacobian!(jac_result, forces, y, sc, t)
@@ -204,6 +209,7 @@ function _augmented_solve(prob::OrbitODEProblem, y0, tspan, start_epoch)
 
     ode = ODEProblem(augmented_rhs!, z0, tspan)
     sol = CommonSolve.solve(ode, integ.integrator;
+                                callback = _kink_callback(forces, start_epoch, (1:6,)),
                                 reltol = integ.reltol,
                                 abstol = integ.abstol,
                                 save_everystep = prob.dense,

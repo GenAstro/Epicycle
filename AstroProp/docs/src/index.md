@@ -326,7 +326,8 @@ that's fast and works well for early analysis.
 
 `SolarRadiationPressure` computes the push of sunlight on the spacecraft. It uses the reflectivity
 and area you set on the spacecraft, and accounts for eclipses with the shadow model you pick.
-`DualCone`, which models both umbra and penumbra, is the default and the only shadow model.
+`DualCone`, which models both umbra and penumbra, is the default. `SmoothedConical` approximates it
+with a smooth penumbra, for SRP inside an optimization or an automatic-differentiation Jacobian.
 
 ```julia
 sat.srp = SphericalSRP(; c_r = 1.3, srp_area = 10.0)
@@ -372,6 +373,20 @@ prop   = OrbitPropagator(forces, IntegratorConfig(Tsit5(); dt = 60.0, reltol = 1
 
 # A day of thrusting raises the orbit.
 propagate!(prop, sat, StopAt(sat, PropDurationDays(), 1.0))
+```
+
+A force that needs the epoch in another time scale, a body's rotation into its fixed axes, or a
+body's position from the ephemeris can ask `params` for them, through `AstroProp.force_epoch`,
+`force_rotation`, `force_position` and `force_state`. Every force in an evaluation shares what
+these return, so the time is converted and the Earth's rotation computed once rather than once per
+force. They return what the direct calls would, `t.tdb.jd`, `body_fixed_rotation`, `translate` and
+`translate_state`, and compute it directly when `accel_eval!` is called outside a propagation.
+
+```julia
+# Inside accel_eval!(f, t, y, dy, sc, params):
+jd_utc = AstroProp.force_epoch(params, t).utc
+R      = AstroProp.force_rotation(params, orientation_model(earth), 399, t)   # 6×6, [R 0; Ṙ R]
+r_sun  = AstroProp.force_position(params, earth, sun, t)                      # km, ICRF
 ```
 
 ## Stopping Conditions
