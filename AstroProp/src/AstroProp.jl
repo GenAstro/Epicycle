@@ -56,7 +56,7 @@ export PointMassGravity, accel_eval!
 export HarmonicGravity, AtmosphericDrag, SolarRadiationPressure
 export Zonal, Exponential
 export DualCone, SmoothedConical
-export AbstractGeopotential, AbstractDensityModel, density
+export AbstractGeopotential, AbstractDensityModel, density, density_gradient
 export geopotential_accel, geopotential_gradient, geopotential_data, max_degree, max_order
 export AbstractTideModel, field_radius, tide_system, atmosphere_body
 export gravity_center, includes_central
