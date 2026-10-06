@@ -126,3 +126,12 @@ function force_state(params, from::CelestialBody, to::CelestialBody, t::Time)
     push!(ctx.states, s)
     return s
 end
+
+# ─────────────────────────── analytic partials with the context ───────────────────────────
+#
+# A force's analytic partials are registered through EpicycleBase's state_jac!(out, force, t, y,
+# sc) and param_jac!(out, force, tag, t, y, sc), which carry no context. eval_jacobian! calls these
+# two instead, so a force of this package can take the context and share the epoch, rotations and
+# ephemeris already computed at t; any other force falls through to its registered method.
+_state_jac_ctx!(out, force, t, y, sc, params) = state_jac!(out, force, t, y, sc)
+_param_jac_ctx!(out, force, tag, t, y, sc, params) = param_jac!(out, force, tag, t, y, sc)

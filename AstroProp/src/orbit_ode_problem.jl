@@ -223,7 +223,7 @@ function _augmented_solve(prob::OrbitODEProblem, y0, tspan, start_epoch)
         _eval_all!(forces, t, y, dy, sc, params)      # accelerations summed across forces
 
         # Jacobian blocks A = ∂f/∂y  and  B_i = ∂f/∂p_i
-        eval_jacobian!(jac_result, forces, y, sc, t)
+        eval_jacobian!(jac_result, forces, y, sc, t, params)   # the context the accelerations used
         A = jac_result.partial_y   # 6×6
 
         # Φ̇ = A·Φ

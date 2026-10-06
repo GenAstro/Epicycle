@@ -124,30 +124,37 @@ end
 # state_jac! — A = ∂f/∂y  (analytic registration via dispatch)
 # ---------------------------------------------------------------------------
 
-function state_jac!(out::AbstractMatrix, m::PointMassGravity, t::Time,
-                     y::AbstractVector, sc::Spacecraft)
-    r̄ = y[1:3]
+state_jac!(out::AbstractMatrix, m::PointMassGravity, t::Time, y::AbstractVector, sc::Spacecraft) =
+    _state_jac_ctx!(out, m, t, y, sc, nothing)
+
+# The perturbers' positions come through force_position, as in the acceleration: from the shared
+# context when eval_jacobian! passes one, and from the ephemeris directly otherwise.
+function _state_jac_ctx!(out::AbstractMatrix, m::PointMassGravity, t::Time,
+                         y::AbstractVector, sc::Spacecraft, params)
+    r̄ = SVector{3}(y[1], y[2], y[3])
     r = norm(r̄)
-    I3 = Matrix{Float64}(I, 3, 3)
+    I3 = SMatrix{3,3,Float64}(I)
 
     # ∂ṙ/∂v = I₃
-    out[1:3, 4:6] .+= I3
+    @inbounds for i in 1:3
+        out[i, i + 3] += 1.0
+    end
 
     # ∂v̇/∂r = μ·(3r̂r̂ᵀ − I)/r³  for the central body, when this force includes it
     ∂v̇∂r = m.include_center ? m.central_body.mu * (3 * (r̄ * r̄') / r^5 - I3 / r^3) :
-                              zeros(3, 3)
+                              zero(SMatrix{3,3,Float64})
 
     # Perturber contributions
-    t_tdb  = t.tdb
-    jd_tdb = t_tdb.jd
     for pert in m.pert_bodies
-        r̄ₖ = translate(m.central_body, pert, jd_tdb)
-        r̄ᵣ = r̄ₖ .- r̄
+        r̄ₖ = force_position(params, m.central_body, pert, t)
+        r̄ᵣ = r̄ₖ - r̄
         rᵣ = norm(r̄ᵣ)
-        ∂v̇∂r .+= pert.mu * (-I3 / rᵣ^3 + 3 * (r̄ᵣ * r̄ᵣ') / rᵣ^5)
+        ∂v̇∂r += pert.mu * (-I3 / rᵣ^3 + 3 * (r̄ᵣ * r̄ᵣ') / rᵣ^5)
     end
 
-    out[4:6, 1:3] .+= ∂v̇∂r
+    @inbounds for j in 1:3, i in 1:3
+        out[3 + i, j] += ∂v̇∂r[i, j]
+    end
     return nothing
 end
 

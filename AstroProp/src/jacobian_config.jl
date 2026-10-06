@@ -75,12 +75,15 @@ per ODE step.
 - `partial_y::Matrix{Float64}`                       — df/dy (n×n)
 - `partial_p::Dict{ModelVariable, Vector{Float64}}`  — df/dp_i (n×1) per variable
 - `plan::DispatchPlan`                               — analytic vs. AD routing
+- `context::ForceContext`                            — shared epoch, rotations and ephemeris for
+  callers that do not pass their own
 """
 struct JacobianResult
     config::JacobianConfig
     partial_y::Matrix{Float64}
     partial_p::Dict{ModelVariable, Vector{Float64}}
     plan::DispatchPlan
+    context::ForceContext
 end
 
 """
@@ -100,18 +103,19 @@ function JacobianResult(cfg::JacobianConfig;
     partial_p = Dict{ModelVariable, Vector{Float64}}(
         mv => zeros(n_state) for mv in cfg.partial_p)
     plan = DispatchPlan(forces, cfg, sc, t_example)
-    return JacobianResult(cfg, partial_y, partial_p, plan)
+    return JacobianResult(cfg, partial_y, partial_p, plan, ForceContext())
 end
 
 # ---------------------------------------------------------------------------
 # AD fallbacks — called when no analytic method is registered
 # ---------------------------------------------------------------------------
 
-# State fallback: ForwardDiff.jacobian on accel_eval! for this force only.
-function _state_jac_ad!(out, force, t, y::AbstractVector, sc::Spacecraft)
+# State fallback: ForwardDiff.jacobian on accel_eval! for this force only. The context depends on
+# the epoch alone, so the dual numbers in the state leave it valid.
+function _state_jac_ad!(out, force, t, y::AbstractVector, sc::Spacecraft, params = [])
     f_ = y_ -> begin
         acc = zeros(eltype(y_), length(y_))
-        accel_eval!(force, t, y_, acc, sc, [])
+        accel_eval!(force, t, y_, acc, sc, params)
         acc
     end
     out .+= ForwardDiff.jacobian(f_, y)
@@ -122,10 +126,10 @@ end
 # Used when no param_jac! method is registered and no kernel is available to
 # inject a Dual.  Correct but approximate — register param_jac! for production.
 function _param_jac_fd!(out, force, mv::ModelVariable, t, y::AbstractVector,
-                         sc::Spacecraft)
+                         sc::Spacecraft, params = [])
     out .+= _central_difference(mv.model, mv.tag) do
         acc = zeros(length(y))
-        accel_eval!(force, t, y, acc, sc, [])
+        accel_eval!(force, t, y, acc, sc, params)
         acc
     end
     return nothing
@@ -154,7 +158,7 @@ end
 # ---------------------------------------------------------------------------
 
 """
-    eval_jacobian!(result, forces, y, sc, t) -> result
+    eval_jacobian!(result, forces, y, sc, t[, params]) -> result
 
 In-place Jacobian evaluation.  For each force:
   • Calls `state_jac!`  if registered (analytic), else `ForwardDiff.jacobian`.
@@ -163,11 +167,21 @@ In-place Jacobian evaluation.  For each force:
 Registration is detected once at `JacobianResult` construction via `hasmethod`, so no method
 lookup happens per ODE step. The result arrays are reused; the automatic-differentiation and
 finite-difference fallbacks still allocate on each call.
+
+Every force is evaluated with one shared `ForceContext`, so the epoch conversion, body rotations
+and ephemeris positions at `t` are computed once for the whole Jacobian. A caller that already
+holds a context reset to `t`, as the right-hand side of a propagation does, passes it in
+`params` (a named tuple with a `context` field) and the Jacobian reuses what the accelerations
+computed; otherwise the result's own context is reset to `t`.
 """
 function eval_jacobian!(result::JacobianResult, fm::ForceModel,
-                         y::AbstractVector, sc::Spacecraft, t)
+                         y::AbstractVector, sc::Spacecraft, t, params = nothing)
     cfg  = result.config
     plan = result.plan
+    if params === nothing
+        _reset!(result.context, t)
+        params = (context = result.context,)
+    end
 
     if cfg.partial_y
         fill!(result.partial_y, 0.0)
@@ -182,9 +196,9 @@ function eval_jacobian!(result::JacobianResult, fm::ForceModel,
         # A = ∂f/∂y
         if cfg.partial_y
             if FT in plan.analytic_state
-                state_jac!(result.partial_y, force, t, y, sc)
+                _state_jac_ctx!(result.partial_y, force, t, y, sc, params)
             else
-                _state_jac_ad!(result.partial_y, force, t, y, sc)
+                _state_jac_ad!(result.partial_y, force, t, y, sc, params)
             end
         end
 
@@ -193,9 +207,9 @@ function eval_jacobian!(result::JacobianResult, fm::ForceModel,
             GT  = typeof(mv.tag)
             out = result.partial_p[mv]
             if (FT, GT) in plan.analytic_param
-                param_jac!(out, force, mv.tag, t, y, sc)
+                _param_jac_ctx!(out, force, mv.tag, t, y, sc, params)
             else
-                _param_jac_fd!(out, force, mv, t, y, sc)
+                _param_jac_fd!(out, force, mv, t, y, sc, params)
             end
         end
     end
