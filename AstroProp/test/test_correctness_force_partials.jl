@@ -17,7 +17,7 @@ using Test
 using LinearAlgebra
 using AstroProp
 using AstroModels, AstroStates, AstroEpochs
-using AstroUniverse: earth
+using AstroUniverse: earth, sun
 using StaticArrays: SVector
 
 @testset "Force partials: HarmonicGravity state Jacobian" begin
@@ -77,4 +77,52 @@ end
     ∇fd = [(density(f.model, jd, r + h * SVector(ntuple(k -> k == j, 3)), R) -
             density(f.model, jd, r - h * SVector(ntuple(k -> k == j, 3)), R)) / 2h for j in 1:3]
     @test norm(∇ρ - ∇fd) / norm(∇ρ) < 1e-6
+end
+
+# SolarRadiationPressure: closed form but for the shadow factor's gradient, by ForwardDiff on the
+# shadow function alone. Points in sunlight, in the penumbra and in the umbra, with both shadows,
+# and about the Sun, where there is no shadow. Measured on 2026-10-06: ≤ 6.3e-16 against full AD.
+@testset "Force partials: SolarRadiationPressure state Jacobian" begin
+    t = Time("2020-10-20T12:00:00", UTC(), ISOT())
+    sc = Spacecraft(; state = CartesianState([6878.137, 0, 0, 0, 7.6, 0.0]), time = t, mass = 1000.0,
+                    srp = SphericalSRP(c_r = 1.8, srp_area = 10.0))
+    rs = AstroProp.force_position(nothing, earth, sun, t); ŝ = rs / norm(rs)
+    n̂ = normalize(cross(ŝ, SVector(0.0, 0.0, 1.0)))
+    at(θ) = [6878.137 * (-cos(θ) * ŝ + sin(θ) * n̂); 0.0; 7.6; 0.0]          # θ from the anti-Sun line
+    for shadow in (DualCone(), SmoothedConical()), θ in (1.6, 1.188, 0.3)  # sunlight, penumbra, umbra
+        f = SolarRadiationPressure(earth; shadow = shadow)
+        y = at(θ)
+        A = zeros(6, 6); AstroProp.state_jac!(A, f, t, y, sc)
+        B = zeros(6, 6); AstroProp._state_jac_ad!(B, f, t, y, sc)
+        @test norm(A[4:6, 1:3] - B[4:6, 1:3]) <= 1e-13 * max(norm(B[4:6, 1:3]), eps())
+        @test A[4:6, 4:6] == zeros(3, 3)
+    end
+    fs = SolarRadiationPressure(sun)
+    y = [1.5e8, 1.0e6, 0.0, 0.0, 30.0, 0.0]
+    A = zeros(6, 6); AstroProp.state_jac!(A, fs, t, y, sc)
+    B = zeros(6, 6); AstroProp._state_jac_ad!(B, fs, t, y, sc)
+    @test norm(A[4:6, 1:3] - B[4:6, 1:3]) / norm(B[4:6, 1:3]) < 1e-13
+end
+
+# eval_accel_and_jacobian!: one pass, a force with accel_and_jac! evaluated once for both. It must
+# give accel_eval!'s acceleration and eval_jacobian!'s Jacobian to round-off: a density evaluated on
+# dual numbers can differ from the plain evaluation in its last bit (one unit, 4e-20 km/s², here).
+@testset "eval_accel_and_jacobian! against separate calls" begin
+    t = Time("2020-10-20T12:00:00", UTC(), ISOT())
+    sc = Spacecraft(; state = CartesianState([6578.137, 0, 0, 0, 7.7, 0.0]), time = t, mass = 1000.0,
+                    drag = SphericalDrag(c_d = 2.2, drag_area = 10.0), srp = SphericalSRP(c_r = 1.8, srp_area = 10.0))
+    fm = ForceModel(HarmonicGravity(earth; degree = 4, order = 0, model = Zonal()),
+                    PointMassGravity(earth, (sun,); include_center = false),
+                    AtmosphericDrag(earth; model = Exponential()), SolarRadiationPressure(earth))
+    y = [6578.137, 120.0, 300.0, 0.0, 7.7, 0.3]
+    cfg = JacobianConfig(partial_y = true)
+    r1 = JacobianResult(cfg; n_state = 6, forces = fm, sc = sc, t_example = t)
+    r2 = JacobianResult(cfg; n_state = 6, forces = fm, sc = sc, t_example = t)
+    @test r1.plan.combined == Set([typeof(fm.forces[1]), typeof(fm.forces[3])])
+    acc = zeros(6); eval_accel_and_jacobian!(acc, r1, fm, y, sc, t)
+    ctx = AstroProp.ForceContext(); AstroProp._reset!(ctx, t)
+    acc0 = zeros(6); AstroProp._eval_all!(fm, t, y, acc0, sc, (context = ctx,))
+    eval_jacobian!(r2, fm, y, sc, t)
+    @test acc ≈ acc0 rtol = 1e-14
+    @test r1.partial_y ≈ r2.partial_y rtol = 1e-14
 end

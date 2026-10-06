@@ -28,12 +28,14 @@ end
 struct DispatchPlan
     analytic_state::Set{DataType}                 # force types with state_jac! defined
     analytic_param::Set{Tuple{DataType,DataType}} # (force_type, tag_type) pairs
+    combined::Set{DataType}                       # force types with accel_and_jac! defined
 end
 
 function DispatchPlan(forces::ForceModel, cfg::JacobianConfig,
                       sc::Spacecraft, t_example)
     analytic_state = Set{DataType}()
     analytic_param = Set{Tuple{DataType,DataType}}()
+    combined       = Set{DataType}()
 
     TT = typeof(t_example)
     TS = typeof(sc)
@@ -46,6 +48,10 @@ function DispatchPlan(forces::ForceModel, cfg::JacobianConfig,
                     Tuple{Matrix{Float64}, FT, TT, AbstractVector, TS})
                 push!(analytic_state, FT)
             end
+            if hasmethod(accel_and_jac!,
+                    Tuple{AbstractVector, AbstractMatrix, FT, TT, AbstractVector, TS, Any})
+                push!(combined, FT)
+            end
         end
 
         for mv in cfg.partial_p
@@ -57,7 +63,7 @@ function DispatchPlan(forces::ForceModel, cfg::JacobianConfig,
         end
     end
 
-    return DispatchPlan(analytic_state, analytic_param)
+    return DispatchPlan(analytic_state, analytic_param, combined)
 end
 
 """
@@ -176,57 +182,95 @@ computed; otherwise the result's own context is reset to `t`.
 """
 function eval_jacobian!(result::JacobianResult, fm::ForceModel,
                          y::AbstractVector, sc::Spacecraft, t, params = nothing)
-    cfg  = result.config
-    plan = result.plan
+    params = _start_jacobian!(result, t, params)
+    for force in fm.forces
+        _state_partials!(result, force, t, y, sc, params)
+        _param_partials!(result, force, t, y, sc, params)
+    end
+    return _finish_jacobian!(result)
+end
+
+"""
+    eval_accel_and_jacobian!(acc, result, forces, y, sc, t[, params]) -> result
+
+The state derivative into `acc`, assembled as `propagate!` assembles it (the velocity, then the
+forces' accelerations summed), and the Jacobian into `result`, in one pass over the forces. A force
+with an [`accel_and_jac!`](@ref) method is evaluated once for both; any other by `accel_eval!` and
+then its Jacobian route, exactly as `eval_jacobian!` takes it. For the right-hand side of a
+variational propagation, which needs both at every stage. `params` as for `eval_jacobian!`.
+"""
+function eval_accel_and_jacobian!(acc::AbstractVector, result::JacobianResult, fm::ForceModel,
+                                  y::AbstractVector, sc::Spacecraft, t, params = nothing)
+    params = _start_jacobian!(result, t, params)
+    fill!(acc, 0.0)
+    acc[1:3] .= y[4:6]
+    one = zeros(eltype(acc), length(acc))
+    for force in fm.forces
+        fill!(one, 0.0)
+        if result.config.partial_y && typeof(force) in result.plan.combined
+            accel_and_jac!(one, result.partial_y, force, t, y, sc, params)
+        else
+            accel_eval!(force, t, y, one, sc, params)
+            _state_partials!(result, force, t, y, sc, params)
+        end
+        _param_partials!(result, force, t, y, sc, params)
+        acc[4:6] .+= one[4:6]
+    end
+    return _finish_jacobian!(result)
+end
+
+# The context for one evaluation at t, the caller's or the result's own reset to t; the buffers
+# cleared.
+function _start_jacobian!(result::JacobianResult, t, params)
     if params === nothing
         _reset!(result.context, t)
         params = (context = result.context,)
     end
-
-    if cfg.partial_y
-        fill!(result.partial_y, 0.0)
-    end
-    for mv in cfg.partial_p
+    result.config.partial_y && fill!(result.partial_y, 0.0)
+    for mv in result.config.partial_p
         fill!(result.partial_p[mv], 0.0)
     end
+    return params
+end
 
-    for force in fm.forces
-        FT = typeof(force)
+# A = ∂f/∂y from one force: its state_jac! when it has one, else ForwardDiff through accel_eval!.
+function _state_partials!(result::JacobianResult, force, t, y, sc, params)
+    result.config.partial_y || return nothing
+    if typeof(force) in result.plan.analytic_state
+        _state_jac_ctx!(result.partial_y, force, t, y, sc, params)
+    else
+        _state_jac_ad!(result.partial_y, force, t, y, sc, params)
+    end
+    return nothing
+end
 
-        # A = ∂f/∂y
-        if cfg.partial_y
-            if FT in plan.analytic_state
-                _state_jac_ctx!(result.partial_y, force, t, y, sc, params)
-            else
-                _state_jac_ad!(result.partial_y, force, t, y, sc, params)
-            end
-        end
-
-        # B_i = ∂f/∂p_i
-        for mv in cfg.partial_p
-            GT  = typeof(mv.tag)
-            out = result.partial_p[mv]
-            if (FT, GT) in plan.analytic_param
-                _param_jac_ctx!(out, force, mv.tag, t, y, sc, params)
-            else
-                _param_jac_fd!(out, force, mv, t, y, sc, params)
-            end
+# B_i = ∂f/∂p_i from one force: its param_jac! for the tag when it has one, else central differences.
+function _param_partials!(result::JacobianResult, force, t, y, sc, params)
+    FT = typeof(force)
+    for mv in result.config.partial_p
+        out = result.partial_p[mv]
+        if (FT, typeof(mv.tag)) in result.plan.analytic_param
+            _param_jac_ctx!(out, force, mv.tag, t, y, sc, params)
+        else
+            _param_jac_fd!(out, force, mv, t, y, sc, params)
         end
     end
+    return nothing
+end
 
-    # Each force's contribution, analytic or AD, carries the kinematic rows ṙ = v as well as its
-    # acceleration, so summing N forces would give ∂ṙ/∂v = N·I and ∂ṙ/∂p = N·0. The kinematics
-    # appear once in the dynamics, so they are written once here.
-    if cfg.partial_y
+# Each force's contribution, analytic or AD, carries the kinematic rows ṙ = v as well as its
+# acceleration, so summing N forces would give ∂ṙ/∂v = N·I and ∂ṙ/∂p = N·0. The kinematics appear
+# once in the dynamics, so they are written once here.
+function _finish_jacobian!(result::JacobianResult)
+    if result.config.partial_y
         result.partial_y[1:3, :] .= 0.0
         for i in 1:3
             result.partial_y[i, i + 3] = 1.0
         end
     end
-    for mv in cfg.partial_p
+    for mv in result.config.partial_p
         result.partial_p[mv][1:3] .= 0.0
     end
-
     return result
 end
 

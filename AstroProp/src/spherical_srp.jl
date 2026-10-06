@@ -206,6 +206,45 @@ end
 
 _sun_centred(force::SolarRadiationPressure) = force.central_body.naifid == sun.naifid
 
+# The state Jacobian. With u = r − r_sun and K = Cr·A/m · Ψ · AU² / 10³, the acceleration is
+# a = K F u/|u|³, F the shadow factor, so
+#
+#     ∂a/∂r = K (u ∇Fᵀ/|u|³ + F (I/|u|³ − 3 u uᵀ/|u|⁵)),   ∂a/∂v = 0,
+#
+# closed form but for ∇F, the gradient of a scalar of position, by ForwardDiff on the shadow
+# function alone. It is zero in full sunlight and in the umbra; at a dual cone's penumbra edge it is
+# the one-sided derivative of the side the state is on. About the Sun F = 1.
+state_jac!(out::AbstractMatrix, force::SolarRadiationPressure, t::Time, y::AbstractVector, sc::Spacecraft) =
+    _state_jac_ctx!(out, force, t, y, sc, nothing)
+
+function _state_jac_ctx!(out::AbstractMatrix, force::SolarRadiationPressure, t::Time, y::AbstractVector,
+                         sc::Spacecraft, params)
+    geom = sc.srp
+    geom === nothing && throw(ArgumentError(
+        "sc.srp must be a SphericalSRP for SolarRadiationPressure; got nothing. " *
+        "Set sc.srp = SphericalSRP(; c_r, srp_area) before propagating."))
+    r = SVector{3}(y[1], y[2], y[3])
+    r_sun = force_position(params, force.central_body, sun, t)
+    K = geom.c_r * geom.srp_area / total_mass(sc) * (force.solar_flux / _C_M_S) * force.nominal_sun^2 / 1.0e3
+    if _sun_centred(force)
+        F, ∇F = 1.0, zero(SVector{3,Float64})
+    else
+        shadow(x) = _shadow_factor(force.shadow, x, r_sun, force.R_sun, force.R_occ)
+        F = shadow(r)
+        ∇F = SVector{3}(ForwardDiff.gradient(x -> shadow(SVector{3}(x[1], x[2], x[3])), Vector(r)))
+    end
+    u = r - r_sun
+    d = norm(u)
+    J = K * ((u * ∇F') / d^3 + F * (SMatrix{3,3,Float64}(I) / d^3 - 3 * (u * u') / d^5))
+    @inbounds for i in 1:3
+        out[i, i + 3] += 1.0
+    end
+    @inbounds for j in 1:3, i in 1:3
+        out[3 + i, j] += J[i, j]
+    end
+    return nothing
+end
+
 function accel_eval!(force::SolarRadiationPressure, t::Time, x̄::AbstractVector, x̄̇::AbstractVector,
                      sc::Spacecraft, params; jac::Dict = Dict())
     geom = sc.srp

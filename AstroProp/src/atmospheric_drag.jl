@@ -202,6 +202,25 @@ state_jac!(out::AbstractMatrix, force::AtmosphericDrag, t::Time, y::AbstractVect
 
 function _state_jac_ctx!(out::AbstractMatrix, force::AtmosphericDrag, t::Time, y::AbstractVector,
                          sc::Spacecraft, params)
+    _, ∂a∂r, ∂a∂v = _drag_partials(force, t, y, sc, params)
+    _add_drag_blocks!(out, ∂a∂r, ∂a∂v)
+    return nothing
+end
+
+# The acceleration and the Jacobian together: the density's value and gradient come from one
+# evaluation (density_gradient), and the acceleration is formed from that value as accel_eval!
+# forms it.
+function accel_and_jac!(acc::AbstractVector, jac::AbstractMatrix, force::AtmosphericDrag, t::Time,
+                        y::AbstractVector, sc::Spacecraft, params)
+    a, ∂a∂r, ∂a∂v = _drag_partials(force, t, y, sc, params)
+    acc[1] = y[4]; acc[2] = y[5]; acc[3] = y[6]
+    acc[4] = a[1]; acc[5] = a[2]; acc[6] = a[3]
+    _add_drag_blocks!(jac, ∂a∂r, ∂a∂v)
+    return acc
+end
+
+# The acceleration [km/s²] and its partials in position and velocity.
+function _drag_partials(force::AtmosphericDrag, t::Time, y::AbstractVector, sc::Spacecraft, params)
     geom = sc.drag
     geom === nothing && throw(ArgumentError(
         "sc.drag must be a SphericalDrag for AtmosphericDrag; got nothing. " *
@@ -211,13 +230,19 @@ function _state_jac_ctx!(out::AbstractMatrix, force::AtmosphericDrag, t::Time, y
     v  = SVector{3}(y[4], y[5], y[6])
     R, Ṙ = _rotation_blocks(force_rotation(params, force.orientation, force.central_body.naifid, t))
     Ω  = R' * Ṙ
-    w  = v + Ω * r
+    w  = R' * (R * v + Ṙ * r)                                   # as accel_eval! forms it
     wn = norm(w)
     ρ, ∇ρ = density_gradient(force.model, jd, r, R)
-    k  = geom.c_d * geom.drag_area / total_mass(sc) * 1.0e3
+    BC = geom.c_d * geom.drag_area / total_mass(sc)
+    a  = (-0.5 * BC * ρ * wn * 1.0e3) * w
+    k  = BC * 1.0e3
     P  = wn * SMatrix{3,3,Float64}(I) + (w * w') / wn         # ∂(|w| w)/∂w
     ∂a∂v = -0.5 * k * ρ * P
     ∂a∂r = -0.5 * k * (wn * (w * ∇ρ') + ρ * P * Ω)
+    return a, ∂a∂r, ∂a∂v
+end
+
+@inline function _add_drag_blocks!(out, ∂a∂r, ∂a∂v)
     @inbounds for i in 1:3
         out[i, i + 3] += 1.0
     end
@@ -225,5 +250,5 @@ function _state_jac_ctx!(out::AbstractMatrix, force::AtmosphericDrag, t::Time, y
         out[3 + i, j]     += ∂a∂r[i, j]
         out[3 + i, j + 3] += ∂a∂v[i, j]
     end
-    return nothing
+    return out
 end

@@ -135,3 +135,18 @@ end
 # ephemeris already computed at t; any other force falls through to its registered method.
 _state_jac_ctx!(out, force, t, y, sc, params) = state_jac!(out, force, t, y, sc)
 _param_jac_ctx!(out, force, tag, t, y, sc, params) = param_jac!(out, force, tag, t, y, sc)
+
+"""
+    accel_and_jac!(acc, jac, force, t, y, sc, params)
+
+Evaluate `force`'s acceleration and its state Jacobian together, for a force that shares work
+between the two (a gravity field whose recursion gives both, a density evaluated once for its value
+and gradient). Writes the force's state derivative into `acc` (six elements, as `accel_eval!` does)
+and adds ∂f/∂y into `jac` (6 × 6), with `params` carrying the shared `ForceContext`.
+
+Defining a method for a force type is the registration; there is no default. A force without one
+is evaluated by `accel_eval!` and its own Jacobian route (`state_jac!`, or ForwardDiff), so a
+method here is an optimization, never a requirement. Parameter partials keep their own route
+through `param_jac!`.
+"""
+function accel_and_jac! end

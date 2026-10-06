@@ -63,6 +63,16 @@ geopotential_gradient(model, data, r_fixed, tsec, degree, order) =
                                       Vector(r_fixed)))
 
 """
+    geopotential_accel_gradient(model, data, r_fixed, tsec, degree, order) -> (a, G)
+
+The acceleration [m/s²] and the gravity gradient [1/s²] together, for a field that computes both in
+one pass. The default calls [`geopotential_accel`](@ref) and [`geopotential_gradient`](@ref).
+"""
+geopotential_accel_gradient(model, data, r_fixed, tsec, degree, order) =
+    (geopotential_accel(model, data, r_fixed, tsec, degree, order),
+     geopotential_gradient(model, data, r_fixed, tsec, degree, order))
+
+"""
     field_orientation(model, body) -> AbstractOrientationModel
 
 The body-fixed axes `model`'s coefficients are defined in, which `HarmonicGravity` evaluates it in.
@@ -293,11 +303,39 @@ function _state_jac_ctx!(out::AbstractMatrix, force::HarmonicGravity, t::Time, y
     if force.tides !== nothing
         G_icrf = G_icrf + tide_gradient(force.tides, r, R, t, params)
     end
+    _add_position_block!(out, G_icrf)
+    return nothing
+end
+
+# The acceleration and the Jacobian together, from geopotential_accel_gradient: one pass of the
+# field's recursion for a field that provides it. The acceleration is accel_eval!'s, operation for
+# operation.
+function accel_and_jac!(acc::AbstractVector, jac::AbstractMatrix, force::HarmonicGravity, t::Time,
+                        y::AbstractVector, sc::Spacecraft, params)
+    R, _ = _rotation_blocks(force_rotation(params, force.orientation, force.central_body.naifid, t))
+    r = SVector{3}(y[1], y[2], y[3])
+    r_fixed = R * r .* 1.0e3
+    tsec = (force_epoch(params, t).utc - _JD_J2000) * 86400.0
+    g, G = geopotential_accel_gradient(force.model, force.data, r_fixed, tsec, force.degree, force.order)
+    a_icrf = R' * (g ./ 1.0e3)
+    G_icrf = R' * G * R
+    if force.tides !== nothing
+        a_icrf = a_icrf + tide_accel(force.tides, r, R, t, params)
+        G_icrf = G_icrf + tide_gradient(force.tides, r, R, t, params)
+    end
+    acc[1] = y[4]; acc[2] = y[5]; acc[3] = y[6]
+    acc[4] = a_icrf[1]; acc[5] = a_icrf[2]; acc[6] = a_icrf[3]
+    _add_position_block!(jac, G_icrf)
+    return acc
+end
+
+# ∂ṙ/∂v = I and ∂a/∂r = M into a 6 × 6 state Jacobian.
+@inline function _add_position_block!(out, M)
     @inbounds for i in 1:3
         out[i, i + 3] += 1.0
     end
     @inbounds for j in 1:3, i in 1:3
-        out[3 + i, j] += G_icrf[i, j]
+        out[3 + i, j] += M[i, j]
     end
-    return nothing
+    return out
 end
