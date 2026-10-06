@@ -57,7 +57,7 @@ export HarmonicGravity, AtmosphericDrag, SolarRadiationPressure
 export Zonal, Exponential
 export DualCone, SmoothedConical
 export AbstractGeopotential, AbstractDensityModel, density
-export geopotential_accel, geopotential_data, max_degree, max_order
+export geopotential_accel, geopotential_gradient, geopotential_data, max_degree, max_order
 export AbstractTideModel, field_radius, tide_system, atmosphere_body
 export gravity_center, includes_central
 export SphericalDrag, SphericalSRP, total_mass
