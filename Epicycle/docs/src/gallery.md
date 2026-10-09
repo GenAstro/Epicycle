@@ -1,6 +1,6 @@
 # Gallery
 
-Output from the example scripts that ship in `Epicycle/examples/`.
+Output from the example scripts that ship in `Epicycle/examples/` and from work in development.
 
 ## A Trajectory on the Globe
 
@@ -65,6 +65,20 @@ An Earth to Apophis rendezvous with Sims-Flanagan transcription.
 An Earth-Earth-Venus gravity assist.
 
 ![Gravity assist](assets/gallery/Ex_GravityAssistMGA.avif)
+
+## Dynamical Systems
+
+A preview of work in progress; this example is not yet in `Epicycle/examples/`.
+
+A Sun-Earth L2 halo orbit with an out-of-plane amplitude of about 200,000 km, started from JPL's
+three-body periodic orbit catalog, with its stable manifold in the circular restricted three-body
+problem. The red trajectories are the transfers from near Earth with the lowest perigee.
+
+![Halo orbit and its stable manifold](assets/gallery/HaloManifolds.png)
+
+The Sun-Earth L2 northern halo family, continued from that orbit with BifurcationKit.jl.
+
+![Halo orbit family](assets/gallery/HaloOrbitFamily.png)
 
 ## Orbit Determination
 
