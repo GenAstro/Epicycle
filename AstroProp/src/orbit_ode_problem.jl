@@ -220,10 +220,9 @@ function _augmented_solve(prob::OrbitODEProblem, y0, tspan, start_epoch)
         # Nominal dynamics
         dy = @view dz[1:n_y]
         _reset!(params.context, t)
-        _eval_all!(forces, t, y, dy, sc, params)      # accelerations summed across forces
-
-        # Jacobian blocks A = ∂f/∂y  and  B_i = ∂f/∂p_i
-        eval_jacobian!(jac_result, forces, y, sc, t)
+        # Accelerations summed across forces, and the Jacobian blocks A = ∂f/∂y and B_i = ∂f/∂p_i,
+        # in one pass: a force that shares work between the two is evaluated once.
+        eval_accel_and_jacobian!(dy, jac_result, forces, y, sc, t, params)
         A = jac_result.partial_y   # 6×6
 
         # Φ̇ = A·Φ

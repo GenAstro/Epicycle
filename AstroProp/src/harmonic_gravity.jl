@@ -51,6 +51,28 @@ axes [m]. Each gravity field provides this method, and `HarmonicGravity` calls i
 function geopotential_accel end
 
 """
+    geopotential_gradient(model, data, r_fixed, tsec, degree, order) -> SMatrix{3,3}
+
+The gravity gradient ∂a/∂r in the field's body-fixed axes [1/s²], with `r_fixed` and the other
+arguments as for [`geopotential_accel`](@ref). `HarmonicGravity`'s state Jacobian rotates it to
+ICRF. A field may provide an analytic method; the default differentiates `geopotential_accel` by
+ForwardDiff in the three position components only.
+"""
+geopotential_gradient(model, data, r_fixed, tsec, degree, order) =
+    SMatrix{3,3}(ForwardDiff.jacobian(r -> geopotential_accel(model, data, r, tsec, degree, order),
+                                      Vector(r_fixed)))
+
+"""
+    geopotential_accel_gradient(model, data, r_fixed, tsec, degree, order) -> (a, G)
+
+The acceleration [m/s²] and the gravity gradient [1/s²] together, for a field that computes both in
+one pass. The default calls [`geopotential_accel`](@ref) and [`geopotential_gradient`](@ref).
+"""
+geopotential_accel_gradient(model, data, r_fixed, tsec, degree, order) =
+    (geopotential_accel(model, data, r_fixed, tsec, degree, order),
+     geopotential_gradient(model, data, r_fixed, tsec, degree, order))
+
+"""
     field_orientation(model, body) -> AbstractOrientationModel
 
 The body-fixed axes `model`'s coefficients are defined in, which `HarmonicGravity` evaluates it in.
@@ -134,6 +156,17 @@ The tidal acceleration at the ICRF position `r` [km], km/s². `R` is the rotatio
 field's axes at `t`, whose third row is the spin axis.
 """
 function tide_accel end
+
+"""
+    tide_gradient(tides, r, R, t, params) -> SMatrix{3,3}
+
+∂a/∂r of the tidal acceleration at the ICRF position `r` [km], 1/s², with the arguments of
+[`tide_accel`](@ref). A tide model may provide an analytic method; the default differentiates
+`tide_accel` by ForwardDiff in the three position components only.
+"""
+tide_gradient(tides, r, R, t, params) =
+    SMatrix{3,3}(ForwardDiff.jacobian(x -> tide_accel(tides, SVector{3}(x[1], x[2], x[3]), R, t, params),
+                                      Vector(r)))
 
 # ─────────────────────── body-fixed axes, shared with drag ───────────────────
 
@@ -250,4 +283,59 @@ function accel_eval!(force::HarmonicGravity, t::Time, x̄::AbstractVector, x̄̇
     x̄̇[1] = x̄[4]; x̄̇[2] = x̄[5]; x̄̇[3] = x̄[6]
     x̄̇[4] = a_icrf[1]; x̄̇[5] = a_icrf[2]; x̄̇[6] = a_icrf[3]
     return x̄̇
+end
+
+# The state Jacobian: gravity depends on position alone, through the body-fixed position R·r, so
+# ∂a/∂r = Rᵀ G R with G the field's gradient in its own axes, plus the tides' gradient. R depends on
+# the epoch alone. Nothing here is differentiated through the rotation, the context or the
+# velocity; a field or tide model without an analytic gradient is differentiated in the three
+# position components only.
+state_jac!(out::AbstractMatrix, force::HarmonicGravity, t::Time, y::AbstractVector, sc::Spacecraft) =
+    _state_jac_ctx!(out, force, t, y, sc, nothing)
+
+function _state_jac_ctx!(out::AbstractMatrix, force::HarmonicGravity, t::Time, y::AbstractVector,
+                         sc::Spacecraft, params)
+    R, _ = _rotation_blocks(force_rotation(params, force.orientation, force.central_body.naifid, t))
+    r = SVector{3}(y[1], y[2], y[3])
+    tsec = (force_epoch(params, t).utc - _JD_J2000) * 86400.0
+    G = geopotential_gradient(force.model, force.data, R * r .* 1.0e3, tsec, force.degree, force.order)
+    G_icrf = R' * G * R
+    if force.tides !== nothing
+        G_icrf = G_icrf + tide_gradient(force.tides, r, R, t, params)
+    end
+    _add_position_block!(out, G_icrf)
+    return nothing
+end
+
+# The acceleration and the Jacobian together, from geopotential_accel_gradient: one pass of the
+# field's recursion for a field that provides it. The acceleration is accel_eval!'s, operation for
+# operation.
+function accel_and_jac!(acc::AbstractVector, jac::AbstractMatrix, force::HarmonicGravity, t::Time,
+                        y::AbstractVector, sc::Spacecraft, params)
+    R, _ = _rotation_blocks(force_rotation(params, force.orientation, force.central_body.naifid, t))
+    r = SVector{3}(y[1], y[2], y[3])
+    r_fixed = R * r .* 1.0e3
+    tsec = (force_epoch(params, t).utc - _JD_J2000) * 86400.0
+    g, G = geopotential_accel_gradient(force.model, force.data, r_fixed, tsec, force.degree, force.order)
+    a_icrf = R' * (g ./ 1.0e3)
+    G_icrf = R' * G * R
+    if force.tides !== nothing
+        a_icrf = a_icrf + tide_accel(force.tides, r, R, t, params)
+        G_icrf = G_icrf + tide_gradient(force.tides, r, R, t, params)
+    end
+    acc[1] = y[4]; acc[2] = y[5]; acc[3] = y[6]
+    acc[4] = a_icrf[1]; acc[5] = a_icrf[2]; acc[6] = a_icrf[3]
+    _add_position_block!(jac, G_icrf)
+    return acc
+end
+
+# ∂ṙ/∂v = I and ∂a/∂r = M into a 6 × 6 state Jacobian.
+@inline function _add_position_block!(out, M)
+    @inbounds for i in 1:3
+        out[i, i + 3] += 1.0
+    end
+    @inbounds for j in 1:3, i in 1:3
+        out[3 + i, j] += M[i, j]
+    end
+    return out
 end

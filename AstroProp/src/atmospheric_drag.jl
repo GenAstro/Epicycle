@@ -45,6 +45,36 @@ J2000. A model reaches geodetic coordinates through a helper that accepts either
 function density end
 
 """
+    density_gradient(model::AbstractDensityModel, jd, r_eci, body_axes) -> (ρ, ∇ρ)
+
+The density [kg/m³] and its gradient with respect to the ICRF position [kg/m³ per km], with the
+arguments of [`density`](@ref). `AtmosphericDrag`'s state Jacobian uses it. A model may provide an
+analytic method; the default differentiates `density` by ForwardDiff in the three position
+components, one evaluation that gives the value and the gradient together, and falls back to
+central differences, six evaluations, for a model whose code does not accept ForwardDiff's dual
+numbers.
+"""
+function density_gradient(model::AbstractDensityModel, jd, r_eci, body_axes)
+    r = SVector{3}(Float64(r_eci[1]), Float64(r_eci[2]), Float64(r_eci[3]))
+    try
+        # The position seeded as dual numbers with three partials: one evaluation of the density
+        # carries its value and its gradient.
+        T  = typeof(ForwardDiff.Tag(density_gradient, Float64))
+        rd = SVector{3}(ntuple(i -> ForwardDiff.Dual{T}(r[i], ntuple(k -> Float64(k == i), 3)), 3))
+        ρd = density(model, jd, rd, body_axes)
+        ρd isa ForwardDiff.Dual || return Float64(ρd), zero(SVector{3,Float64})   # no position dependence
+        return ForwardDiff.value(ρd), SVector{3}(ForwardDiff.partials(ρd)...)
+    catch err
+        err isa MethodError || rethrow()
+        ρ = density(model, jd, r, body_axes)
+        h = 1.0e-3                                            # km
+        g = SVector{3}(ntuple(j -> (density(model, jd, r + h * SVector{3}(ntuple(k -> k == j, 3)), body_axes) -
+                                    density(model, jd, r - h * SVector{3}(ntuple(k -> k == j, 3)), body_axes)) / 2h, 3))
+        return ρ, g
+    end
+end
+
+"""
     atmosphere_body(model::AbstractDensityModel) -> Int
 
 The NAIF ID of the body whose atmosphere `model` describes. [`AtmosphericDrag`](@ref) refuses a
@@ -157,4 +187,68 @@ function accel_eval!(force::AtmosphericDrag, t::Time, x̄::AbstractVector, x̄̇
     x̄̇[1] = x̄[4]; x̄̇[2] = x̄[5]; x̄̇[3] = x̄[6]
     x̄̇[4] = dfac * v_app[1]; x̄̇[5] = dfac * v_app[2]; x̄̇[6] = dfac * v_app[3]
     return x̄̇
+end
+
+# The state Jacobian. With w = Rᵀ(R v + Ṙ r) = v + Ω r, Ω = RᵀṘ, and k = 10³·Cd·A/m, the
+# acceleration is a = −½ k ρ |w| w, so
+#
+#     ∂a/∂v = −½ k ρ (|w| I + w wᵀ/|w|),
+#     ∂a/∂r = −½ k (|w| w ∇ρᵀ + ρ (|w| I + w wᵀ/|w|) Ω),
+#
+# closed form except the density's gradient, which density_gradient gives (by default ForwardDiff
+# on the density alone). R and Ṙ depend on the epoch alone.
+state_jac!(out::AbstractMatrix, force::AtmosphericDrag, t::Time, y::AbstractVector, sc::Spacecraft) =
+    _state_jac_ctx!(out, force, t, y, sc, nothing)
+
+function _state_jac_ctx!(out::AbstractMatrix, force::AtmosphericDrag, t::Time, y::AbstractVector,
+                         sc::Spacecraft, params)
+    _, ∂a∂r, ∂a∂v = _drag_partials(force, t, y, sc, params)
+    _add_drag_blocks!(out, ∂a∂r, ∂a∂v)
+    return nothing
+end
+
+# The acceleration and the Jacobian together: the density's value and gradient come from one
+# evaluation (density_gradient), and the acceleration is formed from that value as accel_eval!
+# forms it.
+function accel_and_jac!(acc::AbstractVector, jac::AbstractMatrix, force::AtmosphericDrag, t::Time,
+                        y::AbstractVector, sc::Spacecraft, params)
+    a, ∂a∂r, ∂a∂v = _drag_partials(force, t, y, sc, params)
+    acc[1] = y[4]; acc[2] = y[5]; acc[3] = y[6]
+    acc[4] = a[1]; acc[5] = a[2]; acc[6] = a[3]
+    _add_drag_blocks!(jac, ∂a∂r, ∂a∂v)
+    return acc
+end
+
+# The acceleration [km/s²] and its partials in position and velocity.
+function _drag_partials(force::AtmosphericDrag, t::Time, y::AbstractVector, sc::Spacecraft, params)
+    geom = sc.drag
+    geom === nothing && throw(ArgumentError(
+        "sc.drag must be a SphericalDrag for AtmosphericDrag; got nothing. " *
+        "Set sc.drag = SphericalDrag(; c_d, drag_area) before propagating."))
+    jd = force_epoch(params, t).utc
+    r  = SVector{3}(y[1], y[2], y[3])
+    v  = SVector{3}(y[4], y[5], y[6])
+    R, Ṙ = _rotation_blocks(force_rotation(params, force.orientation, force.central_body.naifid, t))
+    Ω  = R' * Ṙ
+    w  = R' * (R * v + Ṙ * r)                                   # as accel_eval! forms it
+    wn = norm(w)
+    ρ, ∇ρ = density_gradient(force.model, jd, r, R)
+    BC = geom.c_d * geom.drag_area / total_mass(sc)
+    a  = (-0.5 * BC * ρ * wn * 1.0e3) * w
+    k  = BC * 1.0e3
+    P  = wn * SMatrix{3,3,Float64}(I) + (w * w') / wn         # ∂(|w| w)/∂w
+    ∂a∂v = -0.5 * k * ρ * P
+    ∂a∂r = -0.5 * k * (wn * (w * ∇ρ') + ρ * P * Ω)
+    return a, ∂a∂r, ∂a∂v
+end
+
+@inline function _add_drag_blocks!(out, ∂a∂r, ∂a∂v)
+    @inbounds for i in 1:3
+        out[i, i + 3] += 1.0
+    end
+    @inbounds for j in 1:3, i in 1:3
+        out[3 + i, j]     += ∂a∂r[i, j]
+        out[3 + i, j + 3] += ∂a∂v[i, j]
+    end
+    return out
 end

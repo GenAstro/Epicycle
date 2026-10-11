@@ -56,8 +56,8 @@ export PointMassGravity, accel_eval!
 export HarmonicGravity, AtmosphericDrag, SolarRadiationPressure
 export Zonal, Exponential
 export DualCone, SmoothedConical
-export AbstractGeopotential, AbstractDensityModel, density
-export geopotential_accel, geopotential_data, max_degree, max_order
+export AbstractGeopotential, AbstractDensityModel, density, density_gradient
+export geopotential_accel, geopotential_gradient, geopotential_accel_gradient, geopotential_data, max_degree, max_order
 export AbstractTideModel, field_radius, tide_system, atmosphere_body
 export gravity_center, includes_central
 export SphericalDrag, SphericalSRP, total_mass
@@ -68,7 +68,7 @@ export PropDurationSeconds, PropDurationDays
 
 export Mu, Mass                            # pass-through from AstroUniverse / AstroModels
 export JacobianConfig, JacobianResult
-export eval_jacobian!, eval_jacobian, state_jac!, param_jac!
+export eval_jacobian!, eval_jacobian, eval_accel_and_jacobian!, accel_and_jac!, state_jac!, param_jac!
 export fd_differentiate_wrt
 export STMConfig, OrbitODEProblem, PropagationResult, solve
 
