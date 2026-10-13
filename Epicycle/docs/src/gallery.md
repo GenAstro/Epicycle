@@ -14,6 +14,27 @@ This is `Ex_HohmannTransfer.jl` open in VS Code with the solver report in the te
 
 ![Epicycle in VS Code](assets/gallery/Ex_IDE_View.png)
 
+## OD Solutions from Real Tracking Data
+
+Two days of the Lunar Reconnaissance Orbiter from the S-band Doppler and range of the NASA ground
+network, differenced with the LOLA team's GEODYN reconstruction and the Flight Dynamics Facility's
+daily reconstruction in the radial, along-track and cross-track axes. Against GEODYN the RMS
+difference is 0.3 m radial, 4.4 m along-track and 2.8 m cross-track.
+
+![LRO against the GEODYN and FDF orbits](assets/gallery/LRO_OD_DefinitiveSolutionCompare.png)
+
+Two weeks of Juno's 2014 cruise from DSN two-way and three-way Doppler and sequential range, with
+the uplink ramps, the DSN's troposphere and ionosphere calibrations and the spacecraft's spin in the
+measurement models. Post-fit residuals of 1.2 mHz and 0.16 m.
+
+![Juno DSN residuals](assets/gallery/JunoResidualsPlots.png)
+
+A week of LAGEOS-1 laser ranging from the ILRS normal points, with the IERS station displacements,
+sub-daily Earth orientation and the Mendes-Pavlis troposphere. Post-fit residuals of 6.5 mm over
+twenty-one stations; the hollow points are the normal points the editing left out.
+
+![LAGEOS range residuals](assets/gallery/LAGEOS_Residuals.png)
+
 ## Propagation and Targeting
 
 A Hohmann transfer between two circular orbits.
@@ -98,6 +119,7 @@ Stepping the filter one observation at a time, with the postfit residuals and th
 recorded at each update.
 
 ![Stepped Kalman filter](assets/gallery/Ex_SteppedKalmanFilter.png)
+
 
 ## Plotting
 
