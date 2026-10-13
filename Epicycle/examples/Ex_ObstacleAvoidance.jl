@@ -144,7 +144,7 @@ Objective(speed_squared, phase; sense = Min(), at = Path())
 check_partials(phase)
 
 # Solve and report the arrival and cost
-result = solve!(Sequence(phase); method = Optimize(print_level = 5))
+result = solve!(Sequence(phase); method = Optimize())
 yf = get_final_state(phase)
 println("status    : ", result.info)
 println("x_f       : ", round(yf.x, digits = 6), "   (target ", XF, ")")

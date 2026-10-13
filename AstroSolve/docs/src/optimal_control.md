@@ -313,7 +313,7 @@ are read through the quantities declared with `Vary`.
 ```julia
 check_partials(transfer)
 result = solve!(Sequence(transfer);
-                method = Optimize(max_iter = 500, print_level = 5))
+                method = Optimize(max_iter = 500))
 
 println("status         : ", result.info)
 println("delivered mass : ", round(final_mass(transfer), digits = 3), " kg")

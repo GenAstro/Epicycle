@@ -192,7 +192,7 @@ Objective(duration, phase; sense = Min())
 check_partials(phase)
 
 # Solve and compare the transfer time with the linear tangent law
-result = solve!(Sequence(phase); method = Optimize(print_level = 5))
+result = solve!(Sequence(phase); method = Optimize())
 println("status : ", result.info)
 println("tf     : ", round(get_final_time(phase), digits = 6),
         " s   (linear tangent law 0.554571 s)")

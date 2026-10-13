@@ -258,7 +258,7 @@ Objective(peak_altitude, coast; sense = Max())
 #' the trajectory used to initialize the phases.
 
 # Solve and report the peak altitude
-result = solve!(seq; method = Optimize(max_iter = 3000, tol = 1e-5, print_level = 5))
+result = solve!(seq; method = Optimize(max_iter = 3000, tol = 1e-5))
 println("status        : ", result.info)
 println("peak altitude : ", round(get_final_state(coast).h, digits = 2),
         " ft   (the same control law flown: ", round(y3[1], digits = 1), " ft)")

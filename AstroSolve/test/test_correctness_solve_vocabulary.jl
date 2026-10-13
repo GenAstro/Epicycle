@@ -42,8 +42,8 @@ const _SV_BLS = AstroSolve.BatchLeastSquares
 
 @testset "Optimize, Batch and Sequential — defaults and the solver options they make" begin
     o = Optimize()
-    @test (o.max_iter, o.tol, o.print_level, o.derivatives, o.record_iterations) ==
-          (500, 1e-6, 5, :user, false)
+    @test (o.max_iter, o.tol, o.print_level, o.derivatives, o.record_iterations, o.monitor) ==
+          (500, 1e-6, nothing, :user, false, nothing)
     @test isempty(o.extra)
     @test Optimize(extra = Dict("sb" => "yes")).extra == Dict{String,Any}("sb" => "yes")
 

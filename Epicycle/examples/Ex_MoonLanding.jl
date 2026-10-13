@@ -150,7 +150,7 @@ Objective(final_mass, phase; sense = Max())
 check_partials(phase)
 
 # Solve and compare the landing with the published values
-result = solve!(Sequence(phase); method = Optimize(print_level = 5))
+result = solve!(Sequence(phase); method = Optimize())
 yf = get_final_state(phase)
 println("status     : ", result.info)
 println("altitude   : ", round(yf.h, digits = 6), "   (touchdown 0)")

@@ -530,6 +530,6 @@ function solve_trajectory_oc!(seq::Sequence)
         "file_print_level" => 5,
     )
     options = SNOW.Options(derivatives = SNOW.UserDeriv(),
-                           solver      = SNOW.IPOPT(ip_options))
+                           solver      = _ipopt(ip_options))
     solve_trajectory_oc!(seq, options)
 end

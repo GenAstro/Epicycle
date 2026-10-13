@@ -46,7 +46,7 @@ export solve_trajectory!, target!, report_sequence, report_solution
 
 # Posing and solving a problem: what varies, what must hold, what is minimized, and how.
 export Vary, Constraint, Objective, Link, continuity, solve!
-export Optimize, Batch, Sequential, RTS
+export Optimize, Batch, Sequential, RTS, solver_monitor!
 export Initial, Final, Path, Boundary, Min, Max
 export SolveFor, Consider, Fixed
 export partial, @partial, check_partials
@@ -564,6 +564,8 @@ end
 include("constraint.jl")
 include("transcription.jl")
 include("hermite_simpson.jl")
+include("solver_monitor.jl")       # the live status box; the IPOPT driver below feeds it
+include("ipopt_backend.jl")
 include("sequence.jl")
 include("sequence_report.jl")
 

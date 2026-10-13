@@ -47,6 +47,30 @@ label(beta_angle)                                        # "Beta angle"
 label(::Any) = "quantity"
 
 """
+    unit(quantity) -> String
+
+The unit the quantity's value is in, as a short string for a report column: `"km"`, `"km/s"`,
+`"rad"`. A dimensionless quantity returns `""`.
+
+This is the unit of the number the quantity function returns, not a preferred display unit. A
+display that prefers degrees converts a `"rad"` quantity itself.
+
+Defaults to `""`, so a quantity that declares no unit prints without one.
+
+# Returns
+The unit as a `String`.
+
+# Examples
+```julia
+using EpicycleBase
+beta_angle(sat) = 0.0                                   # a quantity of your own
+EpicycleBase.unit(::typeof(beta_angle)) = "rad"         # declaring its unit
+EpicycleBase.unit(beta_angle)                           # "rad"
+```
+"""
+unit(::Any) = ""
+
+"""
     set_quantity!(subject, quantity, deps...; to)
 
 Write `to` as the value of `quantity` on `subject`. The generic writer a solver calls, because a

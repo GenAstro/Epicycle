@@ -19,6 +19,7 @@ continuity
 Sequence
 solve!
 Optimize
+solver_monitor!
 target!
 Event
 CollocationPhase
@@ -43,6 +44,6 @@ Order   = [:type, :function, :macro, :constant]
 Public  = true
 Private = false
 Filter  = t -> !(t in (Vary, Constraint, Objective, Link, continuity, Sequence, solve!,
-                       Optimize, target!, Event, CollocationPhase, HermiteSimpson,
+                       Optimize, solver_monitor!, target!, Event, CollocationPhase, HermiteSimpson,
                        ODProblem, simulate, Batch, Sequential, check_partials))
 ```

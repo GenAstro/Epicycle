@@ -121,8 +121,7 @@ add_sequence!(seq,
 # Solve and report the transfer
 result = solve!(seq; method = Optimize(max_iter = 1000,
                                        tol = 1e-6,
-                                       derivatives = :fd,
-                                       print_level = 5))
+                                       derivatives = :fd))
 report_sequence(seq)
 report_solution(seq, result)
 

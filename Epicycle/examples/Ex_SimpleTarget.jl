@@ -54,8 +54,12 @@ add_sequence!(seq,
           funcs = [Constraint(position_magnitude, sat; equals = 55000.0)]))
 
 #' ## Solve the targeting problem
+#'
+#' While the solver runs, a status box shows the burn and the apoapsis radius at each
+#' iteration, with a ✓ once the radius is met. `Optimize(monitor = false)` turns the box off
+#' and prints IPOPT's own log instead.
 
 # Solve and report the sequence and solution
-result = solve!(seq; method = Optimize(derivatives = :fd, print_level = 5))
+result = solve!(seq; method = Optimize(derivatives = :fd))
 report_sequence(seq)
 report_solution(seq, result)

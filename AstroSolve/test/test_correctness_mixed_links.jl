@@ -144,8 +144,13 @@ end
     # IPOPT's exit status is not the claim. Mass flow goes as |u|, which has a kink at zero thrust,
     # so the coast optimum is degenerate and IPOPT reaches it without meeting its termination test.
     # The answer it reaches is checked instead, to 1e-5 in mass and 1e-3 in radius.
+    #
+    # The iteration limit is where the answer is read, since the solve never terminates on its
+    # own. It was 300, which passed only because SNOW's IPOPT driver could hand IPOPT a stale
+    # objective (it kept IPOPT's x buffer rather than a copy). With correct values the mass error at
+    # 300 iterations is 1.3e-4; at 1000 it is 1.1e-7 and the radius error 3.3e-5.
     seq, sf, hs = _ml_sequence((seq, a, b) -> Constraint(continuity, Link(a, b)); coast = true)
-    solve!(seq; method = Optimize(max_iter = 300, tol = 1e-6, print_level = 0))
+    solve!(seq; method = Optimize(max_iter = 1000, tol = 1e-6, print_level = 0))
     Y = state(hs)
     @test maximum(abs.(Y[:, 1] .- vcat(final_state(sf), final_mass(sf)))) < 1e-8
     @test get_initial_time(hs) ≈ final_time(sf)

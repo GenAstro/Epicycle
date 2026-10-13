@@ -94,7 +94,7 @@ Objective(fit_error, phase; sense = Min(), at = Path())
 check_partials(phase)
 
 # Solve and compare the identified parameter with the truth
-result = solve!(Sequence(phase); method = Optimize(print_level = 5))
+result = solve!(Sequence(phase); method = Optimize())
 println("status    : ", result.info)
 println("parameter : ", round(get_param_value(phase)[1], digits = 6), "   (truth 0.1)")
 println("x_f       : ", round(get_final_state(phase).x, digits = 6), "   (truth 0.904837)")

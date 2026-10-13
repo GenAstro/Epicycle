@@ -33,6 +33,7 @@ mutable struct _Writable; value::Float64 end
 struct _ReadOnly end
 
 EpicycleBase.label(::typeof(declared))     = "Declared quantity"
+EpicycleBase.unit(::typeof(declared))      = "rad"
 EpicycleBase.is_cyclic(::typeof(declared)) = true
 EpicycleBase.cycle(::typeof(declared))     = 2π
 
@@ -53,6 +54,7 @@ EpicycleBase.tag(::typeof(tagged)) = _ATag()
     # No registration, no subtyping — a bare function has every trait, at its
     # default. Nothing has to be declared for a quantity to be readable.
     @test label(undeclared)       == "quantity"
+    @test EpicycleBase.unit(undeclared) == ""
     @test is_cyclic(undeclared)   == false
     @test cycle(undeclared)       === nothing
     @test tag(undeclared)         === nothing
@@ -61,6 +63,7 @@ end
 
 @testset "declaring a method is the whole opt-in" begin
     @test label(declared)     == "Declared quantity"
+    @test EpicycleBase.unit(declared) == "rad"
     @test is_cyclic(declared) == true
     @test cycle(declared)     ≈ 2π
     @test tag(tagged)         isa _ATag

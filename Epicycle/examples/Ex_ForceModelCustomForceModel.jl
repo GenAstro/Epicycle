@@ -182,7 +182,7 @@ Objective(final_radius_du, phase; sense = Max())
 #' Solve the nonlinear program and report the final orbit characteristics
 
 # Solve and report the final orbit
-result = solve!(Sequence(phase); method = Optimize(tol = 1e-4, max_iter = 800, print_level = 5))
+result = solve!(Sequence(phase); method = Optimize(tol = 1e-4, max_iter = 800))
 println("status       : ", result.info)
 println("final radius : ", round(position_magnitude(subject_at(phase, Final())), digits = 3), " km")
 println("final sma    : ", round(semi_major_axis(subject_at(phase, Final())), digits = 3), " km")
