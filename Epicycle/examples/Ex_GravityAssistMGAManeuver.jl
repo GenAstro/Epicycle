@@ -460,7 +460,7 @@ println("check_partials, phase 2:"); check_partials(phase2)
 
 #' ## Solve the problem
 
-result = solve!(seq; method = Optimize(max_iter = 500, tol = 1e-6))
+result = solve!(seq; method = Optimize(max_iter = 500, tol = 1e-6, monitor = true))
 
 @printf("status         : %s
 ", result.info)

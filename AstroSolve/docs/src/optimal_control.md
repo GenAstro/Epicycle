@@ -157,7 +157,7 @@ A phase is added to a `Sequence` and solved with `Optimize`. The solution remain
 the state and control histories have one column per transcription node.
 
 ```julia
-result = solve!(Sequence(phase); method = Optimize())
+result = solve!(Sequence(phase); method = Optimize(monitor = true))
 
 println("status: ", result.info)
 println("time  : ", round(get_final_time(phase), digits = 6), " s")
@@ -313,7 +313,7 @@ are read through the quantities declared with `Vary`.
 ```julia
 check_partials(transfer)
 result = solve!(Sequence(transfer);
-                method = Optimize(max_iter = 500))
+                method = Optimize(max_iter = 500, monitor = true))
 
 println("status         : ", result.info)
 println("delivered mass : ", round(final_mass(transfer), digits = 3), " kg")

@@ -105,7 +105,7 @@ function reboost!(sat, prop; target_mean_sma)
               funcs = [Constraint(mean_long_sma, sat; equals = target_mean_sma)]))
 
     # Solve the re-boost
-    solve!(seq; method = Optimize(derivatives = :fd))
+    solve!(seq; method = Optimize(derivatives = :fd, monitor = true))
 
     return (dv1_guess, dv2_guess, toi.element1, moi.element1)
 end

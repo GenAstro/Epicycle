@@ -213,7 +213,7 @@ Objective(final_radius, phase; sense = Max())
 check_partials(phase)
 
 # Solve the problem
-result = solve!(Sequence(phase); method = Optimize(max_iter = 1000, tol = 1e-6))
+result = solve!(Sequence(phase); method = Optimize(max_iter = 1000, tol = 1e-6, monitor = true))
 
 # Compare the solution with the CSALT reference
 y_final = get_final_state(phase)

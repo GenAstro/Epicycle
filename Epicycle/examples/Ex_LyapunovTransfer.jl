@@ -163,7 +163,7 @@ Objective(effort, phase; sense = Min(), at = Path())
 check_partials(phase)
 
 # Solve the transfer problem
-result = solve!(Sequence(phase); method = Optimize())
+result = solve!(Sequence(phase); method = Optimize(monitor = true))
 
 # Report the transfer against the published orbits
 y0 = get_initial_state(phase)

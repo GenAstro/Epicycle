@@ -114,7 +114,7 @@ Objective(tracking_error, phase; sense = Min(), at = Path())
 check_partials(phase)
 
 # Solve and compare the cost with the closed-form value
-result = solve!(Sequence(phase); method = Optimize())
+result = solve!(Sequence(phase); method = Optimize(monitor = true))
 println("status    : ", result.info)
 println("cost      : ", round(result.objective, digits = 6), "   (analytic 1.047198)")
 

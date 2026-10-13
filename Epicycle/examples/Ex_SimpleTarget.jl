@@ -55,11 +55,11 @@ add_sequence!(seq,
 
 #' ## Solve the targeting problem
 #'
-#' While the solver runs, a status box shows the burn and the apoapsis radius at each
-#' iteration, with a ✓ once the radius is met. `Optimize(monitor = false)` turns the box off
-#' and prints IPOPT's own log instead.
+#' `monitor = true` shows a status box while the solver runs: the burn and the apoapsis radius
+#' at each iteration, with a ✓ once the radius is met. `monitor = false` turns the box off and
+#' prints IPOPT's own log instead.
 
 # Solve and report the sequence and solution
-result = solve!(seq; method = Optimize(derivatives = :fd))
+result = solve!(seq; method = Optimize(derivatives = :fd, monitor = true))
 report_sequence(seq)
 report_solution(seq, result)

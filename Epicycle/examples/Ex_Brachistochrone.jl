@@ -175,7 +175,7 @@ Objective(duration, phase; sense = Min())
 check_partials(phase)
 
 # Solve and report the transfer time
-result = solve!(Sequence(phase); method = Optimize())
+result = solve!(Sequence(phase); method = Optimize(monitor = true))
 println("status : ", result.info)
 println("tf     : ", round(get_final_time(phase), digits = 6), " s   (cycloid 0.8245 s)")
 

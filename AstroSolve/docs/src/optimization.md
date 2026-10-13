@@ -177,23 +177,25 @@ result = solve!(seq; method = Optimize(
     max_iter = 1000,
     tol = 1e-6,
     derivatives = :fd,
+    monitor = true,
 ))
 
 report_sequence(seq)
 report_solution(seq, result)
 ```
 
-While the solve runs, a status box in the terminal shows every varied component and every
-constraint by name, with its unit, its current value and its error, and redraws in place each
+`monitor = true` shows a status box in the terminal while the solve runs: every varied component
+and every constraint by name, with its unit, its current value and its error. The box redraws in place each
 iteration. A goal shows ✓ once its violation is within IPOPT's constraint-violation tolerance, which
 is the test the solver itself applies, and the bar along the bottom fills as the worst violation
 falls. Angles show in degrees. The box is at most 80 columns, narrows to fit a smaller terminal,
 and leaves earlier output where it is; warnings logged during the solve appear above it. Where the
 output is not an interactive terminal, such as a file or a CI log, only the final frame is printed.
 
-`Optimize(monitor = false)` turns the box off for one solve and prints IPOPT's own log instead, at
-`print_level`. `solver_monitor!(false)` turns it off for every solve that does not say. With the box
-on, IPOPT's log still goes to its log file, at `print_level`.
+`monitor = false` turns the box off and prints IPOPT's own log instead, at `print_level`. A solve
+that does not set `monitor` follows the session default, which is on and which
+`solver_monitor!(false)` turns off. With the box on, IPOPT's log still goes to its log file, at
+`print_level`.
 
 `result.info` reports why the solver stopped. A returned result may contain the last iterate from
 an unsuccessful solve, so the status and targeted quantities must both be checked. After the solve,
@@ -219,7 +221,7 @@ Create fresh inputs before solving the same transfer again:
 ```julia
 (; sat, prop, toi, mcc, moi, z_crossing, apoapsis, periapsis) = geo_transfer_inputs()
 
-result = target!(method = Optimize(derivatives = :fd)) do
+result = target!(method = Optimize(derivatives = :fd, monitor = true)) do
     propagate!(prop, sat, z_crossing)
 
     Vary(delta_v, toi;

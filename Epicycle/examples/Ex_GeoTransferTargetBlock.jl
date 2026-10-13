@@ -57,7 +57,7 @@ perigee = StopAt(position_dot_velocity, sat; equals = 0.0, direction = +1)
 #' finite-difference partials.
 
 # Target the complete transfer
-result = target!(method = Optimize(derivatives = :fd)) do
+result = target!(method = Optimize(derivatives = :fd, monitor = true)) do
 
     # Coast to the first equatorial crossing
     propagate!(prop, sat, z_crossing)
