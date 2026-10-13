@@ -278,7 +278,7 @@ end
         # Create the propagator with point mass gravity model
         gravity = PointMassGravity(earth, (moon, sun))
         forces  = ForceModel(gravity)
-        integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
+        integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-12, abstol=1e-12)   # tight: the event graph differentiates by finite differences
         prop    = OrbitPropagator(forces, integ)
         
         # Create an impulsive maneuver (only V component will vary)
@@ -343,7 +343,7 @@ end
         
         gravity = PointMassGravity(earth, (moon, sun))
         forces  = ForceModel(gravity)
-        integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
+        integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-12, abstol=1e-12)   # tight: the event graph differentiates by finite differences
         prop    = OrbitPropagator(forces, integ)
         
         toi = ImpulsiveManeuver(
@@ -419,7 +419,7 @@ end
         
         gravity = PointMassGravity(earth, (moon, sun))
         forces  = ForceModel(gravity)
-        integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
+        integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-12, abstol=1e-12)   # tight: the event graph differentiates by finite differences
         prop    = OrbitPropagator(forces, integ)
         
         toi = ImpulsiveManeuver(
@@ -468,7 +468,7 @@ end
         
         gravity = PointMassGravity(earth, (moon, sun))
         forces  = ForceModel(gravity)
-        integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-9, abstol=1e-9)
+        integ   = IntegratorConfig(Tsit5(); dt=10.0, reltol=1e-12, abstol=1e-12)   # tight: the event graph differentiates by finite differences
         prop    = OrbitPropagator(forces, integ)
         
         toi = ImpulsiveManeuver(

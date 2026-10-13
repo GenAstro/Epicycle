@@ -824,5 +824,8 @@ function default_snow_options()
         # folder the user happened to start from.
         "output_file" => joinpath(tempdir(), "ipopt_$(time_ns()).out")
     )
+    # Finite differences: the event graph has no derivative route of its own yet. They are only
+    # as repeatable as the integrator's step sequence, which differs with a platform's rounding:
+    # a one-variable target that converged in 4 iterations on Windows ran 384 on Linux CI.
     return Options(derivatives=ForwardFD(), solver=IPOPT(ip_options))
 end
