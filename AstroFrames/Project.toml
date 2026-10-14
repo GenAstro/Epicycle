@@ -19,7 +19,7 @@ AstroStates = "0.11"
 AstroUniverse = "0.4"
 EpicycleBase = "0.1.1"
 SPICE = "0.2"
-SatelliteToolboxTransformations = "1.2.0"
+SatelliteToolboxTransformations = "1.3"
 StaticArrays = "1.9.17"
 julia = "1.10"
 

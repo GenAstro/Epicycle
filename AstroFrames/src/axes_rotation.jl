@@ -238,8 +238,9 @@ end
 # Outside the table SatelliteToolboxTransformations holds the end values, and the rotation stays
 # orthonormal and round-trips while drifting at roughly 250 m a year at LEO. A date past the
 # end is a legitimate mission-design question, so this warns once rather than throwing. The
-# span is the knots of the table's interpolant, which belong to SatelliteToolboxTransformations;
-# if that layout changes the check turns itself off rather than failing.
+# span is the knots of the table's interpolant, read through the `EopInterpolation` wrapper of
+# SatelliteToolboxTransformations 1.3; the compat bound holds that layout, and
+# test_robustness_eop_range.jl fails if a later release changes it.
 @inline function _check_eop_span(table, jd_utc)
     span = _eop_span(table)
     span === nothing && return nothing
