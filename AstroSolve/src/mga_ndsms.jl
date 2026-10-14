@@ -19,6 +19,11 @@
 #   N_bwd = floor((n+1)/2)  arcs in the backward half-phase
 #   N_dsm_fwd = N_fwd - 1   DSMs applied within the forward  half-phase
 #   N_dsm_bwd = N_bwd - 1   DSMs applied within the backward half-phase
+#   and, when n ≥ 1, one DSM at the match point itself, between the last forward arc and the first
+#   backward arc, applied to the forward state. n = 1 is the classic MGA-1DSM leg.
+#
+#   The columns of the Δv block are in flight order: the forward DSMs, the match-point DSM, then the
+#   backward DSMs from the match point to the right control point.
 #
 # Control variables:
 #   Δv_k  (3-vector, km/s)  — impulsive maneuver at each mid-course node   [3n total]
@@ -63,7 +68,8 @@
 
 Transcription descriptor for a gravity-assist phase carrying `n_dsm` deep-space maneuvers, each an
 impulse between two Keplerian arcs. A phase with `n` maneuvers has `n + 1` arcs, split between a
-forward half-phase of `ceil((n+1)/2)` arcs and a backward half-phase of `floor((n+1)/2)`.
+forward half-phase of `ceil((n+1)/2)` arcs and a backward half-phase of `floor((n+1)/2)`; the
+maneuver between the two halves sits at the match point. One maneuver gives the MGA-1DSM leg.
 
 # Fields
 - `n_dsm::Int`: number of deep-space maneuvers, which must be zero or more. Zero gives a single
@@ -99,8 +105,26 @@ end
 # total keplerian arcs = n_dsm + 1, split across fwd/bwd half-phases
 n_arcs_fwd(t::MGAnDSMs) = (t.n_dsm + 1 + 1) ÷ 2     # ceil((n+1)/2)
 n_arcs_bwd(t::MGAnDSMs) = (t.n_dsm + 1)     ÷ 2     # floor((n+1)/2)
-n_dsm_fwd(t::MGAnDSMs)  = n_arcs_fwd(t) - 1          # DSMs in fwd half
-n_dsm_bwd(t::MGAnDSMs)  = n_arcs_bwd(t) - 1          # DSMs in bwd half
+n_dsm_fwd(t::MGAnDSMs)  = n_arcs_fwd(t) - 1          # DSMs inside the fwd half
+n_dsm_bwd(t::MGAnDSMs)  = max(n_arcs_bwd(t) - 1, 0)   # DSMs inside the bwd half
+# the remaining DSM, when n ≥ 1, sits at the match point
+
+# The phase's Δv columns split by where each burn is applied: inside the forward half, at the match
+# point (a 3-vector, or nothing when the phase has no burns), and inside the backward half in the
+# order the backward propagation meets them, nearest the right control point first.
+function _split_dsms(dv::AbstractMatrix, t::MGAnDSMs)
+    n, ndf, ndb = t.n_dsm, n_dsm_fwd(t), n_dsm_bwd(t)
+    fwd = dv[:, 1:ndf]
+    mid = n >= 1 ? dv[:, ndf+1] : nothing
+    bwd = dv[:, n:-1:n-ndb+1]
+    return fwd, mid, bwd
+end
+
+# Column of the Δv block holding backward DSM k (k = 1 nearest the right control point)
+_bwd_dsm_column(t::MGAnDSMs, k) = t.n_dsm - k + 1
+
+# The mass ratio across a burn; a phase given no Isp spends no mass on its burns.
+_burn_mass_ratio(dv_mag, ve, sign_m) = isnan(ve) ? one(dv_mag) : exp(sign_m * dv_mag / ve)
 n_alphas(t::MGAnDSMs)   = t.n_dsm + 1                 # one α per arc
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -378,7 +402,7 @@ function _propagate_half_mgandsms(x_cp, m_cp, dv, alpha, dt_phase, mu, ve,
             dv_mag    = norm(dv_k)
             # Tsiolkovsky — forward (sign_m=-1): depletes  m_{k+1} = m_k·exp(-|Δv|/ve)
             #              backward (sign_m=+1): accumulates m_{k+1} = m_k·exp(+|Δv|/ve)
-            m[k+1]    = m[k] * exp(sign_m * dv_mag / ve)
+            m[k+1]    = m[k] * _burn_mass_ratio(dv_mag, ve, sign_m)
             x[4:6] .+= sign_dt * dv_k            # Δv applied in direction of propagation
         else
             m[k+1]    = m[k]   # no DSM after last arc
@@ -420,17 +444,21 @@ function evaluate_matchpoint!(p::MGAnDSMsPhase)
     alpha_fwd = p._alpha[1:Nf]            # arcs 1 … N_fwd
     alpha_bwd = p._alpha[Nf+1:end]        # arcs N_fwd+1 … N_fwd+N_bwd
 
-    dv_fwd = ndf > 0 ? p._dv[:, 1:ndf]                   : zeros(3, 0)
-    dv_bwd = ndb > 0 ? p._dv[:, ndf+1:ndf+ndb]           : zeros(3, 0)
+    dv_fwd, dv_mid, dv_bwd = _split_dsms(p._dv, p.transcription)
 
     Fwd = _propagate_half_mgandsms(p._x0, p._m0, dv_fwd, alpha_fwd, dt_p,
                                     p.mu, ve(p), +1.0, -1.0)
     Bwd = _propagate_half_mgandsms(p._xf, p._mf, dv_bwd, alpha_bwd, dt_p,
                                     p.mu, ve(p), -1.0, +1.0)
 
-    # The match point is the end of the forward propagation (= end of backward)
-    p._x_match_fwd = Fwd.x_nodes[:, Nf+1]
+    # The match point is the end of the forward propagation (= end of backward), after the burn
+    # that sits there
+    p._x_match_fwd = copy(Fwd.x_nodes[:, Nf+1])
     p._m_match_fwd = Fwd.m[Nf+1]
+    if dv_mid !== nothing
+        p._x_match_fwd[4:6] .+= dv_mid
+        p._m_match_fwd *= _burn_mass_ratio(norm(dv_mid), ve(p), -1.0)
+    end
     p._x_match_bwd = Bwd.x_nodes[:, Nb+1]
     p._m_match_bwd = Bwd.m[Nb+1]
 
@@ -500,8 +528,7 @@ function matchpoint_jacobian(p::MGAnDSMsPhase)
     # ── Re-propagate to collect STMs ─────────────────────────────────────────
     alpha_fwd = p._alpha[1:Nf]
     alpha_bwd = p._alpha[Nf+1:end]
-    dv_fwd = ndf > 0 ? p._dv[:, 1:ndf]         : zeros(3, 0)
-    dv_bwd = ndb > 0 ? p._dv[:, ndf+1:ndf+ndb] : zeros(3, 0)
+    dv_fwd, dv_mid, dv_bwd = _split_dsms(p._dv, p.transcription)
 
     Fwd = _propagate_half_mgandsms(p._x0, p._m0, dv_fwd, alpha_fwd, dt_p,
                                     p.mu, ve_p, +1.0, -1.0)
@@ -527,7 +554,7 @@ function matchpoint_jacobian(p::MGAnDSMsPhase)
     #   sign_m = +1  (backward): M33 = exp(+|Δv|/ve) > 1  (accumulation)
     function build_mtm(dv_k, sign_m)
         dv_mag = norm(dv_k)
-        M33    = exp(sign_m * dv_mag / ve_p)   # = m_{k+1}/m_k
+        M33    = _burn_mass_ratio(dv_mag, ve_p, sign_m)   # = m_{k+1}/m_k
         M      = Matrix{Float64}(I, 7, 7)
         M[7, 7] = M33
         return M
@@ -558,8 +585,10 @@ function matchpoint_jacobian(p::MGAnDSMsPhase)
     #   tail_arc_fwd[Nf] = I
     #   tail_arc_fwd[k]  = (DSM k present?) M_k · Φ̄_{k+1} · tail_arc_fwd[k+1]  for k < Nf
 
+    # The forward chain ends with the match-point burn, which scales the mass and adds a constant to
+    # the velocity, so every forward sensitivity passes through its MTM.
     tail_arc_fwd = Vector{Matrix{Float64}}(undef, Nf)
-    tail_arc_fwd[Nf] = I7
+    tail_arc_fwd[Nf] = dv_mid === nothing ? I7 : build_mtm(dv_mid, -1.0)
     for k in (Nf-1):-1:1
         # after arc k: apply DSM k, then arc k+1, then rest
         tail_arc_fwd[k] = tail_arc_fwd[k+1] * Phi_aug_fwd[k+1] * Mtm_fwd[k]
@@ -618,7 +647,7 @@ function matchpoint_jacobian(p::MGAnDSMsPhase)
         dv_mag = norm(dv_k)
         m_k    = Fwd.m[k+1]   # post-burn mass
         # ∂m_{k+1}/∂Δv_k (1×3)
-        dm_dv  = -(m_k / ve_p) .* dv_k ./ (dv_mag + 1e-20)   # 3-vec
+        dm_dv  = isnan(ve_p) ? zeros(3) : -(m_k / ve_p) .* dv_k ./ (dv_mag + 1e-20)   # 3-vec
         # Ξ_k: 7×3
         Xi_k   = vcat(zeros(3, 3), I(3), dm_dv')
         # chain after the DSM: tail_arc_fwd[k+1] · Φ̄_{k+1}
@@ -635,12 +664,21 @@ function matchpoint_jacobian(p::MGAnDSMsPhase)
         dv_k   = dv_bwd[:, k]
         dv_mag = norm(dv_k)
         m_k    = Bwd.m[k+1]   # post-burn mass (in backward propagation)
-        dm_dv  = +(m_k / ve_p) .* dv_k ./ (dv_mag + 1e-20)
+        dm_dv  = isnan(ve_p) ? zeros(3) : +(m_k / ve_p) .* dv_k ./ (dv_mag + 1e-20)
         Xi_k   = vcat(zeros(3, 3), -I(3), dm_dv')   # -I: backward sign_dt = -1
         chain_after = tail_arc_bwd[k+1] * Phi_aug_bwd[k+1]
         dXbwd_dv = chain_after * Xi_k
-        col = (ndf + k - 1)*3+1 : (ndf + k)*3
-        J_ddv[:, col] .= +dXbwd_dv   # c_mp = X_bwd - X_fwd → + sign for bwd
+        c = _bwd_dsm_column(p.transcription, k)
+        J_ddv[:, (c-1)*3+1 : c*3] .= +dXbwd_dv   # c_mp = X_bwd - X_fwd → + sign for bwd
+    end
+
+    # The match-point burn: X_fwd⁺ = [r; v + Δv; m·exp(-|Δv|/ve)]
+    if dv_mid !== nothing
+        dv_mag = norm(dv_mid)
+        m_after = Fwd.m[Nf+1] * _burn_mass_ratio(dv_mag, ve_p, -1.0)
+        dm_dv = isnan(ve_p) ? zeros(3) : -(m_after / ve_p) .* dv_mid ./ (dv_mag + 1e-20)
+        c = ndf + 1
+        J_ddv[:, (c-1)*3+1 : c*3] .= -vcat(zeros(3, 3), I(3), dm_dv')
     end
 
     # ─────────────────────────────────────────────────────────────────────────

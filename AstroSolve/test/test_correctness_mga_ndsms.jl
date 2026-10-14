@@ -286,6 +286,45 @@ end
     @test _mg_worst_relative_jacobian_error(q1) < 1e-4
 end
 
+@testset "MGAnDSMs — every burn flies, and its partials are right" begin
+    # A phase with n burns has n + 1 arcs; the burn between the last forward arc and the first
+    # backward arc sits at the match point. Each burn must move the match point, and the analytic
+    # partials for burns, arc fractions, masses and times must match central differences.
+    for n in 1:4
+        p = MGAnDSMsPhase(name = :leg, transcription = MGAnDSMs(n_dsm = n),
+                          model = PropulsionModel(mu = _MG_MU, Isp = _MG_ISP, g0 = _MG_G0),
+                          ephemeris_left = _mg_earth, ephemeris_right = _mg_venus)
+        p._t0 = 0.0; p._tf = 150 * 86400.0; p._m0 = 2000.0; p._mf = 1800.0
+        p._vinf_dep .= (0.5, 2.0, 0.1); p._vinf_arr .= (-1.0, 0.5, 0.2)
+        p._alpha .= range(1.0, 2.0, length = n + 1) ./ sum(range(1.0, 2.0, length = n + 1))
+        p._dv .= reshape(0.05 .* sin.(1:3n), 3, n)
+        AstroSolve.evaluate_matchpoint!(p)
+        d0 = AstroSolve.matchpoint_defect(p)
+        @test all(1:n) do k
+            q = deepcopy(p); q._dv[2, k] += 0.01
+            AstroSolve.evaluate_matchpoint!(q)
+            norm(AstroSolve.matchpoint_defect(q) - d0) > 1e-6
+        end
+        J = AstroSolve.matchpoint_jacobian(p)
+        function fd(set!, h)
+            q = deepcopy(p); set!(q, +h); AstroSolve.evaluate_matchpoint!(q); fp = AstroSolve.matchpoint_defect(q)
+            q = deepcopy(p); set!(q, -h); AstroSolve.evaluate_matchpoint!(q); fm = AstroSolve.matchpoint_defect(q)
+            (fp - fm) / 2h
+        end
+        rel(a, b) = norm(a - b) / (1 + norm(b))
+        for c in 1:3n
+            @test rel(J.ddv[:, c], fd((q, h) -> q._dv[c] += h, 1e-6)) < 1e-6
+        end
+        for k in 1:n+1
+            @test rel(J.dalpha[:, k], fd((q, h) -> q._alpha[k] += h, 1e-7)) < 1e-6
+        end
+        @test rel(J.dm0, fd((q, h) -> q._m0 += h, 1e-3)) < 1e-6
+        @test rel(J.dmf, fd((q, h) -> q._mf += h, 1e-3)) < 1e-6
+        @test rel(J.dt0, fd((q, h) -> q._t0 += h, 10.0)) < 1e-5
+        @test rel(J.dtf, fd((q, h) -> q._tf += h, 10.0)) < 1e-5
+    end
+end
+
 @testset "MGAnDSMs — test_partials_fd cannot judge a problem whose columns span nine decades" begin
     # 🔴 Recorded behaviour. The shared diagnostic takes one absolute step for every column and
     # compares on absolute error, and an MGAnDSMs phase defeats both: its columns run from a few

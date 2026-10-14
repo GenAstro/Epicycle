@@ -302,10 +302,12 @@ function final_mass end
 The impulses a gravity-assist phase applies between its Keplerian arcs.
 
 Varied with `Vary(deep_space_dv, phase; guess = ...)`. There is one impulse per maneuver, and a
-phase with `n` maneuvers has `n + 1` arcs.
+phase with `n` maneuvers has `n + 1` arcs. With one maneuver the phase is the familiar MGA-1DSM leg:
+a coast, the burn, and a coast, with the arc fractions placing the burn.
 
 # Returns
-A matrix with three rows and one column per maneuver, in the velocity units of the dynamics.
+A matrix with three rows and one column per maneuver, in the order they are flown, in the velocity
+units of the dynamics.
 
 # Example
 ```julia
