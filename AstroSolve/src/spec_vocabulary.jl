@@ -1418,6 +1418,9 @@ function drain_links!(seq)
     for (l, f, lb, ub, nm) in _PENDING
         p1, p2 = l.phases[1], l.phases[2]
         both_coll = p1 isa CollocationPhase && p2 isa CollocationPhase
+        # A link the script named is called that wherever its rows are shown, as the solver status
+        # box does. `:link` is the default, which names nothing.
+        l.name === :link || (_LINK_NAMES[_link_key(p1, p2)] = String(l.name))
         if mixed || (f === continuity && !both_coll)
             f === continuity ? add_continuity!(seq, p1, p2) :
                 add_continuity!((c1, c2) -> f(c1, c2), seq, p1, p2;
@@ -1430,12 +1433,10 @@ function drain_links!(seq)
             n = _continuity_size(p1, p2)
             lb = ub = zeros(n + 1)
         end
+        # A link constraint written without `name` carries a generated one; the function names it
+        # better wherever it is shown.
+        startswith(nm, "##") && (nm = something(_readable_fname(f), nm))
         if p1 isa CollocationPhase && p2 isa CollocationPhase
-            # A link written without `name` carries a generated one; the function names it better
-            # wherever it is shown, as the solver status box does.
-            if startswith(nm, "##")
-                nm = something(_readable_fname(f), nm)
-            end
             add_linkage!((c1, c2) -> f(c1, c2), seq, p1, p2;
                          lower_bounds = lb, upper_bounds = ub, name = nm)
         else

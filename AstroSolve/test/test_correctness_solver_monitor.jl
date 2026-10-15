@@ -439,7 +439,7 @@ _sm_di_rest(c)   = [state(c).x, state(c).v]
 _sm_di_accel(c)  = [control(c).a]
 _sm_di_effort(c) = control(c).a^2
 
-function _sm_di_problem(; linked = true)
+function _sm_di_problem(; linked = true, link_name = :link)
     first_arc = _sm_di_arc(:first_arc, 0.0, 1.0, (0.0, 0.4), 0.0)
     seq = Sequence()
     add_sequence!(seq, first_arc)
@@ -457,7 +457,7 @@ function _sm_di_problem(; linked = true)
                name = :arrival)
     Constraint(_sm_di_accel, second_arc; lower_bound = [-2.0], upper_bound = [2.0], at = Path())
     Objective(_sm_di_effort, second_arc; sense = Min(), at = Path())
-    Constraint(continuity, Link(first_arc, second_arc))
+    Constraint(continuity, Link(first_arc, second_arc; name = link_name))
     return seq
 end
 
@@ -470,13 +470,14 @@ end
         end
         @test r.info == :Maximum_Iterations_Exceeded
         frame = _sm_final_frame(out)
-        @test occursin("second_arc.final_time", frame)
+        @test occursin("second_arc · final_time", frame)
         @test !occursin("initial_time", frame)                  # fixed by tspan: not shown
         @test occursin("first_arc · HermiteSimpson, 21 nodes", frame)
         @test occursin("130 decision variables", frame)
         @test occursin(r"first_arc · defects\s+\d+/40\s+[xv] @ step \d+ \(t ", frame)
         @test occursin(r"second_arc · path\s+\d+/21\s+_sm_di_accel @ node \d+", frame)
-        @test occursin(r"first_arc→second_arc · li…\s+\d/3\s+continuity\[[xvt]\]", frame)
+        # Too long for the column: the phase names are cut, not the kind after them.
+        @test occursin(r"first_arc→second_a… · link\s+\d/3\s+continuity\[[xvt]\]", frame)
         @test occursin(r"first_arc · boundary\s+2/2", frame)
         @test occursin(r"Goals met \d/6", frame)
 
@@ -522,4 +523,228 @@ end
                                       solver = _SM._ipopt(_sm_opts(); monitor = false))
         @test AstroSolve._with_collocation_rows(off, nothing) === off     # box off: not built
     end
+end
+
+# ── Names that fit: the phase is cut, the kind after it is kept ──────────────────────────────────
+
+@testset "Row names and counts" begin
+    @test _SM._fit_name("defects", 12) == "defects     "
+    @test _SM._fit_name("earth_to_flyby · match point", 26) == "earth_to_fl… · match point"
+    @test textwidth(_SM._fit_name("earth_to_flyby · match point", 26)) == 26
+    # Variables use the same form, so their quantity survives too.
+    @test endswith(rstrip(_SM._fit_name("earth_to_flyby · departure_vinf[1]", 26)),
+                   "departure_vinf[1]")
+    # No separator, or no room for one: the end is cut as before.
+    @test _SM._fit_name("a name far too long for any column", 12) == "a name far …"
+    @test _SM._fit_name("phase · a kind far too long to keep", 12) == "phase · a k…"
+    @test _SM._count(1, "node") == "1 node" && _SM._count(21, "node") == "21 nodes"
+end
+
+# ── Named links ──────────────────────────────────────────────────────────────────────────────────
+
+@testset "A named Link names its group" begin
+    out = _sm_capture(live = true) do
+        solve!(_sm_di_problem(link_name = :handover); method = Optimize(monitor = true, max_iter = 1))
+    end
+    frame = _sm_final_frame(out)
+    @test occursin(r"handover · link\s+\d/3\s+continuity\[[xvt]\]", frame)
+    @test !occursin("first_arc→second_a", frame)
+end
+
+# ── Shooting: a Sims-Flanagan phase ──────────────────────────────────────────────────────────────
+
+# An Earth-Mars rendezvous on circular, coplanar orbits, as in the Sims-Flanagan tests: 20
+# segments, so 10 forward and 10 backward, a throttle ball as a path constraint and the final
+# mass varied with a scale.
+const _SMSF_MU  = 1.32712440018e11
+const _SMSF_AU  = 1.495978707e8
+const _SMSF_RE  = 1.0 * _SMSF_AU
+const _SMSF_RM  = 1.524 * _SMSF_AU
+const _SMSF_VE  = sqrt(_SMSF_MU / _SMSF_RE)
+const _SMSF_VM  = sqrt(_SMSF_MU / _SMSF_RM)
+const _SMSF_TOF = π * sqrt(((_SMSF_RE + _SMSF_RM) / 2)^3 / _SMSF_MU)
+const _SMSF_TH0 = π - (_SMSF_VM / _SMSF_RM) * _SMSF_TOF
+const _SMSF_M0  = 1500.0
+
+_smsf_body(r, v, θ0, ω) = t -> (r * [cos(θ0 + ω * t), sin(θ0 + ω * t), 0.0],
+                                v * [-sin(θ0 + ω * t), cos(θ0 + ω * t), 0.0],
+                                -(_SMSF_MU / r^2) * [cos(θ0 + ω * t), sin(θ0 + ω * t), 0.0])
+const _smsf_earth = _smsf_body(_SMSF_RE, _SMSF_VE, 0.0, _SMSF_VE / _SMSF_RE)
+const _smsf_mars  = _smsf_body(_SMSF_RM, _SMSF_VM, _SMSF_TH0, _SMSF_VM / _SMSF_RM)
+
+_smsf_thrust_ball(c) = [dot(control(c), control(c))]
+
+function _smsf_problem()
+    phase = SimsFlanaganPhase(name = :earth_mars, transcription = SimsFlanagan(n_segments = 20),
+                              model = PropulsionModel(mu = _SMSF_MU, Isp = 3000.0,
+                                                      Tmax = 1.0e-3, g0 = 9.80665e-3),
+                              ephemeris_left = _smsf_earth, ephemeris_right = _smsf_mars)
+    uf = Vary(forward_control,  phase; lower_bound = fill(-2.0, 3), upper_bound = fill(2.0, 3))
+    ub = Vary(backward_control, phase; lower_bound = fill(-2.0, 3), upper_bound = fill(2.0, 3))
+    mf = Vary(final_mass, phase; lower_bound = 100.0, upper_bound = _SMSF_M0, scale = _SMSF_M0)
+    AstroSolve.set_matchpoint_scale!(phase, [_SMSF_RE, _SMSF_RE, _SMSF_RE,
+                                  _SMSF_VE, _SMSF_VE, _SMSF_VE, _SMSF_M0])
+    Constraint(_smsf_thrust_ball, phase; lower_bound = 0.0, upper_bound = 1.0, at = Path())
+    obj = AstroSolve.MayerObjective(ctx -> ctx.mf, phase; sense = :Max)
+    AstroSolve.set_objective!(phase, obj)
+    AstroSolve.add_objective_jacobian!(() -> [1.0], obj, mf)
+    phase._t0, phase._tf, phase._m0 = 0.0, _SMSF_TOF, _SMSF_M0
+    _, v0, _ = _smsf_earth(0.0)
+    _, vf, _ = _smsf_mars(_SMSF_TOF)
+    for k in 1:10
+        phase._u_fwd[:, k] = 0.5 * v0 / norm(v0)
+        phase._u_bwd[:, k] = 0.5 * vf / norm(vf)
+    end
+    phase._mf = 0.85 * _SMSF_M0
+    seq = Sequence()
+    add_sequence!(seq, phase)
+    return seq, phase
+end
+
+# Constraint values that meet every bound, to violate one row at a time.
+_sm_feasible(r) = [isfinite(lo) ? lo : (isfinite(hi) ? hi : 0.0) for (lo, hi) in zip(r.lg, r.ug)]
+
+_sm_group(groups, name) = only(filter(g -> g.name == name, groups))
+
+@testset "Sims-Flanagan rows" begin
+    seq, phase = _smsf_problem()
+    AstroSolve.initialize_sequence!(seq)
+    sm   = AstroSolve._get_or_build_sm(seq)
+    rows = _SM.ShootingRows(sm, 1e-4)
+    x    = AstroSolve.get_decision_vector(sm)
+
+    vars, notes, groups, worst = _SM.monitor_rows(rows, x, _sm_feasible(rows))
+    @test [g.name for g in groups] == ["match point", "path"]
+    @test (_sm_group(groups, "match point").total, _sm_group(groups, "path").total) == (7, 20)
+    @test all(_SM._is_met, groups) && worst == 0.0
+    @test notes == ["earth_mars · SimsFlanagan, 20 segments", "$(sm.n_vars) decision variables"]
+    # The solver sees final_mass divided by its scale; the box shows kilograms.
+    @test only(v.name for v in vars) == "final_mass"
+    @test only(v.value for v in vars) ≈ 0.85 * _SMSF_M0
+
+    # One row violated at a time: each group reports it, by component and segment.
+    mp, pa = _sm_group(groups, "match point"), _sm_group(groups, "path")
+    # The match point is an equality, so +2 violates it by 2; the throttle ball sits at its lower
+    # bound of 0, so +2 passes its upper bound of 1 by 1. "_smsf_thrust_ball @ fwd seg 3" is
+    # wider than the column, so the location keeps the segment and drops the name.
+    for (row, group, where, viol) in ((4, "match point", "vx", 2.0), (7, "match point", "m", 2.0),
+                                      (7 + 3,  "path", "fwd seg 3", 1.0),
+                                      (7 + 12, "path", "bwd seg 2", 1.0))
+        g = _sm_feasible(rows)
+        g[row] += 2.0
+        _, _, gs, w = _SM.monitor_rows(rows, x, g)
+        hit = _sm_group(gs, group)
+        @test hit.met == hit.total - 1
+        @test hit.where == where
+        @test w ≈ viol
+        @test all(_SM._is_met, filter(gg -> gg.name != group, gs))
+    end
+end
+
+@testset "Sims-Flanagan solve with the status box" begin
+    local on, off
+    out = _sm_capture(live = true) do
+        on = solve!(first(_smsf_problem()); method = Optimize(monitor = true, max_iter = 3))
+    end
+    _sm_capture(live = true) do
+        off = solve!(first(_smsf_problem()); method = Optimize(monitor = false, max_iter = 3,
+                                                                print_level = 0))
+    end
+    @test on.info == off.info
+    @test on.variables == off.variables
+    frame = _sm_final_frame(out)
+    @test occursin(r"│   final_mass\s+\d", frame)
+    @test occursin(r"match point\s+\d/7", frame) && occursin(r"path\s+\d+/20", frame)
+    frames = split(_sm_strip(out), "┌")[2:end]
+    @test allequal(count(==('\n'), first(split(f, "┘"))) for f in frames)
+end
+
+# ── Shooting: two MGA legs and a named flyby link ────────────────────────────────────────────────
+
+const _SMMG_RV   = 0.723 * _SMSF_AU
+const _SMMG_TDEP = 12222.0 * 86400.0
+const _SMMG_TFLY = _SMMG_TDEP + 365.0 * 86400.0
+const _SMMG_TARR = _SMMG_TFLY + 175.0 * 86400.0
+const _smmg_earth = _smsf_body(_SMSF_RE, _SMSF_VE, 0.0, _SMSF_VE / _SMSF_RE)
+const _smmg_venus = _smsf_body(_SMMG_RV, sqrt(_SMSF_MU / _SMMG_RV), 1.1,
+                               sqrt(_SMSF_MU / _SMMG_RV) / _SMMG_RV)
+
+_smmg_epoch(c1, c2)  = [final_time(c1) - initial_time(c2)]
+_smmg_mass(c1, c2)   = [final_mass(c1) - initial_mass(c2)]
+_smmg_speed(c1, c2)  = [dot(arrival_vinf(c1), arrival_vinf(c1)) -
+                        dot(departure_vinf(c2), departure_vinf(c2))]
+
+function _smmg_problem()
+    trans = MGAnDSMs(n_dsm = 1)
+    model = PropulsionModel(mu = _SMSF_MU, Isp = 320.0, g0 = 9.80665e-3)
+    p1 = MGAnDSMsPhase(name = :earth_to_flyby, transcription = trans, model = model,
+                       ephemeris_left = _smmg_earth, ephemeris_right = _smmg_earth)
+    p2 = MGAnDSMsPhase(name = :flyby_to_venus, transcription = trans, model = model,
+                       ephemeris_left = _smmg_earth, ephemeris_right = _smmg_venus)
+    for (p, t0, tf) in ((p1, _SMMG_TDEP, _SMMG_TFLY), (p2, _SMMG_TFLY, _SMMG_TARR))
+        p._alpha = [0.5, 0.5]
+        Vary(departure_vinf, p; guess = [3.0, 1.0, 0.0],
+             lower_bound = fill(-6.0, 3), upper_bound = fill(6.0, 3))
+        Vary(arrival_vinf, p; guess = [-3.0, 1.0, 0.0],
+             lower_bound = fill(-6.0, 3), upper_bound = fill(6.0, 3))
+        Vary(initial_time, p; guess = t0,
+             lower_bound = t0 - 30 * 86400.0, upper_bound = t0 + 30 * 86400.0)
+        Vary(final_time, p; guess = tf,
+             lower_bound = tf - 60 * 86400.0, upper_bound = tf + 60 * 86400.0)
+        Vary(initial_mass, p; guess = 2000.0, lower_bound = 10.0, upper_bound = 4000.0,
+             scale = 2000.0)
+    end
+    flyby = Link(p1, p2; name = :earth_flyby)
+    Constraint(_smmg_epoch, flyby; equals = 0.0, name = :epoch)
+    Constraint(_smmg_mass,  flyby; equals = 0.0, name = :mass)
+    Constraint(_smmg_speed, flyby; equals = 0.0)                 # unnamed: its function names it
+    seq = Sequence()
+    add_sequence!(seq, p1)
+    add_sequence!(seq, p2)
+    return seq, p1, p2
+end
+
+@testset "MGA rows" begin
+    seq, p1, p2 = _smmg_problem()
+    AstroSolve.initialize_sequence!(seq)
+    sm   = AstroSolve._get_or_build_sm(seq)
+    rows = _SM.ShootingRows(sm, 1e-4)
+    x    = AstroSolve.get_decision_vector(sm)
+
+    vars, notes, groups, _ = _SM.monitor_rows(rows, x, _sm_feasible(rows))
+    @test [g.name for g in groups] ==
+          ["earth_to_flyby · match point", "flyby_to_venus · match point", "earth_flyby · link"]
+    @test _sm_group(groups, "earth_flyby · link").total == 3
+    @test notes[1:2] == ["earth_to_flyby · MGAnDSMs, 1 deep-space maneuver",
+                         "flyby_to_venus · MGAnDSMs, 1 deep-space maneuver"]
+    names = [v.name for v in vars]
+    @test "earth_to_flyby · initial_time" in names && "flyby_to_venus · final_time" in names
+    @test "earth_to_flyby · departure_vinf[2]" in names
+    # Scaled for the solver, shown as written: seconds and kilograms.
+    @test vars[findfirst(==("earth_to_flyby · initial_time"), names)].value ≈ _SMMG_TDEP
+    @test vars[findfirst(==("flyby_to_venus · initial_mass"), names)].value ≈ 2000.0
+
+    # The link's rows by their names; the unnamed one by its function.
+    link = rows.groups[end].blocks
+    @test [b.label for b in link] == ["epoch", "mass", "_smmg_speed"]
+    for (k, label) in enumerate(("epoch", "mass", "_smmg_speed"))
+        g = _sm_feasible(rows)
+        g[first(link[k].rows)] += 1.0
+        _, _, gs, _ = _SM.monitor_rows(rows, x, g)
+        @test _sm_group(gs, "earth_flyby · link").where == label
+    end
+    g = _sm_feasible(rows)
+    g[first(rows.groups[2].blocks[1].rows) + 2] += 1.0                # leg 2, match point z
+    _, _, gs, _ = _SM.monitor_rows(rows, x, g)
+    @test _sm_group(gs, "flyby_to_venus · match point").where == "z"
+end
+
+@testset "A shooting problem whose rows cannot be named still solves" begin
+    opts = AstroSolve.SNOW.Options(derivatives = AstroSolve.SNOW.UserDeriv(),
+                                   solver = _SM._ipopt(_sm_opts(); monitor = true))
+    local same
+    @test_logs (:warn, r"could not name this problem's rows") begin
+        same = AstroSolve._with_grouped_rows(opts, _SM.ShootingRows, nothing)
+    end
+    @test same === opts
 end
