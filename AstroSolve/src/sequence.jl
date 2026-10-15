@@ -778,6 +778,9 @@ function _solve_event_graph!(seq::Sequence, options::SNOW.Options; record_iterat
     ug = get_fun_upper_bounds(sm)
     ng = length(lg)
     
+    # Name the status box's rows after the sequence's variables and constraints
+    options = _with_rows(options, EventGraphRows(sm, _constr_viol_tol(options)))
+
     # Create closure for SNOW interface
     snow_solver_fun!(F, x) = solver_fun!(F, x, sm)
     
@@ -827,5 +830,5 @@ function default_snow_options()
     # Finite differences: the event graph has no derivative route of its own yet. They are only
     # as repeatable as the integrator's step sequence, which differs with a platform's rounding:
     # a one-variable target that converged in 4 iterations on Windows ran 384 on Linux CI.
-    return Options(derivatives=ForwardFD(), solver=IPOPT(ip_options))
+    return Options(derivatives=ForwardFD(), solver=_ipopt(ip_options))
 end

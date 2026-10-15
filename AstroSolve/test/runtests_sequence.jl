@@ -408,7 +408,7 @@ end
         
         # Verify it has expected components (basic structure test)
         @test isa(options.derivatives, ForwardFD)
-        @test isa(options.solver, IPOPT)
+        @test isa(options.solver, AstroSolve.AstroIPOPT)   # AstroSolve's IPOPT driver, with the status box
         
         # Test that default options work with solve_trajectory! using simple working config
         sat = Spacecraft()

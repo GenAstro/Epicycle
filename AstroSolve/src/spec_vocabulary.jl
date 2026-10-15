@@ -1431,6 +1431,11 @@ function drain_links!(seq)
             lb = ub = zeros(n + 1)
         end
         if p1 isa CollocationPhase && p2 isa CollocationPhase
+            # A link written without `name` carries a generated one; the function names it better
+            # wherever it is shown, as the solver status box does.
+            if startswith(nm, "##")
+                nm = something(_readable_fname(f), nm)
+            end
             add_linkage!((c1, c2) -> f(c1, c2), seq, p1, p2;
                          lower_bounds = lb, upper_bounds = ub, name = nm)
         else
@@ -1480,8 +1485,8 @@ _est(m) = getfield(AstroSolve, m)
 # =============================================================================
 
 """
-    Optimize(; max_iter = 500, tol = 1e-6, print_level = 5, derivatives = :user,
-               record_iterations = false, extra = Dict{String,Any}())
+    Optimize(; max_iter = 500, tol = 1e-6, print_level = nothing, derivatives = :user,
+               record_iterations = false, monitor = nothing, extra = Dict{String,Any}())
 
 `Optimize` says how an NLP is solved, and is passed as `solve!(seq; method = Optimize(...))`.
 
@@ -1490,29 +1495,39 @@ _est(m) = getfield(AstroSolve, m)
   `Maximum_Iterations_Exceeded` rather than a converged answer, so the status is worth reading.
 - `tol::Float64`: the tolerance the solver's own error measure must fall below before it reports
   success.
-- `print_level::Int`: how much the solver prints, from 0 for silence.
+- `print_level::Union{Nothing,Int}`: how much IPOPT logs, from 0 for silence. With the status box
+  on, IPOPT's log goes to its log file only, at this level; with it off, to the terminal as well.
+  `nothing` means 5.
 - `derivatives::Symbol`: `:user` to use the partials declared with `@partial`, or `:fd` for finite
   differences throughout.
 - `record_iterations::Bool`: keeps the iterate history where the solver supports it.
+- `monitor::Union{Nothing,Bool}`: `true` to show the live solver status box, `false` for IPOPT's
+  own log instead. `nothing` follows [`solver_monitor!`](@ref), which is on by default.
 - `extra::Dict{String,Any}`: solver-specific options passed straight through, which is the escape
   hatch for what only one solver has rather than a keyword per knob.
 
+# Notes
+The status box shows each variable and goal by name, with its unit, value and error, and a ✓ when
+the solver considers a goal met. It is redrawn in place while the solve runs in an interactive
+terminal; anywhere else only its final frame is printed.
+
 # Example
 ```julia
-Optimize(max_iter = 500, print_level = 0)
+Optimize(max_iter = 500, monitor = false)
 ```
 """
 struct Optimize
     max_iter           ::Int
     tol                ::Float64
-    print_level        ::Int
+    print_level        ::Union{Nothing,Int}
     derivatives        ::Symbol
     record_iterations  ::Bool
+    monitor            ::Union{Nothing,Bool}
     extra              ::Dict{String,Any}
 end
-Optimize(; max_iter = 500, tol = 1e-6, print_level = 5, derivatives = :user,
-           record_iterations = false, extra = Dict{String,Any}()) =
-    Optimize(max_iter, tol, print_level, derivatives, record_iterations,
+Optimize(; max_iter = 500, tol = 1e-6, print_level = nothing, derivatives = :user,
+           record_iterations = false, monitor = nothing, extra = Dict{String,Any}()) =
+    Optimize(max_iter, tol, print_level, derivatives, record_iterations, monitor,
              Dict{String,Any}(extra))
 
 """
@@ -1599,12 +1614,12 @@ _ipopt_log() = joinpath(tempdir(),
 function _snow(m::Optimize)
     opts = Dict{String,Any}("max_iter"    => m.max_iter,
                             "tol"         => m.tol,
-                            "print_level" => m.print_level,
+                            "print_level" => something(m.print_level, 5),
                             "output_file" => _ipopt_log())
     merge!(opts, m.extra)
     return SNOW.Options(
         derivatives = m.derivatives === :fd ? SNOW.ForwardFD() : SNOW.UserDeriv(),
-        solver = SNOW.IPOPT(opts))
+        solver = _ipopt(opts; monitor = something(m.monitor, _MONITOR_DEFAULT[])))
 end
 
 """

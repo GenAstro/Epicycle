@@ -55,7 +55,7 @@ prop = OrbitPropagator(ForceModel(PointMassGravity(earth, ())),
 toi  = ImpulsiveManeuver(axes = VNB(), element1 = 1.0)
 
 # Write the flight sequence, in the order it flies
-result = target!(method = Optimize(derivatives = :fd, print_level = 0)) do
+result = target!(method = Optimize(derivatives = :fd, monitor = true)) do
 
     # Vary and apply the maneuver
     Vary(delta_v, toi; lower_bound = [0.0, 0.0, 0.0], upper_bound = [3.0, 0.0, 0.0])

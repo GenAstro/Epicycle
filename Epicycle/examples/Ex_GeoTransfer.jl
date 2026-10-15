@@ -122,7 +122,7 @@ add_sequence!(seq,
 result = solve!(seq; method = Optimize(max_iter = 1000,
                                        tol = 1e-6,
                                        derivatives = :fd,
-                                       print_level = 5))
+                                       monitor = true))
 report_sequence(seq)
 report_solution(seq, result)
 

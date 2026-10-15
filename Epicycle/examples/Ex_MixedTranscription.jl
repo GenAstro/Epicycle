@@ -199,7 +199,7 @@ Objective(final_radius, second_half; sense = Max())
 #' ## Solve the problem
 
 # Solve and report the final orbit and handoff continuity
-result = solve!(seq; method = Optimize(max_iter = 1000, tol = 1e-6, print_level = 5))
+result = solve!(seq; method = Optimize(max_iter = 1000, tol = 1e-6, monitor = true))
 
 Y = state(second_half)
 handoff = maximum(abs.(Y[:, 1] .- vcat(final_state(first_half), final_mass(first_half))))

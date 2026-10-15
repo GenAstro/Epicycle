@@ -173,7 +173,7 @@ Objective(propellant, phase; sense = Min())
 @printf("TOF   = %.1f days\n", TOF / 86400)
 
 # Optimize the transfer
-result = solve!(Sequence(phase); method = Optimize(max_iter = 500))
+result = solve!(Sequence(phase); method = Optimize(max_iter = 500, monitor = true))
 
 # Report delivered mass and the number of coast segments
 mf = final_mass(phase)

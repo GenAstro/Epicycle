@@ -896,6 +896,19 @@ EpicycleBase.label(::typeof(outgoing_rla))         = "Outgoing RLA"
 EpicycleBase.label(::typeof(delta_v_magnitude))    = "Delta-V magnitude"
 EpicycleBase.label(::typeof(gravitational_parameter)) = "Gravitational parameter"
 
+# The unit of the value each quantity returns. Undeclared quantities (`epoch`, `state`, whose values
+# are a time or a mixed vector) fall back to "".
+for (f, u) in ((:semi_major_axis, "km"), (:inclination, "rad"), (:raan, "rad"),
+               (:argument_of_periapsis, "rad"), (:true_anomaly, "rad"),
+               (:position_vector, "km"), (:velocity_vector, "km/s"),
+               (:position_x, "km"), (:position_y, "km"), (:position_z, "km"),
+               (:position_magnitude, "km"), (:velocity_magnitude, "km/s"),
+               (:delta_v, "km/s"), (:position_dot_velocity, "km²/s"),
+               (:mean_long_sma, "km"), (:outgoing_rla, "rad"),
+               (:delta_v_magnitude, "km/s"), (:gravitational_parameter, "km³/s²"))
+    @eval EpicycleBase.unit(::typeof($f)) = $u
+end
+
 # Angles wrap. A stopping condition has to unwrap before it brackets a root;
 # nothing else needs to know.
 for f in (:inclination, :raan, :argument_of_periapsis, :true_anomaly, :outgoing_rla)

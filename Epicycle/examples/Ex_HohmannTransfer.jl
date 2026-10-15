@@ -79,7 +79,7 @@ add_sequence!(seq,
 #' sequence and converged maneuver values.
 
 # Solve and report the transfer
-result = solve!(seq; method = Optimize(derivatives = :fd, print_level = 5))
+result = solve!(seq; method = Optimize(derivatives = :fd, monitor = true))
 report_sequence(seq)
 report_solution(seq, result)
 

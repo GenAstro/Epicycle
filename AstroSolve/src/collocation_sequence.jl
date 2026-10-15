@@ -455,6 +455,7 @@ end
 
 function _solve_phases!(seq::Sequence, options::SNOW.Options)
     !isempty(sequence_sf_phases(seq)) && return solve_trajectory_shooting!(seq, options)
+    options  = _with_collocation_rows(options, _get_or_build_cm(seq))
     x0       = get_decision_vector(seq)
     lx, ux   = get_variable_bounds(seq)
     lg, ug   = get_constraint_bounds(seq)
@@ -505,6 +506,22 @@ function _solve_phases!(seq::Sequence, options::SNOW.Options)
     return (variables = xopt, objective = fopt, info = info)
 end
 
+# The status box's rows for a collocation solve. Building them reads the problem's structure, so a
+# failure there must not stop the solve: the box falls back to the generic counts with one warning.
+function _with_collocation_rows(options::SNOW.Options, cm)
+    s = options.solver
+    (s isa AstroIPOPT && s.monitor) || return options
+    rows = try
+        CollocationRows(cm, _constr_viol_tol(options))
+    catch err
+        err isa InterruptException && rethrow()
+        @warn "The solver status display could not name this problem's rows; it shows counts " *
+              "only." exception = (err, catch_backtrace())
+        return options
+    end
+    return _with_rows(options, rows)
+end
+
 function _solve_phases!(seq::Sequence)
     !isempty(sequence_sf_phases(seq)) && return solve_trajectory_shooting!(seq)
     ip_options = Dict(
@@ -515,7 +532,7 @@ function _solve_phases!(seq::Sequence)
         "file_print_level" => 5,
     )
     options = SNOW.Options(derivatives = SNOW.UserDeriv(),
-                           solver      = SNOW.IPOPT(ip_options))
+                           solver      = _ipopt(ip_options))
     _solve_phases!(seq, options)
 end
 

@@ -415,7 +415,7 @@ println("check_partials, phase 2:"); check_partials(phase2)
 #' Solve the two-leg trajectory with IPOPT and compare the encounter speeds and
 #' duration with the reference solution.
 
-result = solve!(seq; method = Optimize(max_iter = 500, tol = 1e-6, print_level = 5))
+result = solve!(seq; method = Optimize(max_iter = 500, tol = 1e-6, monitor = true))
 
 @printf("status         : %s
 ", result.info)

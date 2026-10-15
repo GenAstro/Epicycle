@@ -180,7 +180,7 @@ Objective(propellant, phase; sense = Min())
 
 # Solve the transfer
 result = solve!(Sequence(phase);
-                method = Optimize(max_iter = 500, print_level = 5))
+                method = Optimize(max_iter = 500, monitor = true))
 
 # Report the delivered mass against the impulsive bound
 mf = final_mass(phase)

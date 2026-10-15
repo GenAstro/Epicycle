@@ -113,7 +113,7 @@ Objective(running_cost, phase; sense = Min(), at = Path())
 check_partials(phase)
 
 # Solve and report the final state and objective
-result = solve!(Sequence(phase); method = Optimize(print_level = 5))
+result = solve!(Sequence(phase); method = Optimize(monitor = true))
 println("status    : ", result.info)
 println("x_f       : ", round(get_final_state(phase).x, digits = 6), "   (analytical 0.25)")
 println("objective : ", round(result.objective, digits = 6), "   (analytical 0.9375)")

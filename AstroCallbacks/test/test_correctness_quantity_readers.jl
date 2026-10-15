@@ -141,6 +141,15 @@ end
     end
 end
 
+@testset "shipped quantities carry units" begin
+    for (f, u) in ((semi_major_axis, "km"), (eccentricity, ""), (inclination, "rad"),
+                   (raan, "rad"), (position_vector, "km"), (velocity_vector, "km/s"),
+                   (position_magnitude, "km"), (velocity_magnitude, "km/s"),
+                   (delta_v, "km/s"), (delta_v_magnitude, "km/s"), (epoch, ""))
+        @test EpicycleBase.unit(f) == u
+    end
+end
+
 @testset "position_dot_velocity" begin
     sat = _subject()
     eq  = CoordinateSystem(earth, MJ2000Eq())
