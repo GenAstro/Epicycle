@@ -404,14 +404,18 @@ function _readable_fname(f)
 end
 
 # A state's components by the field names of the phase's state type, or by index.
-function _state_names(p)
+_state_names(p) = _registered_state_names(p, p._n_states)
+
+# A phase's `n` state components by the field names of the state type it was built with, for any
+# transcription that registers one; by index otherwise.
+function _registered_state_names(p, n::Int)
     reg = get(_phase_registry, objectid(p), nothing)
     names = try
         reg === nothing || reg.state_type === nothing ? Symbol[] : collect(fieldnames(reg.state_type))
     catch
         Symbol[]
     end
-    return length(names) == p._n_states ? string.(names) : _comp_names(p._n_states)
+    return length(names) == n ? string.(names) : _comp_names(n)
 end
 
 # The names of a phase's boundary or path constraints, in the order the phase holds them. A
@@ -516,7 +520,7 @@ end
 # and boundary constraints.
 function _shooting_groups!(groups, p, row0, tag)
     labels = _shooting_constraint_labels(p)
-    match, path, bound = _RowBlock[], _RowBlock[], _RowBlock[]
+    mpoint, defect, path, bound = _RowBlock[], _RowBlock[], _RowBlock[], _RowBlock[]
     row, nb = row0, 0
     for pf in function_list(p)
         r = row+1 : row+pf.n_nlp
@@ -533,7 +537,12 @@ function _shooting_groups!(groups, p, row0, tag)
                 push!(bound, _RowBlock(r, :boundary, label, _comp_names(pf.n_nlp), 0, []))
             end
         elseif pf.n_nlp == length(_MATCH_POINT_COMPS) && pf.name == "matchpoint_defect"
-            push!(match, _RowBlock(r, :match_point, "", _MATCH_POINT_COMPS, 0, []))
+            push!(mpoint, _RowBlock(r, :match_point, "", _MATCH_POINT_COMPS, 0, []))
+        elseif (m = match(_INTERVAL_DEFECT, pf.name)) !== nothing
+            # A transcription that closes each interval with its own defect rows, one per state
+            # component, names them "defect" or "defect_<interval>".
+            push!(defect, _RowBlock(r, :interval_defect, something(m[1], ""),
+                                    _registered_state_names(p, pf.n_nlp), 0, []))
         else                                                      # e.g. MGA's arc-fraction sum
             push!(bound, _RowBlock(r, :boundary, replace(pf.name, "_" => " "),
                                    _comp_names(pf.n_nlp), 0, []))
@@ -542,9 +551,10 @@ function _shooting_groups!(groups, p, row0, tag)
     row == row0 + n_constraints(p) || throw(ArgumentError(
         "phase $(p.name): its function list covers $(row - row0) rows, but it reports " *
         "$(n_constraints(p))"))
-    isempty(match) || push!(groups, _RowGroup(tag(p, "match point"), match))
-    isempty(path)  || push!(groups, _RowGroup(tag(p, "path"), path))
-    isempty(bound) || push!(groups, _RowGroup(tag(p, "boundary"), bound))
+    isempty(mpoint) || push!(groups, _RowGroup(tag(p, "match point"), mpoint))
+    isempty(defect) || push!(groups, _RowGroup(tag(p, "defects"), defect))
+    isempty(path)   || push!(groups, _RowGroup(tag(p, "path"), path))
+    isempty(bound)  || push!(groups, _RowGroup(tag(p, "boundary"), bound))
     return groups
 end
 
@@ -633,6 +643,9 @@ function _shooting_phase_line(p)
     p isa MGAnDSMsPhase     && return "$(p.name) · MGAnDSMs, $(_count(n_dsm(p), "deep-space maneuver"))"
     return "$(p.name) · $(nameof(typeof(p)))"
 end
+
+# The name of a per-interval defect block: "defect", or "defect_<interval>".
+const _INTERVAL_DEFECT = r"^defects?(?:_(\d+))?$"
 
 # A Sims-Flanagan phase's forward and backward segment counts; (0, 0) for any other phase.
 _segments(p) = p isa SimsFlanaganPhase ? (n_fwd(p), n_bwd(p)) : (0, 0)
@@ -723,6 +736,27 @@ function OCRows(om, ctol::Real)
     return GroupedRows(vars, notes, groups, clocks, lg, ug, Float64(ctol))
 end
 
+# ── One phase solved on its own ──────────────────────────────────────────────────────────────────
+
+"""Rows for a single phase solved by itself (`solve!(phase)`), with no manager around it."""
+function PhaseRows(p, ctol::Real)
+    ranges = Dict(objectid(v) => r for (v, r) in zip(variable_list(p), variable_ranges(p)))
+    cols   = v -> ranges[objectid(v)]
+    vars, groups, listed = _VarSlot[], _RowGroup[], Set{UInt64}()
+    clocks = _PhaseClock[]
+    if p isa CollocationPhase
+        t0, tf = _collocation_vars!(vars, listed, p, cols, "")
+        push!(clocks, _PhaseClock(t0, tf, build_mesh(p.transcription)))
+        _collocation_groups!(groups, p, 1, 0, _phase_tag(false))
+    else
+        _shooting_vars!(vars, listed, p, cols, "")
+        _shooting_groups!(groups, p, 0, _phase_tag(false))
+    end
+    notes  = _phase_notes([_phase_line(p)], nlp_length(p))
+    lg, ug = get_constraint_bounds(p)
+    return GroupedRows(vars, notes, groups, clocks, lg, ug, Float64(ctol))
+end
+
 
 _tfmt(t) = @sprintf("%.4g", t)
 
@@ -771,6 +805,13 @@ function _where(r::GroupedRows, b::_RowBlock, i::Int, x)
         return _fit_where("$name @ $half seg $k", "$half seg $k")
     elseif b.kind === :match_point
         return b.comps[mod1(l, length(b.comps))]
+    elseif b.kind === :interval_defect
+        # The label is the interval number, empty for a phase with a single interval. A component
+        # with a field name is called by it; one with only an index is a state's component.
+        c    = b.comps[mod1(l, length(b.comps))]
+        comp = all(isdigit, c) ? _with_comp("state", c) : c
+        return isempty(b.label) ? comp : _fit_where("$comp @ interval $(b.label)",
+                                                    "interval $(b.label)")
     else
         return _fit_where(_with_comp(b.label, b.comps[min(l, end)]))
     end

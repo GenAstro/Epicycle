@@ -967,3 +967,30 @@ end
     @test fitted == "Position m… @ Prop to per…" && textwidth(fitted) == 26
     @test _SM._fit_name("Radius @ Prop to perigee 2 long event", 26) == "Radius @ Prop to perigee …"
 end
+
+# ── One phase solved on its own ──────────────────────────────────────────────────────────────────
+
+@testset "Rows for a single phase" begin
+    # A shooting phase: the same groups as inside a manager, with no phase prefix.
+    _, sf = _smsf_problem()
+    rows  = _SM.PhaseRows(sf, 1e-4)
+    x     = AstroSolve.get_decision_vector(sf)
+    vars, notes, groups, _ = _SM.monitor_rows(rows, x, _sm_feasible(rows))
+    @test [g.name for g in groups] == ["match point", "path"]
+    @test notes == ["earth_mars · SimsFlanagan, 20 segments",
+                    "$(AstroSolve.nlp_length(sf)) decision variables"]
+    @test only(v.value for v in vars) ≈ 0.85 * _SMSF_M0
+
+    # A collocation phase: defects with their node times.
+    seq = _sm_di_problem(linked = false)
+    AstroSolve.initialize_sequence!(seq)
+    ph   = first(AstroSolve.sequence_phases(seq))
+    rows = _SM.PhaseRows(ph, 1e-4)
+    x    = AstroSolve.get_decision_vector(ph)
+    _, _, groups, _ = _SM.monitor_rows(rows, x, _sm_feasible(rows))
+    @test [g.name for g in groups] == ["defects", "boundary"]
+    g = _sm_feasible(rows)
+    g[2 * 2 * 3 + 2] += 1.0                                   # step 4, first equation, v
+    _, _, gs, _ = _SM.monitor_rows(rows, x, g)
+    @test startswith(_sm_group(gs, "defects").where, "v @ step 4 (t ")
+end
