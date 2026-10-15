@@ -502,6 +502,7 @@ any mix of collocation and shooting phases linked via `add_continuity!`.
 """
 function solve_trajectory_oc!(seq::Sequence, options::SNOW.Options)
     om = _get_or_build_oc(seq)
+    options = _with_grouped_rows(options, OCRows, om)
 
     x0       = get_decision_vector(om)
     lx, ux   = get_variable_bounds(om)

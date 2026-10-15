@@ -748,3 +748,157 @@ end
     end
     @test same === opts
 end
+
+# ── Mixed transcriptions: a Sims-Flanagan half joined to a collocation half ──────────────────────
+
+# The orbit raise of Ex_MixedTranscription in canonical units, on a coarse mesh: the first half
+# Sims-Flanagan, the second Hermite-Simpson, joined by continuity in state, mass and time.
+const _SMMX_MU, _SMMX_TMAX, _SMMX_MDOT, _SMMX_M0 = 1.0, 0.1, 0.05, 1.0
+const _SMMX_TMID, _SMMX_TF = 1.5, 3.0
+const _SMMX_Y0 = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0]
+const _SMMX_LO = [-5.0, -5.0, -5.0, -3.0, -3.0, -3.0]
+const _SMMX_HI = [5.0, 5.0, 5.0, 3.0, 3.0, 3.0]
+
+struct _SMMXState{T} <: AbstractState
+    x::T; y::T; z::T; vx::T; vy::T; vz::T; m::T
+end
+struct _SMMXControl{T} <: AbstractControl
+    ux::T; uy::T; uz::T
+end
+struct _SMMXModel
+    mu::Float64; thrust::Float64; mdot::Float64
+end
+
+function _smmx_raise!(dy, y::_SMMXState, u::_SMMXControl, p, t, m::_SMMXModel)
+    r = sqrt(y.x^2 + y.y^2 + y.z^2)
+    a = m.thrust / y.m
+    dy[1], dy[2], dy[3] = y.vx, y.vy, y.vz
+    dy[4] = -m.mu * y.x / r^3 + a * u.ux
+    dy[5] = -m.mu * y.y / r^3 + a * u.uy
+    dy[6] = -m.mu * y.z / r^3 + a * u.uz
+    dy[7] = -m.mdot * sqrt(u.ux^2 + u.uy^2 + u.uz^2 + 1e-12)
+end
+
+# Thrust along the velocity, integrated with RK4: a guess both halves agree with.
+function _smmx_flown(t_end; steps = 400)
+    f(y) = (r = norm(y[1:3]); v = norm(y[4:6]);
+            vcat(y[4:6], -_SMMX_MU .* y[1:3] ./ r^3 .+ (_SMMX_TMAX / y[7]) .* y[4:6] ./ v,
+                 -_SMMX_MDOT))
+    y, h = vcat(_SMMX_Y0, _SMMX_M0), t_end / steps
+    for _ in 1:steps
+        k1 = f(y); k2 = f(y .+ h / 2 .* k1); k3 = f(y .+ h / 2 .* k2); k4 = f(y .+ h .* k3)
+        y = y .+ (h / 6) .* (k1 .+ 2k2 .+ 2k3 .+ k4)
+    end
+    return y
+end
+
+_smmx_throttle(c)    = [dot(control(c), control(c))]
+_smmx_unit_thrust(c) = [control(c).ux^2 + control(c).uy^2 + control(c).uz^2]
+_smmx_radius(c)      = (y = state(c); sqrt(y.x^2 + y.y^2 + y.z^2))
+_smmx_circular(c)    = (y = state(c); [y.x * y.vx + y.y * y.vy + y.z * y.vz])
+
+function _smmx_problem(; link_name = :link)
+    y_mid, y_end = _smmx_flown(_SMMX_TMID), _smmx_flown(_SMMX_TF)
+    model = _SMMXModel(_SMMX_MU, _SMMX_TMAX, _SMMX_MDOT)
+    first_half = SimsFlanaganPhase(name = :first_half, transcription = SimsFlanagan(n_segments = 6),
+                                   model = PropulsionModel(mu = _SMMX_MU,
+                                                           Isp = _SMMX_TMAX / _SMMX_MDOT,
+                                                           Tmax = _SMMX_TMAX, g0 = 1.0),
+                                   tspan = (0.0, _SMMX_TMID))
+    Vary(state, first_half; guess = _SMMX_Y0, lower_bound = _SMMX_Y0, upper_bound = _SMMX_Y0)
+    Vary(final_state, first_half; guess = y_mid[1:6], lower_bound = _SMMX_LO,
+         upper_bound = _SMMX_HI)
+    Vary(forward_control,  first_half; lower_bound = fill(-1.0, 3), upper_bound = fill(1.0, 3))
+    Vary(backward_control, first_half; lower_bound = fill(-1.0, 3), upper_bound = fill(1.0, 3))
+    Vary(initial_mass, first_half; lower_bound = _SMMX_M0, upper_bound = _SMMX_M0)
+    Vary(final_mass, first_half; guess = y_mid[7], lower_bound = 0.5, upper_bound = _SMMX_M0)
+    Constraint(_smmx_throttle, first_half; lower_bound = 0.0, upper_bound = 1.0, at = Path())
+
+    second_half = CollocationPhase(name = :second_half, transcription = HermiteSimpson(n_steps = 6),
+                                   dynamics = _smmx_raise!, model = model,
+                                   state = _SMMXState, control = _SMMXControl,
+                                   tspan = (_SMMX_TMID, _SMMX_TF))
+    Vary(state, second_half; guess = hcat(y_mid, 0.5 .* (y_mid .+ y_end), y_end),
+         lower_bound = vcat(_SMMX_LO, 0.5), upper_bound = vcat(_SMMX_HI, _SMMX_M0))
+    Vary(control, second_half; guess = repeat([0.0, 1.0, 0.0], 1, 3),
+         lower_bound = fill(-1.0, 3), upper_bound = fill(1.0, 3))
+    Constraint(_smmx_unit_thrust, second_half; equals = 1.0, at = Path())
+
+    seq = Sequence()
+    add_sequence!(seq, first_half)
+    add_sequence!(seq, second_half)
+    Constraint(continuity, Link(first_half, second_half; name = link_name))
+    Constraint(_smmx_circular, second_half; equals = 0.0, at = Final())
+    Objective(_smmx_radius, second_half; sense = Max())
+    return seq
+end
+
+@testset "Mixed-transcription rows" begin
+    seq = _smmx_problem()
+    AstroSolve.initialize_sequence!(seq)
+    om   = AstroSolve._get_or_build_oc(seq)
+    rows = _SM.OCRows(om, 1e-4)
+    x    = AstroSolve.get_decision_vector(om)
+
+    vars, notes, groups, _ = _SM.monitor_rows(rows, x, _sm_feasible(rows))
+    # Each phase reports as its own transcription does; the link comes after the phases.
+    @test [g.name for g in groups] ==
+          ["first_half · match point", "first_half · path", "second_half · defects",
+           "second_half · path", "second_half · boundary", "first_half→second_half · link"]
+    @test notes[1:2] == ["first_half · SimsFlanagan, 6 segments",
+                         "second_half · HermiteSimpson, 13 nodes"]
+    @test "first_half · final_mass" in [v.name for v in vars]
+    @test only(v.value for v in vars if v.name == "first_half · final_mass") ≈
+          _smmx_flown(_SMMX_TMID)[7]
+
+    # The collocation half's defects carry its own node times, though it is the second phase.
+    defects = _sm_group(groups, "second_half · defects")
+    block   = only(rows.groups[3].blocks)
+    g = _sm_feasible(rows)
+    g[first(block.rows) + 7 * 2 + 3] += 1.0                      # step 2, first equation, vx
+    _, _, gs, _ = _SM.monitor_rows(rows, x, g)
+    @test startswith(_sm_group(gs, "second_half · defects").where, "vx @ step 2 (t 1.")
+
+    # Continuity runs over the Sims-Flanagan half's state, mass and time.
+    link = only(rows.groups[end].blocks)
+    @test link.label == "continuity"
+    @test link.comps == ["x", "y", "z", "vx", "vy", "vz", "m", "t"]
+    g = _sm_feasible(rows)
+    g[first(link.rows) + 6] += 1.0
+    _, _, gs, _ = _SM.monitor_rows(rows, x, g)
+    @test _sm_group(gs, "first_half→second_half · link").where == "continuity[m]"
+
+    # The Sims-Flanagan half's throttle, by segment: 3 forward, then 3 backward. With its name the
+    # location is wider than the column, so the segment is kept and the name dropped.
+    g = _sm_feasible(rows)
+    g[first(rows.groups[2].blocks[1].rows) + 4] += 2.0
+    _, _, gs, _ = _SM.monitor_rows(rows, x, g)
+    @test _sm_group(gs, "first_half · path").where == "bwd seg 2"
+end
+
+@testset "Mixed-transcription solve with the status box" begin
+    local on, off
+    out = _sm_capture(live = true) do
+        on = solve!(_smmx_problem(link_name = :handoff); method = Optimize(monitor = true, max_iter = 5))
+    end
+    _sm_capture(live = true) do
+        off = solve!(_smmx_problem(); method = Optimize(monitor = false, max_iter = 5, print_level = 0))
+    end
+    @test on.info == off.info
+    @test on.variables == off.variables
+    frame = _sm_final_frame(out)
+    @test occursin("handoff · link", frame)
+    @test occursin("first_half · match point", frame) && occursin("second_half · defects", frame)
+    @test occursin(r"Goals met \d/6", frame)
+    frames = split(_sm_strip(out), "┌")[2:end]
+    @test allequal(count(==('\n'), first(split(f, "┘"))) for f in frames)
+end
+
+@testset "Phases listed in the order they fly" begin
+    # Stand-ins: only identity matters to the ordering.
+    a, b, c, d = Ref(:a), Ref(:b), Ref(:c), Ref(:d)
+    @test _SM._flight_order([a, b, c], Tuple{Any,Any}[]) == [1, 2, 3]       # no links: as given
+    @test _SM._flight_order([c, a, b], [(a, b), (b, c)]) == [2, 3, 1]       # a → b → c
+    @test _SM._flight_order([b, a, d], [(a, b)]) == [2, 1, 3]               # d is unlinked
+    @test sort(_SM._flight_order([a, b], [(a, b), (b, a)])) == [1, 2]       # a cycle still ends
+end
