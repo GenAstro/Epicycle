@@ -171,6 +171,13 @@ Check `result.info` before using the trajectory. The endpoint accessors
 `get_initial_state(phase)` and `get_final_state(phase)` return the declared state type; `state(phase)`
 and `control(phase)` return the complete histories.
 
+With `monitor = true`, the status box summarizes the problem rather than listing every node. Each
+phase's constraints form one row per kind (`defects`, `path`, `boundary`), and each `Link` adds one
+more, called by the link's `name` when it has one. A row shows how many of its constraints are met,
+the worst violation and, while any are unmet, where the worst one is: the state component and mesh
+step for a defect, the node for a path constraint. With more than eight rows, the unmet ones come
+first. Free times and parameters are listed by name under the phases.
+
 ## Shooting: An Earth-to-Mars Transfer
 
 Sims-Flanagan divides a low-thrust transfer into segments, applies one impulse per segment, and
@@ -325,6 +332,10 @@ u_backward = backward_control(transfer)
 
 The phase enforces its match-point equations internally. A successful solver status should still be
 followed by checks of the endpoint conditions, throttle constraint, and quantities used downstream.
+
+In the status box a shooting phase reports its `match point` in place of defects, with the worst of
+its position, velocity and mass components, and a path constraint by segment of the forward or
+backward half. Masses, times and v-infinities show in the units the script uses.
 
 ## Link Multiple Phases
 

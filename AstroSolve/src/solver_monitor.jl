@@ -801,9 +801,11 @@ mutable struct StatusBox
     nlines::Int                             # lines the last frame drew
     top::Float64                            # the bar's left end: the first frame's measure
     last::Union{Nothing, IterationRecord}
+    log::String                             # IPOPT's log file; empty when it holds nothing
 end
 
-StatusBox() = StatusBox(_inner_width(_term_cols()), _term_live(), 0, NaN, nothing)
+StatusBox(; log::AbstractString = "") =
+    StatusBox(_inner_width(_term_cols()), _term_live(), 0, NaN, nothing, String(log))
 
 _name_width(box) = clamp(box.W - 50, 12, 28)
 _bar_width(box)  = clamp(box.W - 46, 10, 32)
@@ -993,7 +995,13 @@ Draw the final frame with the solver's exit status, and a one-line summary below
 """
 function finish!(box::StatusBox, status::Symbol)
     rec = box.last
-    rec === nothing && return nothing
+    if rec === nothing
+        # The solver stopped before its first iteration, so there is no frame to draw. Say so,
+        # since the box was the only output asked for.
+        println(stdout, "Stopped before the first iteration ($status)")
+        _say_log(box, status)
+        return nothing
+    end
     final = IterationRecord(rec.solver, rec.problem, rec.iter, rec.vars, rec.notes, rec.goals,
                             rec.objective, rec.inf_pr, rec.inf_du, rec.mu, rec.worst, rec.tol,
                             rec.elapsed, status)
@@ -1002,7 +1010,16 @@ function finish!(box::StatusBox, status::Symbol)
     _draw!(box, final)
     verb = _converged(status) ? "Converged in" : "Stopped after"
     @printf(stdout, "%s %d iterations, %.1f s (%s)\n", verb, final.iter, final.elapsed, status)
+    _say_log(box, status)
     box.nlines = 0                          # the final frame stays; nothing redraws over it
+    return nothing
+end
+
+# Where IPOPT's own log is, when the solve did not succeed. With the box on, that file is the only
+# place IPOPT's iteration log goes. The path is printed whole, since a shortened one is no use.
+function _say_log(box::StatusBox, status::Symbol)
+    (_converged(status) || isempty(box.log)) && return nothing
+    println(stdout, "IPOPT log: ", box.log)
     return nothing
 end
 

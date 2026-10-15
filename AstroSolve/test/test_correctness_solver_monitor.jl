@@ -902,3 +902,44 @@ end
     @test _SM._flight_order([b, a, d], [(a, b)]) == [2, 1, 3]               # d is unlinked
     @test sort(_SM._flight_order([a, b], [(a, b), (b, a)])) == [1, 2]       # a cycle still ends
 end
+
+# ── Where IPOPT's log is ─────────────────────────────────────────────────────────────────────────
+
+@testset "A failed solve names IPOPT's log" begin
+    finished(status; log = raw"C:\tmp\ipopt_run.out", record = true) =
+        _sm_capture(live = false) do
+            box = _SM.StatusBox(log = log)
+            record && _SM.show_iteration!(box, _sm_record(2))
+            _SM.finish!(box, status)
+        end
+
+    out = finished(:Maximum_Iterations_Exceeded)
+    @test occursin("Stopped after 2 iterations", out)
+    @test occursin(raw"IPOPT log: C:\tmp\ipopt_run.out", out)
+    @test endswith(rstrip(out), "ipopt_run.out")                      # the last line, in full
+
+    @test !occursin("IPOPT log", finished(:Solve_Succeeded))           # success: nothing to look up
+    @test !occursin("IPOPT log", finished(:Maximum_Iterations_Exceeded; log = ""))   # empty log
+
+    # Stopped before any iteration: no frame, but the status and the log are still given.
+    out = finished(:Not_Enough_Degrees_Of_Freedom; record = false)
+    @test !occursin("┌", out)
+    @test occursin("Stopped before the first iteration (Not_Enough_Degrees_Of_Freedom)", out)
+    @test occursin("IPOPT log: ", out)
+
+    # Through the IPOPT driver: the named file is the one IPOPT wrote. Level 0 writes nothing, so
+    # it is not named.
+    logfile = tempname() * "_ipopt.out"
+    opts = Dict{String,Any}("print_level" => 5, "max_iter" => 1, "output_file" => logfile)
+    out = _sm_capture(live = false) do
+        _sm_solve(_SM._ipopt(opts; monitor = true))
+    end
+    @test occursin("IPOPT log: " * abspath(logfile), out)
+    @test isfile(logfile) && filesize(logfile) > 0
+    out0 = _sm_capture(live = false) do
+        _sm_solve(_SM._ipopt(merge(opts, Dict("print_level" => 0,
+                                              "output_file" => tempname() * "_ipopt.out"));
+                             monitor = true))
+    end
+    @test occursin("Stopped after", out0) && !occursin("IPOPT log", out0)
+end

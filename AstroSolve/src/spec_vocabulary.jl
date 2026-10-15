@@ -1497,8 +1497,8 @@ _est(m) = getfield(AstroSolve, m)
 - `tol::Float64`: the tolerance the solver's own error measure must fall below before it reports
   success.
 - `print_level::Union{Nothing,Int}`: how much IPOPT logs, from 0 for silence. With the status box
-  on, IPOPT's log goes to its log file only, at this level; with it off, to the terminal as well.
-  `nothing` means 5.
+  on, IPOPT's log goes to its log file only, at this level, and a solve that does not succeed
+  prints the file's path; with it off, to the terminal as well. `nothing` means 5.
 - `derivatives::Symbol`: `:user` to use the partials declared with `@partial`, or `:fd` for finite
   differences throughout.
 - `record_iterations::Bool`: keeps the iterate history where the solver supports it.
