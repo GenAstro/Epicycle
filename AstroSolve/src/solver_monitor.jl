@@ -83,10 +83,27 @@ struct MonitorGoal
 end
 
 """
+One row standing for a group of constraint rows, for a problem too large to show a row per goal:
+one kind of constraint in one phase, such as a phase's defects. `met` of `total` rows are within
+tolerance; `error` is the worst violation among them, and `where` says which row that is.
+"""
+struct MonitorGroup
+    name::String
+    met::Int
+    total::Int
+    where::String
+    error::Float64
+end
+
+_is_met(g::MonitorGoal)  = g.met
+_is_met(g::MonitorGroup) = g.met == g.total
+
+"""
     IterationRecord
 
 What one solver iteration reports to the status box. Every solver adapter produces this and the
-display reads nothing else, so a new solver needs an adapter and no change to the display.
+display reads nothing else, so a new solver needs an adapter and no change to the display. The
+goals are either one row per goal or one row per group of goals.
 """
 struct IterationRecord
     solver::String
@@ -94,7 +111,7 @@ struct IterationRecord
     iter::Int
     vars::Vector{MonitorVar}
     notes::Vector{String}          # summary lines under Variables, e.g. a decision-variable count
-    goals::Vector{MonitorGoal}
+    goals::Union{Vector{MonitorGoal}, Vector{MonitorGroup}}
     objective::Float64             # NaN for a feasibility problem
     inf_pr::Float64
     inf_du::Float64
@@ -114,7 +131,8 @@ _converged(s::Symbol) = s === :Solve_Succeeded || s === :Solved_To_Acceptable_Le
     MonitorRows
 
 Turns a solver's current iterate into display rows. `monitor_rows(rows, x, g)` returns
-`(vars, notes, goals, worst)`; `monitor_title(rows)` names the problem in the box's header.
+`(vars, notes, goals, worst)`, where `goals` holds `MonitorGoal`s or `MonitorGroup`s;
+`monitor_title(rows)` names the problem in the box's header.
 """
 abstract type MonitorRows end
 
@@ -277,6 +295,236 @@ function monitor_rows(r::EventGraphRows, x, g)
     return vars, String[], goals, worst
 end
 
+# ── Rows for a collocation sequence ──────────────────────────────────────────────────────────────
+#
+# Thousands of decision variables and constraint rows, so the box summarizes. Variables: any free
+# scalar (initial or final time, a static parameter), a line per phase and the total count. Goals:
+# one group per phase and kind of constraint (defects, path, boundary) and one per pair of linked
+# phases, each with its met count and where its worst row is.
+
+# A run of constraint rows from one constraint, and what is needed to say which row is which.
+struct _RowBlock
+    rows::UnitRange{Int}                    # positions in the solver's constraint vector
+    kind::Symbol                            # :defect, :path, :boundary or :linkage
+    label::String                           # the constraint's name; empty for defects
+    comps::Vector{String}                   # component names; "" for a scalar constraint
+    phase::Int                              # the phase whose node times place a row, 0 for none
+    steps::Vector{Tuple{UnitRange{Int}, Int}}   # defects: each step's rows in the block, first node
+end
+
+struct _RowGroup
+    name::String
+    blocks::Vector{_RowBlock}
+end
+
+# Where a phase's initial and final times sit in the decision vector, and its mesh.
+struct _PhaseClock
+    t0::Int
+    tf::Int
+    mesh::Any
+end
+
+"""Rows for a collocation sequence: free scalars, a line per phase, grouped goals."""
+struct CollocationRows <: MonitorRows
+    vars::Vector{_VarSlot}
+    notes::Vector{String}
+    groups::Vector{_RowGroup}
+    clocks::Vector{_PhaseClock}
+    lg::Vector{Float64}
+    ug::Vector{Float64}
+    ctol::Float64
+end
+
+const _MAX_PHASE_LINES = 4                  # more phases than this: the first few and a count
+
+_comp_names(n::Int) = n == 1 ? [""] : [string(i) for i in 1:n]
+_with_comp(label, comp) = isempty(comp) ? label : "$label[$comp]"
+_generated(name) = isempty(name) || startswith(name, "##")
+
+# The name a function was written with, or `nothing` for an anonymous one. A function defined
+# inside another carries a suffix (`accel#12`), which is dropped.
+function _readable_fname(f)
+    s = first(split(lstrip(string(nameof(typeof(f))), '#'), '#'))
+    return isempty(s) || isdigit(first(s)) ? nothing : String(s)
+end
+
+# A state's components by the field names of the phase's state type, or by index.
+function _state_names(p)
+    reg = get(_phase_registry, objectid(p), nothing)
+    names = try
+        reg === nothing || reg.state_type === nothing ? Symbol[] : collect(fieldnames(reg.state_type))
+    catch
+        Symbol[]
+    end
+    return length(names) == p._n_states ? string.(names) : _comp_names(p._n_states)
+end
+
+# The names of a phase's boundary or path constraints, in the order the phase holds them. A
+# constraint written without `name` carries a generated one (`##con#280`), so it is named by the
+# function the user wrote instead, plus the end it applies at. Constraints and the specs recorded
+# as they were written come in the same order; when the counts differ the position can't be
+# trusted, and the constraint is named by its place.
+function _constraint_labels(p, path::Bool)
+    cons  = path ? [c for c in p.path_constraints if c isa PathConstraint] :
+                   [c for c in p.constraints if c isa BoundaryConstraint]
+    specs = [sp for sp in phase_specs(p) if sp.kind === :constraint && (sp.at isa Path) == path]
+    return map(enumerate(cons)) do (k, c)
+        name = path ? c.name : c.calc.name
+        _generated(name) || return name
+        length(specs) == length(cons) || return "constraint $k"
+        f = _readable_fname(specs[k].f)
+        f === nothing && return "constraint $k"
+        at = specs[k].at
+        return at isa Initial ? "$f (initial)" : at isa Final ? "$f (final)" : f
+    end
+end
+
+function CollocationRows(cm, ctol::Real)
+    multi = length(cm.phases) > 1
+    tag(p, what) = multi ? "$(p.name) · $what" : what
+    vars, notes = _VarSlot[], String[]
+    groups, clocks = _RowGroup[], _PhaseClock[]
+
+    for (i, p) in enumerate(cm.phases)
+        col = cm.phase_var_offsets[i]
+        pre = multi ? "$(p.name)." : ""
+        t0 = tf = 0
+        for (v, r) in zip(variable_list(p), variable_ranges(p))
+            v === p.t0_var && (t0 = col + first(r))
+            v === p.tf_var && (tf = col + first(r))
+            base = v === p.t0_var ? "initial_time" : v === p.tf_var ? "final_time" :
+                   v === p.param_var ? "parameter" : continue
+            # "t0", "tf" and "param" are the framework's own names; a `Vary(...; name)` replaces them.
+            base = v.name in ("", "t0", "tf", "param") ? pre * base : v.name
+            for (k, j) in enumerate(r)
+                v.lower_bounds[k] == v.upper_bounds[k] && continue      # held fixed
+                push!(vars, _VarSlot(length(r) == 1 ? base : "$base[$k]", "", col + j))
+            end
+        end
+        push!(clocks, _PhaseClock(t0, tf, build_mesh(p.transcription)))
+
+        ns     = p._n_states
+        steps  = [(rows, first(nodes)) for (rows, nodes) in defect_row_groups(p.transcription, ns)]
+        blabel = _constraint_labels(p, false)
+        plabel = _constraint_labels(p, true)
+        defect, path, bound = _RowBlock[], _RowBlock[], _RowBlock[]
+        row = cm.phase_fun_offsets[i]
+        for pf in function_list(p)
+            r = row+1 : row+pf.n_nlp
+            row += pf.n_nlp
+            isempty(r) && continue
+            if pf.source isa DefectBlock
+                push!(defect, _RowBlock(r, :defect, "", _state_names(p), i, steps))
+            elseif pf.source isa PathConstraintBlock
+                push!(path, _RowBlock(r, :path, plabel[length(path) + 1],
+                                      _comp_names(pf.source.pc.n_pc), i, []))
+            else
+                push!(bound, _RowBlock(r, :boundary, blabel[length(bound) + 1],
+                                       _comp_names(pf.n_nlp), i, []))
+            end
+        end
+        isempty(defect) || push!(groups, _RowGroup(tag(p, "defects"), defect))
+        isempty(path)   || push!(groups, _RowGroup(tag(p, "path"), path))
+        isempty(bound)  || push!(groups, _RowGroup(tag(p, "boundary"), bound))
+    end
+
+    # One group per pair of linked phases, after the phases.
+    links = Dict{Tuple{Symbol, Symbol}, Int}()
+    for (k, lc) in enumerate(cm.linkages)
+        n = length(lc.lower_bounds)
+        n == 0 && continue
+        r = cm.linkage_fun_offsets[k]+1 : cm.linkage_fun_offsets[k]+n
+        label = _generated(lc.name) ? "link" : lc.name
+        comps = label == "continuity" && n == lc.phase1._n_states + 1 ?
+                [_state_names(lc.phase1); "t"] : _comp_names(n)
+        block = _RowBlock(r, :linkage, label, comps, 0, [])
+        pair  = (lc.phase1.name, lc.phase2.name)
+        if haskey(links, pair)
+            push!(groups[links[pair]].blocks, block)
+        else
+            push!(groups, _RowGroup("$(pair[1])→$(pair[2]) · link", [block]))
+            links[pair] = length(groups)
+        end
+    end
+
+    lines = ["$(p.name) · $(nameof(typeof(p.transcription))), $(n_control_nodes(p)) nodes"
+             for p in cm.phases]
+    if length(lines) > _MAX_PHASE_LINES
+        lines = [lines[1:_MAX_PHASE_LINES-1]; "+ $(length(lines) - _MAX_PHASE_LINES + 1) more phases"]
+    end
+    append!(notes, lines)
+    push!(notes, "$(cm.n_vars) decision variables")
+
+    lg, ug = get_constraint_bounds(cm)
+    return CollocationRows(vars, notes, groups, clocks, lg, ug, Float64(ctol))
+end
+
+_tfmt(t) = @sprintf("%.4g", t)
+
+# The time of node `k` of phase `i` at the current iterate.
+function _node_time(r::CollocationRows, i::Int, k::Int, x)
+    c = r.clocks[i]
+    (c.t0 == 0 || c.tf == 0) && return nothing
+    ts = node_times(c.mesh, Float64(x[c.t0]), Float64(x[c.tf]))
+    return 1 <= k <= length(ts) ? ts[k] : nothing
+end
+
+# The first of these that fits the "worst at" column, or the last one cut to fit.
+function _fit_where(texts...)
+    for s in texts
+        textwidth(s) <= _WHERE_W && return s
+    end
+    return _clip(last(texts), _WHERE_W)
+end
+
+# Which row of `b` the solver-vector row `i` is: a component, and a step or node with its time.
+function _where(r::CollocationRows, b::_RowBlock, i::Int, x)
+    l = i - first(b.rows) + 1
+    if b.kind === :defect
+        ns   = length(b.comps)
+        comp = ns > 0 && length(b.rows) % ns == 0 ? b.comps[mod1(l, ns)] : ""
+        k    = findfirst(s -> l in s[1], b.steps)
+        k === nothing && return isempty(comp) ? "row $l" : comp
+        t    = _node_time(r, b.phase, b.steps[k][2], x)
+        at   = "$(isempty(comp) ? "" : comp * " ")@ step $k"
+        return t === nothing ? at : _fit_where("$at (t $(_tfmt(t)))", at)
+    elseif b.kind === :path
+        n    = length(b.comps)
+        node = (l - 1) ÷ n + 1
+        name = _with_comp(b.label, b.comps[mod1(l, n)])
+        t    = _node_time(r, b.phase, node, x)
+        at   = "$name @ node $node"
+        return t === nothing ? _fit_where(at) :
+               _fit_where("$at (t $(_tfmt(t)))", at, "node $node (t $(_tfmt(t)))")
+    else
+        return _fit_where(_with_comp(b.label, b.comps[min(l, end)]))
+    end
+end
+
+# A NaN constraint is as unmet as it gets.
+_violation_or_inf(g, lo, hi) = isnan(g) ? Inf : _violation(g, lo, hi)
+
+function monitor_rows(r::CollocationRows, x, g)
+    vars  = [MonitorVar(s.name, s.unit, x[s.index]) for s in r.vars]
+    worst = 0.0
+    groups = map(r.groups) do grp
+        met, total, werr = 0, 0, 0.0
+        wb, wi = first(grp.blocks), 0
+        for b in grp.blocks, i in b.rows
+            v = _violation_or_inf(g[i], r.lg[i], r.ug[i])
+            total += 1
+            v <= r.ctol && (met += 1)
+            if v > werr
+                werr, wb, wi = v, b, i
+            end
+        end
+        worst = max(worst, werr)
+        where = met < total && wi > 0 ? _where(r, wb, wi, x) : ""
+        MonitorGroup(grp.name, met, total, where, werr)
+    end
+    return vars, r.notes, groups, worst
+end
+
 # ── The box ──────────────────────────────────────────────────────────────────────────────────────
 
 const _MAX_INNER = 78                       # inner width at most 78, so the box is at most 80
@@ -329,6 +577,53 @@ function _state_text(rec)
     return "✗ " * replace(string(rec.status), "_" => " ")
 end
 
+# One row per goal: the desired and achieved values, unit and error. More than fit show the unmet
+# goals with the largest errors first.
+function _goal_lines!(lines, box, nw, goals::Vector{MonitorGoal})
+    push!(lines, _box_row(box, @sprintf("%-*s %13s %13s  %-6s %9s", nw, "Goals", "desired",
+                                        "achieved", "unit", "error")))
+    shown = length(goals) <= _MAX_GOALS ? goals :
+            sort(goals; by = g -> g.met ? -Inf : g.error, rev = true)[1:_MAX_GOALS]
+    for g in shown
+        push!(lines, _box_row(box, "  " * _fit(g.name, nw - 2) * " " * _rcol(g.desired, 13) *
+                                   " " * _rcol(g.achieved, 13) * "  " * _fit(g.unit, 6) *
+                                   @sprintf(" %9.1e ", g.error) * (g.met ? "✓" : "✗")))
+    end
+    length(goals) > _MAX_GOALS &&
+        push!(lines, _box_row(box, "  + $(length(goals) - _MAX_GOALS) more"))
+    return lines
+end
+
+const _MET_W   = 11                         # "4850/4872" and wider
+const _WHERE_W = 22                         # the "worst at" column; adapters keep within it
+
+# One row per group: how many of its rows are met, where the worst one is and its error. Up to
+# `_MAX_GOALS` groups show in the order the adapter gives, which is trajectory order. More than
+# that show the unmet groups first, then the largest errors, and a last line counts the rest.
+function _goal_lines!(lines, box, nw, groups::Vector{MonitorGroup})
+    push!(lines, _box_row(box, @sprintf("%-*s %*s  %-*s %9s", nw, "Goals", _MET_W, "met",
+                                        _WHERE_W, "worst at", "error")))
+    shown, hidden = groups, MonitorGroup[]
+    if length(groups) > _MAX_GOALS
+        order  = sort(groups; by = g -> (_is_met(g), -g.error))
+        shown  = order[1:_MAX_GOALS]
+        hidden = order[_MAX_GOALS+1:end]
+    end
+    for g in shown
+        ok = _is_met(g)
+        push!(lines, _box_row(box, "  " * _fit(g.name, nw - 2) * " " *
+                                   _rcol("$(g.met)/$(g.total)", _MET_W) * "  " *
+                                   _fit(ok ? "" : g.where, _WHERE_W) *
+                                   @sprintf(" %9.1e ", g.error) * (ok ? "✓" : "✗")))
+    end
+    if !isempty(hidden)
+        unmet = count(!_is_met, hidden)
+        push!(lines, _box_row(box, "  + $(length(hidden)) more · " *
+                                   (unmet == 0 ? "all met" : "$unmet unmet")))
+    end
+    return lines
+end
+
 function _frame(box::StatusBox, rec::IterationRecord)
     nw   = _name_width(box)
     head = "─ $(rec.solver) · $(rec.problem) ─── iter $(lpad(rec.iter, 3)) ─── $(_state_text(rec)) ─── " *
@@ -347,17 +642,7 @@ function _frame(box::StatusBox, rec::IterationRecord)
     push!(lines, _box_row(box, ""))
 
     if !isempty(rec.goals)
-        push!(lines, _box_row(box, @sprintf("%-*s %13s %13s  %-6s %9s", nw, "Goals", "desired",
-                                            "achieved", "unit", "error")))
-        shown = length(rec.goals) <= _MAX_GOALS ? rec.goals :
-                sort(rec.goals; by = g -> g.met ? -Inf : g.error, rev = true)[1:_MAX_GOALS]
-        for g in shown
-            push!(lines, _box_row(box, "  " * _fit(g.name, nw - 2) * " " * _rcol(g.desired, 13) *
-                                       " " * _rcol(g.achieved, 13) * "  " * _fit(g.unit, 6) *
-                                       @sprintf(" %9.1e ", g.error) * (g.met ? "✓" : "✗")))
-        end
-        length(rec.goals) > _MAX_GOALS &&
-            push!(lines, _box_row(box, "  + $(length(rec.goals) - _MAX_GOALS) more"))
+        _goal_lines!(lines, box, nw, rec.goals)
         push!(lines, _box_row(box, ""))
     end
 
@@ -365,7 +650,7 @@ function _frame(box::StatusBox, rec::IterationRecord)
         push!(lines, _box_row(box, @sprintf("%-*s %s   inf_du %.1e   μ %.1e", nw, "Objective",
                                             _fmt(rec.objective), rec.inf_du, rec.mu)))
     end
-    met = count(g -> g.met, rec.goals)
+    met = count(_is_met, rec.goals)
     lead = isempty(rec.goals) ? "Optimality      " : @sprintf("Goals met %d/%d    ", met, length(rec.goals))
     push!(lines, _box_row(box, lead * _bar(rec.worst, box.top, rec.tol, _bar_width(box)) *
                                @sprintf("  %.1e", rec.worst)))
@@ -374,7 +659,7 @@ function _frame(box::StatusBox, rec::IterationRecord)
 end
 
 function _status_line(rec::IterationRecord, cols)
-    met = count(g -> g.met, rec.goals)
+    met = count(_is_met, rec.goals)
     s = isempty(rec.goals) ?
         @sprintf("%s · iter %d · optimality %.1e", _state_text(rec), rec.iter, rec.worst) :
         @sprintf("%s · iter %d · goals %d/%d · err %.1e", _state_text(rec), rec.iter, met,

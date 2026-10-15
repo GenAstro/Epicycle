@@ -304,3 +304,222 @@ end
     end
     @test !occursin("┌", out3)
 end
+
+# ── Grouped goals: a collocation problem's constraints, one row per group ────────────────────────
+
+function _sm_group_record(iter; ngroups = 4, status = :running, unmet = Int[], err = 10.0^(-iter),
+                          longname = false)
+    groups = map(1:ngroups) do i
+        bad = i in unmet
+        name = longname && i == 1 ? "a_phase_name_far_too_long_for_any_column · defects" :
+               "phase_$i · defects"
+        _SM.MonitorGroup(name, bad ? 590 : 600, 600,
+                         bad ? "vz @ step 1234 (t 12345.6789)" : "", bad ? 1e-2 * i : err * i)
+    end
+    notes = ["phase_1 · HermiteSimpson, 101 nodes", "911 decision variables"]
+    vars  = [_SM.MonitorVar("final_time", "", 7.1)]
+    worst = maximum(g.error for g in groups)
+    return _SM.IterationRecord("IPOPT", "Optimizer", iter, vars, notes, groups, 3e-4,
+                               worst, 1e-3, 1e-5, worst, 1e-4, 0.1iter, status)
+end
+
+_sm_final_frame(out) = last(split(_sm_strip(out), "┌"))
+_sm_goal_names(frame) = [m.captures[1] for m in eachmatch(r"│   (phase_\d+ · defects)", frame)]
+
+@testset "Grouped goals" begin
+
+    @testset "fit the terminal at every width, with long names and locations" begin
+        for (cols, width) in ((200, 80), (80, 80), (70, 70), (64, 64))
+            out = _sm_capture(cols = cols, live = false) do
+                box = _SM.StatusBox()
+                _SM.show_iteration!(box, _sm_group_record(0; unmet = [1, 2], longname = true))
+                _SM.finish!(box, :Maximum_Iterations_Exceeded)
+            end
+            lines = _sm_box_lines(out)
+            @test !isempty(lines)
+            @test all(textwidth.(lines) .== width)
+        end
+        out = _sm_capture(cols = 50, live = false) do
+            box = _SM.StatusBox()
+            _SM.show_iteration!(box, _sm_group_record(2; unmet = [3]))
+            _SM.finish!(box, :Solve_Succeeded)
+        end
+        first_line = first(split(out, '\n'))
+        @test occursin("goals 3/4", first_line) && textwidth(first_line) <= 49
+    end
+
+    @testset "met count, location only where unmet, groups counted in Goals met" begin
+        out = _sm_capture(live = false) do
+            box = _SM.StatusBox()
+            _SM.show_iteration!(box, _sm_group_record(3; unmet = [2]))
+            _SM.finish!(box, :Maximum_Iterations_Exceeded)
+        end
+        frame = _sm_final_frame(out)
+        @test occursin(r"Goals\s+met\s+worst at\s+error", frame)
+        @test occursin(r"phase_2 · defects\s+590/600\s+vz @ step 1234", frame)
+        @test occursin(r"phase_1 · defects\s+600/600\s+\d", frame)    # no location when met
+        @test occursin("…", frame)                                     # a long location is cut
+        @test occursin("Goals met 3/4", frame)
+        @test occursin("phase_1 · HermiteSimpson, 101 nodes", frame)
+        @test occursin("911 decision variables", frame)
+    end
+
+    @testset "up to 8 in the order given; more show the worst and count the rest" begin
+        out = _sm_capture(live = false) do
+            box = _SM.StatusBox()
+            _SM.show_iteration!(box, _sm_group_record(3; ngroups = 8, unmet = [7]))
+            _SM.finish!(box, :Maximum_Iterations_Exceeded)
+        end
+        @test _sm_goal_names(_sm_final_frame(out)) == ["phase_$i · defects" for i in 1:8]
+        @test !occursin("more ·", out)
+
+        # 12 groups: the unmet ones first, largest error first, then the met ones by error.
+        out = _sm_capture(live = false) do
+            box = _SM.StatusBox()
+            _SM.show_iteration!(box, _sm_group_record(3; ngroups = 12, unmet = [2, 9]))
+            _SM.finish!(box, :Maximum_Iterations_Exceeded)
+        end
+        frame = _sm_final_frame(out)
+        @test _sm_goal_names(frame) == ["phase_$i · defects" for i in (9, 2, 12, 11, 10, 8, 7, 6)]
+        @test occursin("+ 4 more · all met", frame)
+        out = _sm_capture(live = false) do
+            box = _SM.StatusBox()
+            _SM.show_iteration!(box, _sm_group_record(3; ngroups = 12, unmet = 1:10))
+            _SM.finish!(box, :Maximum_Iterations_Exceeded)
+        end
+        @test occursin("+ 4 more · 2 unmet", out)
+
+        # The height stays the same as groups go from unmet to met.
+        heights = map(0:3) do k
+            out = _sm_capture(live = false) do
+                box = _SM.StatusBox()
+                _SM.show_iteration!(box, _sm_group_record(k; ngroups = 12, unmet = 1:(3 - k)))
+                _SM.finish!(box, :Solve_Succeeded)
+            end
+            length(_sm_box_lines(out))
+        end
+        @test allequal(heights)
+    end
+
+    @testset "a live solve redraws grouped frames in place" begin
+        out = _sm_capture(live = true) do
+            println("earlier output")
+            box = _SM.StatusBox()
+            for k in 0:3
+                _SM.show_iteration!(box, _sm_group_record(k; ngroups = 12, unmet = 1:(3 - k)))
+            end
+            _SM.finish!(box, :Solve_Succeeded)
+        end
+        @test startswith(out, "earlier output\n")
+        ups = _sm_ups(out)
+        @test length(ups) == 4 && allequal(ups)
+    end
+end
+
+# ── End to end: a two-phase collocation problem ──────────────────────────────────────────────────
+
+# A double integrator in two linked arcs, started from a guess that violates every kind of
+# constraint: the defects (position moves with zero velocity), the path bound on acceleration and
+# the continuity link (the arcs' guesses don't meet).
+struct _SMDIState{T}   <: AbstractState;   x::T; v::T end
+struct _SMDIControl{T} <: AbstractControl; a::T end
+_sm_di!(dy, y::_SMDIState, u::_SMDIControl, p, t, model) = (dy[1] = y.v; dy[2] = u.a)
+
+function _sm_di_arc(name, t0, tf, xs, a)
+    ph = CollocationPhase(name = name, transcription = HermiteSimpson(n_steps = 10),
+                          dynamics = _sm_di!, state = _SMDIState, control = _SMDIControl,
+                          tspan = (t0, tf))
+    Vary(state, ph; guess = [xs[1] xs[2]; 0.0 0.0], lower_bound = [-10.0, -10.0],
+         upper_bound = [10.0, 10.0])
+    Vary(control, ph; guess = fill(a, 1, 2), lower_bound = [-10.0], upper_bound = [10.0])
+    return ph
+end
+
+_sm_di_rest(c)   = [state(c).x, state(c).v]
+_sm_di_accel(c)  = [control(c).a]
+_sm_di_effort(c) = control(c).a^2
+
+function _sm_di_problem(; linked = true)
+    first_arc = _sm_di_arc(:first_arc, 0.0, 1.0, (0.0, 0.4), 0.0)
+    seq = Sequence()
+    add_sequence!(seq, first_arc)
+    Constraint(_sm_di_rest, first_arc; equals = [0.0, 0.0], at = Initial())
+    if !linked
+        Vary(final_time, first_arc; guess = 1.0, lower_bound = 0.5, upper_bound = 3.0)
+        Constraint(c -> [state(c).x], first_arc; equals = [1.0], at = Final(), name = :arrival)
+        Objective(_sm_di_effort, first_arc; sense = Min(), at = Path())
+        return seq
+    end
+    second_arc = _sm_di_arc(:second_arc, 1.0, 2.0, (0.6, 1.0), 5.0)
+    add_sequence!(seq, second_arc)
+    Vary(final_time, second_arc; guess = 2.0, lower_bound = 1.5, upper_bound = 3.0)
+    Constraint(c -> [state(c).x, state(c).v], second_arc; equals = [1.0, 0.0], at = Final(),
+               name = :arrival)
+    Constraint(_sm_di_accel, second_arc; lower_bound = [-2.0], upper_bound = [2.0], at = Path())
+    Objective(_sm_di_effort, second_arc; sense = Min(), at = Path())
+    Constraint(continuity, Link(first_arc, second_arc))
+    return seq
+end
+
+@testset "Collocation sequence with the status box" begin
+
+    @testset "groups name the phase, the kind and where the worst row is" begin
+        local r
+        out = _sm_capture(live = true) do
+            r = solve!(_sm_di_problem(); method = Optimize(monitor = true, max_iter = 1))
+        end
+        @test r.info == :Maximum_Iterations_Exceeded
+        frame = _sm_final_frame(out)
+        @test occursin("second_arc.final_time", frame)
+        @test !occursin("initial_time", frame)                  # fixed by tspan: not shown
+        @test occursin("first_arc · HermiteSimpson, 21 nodes", frame)
+        @test occursin("130 decision variables", frame)
+        @test occursin(r"first_arc · defects\s+\d+/40\s+[xv] @ step \d+ \(t ", frame)
+        @test occursin(r"second_arc · path\s+\d+/21\s+_sm_di_accel @ node \d+", frame)
+        @test occursin(r"first_arc→second_arc · li…\s+\d/3\s+continuity\[[xvt]\]", frame)
+        @test occursin(r"first_arc · boundary\s+2/2", frame)
+        @test occursin(r"Goals met \d/6", frame)
+
+        # Every frame of the solve has the same height.
+        frames = split(_sm_strip(out), "┌")[2:end]
+        @test allequal(count(==('\n'), first(split(f, "┘"))) for f in frames)
+    end
+
+    @testset "the solution is the same with the box on or off" begin
+        local on, off
+        out = _sm_capture(live = true) do
+            on = solve!(_sm_di_problem(); method = Optimize(monitor = true))
+        end
+        _sm_capture(live = true) do
+            off = solve!(_sm_di_problem(); method = Optimize(monitor = false, print_level = 0))
+        end
+        @test on.info == off.info == :Solve_Succeeded
+        @test on.variables == off.variables
+        @test occursin("Goals met 6/6", _sm_final_frame(out))
+    end
+
+    @testset "one phase: no phase prefix, names from the script" begin
+        out = _sm_capture(live = true) do
+            solve!(_sm_di_problem(linked = false); method = Optimize(monitor = true, max_iter = 2))
+        end
+        frame = _sm_final_frame(out)
+        @test occursin(r"│   final_time\s", frame)
+        @test occursin(r"│   defects\s", frame) && occursin(r"│   boundary\s", frame)
+        @test !occursin("first_arc · defects", frame)
+        phase = first(AstroSolve.sequence_phases(_sm_di_problem(linked = false)))
+        @test _SM._constraint_labels(phase, false) == ["_sm_di_rest (initial)", "arrival"]
+    end
+
+    @testset "rows that cannot be named fall back to counts, with one warning" begin
+        opts = AstroSolve.SNOW.Options(derivatives = AstroSolve.SNOW.UserDeriv(),
+                                       solver = _SM._ipopt(_sm_opts(); monitor = true))
+        local same
+        @test_logs (:warn, r"could not name this problem's rows") begin
+            same = AstroSolve._with_collocation_rows(opts, nothing)
+        end
+        @test same === opts
+        off = AstroSolve.SNOW.Options(derivatives = AstroSolve.SNOW.UserDeriv(),
+                                      solver = _SM._ipopt(_sm_opts(); monitor = false))
+        @test AstroSolve._with_collocation_rows(off, nothing) === off     # box off: not built
+    end
+end

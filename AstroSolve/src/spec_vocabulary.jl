@@ -1431,6 +1431,11 @@ function drain_links!(seq)
             lb = ub = zeros(n + 1)
         end
         if p1 isa CollocationPhase && p2 isa CollocationPhase
+            # A link written without `name` carries a generated one; the function names it better
+            # wherever it is shown, as the solver status box does.
+            if startswith(nm, "##")
+                nm = something(_readable_fname(f), nm)
+            end
             add_linkage!((c1, c2) -> f(c1, c2), seq, p1, p2;
                          lower_bounds = lb, upper_bounds = ub, name = nm)
         else
