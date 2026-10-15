@@ -943,3 +943,27 @@ end
     end
     @test occursin("Stopped after", out0) && !occursin("IPOPT log", out0)
 end
+
+# ── Goal names: a Constraint's name, else the quantity, with its event where that repeats ───────
+
+@testset "Targeting goals named apart" begin
+    geo = [("", "Position magnitude", "Prop to apoapsis"), ("", "Inclination", "Prop to perigee 2"),
+           ("", "Position magnitude", "Prop to perigee 2"), ("", "Semi-major axis", "MOI")]
+    @test _SM._goal_names(geo) == ["Position magnitude @ Prop to apoapsis", "Inclination",
+                                   "Position magnitude @ Prop to perigee 2", "Semi-major axis"]
+    # A name the script gives is used as written, and leaves the other goal unique.
+    @test _SM._goal_names([("Radius at apoapsis", "Position magnitude", "Prop to apoapsis"),
+                           ("", "Position magnitude", "Prop to perigee 2")]) ==
+          ["Radius at apoapsis", "Position magnitude"]
+    # The same quantity twice in one event still needs a number.
+    @test _SM._goal_names([("", "Eccentricity", "A"), ("", "Eccentricity", "A")]) ==
+          ["Eccentricity @ A #1", "Eccentricity @ A #2"]
+    # An event with no name adds nothing to the name.
+    @test _SM._goal_names([("", "Eccentricity", ""), ("", "Eccentricity", "")]) ==
+          ["Eccentricity #1", "Eccentricity #2"]
+
+    # Too long for the column: both the quantity and the event are cut, so both still show.
+    fitted = _SM._fit_name("Position magnitude @ Prop to perigee 2", 26)
+    @test fitted == "Position m… @ Prop to per…" && textwidth(fitted) == 26
+    @test _SM._fit_name("Radius @ Prop to perigee 2 long event", 26) == "Radius @ Prop to perigee …"
+end

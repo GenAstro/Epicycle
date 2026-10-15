@@ -224,6 +224,20 @@ function _number_repeats(names::Vector{String})
     end
 end
 
+# A goal's row name. A `Constraint`'s own `name` is used as written. An unnamed goal is called by
+# its quantity, and where two goals would then read the same, as when the same radius is
+# targeted at two events, each also names its event: "Position magnitude @ Prop to apoapsis".
+# Names that still repeat are numbered. Each entry is (name given, quantity label, event name).
+function _goal_names(goals::Vector{<:Tuple{AbstractString, AbstractString, AbstractString}})
+    plain = [isempty(name) ? label : String(name) for (name, label, _) in goals]
+    total = Dict{String, Int}()
+    foreach(n -> total[n] = get(total, n, 0) + 1, plain)
+    named = map(zip(goals, plain)) do ((name, _, event), n)
+        isempty(name) && total[n] > 1 && !isempty(event) ? "$n @ $event" : n
+    end
+    return _number_repeats(named)
+end
+
 struct _VarSlot
     name::String
     unit::String
@@ -269,8 +283,9 @@ function EventGraphRows(sm, ctol::Real)
         end
     end
 
-    cons = [c for e in sm.sorted_events for c in e.funcs]
-    bases = _number_repeats([isempty(c.name) ? _quantity_label(c.calc) : c.name for c in cons])
+    cons  = [(c, e) for e in sm.sorted_events for c in e.funcs]
+    bases = _goal_names([(c.name, _quantity_label(c.calc), e.name) for (c, e) in cons])
+    cons  = first.(cons)
     goals = _GoalSlot[]
     k = 0
     for (c, base) in zip(cons, bases)
@@ -827,8 +842,20 @@ function _fit_name(s, n)
         room = n - textwidth(_SEP) - textwidth(tail)
         room >= 4 && return rpad(_clip(head, room) * _SEP * tail, n)
     end
+    # "quantity @ event": both halves tell goals apart, so both are cut, the longer one first.
+    i = findfirst(_AT, s)
+    if i !== nothing
+        head, tail = s[1:prevind(s, first(i))], s[nextind(s, last(i)):end]
+        room = n - textwidth(_AT)
+        if room >= 8
+            h = min(textwidth(head), max(room - textwidth(tail), room ÷ 2))
+            return rpad(_clip(head, h) * _AT * _clip(tail, room - h), n)
+        end
+    end
     return _fit(s, n)
 end
+
+const _AT = " @ "
 
 _count(n, noun) = "$n $noun" * (n == 1 ? "" : "s")
 
