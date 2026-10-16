@@ -671,6 +671,10 @@ const _smmg_venus = _smsf_body(_SMMG_RV, sqrt(_SMSF_MU / _SMMG_RV), 1.1,
 
 _smmg_epoch(c1, c2)  = [final_time(c1) - initial_time(c2)]
 _smmg_mass(c1, c2)   = [final_mass(c1) - initial_mass(c2)]
+_smmg_launch_c3(c)   = [dot(departure_vinf(c), departure_vinf(c))]
+@partial(_smmg_launch_c3, departure_vinf) do c
+    reshape(2 .* departure_vinf(c), 1, 3)
+end
 _smmg_speed(c1, c2)  = [dot(arrival_vinf(c1), arrival_vinf(c1)) -
                         dot(departure_vinf(c2), departure_vinf(c2))]
 
@@ -698,6 +702,7 @@ function _smmg_problem()
     Constraint(_smmg_epoch, flyby; equals = 0.0, name = :epoch)
     Constraint(_smmg_mass,  flyby; equals = 0.0, name = :mass)
     Constraint(_smmg_speed, flyby; equals = 0.0)                 # unnamed: its function names it
+    Constraint(_smmg_launch_c3, p1; lower_bound = 0.0, upper_bound = 50.0)   # a leg's own bound
     seq = Sequence()
     add_sequence!(seq, p1)
     add_sequence!(seq, p2)
@@ -713,7 +718,13 @@ end
 
     vars, notes, groups, _ = _SM.monitor_rows(rows, x, _sm_feasible(rows))
     @test [g.name for g in groups] ==
-          ["earth_to_flyby · match point", "flyby_to_venus · match point", "earth_flyby · link"]
+          ["earth_to_flyby · match point", "earth_to_flyby · boundary",
+           "flyby_to_venus · match point", "earth_flyby · link"]
+    # A leg's own constraint is a boundary row, named by its function.
+    g = _sm_feasible(rows)
+    g[first(rows.groups[2].blocks[1].rows)] += 100.0              # C3 past its upper bound
+    _, _, gs, _ = _SM.monitor_rows(rows, x, g)
+    @test _sm_group(gs, "earth_to_flyby · boundary").where == "_smmg_launch_c3"
     @test _sm_group(groups, "earth_flyby · link").total == 3
     @test notes[1:2] == ["earth_to_flyby · MGAnDSMs, 1 deep-space maneuver",
                          "flyby_to_venus · MGAnDSMs, 1 deep-space maneuver"]
@@ -734,7 +745,7 @@ end
         @test _sm_group(gs, "earth_flyby · link").where == label
     end
     g = _sm_feasible(rows)
-    g[first(rows.groups[2].blocks[1].rows) + 2] += 1.0                # leg 2, match point z
+    g[first(rows.groups[3].blocks[1].rows) + 2] += 1.0                # leg 2, match point z
     _, _, gs, _ = _SM.monitor_rows(rows, x, g)
     @test _sm_group(gs, "flyby_to_venus · match point").where == "z"
 end
@@ -993,4 +1004,46 @@ end
     g[2 * 2 * 3 + 2] += 1.0                                   # step 4, first equation, v
     _, _, gs, _ = _SM.monitor_rows(rows, x, g)
     @test startswith(_sm_group(gs, "defects").where, "v @ step 4 (t ")
+end
+
+# ── A transcription the box has never seen ───────────────────────────────────────────────────────
+
+# A stand-in for a transcription with per-interval defect blocks and a row of its own, as an
+# extension package's might have: the box knows only the names its function list gives.
+struct _SMIntervalPhase
+    name::Symbol
+end
+AstroSolve.function_list(::_SMIntervalPhase) = [
+    AstroSolve.PhaseFunction(nothing, 2, zeros(2), zeros(2), "defect"),       # one interval
+    AstroSolve.PhaseFunction(nothing, 2, zeros(2), zeros(2), "defect_2"),     # numbered
+    AstroSolve.PhaseFunction(nothing, 1, [1.0], [1.0], "alpha_sum")]
+AstroSolve.n_constraints(::_SMIntervalPhase)         = 5
+AstroSolve.nlp_length(::_SMIntervalPhase)            = 0
+AstroSolve.variable_list(::_SMIntervalPhase)         = []
+AstroSolve.variable_ranges(::_SMIntervalPhase)       = UnitRange{Int}[]
+AstroSolve.get_constraint_bounds(::_SMIntervalPhase) = (vcat(zeros(4), 1.0), vcat(zeros(4), 1.0))
+
+@testset "A transcription known only by its function list" begin
+    rows = _SM.PhaseRows(_SMIntervalPhase(:mock), 1e-4)
+    _, notes, groups, _ = _SM.monitor_rows(rows, Float64[], _sm_feasible(rows))
+    @test [g.name for g in groups] == ["defects", "boundary"]
+    @test notes[1] == "mock · _SMIntervalPhase"                 # no transcription line it knows
+    @test _sm_group(groups, "defects").total == 4
+
+    for (row, group, where) in ((2, "defects", "state[2]"),            # the unnumbered block
+                                (3, "defects", "state[1] @ interval 2"),
+                                (5, "boundary", "alpha sum"))
+        g = _sm_feasible(rows)
+        g[row] += 1.0
+        _, _, gs, _ = _SM.monitor_rows(rows, Float64[], g)
+        @test _sm_group(gs, group).where == where
+    end
+end
+
+@testset "Many phases: the first few listed, the rest counted" begin
+    lines = ["p$i · HermiteSimpson, 21 nodes" for i in 1:6]
+    @test _SM._phase_notes(lines, 900) ==
+          ["p1 · HermiteSimpson, 21 nodes", "p2 · HermiteSimpson, 21 nodes",
+           "p3 · HermiteSimpson, 21 nodes", "+ 3 more phases", "900 decision variables"]
+    @test length(_SM._phase_notes(lines[1:4], 900)) == 5          # four fit: all listed
 end
