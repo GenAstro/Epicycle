@@ -107,6 +107,91 @@ An Earth-Earth-Venus gravity assist.
 
 ![Gravity assist](assets/gallery/Ex_GravityAssistMGA.avif)
 
+## Global Search for Interplanetary Transfers
+
+`GlobalSearch` finds the flyby sequence and the trajectory together. When the sequences are few
+enough to list, it first surveys every one with random starts and basin hops, then a genetic
+algorithm evolves the population; each candidate is solved as a nonlinear program, and only
+transfers that pass a realism check are kept. A search writes its progress to its folder, so it can
+be stopped and resumed.
+
+Cassini, with the flyby sequence left to the search: Earth to Saturn, up to four flybys of Venus,
+Earth, Mars and Jupiter, a launch in 1997 or early 1998 at Cassini's launch energy, eight years of
+flight at most, and insertion into a 1.3 × 150 Saturn-radii orbit. The cost is the total ΔV after
+launch. The best of the 341 sequences is the one Cassini flew, Venus, Venus, Earth, Jupiter, at
+0.854 km/s, launching ten days after Cassini did.
+
+```julia
+using Epicycle
+
+R_S = 60268.0
+cassini = ImpulsiveMission(departure = earth, target = saturn,
+                           flyby_bodies = [venus, earth, mars, jupiter], max_flybys = 4,
+                           launch_window = ("1997-01-01", "1998-06-30"),
+                           max_flight_time = 2922.0, max_launch_vinf = 4.1,
+                           arrival = OrbitInsertion(periapsis = 1.3R_S, apoapsis = 150R_S, Isp = 320.0))
+search = GlobalSearch(cassini; folder = "cassini", population = 150, generations = 20, workers = 5)
+evolve!(search)
+```
+
+![Cassini search](assets/gallery/GlobalSearch_Cassini_Search.png)
+
+![Cassini best transfers](assets/gallery/GlobalSearch_Cassini_Best.png)
+
+Europa Clipper, in its 2024 launch period at its launch requirement of C3 up to 41.69 km²/s², six
+years of flight at most, and insertion into an 11 × 265 Jupiter-radii orbit. The sequence Clipper
+flew, Mars then Earth, comes second at 1.309 km/s, 10 m/s behind a Mars, Venus, Earth tour. It
+launches on 17 October 2024 and flies Mars on 1 March 2025, the day Clipper did.
+
+```julia
+using Epicycle
+
+R_J = 71492.0
+clipper = ImpulsiveMission(departure = earth, target = jupiter,
+                           flyby_bodies = [venus, earth, mars], max_flybys = 4,
+                           launch_window = ("2024-10-01", "2024-11-15"),
+                           max_flight_time = 2192.0, max_launch_vinf = sqrt(41.69),
+                           arrival = OrbitInsertion(periapsis = 11R_J, apoapsis = 265R_J, Isp = 320.0))
+search = GlobalSearch(clipper; folder = "clipper", population = 150, generations = 20, workers = 5)
+evolve!(search)
+```
+
+![Europa Clipper search](assets/gallery/GlobalSearch_Europa_Clipper_Search.png)
+
+![Europa Clipper best transfers](assets/gallery/GlobalSearch_Europa_Clipper_Best.png)
+
+Low-thrust transfers to Jupiter and Saturn for a 1500 kg spacecraft with a 0.1 N, 3000 s electric
+thruster, launching between 2030 and 2040 at up to 4 km/s, ten years of flight at most, and up to
+four flybys. Each leg is a Sims-Flanagan transcription, and the cost is the mass delivered after a
+chemical orbit insertion. These searches ran before the survey was added, so they are the genetic
+algorithm alone. The best to Jupiter delivers 1136 kg on a Mars, Earth, Earth tour; the best to Saturn delivers
+1287 kg through Earth twice and Jupiter. Thrust arcs are orange.
+
+```julia
+using Epicycle
+
+R_J = 71492.0
+spacecraft = LowThrustSpacecraft(mass = 1500.0, Isp = 3000.0, thrust = 0.1)
+to_jupiter = LowThrustMission(departure = earth, target = jupiter,
+                              flyby_bodies = [venus, earth, mars], max_flybys = 4,
+                              launch_window = ("2030-01-01", "2040-01-01"),
+                              max_flight_time = 3652.5, max_launch_vinf = 4.0, spacecraft = spacecraft,
+                              arrival = OrbitInsertion(periapsis = 4R_J, apoapsis = 150R_J, Isp = 320.0))
+search = GlobalSearch(to_jupiter; folder = "jupiter", population = 150, generations = 300, workers = 5)
+evolve!(search)
+```
+
+![Low-thrust Jupiter search](assets/gallery/GlobalSearch_LowThrust_Jupiter_Search.png)
+
+![Low-thrust Jupiter best transfers](assets/gallery/GlobalSearch_LowThrust_Jupiter_Best.png)
+
+The Saturn search is the same with Jupiter among the flyby bodies, no closer than 3 Jupiter radii,
+and insertion into a 1.3 × 150 Saturn-radii orbit.
+
+![Low-thrust Saturn search](assets/gallery/GlobalSearch_LowThrust_Saturn_Search.png)
+
+![Low-thrust Saturn best transfers](assets/gallery/GlobalSearch_LowThrust_Saturn_Best.png)
+
 ## Dynamical Systems
 
 A preview of work in progress; this example is not yet in `Epicycle/examples/`.
