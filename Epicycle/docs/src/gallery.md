@@ -23,17 +23,37 @@ difference is 0.3 m radial, 4.4 m along-track and 2.8 m cross-track.
 
 ![LRO against the GEODYN and FDF orbits](assets/gallery/LRO_OD_DefinitiveSolutionCompare.png)
 
-Two weeks of Juno's 2014 cruise from DSN two-way and three-way Doppler and sequential range, with
+A month of Juno's 2014 cruise from DSN two-way and three-way Doppler and sequential range, with
 the uplink ramps, the DSN's troposphere and ionosphere calibrations and the spacecraft's spin in the
-measurement models. Post-fit residuals of 1.2 mHz and 0.16 m.
+measurement models. Eleven attitude slews from the small-forces file enter the fit as impulsive
+maneuvers, the same events used in mission design, and their ΔV is estimated. Post-fit residuals of
+1.0 mHz and 0.23 m.
 
-![Juno DSN residuals](assets/gallery/JunoResidualsPlots.png)
+![Juno DSN residuals](assets/gallery/Juno_Slews_Residuals.png)
+
+The same fit differenced with JPL's reconstruction, with the slews estimated, held at the file's
+values and left out. Estimating them brings the RMS difference to 1.4 km radial, 7.1 km along-track
+and 20 km cross-track.
+
+![Juno against JPL's reconstruction](assets/gallery/Juno_Slews_Compare.png)
 
 A week of LAGEOS-1 laser ranging from the ILRS normal points, with the IERS station displacements,
 sub-daily Earth orientation and the Mendes-Pavlis troposphere. Post-fit residuals of 6.5 mm over
 twenty-one stations; the hollow points are the normal points the editing left out.
 
 ![LAGEOS range residuals](assets/gallery/LAGEOS_Residuals.png)
+
+Thirty-five days of MESSENGER's approach to Mercury in 2011 from DSN Doppler, range and ΔDOR, with
+an eight-plate sunshade and solar panels oriented by the reconstructed attitude, and Moyer's solar
+corona model. Post-fit residuals in Hz, meters and seconds.
+
+![MESSENGER residuals](assets/gallery/MESSENGER_Residuals.png)
+
+The same fit differenced with the navigation team's od431 reconstruction: 1.0 km radial, 2.1 km
+along-track, 1.2 km cross-track and 13 nrad on the plane of the sky. Without ΔDOR the cross-track
+difference grows to 13.5 km.
+
+![MESSENGER against od431, with and without ΔDOR](assets/gallery/MESSENGER_DDOR_Compare.png)
 
 ## Propagation and Targeting
 
