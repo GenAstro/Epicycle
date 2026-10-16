@@ -164,8 +164,8 @@ Low-thrust transfers to Jupiter and Saturn for a 1500 kg spacecraft with a 0.1 N
 thruster, launching between 2030 and 2040 at up to 4 km/s, ten years of flight at most, and up to
 four flybys. Each leg is a Sims-Flanagan transcription, and the cost is the mass delivered after a
 chemical orbit insertion. These searches ran before the survey was added, so they are the genetic
-algorithm alone. The best to Jupiter delivers 1136 kg on a Mars, Earth, Earth tour; the best to Saturn delivers
-1287 kg through Earth twice and Jupiter. Thrust arcs are orange.
+algorithm alone. Each of the three best was then solved again with every segment under 5 % throttle held at zero, so the coasts carry no residual thrust. The best to Jupiter delivers 1134 kg on a Mars, Earth, Earth tour; the best to Saturn delivers
+1284 kg through Earth twice and Jupiter. Thrust arcs are orange.
 
 ```julia
 using Epicycle
