@@ -4,9 +4,9 @@ This gallery shows Epicycle applied to real-world, hard problems. The examples i
 
 # LRO Precision OD
 
-An LRO OD solution agrees with the LOLA science team's orbit to meters. The solution processes two days of LRO S-band Doppler and range from three NASA ground network stations. The fit uses the GRGM900C lunar field to degree 150 with lunar solid tides raised by the Earth and Sun, Earth, Sun and Jupiter point masses, cannonball solar radiation pressure, relativity, the Saastamoinen troposphere with reported weather, and the JPL global ionosphere maps. It estimates 17 parameters: the state, the reflectivity, an along-track acceleration, and Doppler, range and range time-tag biases for each station. Epicycle's solution differs from the LOLA team's GEODYN reconstruction by 0.3 m radial, 4.4 m along-track and 2.8 m cross-track RMS. The Flight Dynamics Facility's daily solution is shown for comparison.
+An LRO OD solution agrees with the LOLA science team's orbit to meters. The solution processes two days of LRO S-band Doppler and range from three NASA ground network stations. The fit uses the GRGM900C lunar field to degree 150 with lunar solid tides raised by the Earth and Sun, Earth, Sun and Jupiter point masses, cannonball solar radiation pressure, relativity, the Saastamoinen troposphere with reported weather, and the JPL global ionosphere maps. It estimates 17 parameters: the state, the reflectivity, an along-track acceleration, and Doppler, range and range time-tag biases for each station. The same data are also fit with the epoch-state square-root information filter and smoother, which adds Gauss-Markov accelerations on each axis, each held for six hours: 27 more parameters. Epicycle's solution differs from the LOLA team's GEODYN reconstruction by 0.3 m radial, 4.4 m along-track and 2.8 m cross-track RMS with the batch estimator, and by 0.4 m, 4.0 m and 2.5 m with the filter and smoother. The Flight Dynamics Facility's daily solution differs from GEODYN by 3.9 m, 127 m and 70 m.
 
-![LRO against the GEODYN and FDF orbits](assets/gallery/LRO_OD_DefinitiveSolutionCompare.png)
+![GEODYN minus FDF and the two Epicycle orbits](assets/gallery/LRO_OD_DefinitiveSolutionCompare.png)
 
 # Juno Small-Force Estimation
 
