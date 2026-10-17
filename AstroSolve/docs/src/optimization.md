@@ -195,7 +195,7 @@ output is not an interactive terminal, such as a file or a CI log, only the fina
 `monitor = false` turns the box off and prints IPOPT's own log instead, at `print_level`. A solve
 that does not set `monitor` follows the session default, which is on and which
 `solver_monitor!(false)` turns off. With the box on, IPOPT's log still goes to its log file, at
-`print_level`.
+`print_level`, and a solve that does not succeed prints the file's path below the box.
 
 `result.info` reports why the solver stopped. A returned result may contain the last iterate from
 an unsuccessful solve, so the status and targeted quantities must both be checked. After the solve,

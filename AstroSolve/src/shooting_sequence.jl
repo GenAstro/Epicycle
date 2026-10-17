@@ -401,6 +401,7 @@ end
 
 function solve_trajectory_shooting!(seq::Sequence, options::SNOW.Options)
     sm = _get_or_build_sm(seq)
+    options = _with_grouped_rows(options, ShootingRows, sm)
 
     x0       = get_decision_vector(sm)
     lx, ux   = get_variable_bounds(sm)

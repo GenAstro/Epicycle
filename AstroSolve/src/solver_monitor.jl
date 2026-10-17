@@ -224,11 +224,32 @@ function _number_repeats(names::Vector{String})
     end
 end
 
+# A goal's row name. A `Constraint`'s own `name` is used as written. An unnamed goal is called by
+# its quantity, and where two goals would then read the same, as when the same radius is
+# targeted at two events, each also names its event: "Position magnitude @ Prop to apoapsis".
+# Names that still repeat are numbered. Each entry is (name given, quantity label, event name).
+function _goal_names(goals::Vector{<:Tuple{AbstractString, AbstractString, AbstractString}})
+    plain = [isempty(name) ? label : String(name) for (name, label, _) in goals]
+    total = Dict{String, Int}()
+    foreach(n -> total[n] = get(total, n, 0) + 1, plain)
+    named = map(zip(goals, plain)) do ((name, _, event), n)
+        isempty(name) && total[n] > 1 && !isempty(event) ? "$n @ $event" : n
+    end
+    return _number_repeats(named)
+end
+
 struct _VarSlot
     name::String
     unit::String
     index::Int          # position in the solver's variable vector
+    scale::Float64      # the solver sees (value - shift) / scale
+    shift::Float64
 end
+
+_VarSlot(name, unit, index) = _VarSlot(name, unit, index, 1.0, 0.0)
+
+# The value the user wrote, from the solver's scaled one.
+_physical(s::_VarSlot, x) = x[s.index] * s.scale + s.shift
 
 struct _GoalSlot
     name::String
@@ -262,8 +283,9 @@ function EventGraphRows(sm, ctol::Real)
         end
     end
 
-    cons = [c for e in sm.sorted_events for c in e.funcs]
-    bases = _number_repeats([isempty(c.name) ? _quantity_label(c.calc) : c.name for c in cons])
+    cons  = [(c, e) for e in sm.sorted_events for c in e.funcs]
+    bases = _goal_names([(c.name, _quantity_label(c.calc), e.name) for (c, e) in cons])
+    cons  = first.(cons)
     goals = _GoalSlot[]
     k = 0
     for (c, base) in zip(cons, bases)
@@ -295,22 +317,28 @@ function monitor_rows(r::EventGraphRows, x, g)
     return vars, String[], goals, worst
 end
 
-# ── Rows for a collocation sequence ──────────────────────────────────────────────────────────────
+# ── Rows for a phased problem: collocation and shooting ──────────────────────────────────────────
 #
-# Thousands of decision variables and constraint rows, so the box summarizes. Variables: any free
-# scalar (initial or final time, a static parameter), a line per phase and the total count. Goals:
-# one group per phase and kind of constraint (defects, path, boundary) and one per pair of linked
-# phases, each with its met count and where its worst row is.
+# Hundreds or thousands of decision variables and constraint rows, so the box summarizes.
+# Variables: the free scalars (times, masses, parameters, v-infinities), a line per phase and the
+# total count. Goals: one group per phase and kind of constraint (defects or the match point,
+# path, boundary) and one per pair of linked phases, each with its met count and where its worst
+# row is. `CollocationRows` and `ShootingRows` build the same `GroupedRows` from their managers.
 
 # A run of constraint rows from one constraint, and what is needed to say which row is which.
 struct _RowBlock
     rows::UnitRange{Int}                    # positions in the solver's constraint vector
-    kind::Symbol                            # :defect, :path, :boundary or :linkage
+    kind::Symbol                            # :defect, :path, :segment_path, :match_point,
+                                            # :boundary or :linkage
     label::String                           # the constraint's name; empty for defects
     comps::Vector{String}                   # component names; "" for a scalar constraint
     phase::Int                              # the phase whose node times place a row, 0 for none
     steps::Vector{Tuple{UnitRange{Int}, Int}}   # defects: each step's rows in the block, first node
+    segments::NTuple{2, Int}                # :segment_path: forward and backward segment counts
 end
+
+_RowBlock(rows, kind, label, comps, phase, steps) =
+    _RowBlock(rows, kind, label, comps, phase, steps, (0, 0))
 
 struct _RowGroup
     name::String
@@ -324,15 +352,42 @@ struct _PhaseClock
     mesh::Any
 end
 
-"""Rows for a collocation sequence: free scalars, a line per phase, grouped goals."""
-struct CollocationRows <: MonitorRows
+"""Rows for a phased problem: free scalars, a line per phase, grouped goals."""
+struct GroupedRows <: MonitorRows
     vars::Vector{_VarSlot}
     notes::Vector{String}
     groups::Vector{_RowGroup}
-    clocks::Vector{_PhaseClock}
+    clocks::Vector{_PhaseClock}             # by phase index; empty where rows carry no times
     lg::Vector{Float64}
     ug::Vector{Float64}
     ctol::Float64
+end
+
+# A `Link` written with a name (`Link(a, b; name = :earth_flyby)`), keyed by the two phases, so a
+# link's group is called what the script calls it. Filled when the links are registered.
+const _LINK_NAMES = Dict{Tuple{UInt64, UInt64}, String}()
+
+_link_key(p1, p2) = (objectid(p1), objectid(p2))
+
+# Add a link's rows to the group for its pair of phases, after the phases' own groups.
+function _add_link_block!(groups, index, p1, p2, block)
+    key = _link_key(p1, p2)
+    if haskey(index, key)
+        push!(groups[index[key]].blocks, block)
+    else
+        name = get(_LINK_NAMES, key, "$(p1.name)→$(p2.name)")
+        push!(groups, _RowGroup("$name · link", [block]))
+        index[key] = length(groups)
+    end
+    return groups
+end
+
+# One line per phase, the first few when there are many, then the decision-variable count.
+function _phase_notes(lines::Vector{String}, nvars::Int)
+    if length(lines) > _MAX_PHASE_LINES
+        lines = [lines[1:_MAX_PHASE_LINES-1]; "+ $(length(lines) - _MAX_PHASE_LINES + 1) more phases"]
+    end
+    return [lines; "$nvars decision variables"]
 end
 
 const _MAX_PHASE_LINES = 4                  # more phases than this: the first few and a count
@@ -349,14 +404,18 @@ function _readable_fname(f)
 end
 
 # A state's components by the field names of the phase's state type, or by index.
-function _state_names(p)
+_state_names(p) = _registered_state_names(p, p._n_states)
+
+# A phase's `n` state components by the field names of the state type it was built with, for any
+# transcription that registers one; by index otherwise.
+function _registered_state_names(p, n::Int)
     reg = get(_phase_registry, objectid(p), nothing)
     names = try
         reg === nothing || reg.state_type === nothing ? Symbol[] : collect(fieldnames(reg.state_type))
     catch
         Symbol[]
     end
-    return length(names) == p._n_states ? string.(names) : _comp_names(p._n_states)
+    return length(names) == n ? string.(names) : _comp_names(n)
 end
 
 # The names of a phase's boundary or path constraints, in the order the phase holds them. A
@@ -379,90 +438,330 @@ function _constraint_labels(p, path::Bool)
     end
 end
 
+
+# ── Building rows phase by phase ─────────────────────────────────────────────────────────────────
+#
+# Each manager places its phases' variables and constraint rows at its own offsets, so the
+# builders below take the placement as arguments: `cols(v)` gives a variable's columns in the
+# solver's vector, and `row0` is the row before the phase's first. `listed` holds the variables
+# already shown, since phases joined at a junction share a variable and it is one column.
+
+# A collocation phase's free scalars: initial and final time and static parameters. The solver
+# sees them unscaled. Returns where the phase's initial and final times sit, for node times.
+function _collocation_vars!(vars, listed, p, cols, pre)
+    t0 = tf = 0
+    for v in variable_list(p)
+        c = cols(v)
+        v === p.t0_var && (t0 = first(c))
+        v === p.tf_var && (tf = first(c))
+        base = v === p.t0_var ? "initial_time" : v === p.tf_var ? "final_time" :
+               v === p.param_var ? "parameter" : continue
+        objectid(v) in listed && continue
+        push!(listed, objectid(v))
+        # "t0", "tf" and "param" are the framework's own names; a `Vary(...; name)` replaces them.
+        base = v.name in ("", "t0", "tf", "param") ? pre * base : v.name
+        for (k, j) in enumerate(c)
+            v.lower_bounds[k] == v.upper_bounds[k] && continue      # held fixed
+            push!(vars, _VarSlot(length(c) == 1 ? base : "$base[$k]", "", j))
+        end
+    end
+    return t0, tf
+end
+
+# A shooting phase's free times, masses and v-infinities. The solver sees each divided by its
+# scale after its shift is taken off, which the slot undoes.
+function _shooting_vars!(vars, listed, p, cols, pre)
+    for (field, quantity) in _SHOOTING_SCALARS
+        hasproperty(p, field) || continue
+        v = getproperty(p, field)
+        (v === nothing || objectid(v) in listed) && continue
+        push!(listed, objectid(v))
+        c = cols(v)
+        base = v.name == quantity || _generated(v.name) ? pre * quantity : v.name
+        for (k, j) in enumerate(c)
+            v.lower_bounds[k] == v.upper_bounds[k] && continue      # held fixed
+            push!(vars, _VarSlot(length(c) == 1 ? base : "$base[$k]", "", j,
+                                 v.scale[k], v.shift[k]))
+        end
+    end
+    return nothing
+end
+
+# A collocation phase's groups: defects, path and boundary. `i` is the phase's place in the
+# manager, which the defect and path rows use to look up node times.
+function _collocation_groups!(groups, p, i, row0, tag)
+    ns     = p._n_states
+    steps  = [(rows, first(nodes)) for (rows, nodes) in defect_row_groups(p.transcription, ns)]
+    blabel = _constraint_labels(p, false)
+    plabel = _constraint_labels(p, true)
+    defect, path, bound = _RowBlock[], _RowBlock[], _RowBlock[]
+    row = row0
+    for pf in function_list(p)
+        r = row+1 : row+pf.n_nlp
+        row += pf.n_nlp
+        isempty(r) && continue
+        if pf.source isa DefectBlock
+            push!(defect, _RowBlock(r, :defect, "", _state_names(p), i, steps))
+        elseif pf.source isa PathConstraintBlock
+            push!(path, _RowBlock(r, :path, plabel[length(path) + 1],
+                                  _comp_names(pf.source.pc.n_pc), i, []))
+        else
+            push!(bound, _RowBlock(r, :boundary, blabel[length(bound) + 1],
+                                   _comp_names(pf.n_nlp), i, []))
+        end
+    end
+    isempty(defect) || push!(groups, _RowGroup(tag(p, "defects"), defect))
+    isempty(path)   || push!(groups, _RowGroup(tag(p, "path"), path))
+    isempty(bound)  || push!(groups, _RowGroup(tag(p, "boundary"), bound))
+    return groups
+end
+
+# A shooting phase's groups: the match point, path constraints lowered to one row per segment,
+# and boundary constraints.
+function _shooting_groups!(groups, p, row0, tag)
+    labels = _shooting_constraint_labels(p)
+    mpoint, defect, path, bound = _RowBlock[], _RowBlock[], _RowBlock[], _RowBlock[]
+    row, nb = row0, 0
+    for pf in function_list(p)
+        r = row+1 : row+pf.n_nlp
+        row += pf.n_nlp
+        isempty(r) && continue
+        if pf.source isa BoundaryConstraint
+            nb += 1
+            label, at_path = labels[nb]
+            segs = _segments(p)
+            if at_path && sum(segs) > 0 && pf.n_nlp % sum(segs) == 0
+                push!(path, _RowBlock(r, :segment_path, label,
+                                      _comp_names(pf.n_nlp ÷ sum(segs)), 0, [], segs))
+            else
+                push!(bound, _RowBlock(r, :boundary, label, _comp_names(pf.n_nlp), 0, []))
+            end
+        elseif pf.n_nlp == length(_MATCH_POINT_COMPS) && pf.name == "matchpoint_defect"
+            push!(mpoint, _RowBlock(r, :match_point, "", _MATCH_POINT_COMPS, 0, []))
+        elseif (m = match(_INTERVAL_DEFECT, pf.name)) !== nothing
+            # A transcription that closes each interval with its own defect rows, one per state
+            # component, names them "defect" or "defect_<interval>".
+            push!(defect, _RowBlock(r, :interval_defect, something(m[1], ""),
+                                    _registered_state_names(p, pf.n_nlp), 0, []))
+        else                                                      # e.g. MGA's arc-fraction sum
+            push!(bound, _RowBlock(r, :boundary, replace(pf.name, "_" => " "),
+                                   _comp_names(pf.n_nlp), 0, []))
+        end
+    end
+    row == row0 + n_constraints(p) || throw(ArgumentError(
+        "phase $(p.name): its function list covers $(row - row0) rows, but it reports " *
+        "$(n_constraints(p))"))
+    isempty(mpoint) || push!(groups, _RowGroup(tag(p, "match point"), mpoint))
+    isempty(defect) || push!(groups, _RowGroup(tag(p, "defects"), defect))
+    isempty(path)   || push!(groups, _RowGroup(tag(p, "path"), path))
+    isempty(bound)  || push!(groups, _RowGroup(tag(p, "boundary"), bound))
+    return groups
+end
+
+# A link's rows, named. A generated name says nothing, and a continuity link's own name repeats
+# the phases its group already names (`continuity_coast_to_burn`), so both read as the kind.
+function _link_label(name)
+    _generated(name) && return "link"
+    startswith(name, "continuity_") && return "continuity"
+    return name
+end
+
+# A continuity residual is each phase's state at the junction, then time. A shooting phase's
+# state is position, velocity and mass.
+function _link_comps(label, n, p1)
+    label == "continuity" || return _comp_names(n)
+    names = p1 isa CollocationPhase ? _state_names(p1) : _MATCH_POINT_COMPS
+    return n == length(names) + 1 ? [names; "t"] : _comp_names(n)
+end
+
+# The phase line under Variables: its transcription and how finely it is divided.
+_phase_line(p) = p isa CollocationPhase ?
+    "$(p.name) · $(nameof(typeof(p.transcription))), $(_count(n_control_nodes(p), "node"))" :
+    _shooting_phase_line(p)
+
+_phase_tag(multi) = multi ? (p, what) -> "$(p.name) · $what" : (p, what) -> what
+
+"""Rows for a collocation sequence, from its `CollocationManager`."""
 function CollocationRows(cm, ctol::Real)
     multi = length(cm.phases) > 1
-    tag(p, what) = multi ? "$(p.name) · $what" : what
-    vars, notes = _VarSlot[], String[]
-    groups, clocks = _RowGroup[], _PhaseClock[]
-
+    vars, groups, clocks, listed = _VarSlot[], _RowGroup[], _PhaseClock[], Set{UInt64}()
     for (i, p) in enumerate(cm.phases)
-        col = cm.phase_var_offsets[i]
-        pre = multi ? "$(p.name)." : ""
-        t0 = tf = 0
-        for (v, r) in zip(variable_list(p), variable_ranges(p))
-            v === p.t0_var && (t0 = col + first(r))
-            v === p.tf_var && (tf = col + first(r))
-            base = v === p.t0_var ? "initial_time" : v === p.tf_var ? "final_time" :
-                   v === p.param_var ? "parameter" : continue
-            # "t0", "tf" and "param" are the framework's own names; a `Vary(...; name)` replaces them.
-            base = v.name in ("", "t0", "tf", "param") ? pre * base : v.name
-            for (k, j) in enumerate(r)
-                v.lower_bounds[k] == v.upper_bounds[k] && continue      # held fixed
-                push!(vars, _VarSlot(length(r) == 1 ? base : "$base[$k]", "", col + j))
-            end
-        end
+        ranges = Dict(objectid(v) => r for (v, r) in zip(variable_list(p), variable_ranges(p)))
+        cols   = v -> cm.phase_var_offsets[i] .+ ranges[objectid(v)]    # offsets here are 0-based
+        t0, tf = _collocation_vars!(vars, listed, p, cols, multi ? "$(p.name) · " : "")
         push!(clocks, _PhaseClock(t0, tf, build_mesh(p.transcription)))
-
-        ns     = p._n_states
-        steps  = [(rows, first(nodes)) for (rows, nodes) in defect_row_groups(p.transcription, ns)]
-        blabel = _constraint_labels(p, false)
-        plabel = _constraint_labels(p, true)
-        defect, path, bound = _RowBlock[], _RowBlock[], _RowBlock[]
-        row = cm.phase_fun_offsets[i]
-        for pf in function_list(p)
-            r = row+1 : row+pf.n_nlp
-            row += pf.n_nlp
-            isempty(r) && continue
-            if pf.source isa DefectBlock
-                push!(defect, _RowBlock(r, :defect, "", _state_names(p), i, steps))
-            elseif pf.source isa PathConstraintBlock
-                push!(path, _RowBlock(r, :path, plabel[length(path) + 1],
-                                      _comp_names(pf.source.pc.n_pc), i, []))
-            else
-                push!(bound, _RowBlock(r, :boundary, blabel[length(bound) + 1],
-                                       _comp_names(pf.n_nlp), i, []))
-            end
-        end
-        isempty(defect) || push!(groups, _RowGroup(tag(p, "defects"), defect))
-        isempty(path)   || push!(groups, _RowGroup(tag(p, "path"), path))
-        isempty(bound)  || push!(groups, _RowGroup(tag(p, "boundary"), bound))
+        _collocation_groups!(groups, p, i, cm.phase_fun_offsets[i], _phase_tag(multi))
     end
-
-    # One group per pair of linked phases, after the phases.
-    links = Dict{Tuple{Symbol, Symbol}, Int}()
+    links = Dict{Tuple{UInt64, UInt64}, Int}()
     for (k, lc) in enumerate(cm.linkages)
         n = length(lc.lower_bounds)
         n == 0 && continue
-        r = cm.linkage_fun_offsets[k]+1 : cm.linkage_fun_offsets[k]+n
-        label = _generated(lc.name) ? "link" : lc.name
-        comps = label == "continuity" && n == lc.phase1._n_states + 1 ?
-                [_state_names(lc.phase1); "t"] : _comp_names(n)
-        block = _RowBlock(r, :linkage, label, comps, 0, [])
-        pair  = (lc.phase1.name, lc.phase2.name)
-        if haskey(links, pair)
-            push!(groups[links[pair]].blocks, block)
+        label = _link_label(lc.name)
+        _add_link_block!(groups, links, lc.phase1, lc.phase2,
+                         _RowBlock(cm.linkage_fun_offsets[k] .+ (1:n), :linkage, label,
+                                   _link_comps(label, n, lc.phase1), 0, []))
+    end
+    notes  = _phase_notes([_phase_line(p) for p in cm.phases], cm.n_vars)
+    lg, ug = get_constraint_bounds(cm)
+    return GroupedRows(vars, notes, groups, clocks, lg, ug, Float64(ctol))
+end
+
+# ── Shooting: Sims-Flanagan and MGA phases ───────────────────────────────────────────────────────
+
+# The components of a shooting phase's match-point defect: position, velocity, then mass.
+const _MATCH_POINT_COMPS = ["x", "y", "z", "vx", "vy", "vz", "m"]
+
+# The quantities a shooting phase's scalar and three-component variables stand for, by the field
+# that holds each. The large blocks (throttles, deep-space burns, arc fractions, endpoint states)
+# are counted in the total rather than listed.
+const _SHOOTING_SCALARS = (:t0_var => "initial_time", :tf_var => "final_time",
+                           :m0_var => "initial_mass", :mf_var => "final_mass",
+                           :vinf_dep_var => "departure_vinf", :vinf_arr_var => "arrival_vinf")
+
+# A shooting phase's boundary constraints, which also hold its path constraints lowered to one
+# row per segment: each with its name and whether it was written `at = Path()`. Named as for
+# collocation when the user gave no name.
+function _shooting_constraint_labels(p)
+    cons  = [c for c in _constraints_of(p) if c isa BoundaryConstraint]
+    specs = [sp for sp in phase_specs(p) if sp.kind === :constraint]
+    trusted = length(specs) == length(cons)
+    return map(enumerate(cons)) do (k, c)
+        path = trusted && specs[k].at isa Path
+        _generated(c.calc.name) || return (c.calc.name, path)
+        trusted || return ("constraint $k", false)
+        f = _readable_fname(specs[k].f)
+        f === nothing && return ("constraint $k", path)
+        at = specs[k].at
+        return (at isa Initial ? "$f (initial)" : at isa Final ? "$f (final)" : f, path)
+    end
+end
+
+# The phase line under Variables for a shooting phase. The phase types are defined after this
+# file, so they are tested here rather than dispatched on.
+function _shooting_phase_line(p)
+    p isa SimsFlanaganPhase && return "$(p.name) · SimsFlanagan, $(_count(n_fwd(p) + n_bwd(p), "segment"))"
+    p isa MGAnDSMsPhase     && return "$(p.name) · MGAnDSMs, $(_count(n_dsm(p), "deep-space maneuver"))"
+    return "$(p.name) · $(nameof(typeof(p)))"
+end
+
+# The name of a per-interval defect block: "defect", or "defect_<interval>".
+const _INTERVAL_DEFECT = r"^defects?(?:_(\d+))?$"
+
+# A Sims-Flanagan phase's forward and backward segment counts; (0, 0) for any other phase.
+_segments(p) = p isa SimsFlanaganPhase ? (n_fwd(p), n_bwd(p)) : (0, 0)
+
+"""Rows for a shooting sequence (Sims-Flanagan and MGA phases), from its `ShootingManager`."""
+function ShootingRows(sm, ctol::Real)
+    multi = length(sm.phases) > 1
+    vars, groups, listed = _VarSlot[], _RowGroup[], Set{UInt64}()
+    cols = v -> sm.global_var_ranges[objectid(v)]                     # 1-based columns
+    for p in sm.phases
+        _shooting_vars!(vars, listed, p, cols, multi ? "$(p.name) · " : "")
+    end
+    for (i, p) in enumerate(sm.phases)
+        _shooting_groups!(groups, p, sm.phase_fun_offsets[i] - 1, _phase_tag(multi))
+    end
+    links = Dict{Tuple{UInt64, UInt64}, Int}()
+    for (k, sc) in enumerate(sm.seq_constraints)
+        n = length(sc.lower_bounds)
+        n == 0 && continue
+        label = _link_label(sc.name)
+        _add_link_block!(groups, links, sc.phase1, sc.phase2,
+                         _RowBlock(sm.seq_con_offsets[k] - 1 .+ (1:n), :linkage, label,
+                                   _link_comps(label, n, sc.phase1), 0, []))
+    end
+    notes  = _phase_notes([_phase_line(p) for p in sm.phases], sm.n_vars)
+    lg, ug = get_constraint_bounds(sm)
+    return GroupedRows(vars, notes, groups, _PhaseClock[], lg, ug, Float64(ctol))
+end
+
+# ── Mixed transcriptions: collocation and shooting phases in one problem ─────────────────────────
+
+# The order phases fly in, from the links between them: a phase comes after the phase linked into
+# it. The manager stores collocation phases before shooting ones whatever the script says, so its
+# order is used only where the links do not decide.
+function _flight_order(phases, links)
+    n     = length(phases)
+    index = Dict(objectid(p) => i for (i, p) in enumerate(phases))
+    preds = [Int[] for _ in 1:n]
+    for (a, b) in links
+        ia, ib = get(index, objectid(a), 0), get(index, objectid(b), 0)
+        (ia == 0 || ib == 0 || ia == ib) || push!(preds[ib], ia)
+    end
+    order, placed = Int[], falses(n)
+    while length(order) < n
+        # The first phase in the manager's order whose predecessors are all placed, or, for a
+        # cycle, the first not yet placed.
+        i = something(findfirst(j -> !placed[j] && all(placed[preds[j]]), 1:n),
+                      findfirst(!, placed))
+        placed[i] = true
+        push!(order, i)
+    end
+    return order
+end
+
+"""Rows for a mixed sequence, from its `OCManager`: each phase as its own transcription does."""
+function OCRows(om, ctol::Real)
+    multi = length(om.phases) > 1
+    order = _flight_order(om.phases, [(lk.phase1, lk.phase2) for lk in om.links])
+    vars, groups, listed = _VarSlot[], _RowGroup[], Set{UInt64}()
+    clocks = [_PhaseClock(0, 0, nothing) for _ in om.phases]          # by manager index
+    cols   = v -> om.global_var_ranges[objectid(v)]                   # 1-based columns
+    for i in order
+        p   = om.phases[i]
+        pre = multi ? "$(p.name) · " : ""
+        if p isa CollocationPhase
+            t0, tf = _collocation_vars!(vars, listed, p, cols, pre)
+            clocks[i] = _PhaseClock(t0, tf, build_mesh(p.transcription))
         else
-            push!(groups, _RowGroup("$(pair[1])→$(pair[2]) · link", [block]))
-            links[pair] = length(groups)
+            _shooting_vars!(vars, listed, p, cols, pre)
         end
     end
-
-    lines = ["$(p.name) · $(nameof(typeof(p.transcription))), $(n_control_nodes(p)) nodes"
-             for p in cm.phases]
-    if length(lines) > _MAX_PHASE_LINES
-        lines = [lines[1:_MAX_PHASE_LINES-1]; "+ $(length(lines) - _MAX_PHASE_LINES + 1) more phases"]
+    for i in order
+        p, row0 = om.phases[i], om.phase_fun_offsets[i] - 1
+        p isa CollocationPhase ? _collocation_groups!(groups, p, i, row0, _phase_tag(multi)) :
+                                 _shooting_groups!(groups, p, row0, _phase_tag(multi))
     end
-    append!(notes, lines)
-    push!(notes, "$(cm.n_vars) decision variables")
-
-    lg, ug = get_constraint_bounds(cm)
-    return CollocationRows(vars, notes, groups, clocks, lg, ug, Float64(ctol))
+    links = Dict{Tuple{UInt64, UInt64}, Int}()
+    for (k, lk) in enumerate(om.links)
+        n = length(lk.lower_bounds)
+        n == 0 && continue
+        label = _link_label(lk.name)
+        _add_link_block!(groups, links, lk.phase1, lk.phase2,
+                         _RowBlock(om.link_fun_offsets[k] - 1 .+ (1:n), :linkage, label,
+                                   _link_comps(label, n, lk.phase1), 0, []))
+    end
+    notes  = _phase_notes([_phase_line(om.phases[i]) for i in order], om.n_vars)
+    lg, ug = get_constraint_bounds(om)
+    return GroupedRows(vars, notes, groups, clocks, lg, ug, Float64(ctol))
 end
+
+# ── One phase solved on its own ──────────────────────────────────────────────────────────────────
+
+"""Rows for a single phase solved by itself (`solve!(phase)`), with no manager around it."""
+function PhaseRows(p, ctol::Real)
+    ranges = Dict(objectid(v) => r for (v, r) in zip(variable_list(p), variable_ranges(p)))
+    cols   = v -> ranges[objectid(v)]
+    vars, groups, listed = _VarSlot[], _RowGroup[], Set{UInt64}()
+    clocks = _PhaseClock[]
+    if p isa CollocationPhase
+        t0, tf = _collocation_vars!(vars, listed, p, cols, "")
+        push!(clocks, _PhaseClock(t0, tf, build_mesh(p.transcription)))
+        _collocation_groups!(groups, p, 1, 0, _phase_tag(false))
+    else
+        _shooting_vars!(vars, listed, p, cols, "")
+        _shooting_groups!(groups, p, 0, _phase_tag(false))
+    end
+    notes  = _phase_notes([_phase_line(p)], nlp_length(p))
+    lg, ug = get_constraint_bounds(p)
+    return GroupedRows(vars, notes, groups, clocks, lg, ug, Float64(ctol))
+end
+
 
 _tfmt(t) = @sprintf("%.4g", t)
 
 # The time of node `k` of phase `i` at the current iterate.
-function _node_time(r::CollocationRows, i::Int, k::Int, x)
+function _node_time(r::GroupedRows, i::Int, k::Int, x)
     c = r.clocks[i]
     (c.t0 == 0 || c.tf == 0) && return nothing
     ts = node_times(c.mesh, Float64(x[c.t0]), Float64(x[c.tf]))
@@ -478,7 +777,7 @@ function _fit_where(texts...)
 end
 
 # Which row of `b` the solver-vector row `i` is: a component, and a step or node with its time.
-function _where(r::CollocationRows, b::_RowBlock, i::Int, x)
+function _where(r::GroupedRows, b::_RowBlock, i::Int, x)
     l = i - first(b.rows) + 1
     if b.kind === :defect
         ns   = length(b.comps)
@@ -496,6 +795,23 @@ function _where(r::CollocationRows, b::_RowBlock, i::Int, x)
         at   = "$name @ node $node"
         return t === nothing ? _fit_where(at) :
                _fit_where("$at (t $(_tfmt(t)))", at, "node $node (t $(_tfmt(t)))")
+    elseif b.kind === :segment_path
+        # One row per component per segment: the forward half's segments, then the backward's.
+        n    = length(b.comps)
+        seg  = (l - 1) ÷ n + 1
+        nf   = b.segments[1]
+        name = _with_comp(b.label, b.comps[mod1(l, n)])
+        half, k = seg <= nf ? ("fwd", seg) : ("bwd", seg - nf)
+        return _fit_where("$name @ $half seg $k", "$half seg $k")
+    elseif b.kind === :match_point
+        return b.comps[mod1(l, length(b.comps))]
+    elseif b.kind === :interval_defect
+        # The label is the interval number, empty for a phase with a single interval. A component
+        # with a field name is called by it; one with only an index is a state's component.
+        c    = b.comps[mod1(l, length(b.comps))]
+        comp = all(isdigit, c) ? _with_comp("state", c) : c
+        return isempty(b.label) ? comp : _fit_where("$comp @ interval $(b.label)",
+                                                    "interval $(b.label)")
     else
         return _fit_where(_with_comp(b.label, b.comps[min(l, end)]))
     end
@@ -504,8 +820,8 @@ end
 # A NaN constraint is as unmet as it gets.
 _violation_or_inf(g, lo, hi) = isnan(g) ? Inf : _violation(g, lo, hi)
 
-function monitor_rows(r::CollocationRows, x, g)
-    vars  = [MonitorVar(s.name, s.unit, x[s.index]) for s in r.vars]
+function monitor_rows(r::GroupedRows, x, g)
+    vars  = [MonitorVar(s.name, s.unit, _physical(s, x)) for s in r.vars]
     worst = 0.0
     groups = map(r.groups) do grp
         met, total, werr = 0, 0, 0.0
@@ -541,9 +857,11 @@ mutable struct StatusBox
     nlines::Int                             # lines the last frame drew
     top::Float64                            # the bar's left end: the first frame's measure
     last::Union{Nothing, IterationRecord}
+    log::String                             # IPOPT's log file; empty when it holds nothing
 end
 
-StatusBox() = StatusBox(_inner_width(_term_cols()), _term_live(), 0, NaN, nothing)
+StatusBox(; log::AbstractString = "") =
+    StatusBox(_inner_width(_term_cols()), _term_live(), 0, NaN, nothing, String(log))
 
 _name_width(box) = clamp(box.W - 50, 12, 28)
 _bar_width(box)  = clamp(box.W - 46, 10, 32)
@@ -551,6 +869,36 @@ _box_row(box, s) = "│ " * rpad(_clip(s, box.W - 2), box.W - 2) * " │"
 
 _clip(s, n) = textwidth(s) <= n ? s : first(s, n - 1) * "…"
 _fit(s, n)  = rpad(_clip(s, n), n)
+
+# A row name of the form "phase · what" that is too long loses characters from the phase, not
+# from what follows it: "earth_to_fl… · match point", since the kind or quantity is what tells
+# rows apart. Without the separator, or when even that will not fit, the end is cut as usual.
+const _SEP = " · "
+
+function _fit_name(s, n)
+    textwidth(s) <= n && return rpad(s, n)
+    i = findlast(_SEP, s)
+    if i !== nothing
+        head, tail = s[1:prevind(s, first(i))], s[nextind(s, last(i)):end]
+        room = n - textwidth(_SEP) - textwidth(tail)
+        room >= 4 && return rpad(_clip(head, room) * _SEP * tail, n)
+    end
+    # "quantity @ event": both halves tell goals apart, so both are cut, the longer one first.
+    i = findfirst(_AT, s)
+    if i !== nothing
+        head, tail = s[1:prevind(s, first(i))], s[nextind(s, last(i)):end]
+        room = n - textwidth(_AT)
+        if room >= 8
+            h = min(textwidth(head), max(room - textwidth(tail), room ÷ 2))
+            return rpad(_clip(head, h) * _AT * _clip(tail, room - h), n)
+        end
+    end
+    return _fit(s, n)
+end
+
+const _AT = " @ "
+
+_count(n, noun) = "$n $noun" * (n == 1 ? "" : "s")
 
 # A fixed-width number that switches to exponent form when plain decimals would not fit.
 function _fmt(v::Real; w::Int = 13)
@@ -585,7 +933,7 @@ function _goal_lines!(lines, box, nw, goals::Vector{MonitorGoal})
     shown = length(goals) <= _MAX_GOALS ? goals :
             sort(goals; by = g -> g.met ? -Inf : g.error, rev = true)[1:_MAX_GOALS]
     for g in shown
-        push!(lines, _box_row(box, "  " * _fit(g.name, nw - 2) * " " * _rcol(g.desired, 13) *
+        push!(lines, _box_row(box, "  " * _fit_name(g.name, nw - 2) * " " * _rcol(g.desired, 13) *
                                    " " * _rcol(g.achieved, 13) * "  " * _fit(g.unit, 6) *
                                    @sprintf(" %9.1e ", g.error) * (g.met ? "✓" : "✗")))
     end
@@ -611,7 +959,7 @@ function _goal_lines!(lines, box, nw, groups::Vector{MonitorGroup})
     end
     for g in shown
         ok = _is_met(g)
-        push!(lines, _box_row(box, "  " * _fit(g.name, nw - 2) * " " *
+        push!(lines, _box_row(box, "  " * _fit_name(g.name, nw - 2) * " " *
                                    _rcol("$(g.met)/$(g.total)", _MET_W) * "  " *
                                    _fit(ok ? "" : g.where, _WHERE_W) *
                                    @sprintf(" %9.1e ", g.error) * (ok ? "✓" : "✗")))
@@ -632,7 +980,7 @@ function _frame(box::StatusBox, rec::IterationRecord)
 
     push!(lines, _box_row(box, @sprintf("%-*s %13s  %s", nw, "Variables", "value", "unit")))
     for v in rec.vars[1:min(end, _MAX_VARS)]
-        push!(lines, _box_row(box, "  " * _fit(v.name, nw - 2) * " " * _fmt(v.value) * "  " * v.unit))
+        push!(lines, _box_row(box, "  " * _fit_name(v.name, nw - 2) * " " * _fmt(v.value) * "  " * v.unit))
     end
     length(rec.vars) > _MAX_VARS &&
         push!(lines, _box_row(box, "  + $(length(rec.vars) - _MAX_VARS) more"))
@@ -715,7 +1063,13 @@ Draw the final frame with the solver's exit status, and a one-line summary below
 """
 function finish!(box::StatusBox, status::Symbol)
     rec = box.last
-    rec === nothing && return nothing
+    if rec === nothing
+        # The solver stopped before its first iteration, so there is no frame to draw. Say so,
+        # since the box was the only output asked for.
+        println(stdout, "Stopped before the first iteration ($status)")
+        _say_log(box, status)
+        return nothing
+    end
     final = IterationRecord(rec.solver, rec.problem, rec.iter, rec.vars, rec.notes, rec.goals,
                             rec.objective, rec.inf_pr, rec.inf_du, rec.mu, rec.worst, rec.tol,
                             rec.elapsed, status)
@@ -724,7 +1078,16 @@ function finish!(box::StatusBox, status::Symbol)
     _draw!(box, final)
     verb = _converged(status) ? "Converged in" : "Stopped after"
     @printf(stdout, "%s %d iterations, %.1f s (%s)\n", verb, final.iter, final.elapsed, status)
+    _say_log(box, status)
     box.nlines = 0                          # the final frame stays; nothing redraws over it
+    return nothing
+end
+
+# Where IPOPT's own log is, when the solve did not succeed. With the box on, that file is the only
+# place IPOPT's iteration log goes. The path is printed whole, since a shortened one is no use.
+function _say_log(box::StatusBox, status::Symbol)
+    (_converged(status) || isempty(box.log)) && return nothing
+    println(stdout, "IPOPT log: ", box.log)
     return nothing
 end
 
