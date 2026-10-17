@@ -191,16 +191,15 @@ Constraint(continuity, Link(first_half, second_half))
 
 # Arrive on a circular orbit, as high as the transfer can reach
 final_radius(c) = (y = state(c); sqrt(y.x^2 + y.y^2 + y.z^2))
-circular(c) = (y = state(c); r = sqrt(y.x^2 + y.y^2 + y.z^2);
-               [y.x * y.vx + y.y * y.vy + y.z * y.vz, y.vx^2 + y.vy^2 + y.vz^2 - MU / r])
+circular(c) = (y = state(c); [y.x * y.vx + y.y * y.vy + y.z * y.vz])
 
-Constraint(circular, second_half; equals = [0.0, 0.0], at = Final())
+Constraint(circular, second_half; equals = 0.0, at = Final())
 Objective(final_radius, second_half; sense = Max())
 
 #' ## Solve the problem
 
 # Solve and report the final orbit and handoff continuity
-result = solve!(seq; method = Optimize(max_iter = 5000, tol = 1e-6, monitor = true))
+result = solve!(seq; method = Optimize(max_iter = 1000, tol = 1e-6, monitor = true))
 
 Y = state(second_half)
 handoff = maximum(abs.(Y[:, 1] .- vcat(final_state(first_half), final_mass(first_half))))
@@ -209,46 +208,3 @@ println("status       : ", result.info)
 println("final radius : ", round(norm(Y[1:3, end]), digits = 6))
 println("final mass   : ", round(Y[7, end], digits = 6))
 println("handoff jump : ", round(handoff, sigdigits = 3))
-
-#' ## Plot the Transfer
-#'
-#' `trajectory` returns the Sims-Flanagan arc in flight order, and `state` the collocation mesh.
-#' The forward controls act on the first segments in order. The backward controls are stored from
-#' the arrival end, and each is the impulse added stepping back in time, so the thrust on segment
-#' `N + 1 - k` is the negative of backward control `k`.
-
-# Read the two arcs
-arc = trajectory(first_half)
-N = size(arc, 2) - 1
-mesh = state(second_half)
-directions = control(second_half)
-
-# The thrust on each Sims-Flanagan segment, in flight order, placed at the segment's midpoint
-u_fwd, u_bwd = forward_control(first_half), backward_control(first_half)
-impulses = hcat(u_fwd, -u_bwd[:, end:-1:1])
-mid_x = [0.5 * (arc[1, k] + arc[1, k+1]) for k in 1:N]
-mid_y = [0.5 * (arc[2, k] + arc[2, k+1]) for k in 1:N]
-
-# Build one NaN-separated segment per arrow, scaled to a readable fraction of the figure
-function arrows(x, y, ux, uy, scale)
-    ax, ay = Float64[], Float64[]
-    for k in eachindex(x)
-        push!(ax, x[k], x[k] + scale * ux[k], NaN)
-        push!(ay, y[k], y[k] + scale * uy[k], NaN)
-    end
-    return ax, ay
-end
-xs, ys = vcat(arc[1, :], mesh[1, :]), vcat(arc[2, :], mesh[2, :])
-scale = 0.06 * max(maximum(xs) - minimum(xs), maximum(ys) - minimum(ys))
-sf_ax, sf_ay = arrows(mid_x, mid_y, impulses[1, :] ./ maximum(norm.(eachcol(impulses))),
-                      impulses[2, :] ./ maximum(norm.(eachcol(impulses))), scale)
-hs_ax, hs_ay = arrows(mesh[1, 1:2:end], mesh[2, 1:2:end], directions[1, 1:2:end], directions[2, 1:2:end], scale)
-
-# Draw both halves with their thrust
-xyplot("Mixed Transcription", arc[1, :], arc[2, :]; name = "Sims-Flanagan half")
-xyplot!("Mixed Transcription", mesh[1, :], mesh[2, :]; name = "Hermite-Simpson half")
-xyplot!("Mixed Transcription", sf_ax, sf_ay; name = "Sims-Flanagan impulses")
-xyplot!("Mixed Transcription", hs_ax, hs_ay; name = "Hermite-Simpson thrust direction")
-panel!("Mixed Transcription";
-       xaxis_title = "x  (canonical)", yaxis_title = "y  (canonical)",
-       yaxis_scaleanchor = "x", legend_orientation = "h")
