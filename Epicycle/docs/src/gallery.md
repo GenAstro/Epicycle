@@ -1,6 +1,6 @@
 # Gallery
 
-This gallery shows Epicycle applied to real-world, hard problems.  The examples include precision OD applied to Earth, Lunar, and interplanetary trajectories, global trajectory optimization without apriori knowledge of the solution, dynamical systems theory generating periodic orbits and stable and unstable manifolds, and hybrid optimial control employing collocation and shooting methods in a single problem configuration.   Most entries come from the example scripts in `Epicycle/examples/`; the rest are work in development.  Precision OD and global optimization are work in progress to be inluded in an upcoming production release.  
+This gallery shows Epicycle applied to real-world, hard problems. The examples include precision OD applied to Earth, lunar, and interplanetary trajectories, global trajectory optimization without a priori knowledge of the solution, dynamical systems theory generating periodic orbits and stable and unstable manifolds, and hybrid optimal control employing collocation and shooting methods in a single problem configuration. Most entries come from the example scripts in `Epicycle/examples/`; the rest are work in development. Precision OD and global optimization are work in progress to be included in an upcoming production release.
 
 # LRO Precision OD
 
@@ -25,6 +25,48 @@ A LAGEOS OD solution agrees with DGFI and the ILRS as closely as they agree with
 A MESSENGER OD solution agrees with the navigation team's od431 reconstruction to a few kilometers, and ΔDOR resolves the plane of the sky. The solution processes thirty-five days of MESSENGER's approach to Mercury in 2011, from DSN ramped Doppler, sequential range and ΔDOR against ICRF3 quasars. The fit uses the planets and the Moon as point masses, solar relativity, plate solar radiation pressure on an eight-plate sunshade and both sides of the solar panels oriented by the reconstructed attitude, Moyer's corona model in every leg of the light time, and the DSN troposphere and ionosphere calibrations. It estimates 39 parameters: the state, six plate-group scale factors, the sunshade reflectivities, the corona strength, ten range biases and fourteen three-way Doppler biases. The batch estimator and the epoch-state square-root information filter reach the same solution. Epicycle's solution differs from od431 by 1.0 km radial, 2.1 km along-track and 1.2 km cross-track RMS, and by 13 nrad on the plane of the sky; without ΔDOR the difference reaches 21 km.
 
 ![MESSENGER residuals](assets/gallery/MESSENGER_Residuals.png)
+
+# Propagation Accuracy and Speed
+
+Epicycle's propagator compared with GMAT R2026A and Orekit 13.1 on one day of low Earth orbit with
+a full force model: EGM96 70 × 70 gravity with solid tides, the Sun and Moon from DE440, drag, solar
+radiation pressure with Earth's shadow, and relativity. Each tool's high-accuracy reference run is
+compared with the others' to measure how well the force models agree, and each timed run is
+compared with its own tool's reference to measure its integration error.
+
+| Reference runs after one day | Position difference | Velocity difference |
+|:---|---:|---:|
+| Epicycle and Orekit | 0.6 mm | 0.7 µm/s |
+| Epicycle and GMAT | 11.0 cm | 99.5 µm/s |
+
+The difference from GMAT comes from a convention for Earth's axes: Epicycle applies the IERS
+celestial-pole offsets and GMAT's Earth-fixed frame does not. With GMAT's convention the two agree
+to 2.3 cm.
+
+| Fastest setting reaching a few millimetres | Setting | Position error | Time |
+|:---|:---|---:|---:|
+| Epicycle | Verner 7, 1e-11 | 0.2 mm | 0.25 s |
+| GMAT | RungeKutta89, 1e-9 | 3.1 mm | 0.49 s |
+| Orekit | Dormand-Prince 8(5,3), 1e-8 m | 8.0 mm | 1.20 s |
+
+With matched methods and tolerances Epicycle's runs are 2.0 to 3.1 times shorter, and with the
+same 10 s fixed step about 2.2 times shorter. The full comparison, with the method and machine, is
+on the [Benchmarks](benchmarks.md) page, and the force models compared one at a time over five
+orbits are on the [Verification](verification.md) page.
+
+# Time, Frames and States
+
+Precision orbit determination depends on time scales, Earth orientation and coordinate frames being correct to well below the measurement noise. The OD solutions above worked on their first run because these models were verified first, each against a reference implementation.
+
+| What | Checked against | Agreement |
+|:---|:---|:---|
+| Time scales and formats, 1,790 epochs in six scales | Astropy 8.0.1 (ERFA, the IAU's SOFA) | Bit identical |
+| Earth frames, IAU 2006/2000A and FK5 chains | pyerfa (ERFA, the IAU's SOFA) | Under 2.5 µas |
+| Body-fixed axes, the Sun and nine planets | SPICE `sxform` with `pck00011` | Under 10 µas |
+| Lunar frames | SPICE `sxform` with the DE440 lunar kernels | Under 0.03 µas |
+
+The details, with every known difference from each reference, are on the
+[Verification](verification.md) page.
 
 # GEO Transfer
 
@@ -217,3 +259,7 @@ A view of Earth and an orbit.
 This is `Ex_HohmannTransfer.jl` open in VS Code with the solver report in the terminal.
 
 ![Epicycle in VS Code](assets/gallery/Ex_IDE_View.png)
+
+# Future Work
+
+Future work will extend the orbit determination toward estimating gravity fields from tracking data, and toward covariance realism in nonlinear filters, using Gaussian mixtures for non-Gaussian uncertainty with high-order derivatives computed to machine precision. We are also investigating nonlinear programming for orbit determination, to see what large, sparse nonlinear solvers can bring to optimal estimation. We also plan to implement closed-loop navigation and control, with the filter and the controller in one loop.
