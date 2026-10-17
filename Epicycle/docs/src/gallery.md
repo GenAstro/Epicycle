@@ -160,24 +160,31 @@ evolve!(search)
 
 ![Europa Clipper best transfers](assets/gallery/GlobalSearch_Europa_Clipper_Best.png)
 
-Low-thrust transfers to Jupiter and Saturn for a 1500 kg spacecraft with a 0.1 N, 3000 s electric
-thruster, launching between 2030 and 2040 at up to 4 km/s, ten years of flight at most, and up to
-four flybys. Each leg is a Sims-Flanagan transcription, and the cost is the mass delivered after a
-chemical orbit insertion. These searches ran before the survey was added, so they are the genetic
-algorithm alone. Each of the three best was then solved again with every segment under 5 % throttle held at zero, so the coasts carry no residual thrust. The best to Jupiter delivers 1134 kg on a Mars, Earth, Earth tour; the best to Saturn delivers
-1284 kg through Earth twice and Jupiter. Thrust arcs are orange.
+Solar-electric transfers to Jupiter and Saturn, launched on a Falcon 9 between 2030 and 2040, with
+ten years of flight at most and up to four flybys. The launch mass follows the launch C3 on the
+Falcon 9 performance curve, and two NEXT-class thrusters give 0.47 N at 4100 s with full power at
+1 AU, falling as 1/r² beyond. Each leg is a Sims-Flanagan transcription, and the cost is the mass
+delivered after a chemical orbit insertion. Each search surveyed every sequence before the genetic
+algorithm ran, and each of the best transfers was then solved again with every segment under 5 %
+throttle held at zero, so the coasts carry no residual thrust. The best to Jupiter launches 3280 kg
+on an Earth, Mars, Mars, Mars tour, burns 316 kg of propellant and delivers 2394 kg; the best to
+Saturn launches 3280 kg through Earth twice and Jupiter, burns 259 kg and delivers 2736 kg. Thrust
+arcs are orange, with the thrust direction in red.
 
 ```julia
 using Epicycle
 
+falcon9 = LaunchVehicle(name = "Falcon 9 (ASDS)",
+                        coefficients = [3310.0, -105.4538, -2.663866, 0.2309244], max_c3 = 10.0)
+spacecraft = LowThrustSpacecraft(Isp = 4100.0, thrust = 0.47, power = SolarPower())
+
 R_J = 71492.0
-spacecraft = LowThrustSpacecraft(mass = 1500.0, Isp = 3000.0, thrust = 0.1)
 to_jupiter = LowThrustMission(departure = earth, target = jupiter,
                               flyby_bodies = [venus, earth, mars], max_flybys = 4,
-                              launch_window = ("2030-01-01", "2040-01-01"),
-                              max_flight_time = 3652.5, max_launch_vinf = 4.0, spacecraft = spacecraft,
+                              launch_window = ("2030-01-01", "2040-01-01"), max_flight_time = 3652.5,
+                              spacecraft = spacecraft, launch_vehicle = falcon9,
                               arrival = OrbitInsertion(periapsis = 4R_J, apoapsis = 150R_J, Isp = 320.0))
-search = GlobalSearch(to_jupiter; folder = "jupiter", population = 150, generations = 300, workers = 5)
+search = GlobalSearch(to_jupiter; folder = "jupiter", population = 150, generations = 100, workers = 5)
 evolve!(search)
 ```
 
