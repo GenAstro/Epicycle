@@ -2,18 +2,6 @@
 
 Output from the example scripts that ship in `Epicycle/examples/` and from work in development.
 
-## A Trajectory on the Globe
-
-A view of Earth and an orbit.
-
-![Earth view with trajectory](assets/gallery/Ex_EarthViewWithTrajectory.png)
-
-## Working in the Editor
-
-This is `Ex_HohmannTransfer.jl` open in VS Code with the solver report in the terminal.
-
-![Epicycle in VS Code](assets/gallery/Ex_IDE_View.png)
-
 ## OD Solutions from Real Tracking Data
 
 Two days of the Lunar Reconnaissance Orbiter from the S-band Doppler and range of the NASA ground
@@ -134,8 +122,6 @@ search = GlobalSearch(cassini; folder = "cassini", population = 150, generations
 evolve!(search)
 ```
 
-![Cassini search](assets/gallery/GlobalSearch_Cassini_Search.png)
-
 ![Cassini best transfers](assets/gallery/GlobalSearch_Cassini_Best.png)
 
 Europa Clipper, in its 2024 launch period at its launch requirement of C3 up to 41.69 km²/s², six
@@ -155,8 +141,6 @@ clipper = ImpulsiveMission(departure = earth, target = jupiter,
 search = GlobalSearch(clipper; folder = "clipper", population = 150, generations = 20, workers = 5)
 evolve!(search)
 ```
-
-![Europa Clipper search](assets/gallery/GlobalSearch_Europa_Clipper_Search.png)
 
 ![Europa Clipper best transfers](assets/gallery/GlobalSearch_Europa_Clipper_Best.png)
 
@@ -188,14 +172,10 @@ search = GlobalSearch(to_jupiter; folder = "jupiter", population = 150, generati
 evolve!(search)
 ```
 
-![Low-thrust Jupiter search](assets/gallery/GlobalSearch_LowThrust_Jupiter_Search.png)
-
 ![Low-thrust Jupiter best transfers](assets/gallery/GlobalSearch_LowThrust_Jupiter_Best.png)
 
 The Saturn search is the same with Jupiter among the flyby bodies, no closer than 3 Jupiter radii,
 and insertion into a 1.3 × 150 Saturn-radii orbit.
-
-![Low-thrust Saturn search](assets/gallery/GlobalSearch_LowThrust_Saturn_Search.png)
 
 ![Low-thrust Saturn best transfers](assets/gallery/GlobalSearch_LowThrust_Saturn_Best.png)
 
@@ -238,3 +218,15 @@ recorded at each update.
 A gallery of supported data visualization styles.
 
 ![Plot examples](assets/gallery/Ex_PlotExamples.png)
+
+## A Trajectory on the Globe
+
+A view of Earth and an orbit.
+
+![Earth view with trajectory](assets/gallery/Ex_EarthViewWithTrajectory.png)
+
+## Working in the Editor
+
+This is `Ex_HohmannTransfer.jl` open in VS Code with the solver report in the terminal.
+
+![Epicycle in VS Code](assets/gallery/Ex_IDE_View.png)
