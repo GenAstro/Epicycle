@@ -19,12 +19,6 @@ maneuvers, the same events used in mission design, and their ΔV is estimated. P
 
 ![Juno DSN residuals](assets/gallery/Juno_Slews_Residuals.png)
 
-The same fit differenced with JPL's reconstruction, with the slews estimated, held at the file's
-values and left out. Estimating them brings the RMS difference to 1.4 km radial, 7.1 km along-track
-and 20 km cross-track.
-
-![Juno against JPL's reconstruction](assets/gallery/Juno_Slews_Compare.png)
-
 A week of LAGEOS-1 laser ranging from the ILRS normal points, with the IERS station displacements,
 sub-daily Earth orientation and the Mendes-Pavlis troposphere. Post-fit residuals of 6.5 mm over
 twenty-one stations; the hollow points are the normal points the editing left out.
