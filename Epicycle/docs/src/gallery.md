@@ -1,6 +1,6 @@
 # Gallery
 
-This gallery shows Epicycle applied to real-world, hard problems. The examples include precision OD applied to Earth, lunar, and interplanetary trajectories, global trajectory optimization without a priori knowledge of the solution, dynamical systems theory generating periodic orbits and stable and unstable manifolds, and hybrid optimal control employing collocation and shooting methods in a single problem configuration. Most entries come from the example scripts in `Epicycle/examples/`; the rest are work in development. Precision OD and global optimization are work in progress to be included in an upcoming production release.
+This gallery shows Epicycle applied to real-world, hard problems. The examples include precision OD applied to Earth, lunar, and interplanetary trajectories, global trajectory optimization without a priori knowledge of the solution, dynamical systems theory generating periodic orbits and stable and unstable manifolds, and hybrid optimal control employing collocation and shooting methods in a single problem configuration. Some entries come from the example scripts in `Epicycle/examples/`; the rest are work in development. Precision OD and global optimization are work in progress to be included in an upcoming production release.
 
 # LRO Precision OD
 
@@ -14,7 +14,7 @@ The filter's empirical accelerations, modeled as a first-order Gauss-Markov proc
 
 # MESSENGER OD with ΔDOR
 
-A MESSENGER OD solution agrees with the navigation team's od431 reconstruction to a few kilometers, and ΔDOR resolves the plane of the sky. The solution processes thirty-five days of MESSENGER's approach to Mercury in 2011, from DSN ramped Doppler, sequential range and ΔDOR against ICRF3 quasars. The fit uses the planets and the Moon as point masses, solar relativity, plate solar radiation pressure on an eight-plate sunshade and both sides of the solar panels oriented by the reconstructed attitude, Moyer's corona model in every leg of the light time, and the DSN troposphere and ionosphere calibrations. It estimates 39 parameters: the state, six plate-group scale factors, the sunshade reflectivities, the corona strength, ten range biases and fourteen three-way Doppler biases. The batch estimator and the epoch-state square-root information filter reach the same solution. Epicycle's solution differs from od431 (JPL's published ephemeris solution) by 1.0 km radial, 2.1 km along-track and 1.2 km cross-track RMS, and by 13 nrad on the plane of the sky; without ΔDOR the difference reaches 21 km.
+A MESSENGER OD solution agrees with the navigation team's od431 reconstruction to a few kilometers, and ΔDOR resolves the plane of the sky. The solution processes thirty-five days of MESSENGER's approach to Mercury in 2011, from DSN ramped Doppler, sequential range and ΔDOR against ICRF3 quasars. The fit uses the planets and the Moon as point masses, solar relativity, plate solar radiation pressure on an eight-plate sunshade and both sides of the solar panels oriented by the reconstructed attitude, Moyer's corona model in every leg of the light time, and the DSN troposphere and ionosphere calibrations. It estimates 39 parameters: the state, six plate-group scale factors, the sunshade reflectivities, the corona strength, ten range biases and fourteen three-way Doppler biases. The batch estimator and the epoch-state square-root information filter reach the same solution. Epicycle's solution differs from the navigation team's od431 reconstruction by 1.0 km radial, 2.1 km along-track and 1.2 km cross-track RMS, and by 13 nrad on the plane of the sky; without ΔDOR the difference reaches 21 km.
 
 ![MESSENGER residuals](assets/gallery/MESSENGER_Residuals.png)
 
@@ -32,31 +32,22 @@ A LAGEOS OD solution agrees with DGFI and the ILRS as closely as they agree with
 
 # Propagation Accuracy and Speed
 
-Epicycle's propagator compared with GMAT R2026A and Orekit 13.1 on one day of low Earth orbit with
-a full force model: EGM96 70 × 70 gravity with solid tides, the Sun and Moon from DE440, drag, solar
-radiation pressure with Earth's shadow, and relativity. Each tool's high-accuracy reference run is
-compared with the others' to measure how well the force models agree, and each timed run is
-compared with its own tool's reference to measure its integration error.
+Epicycle's propagator is compared with GMAT R2026A and Orekit 13.1 on one day of low Earth orbit with a full force model: EGM96 70 × 70 gravity with solid tides, the Sun and Moon from DE440, drag, solar radiation pressure with Earth's shadow, and relativity. Each tool's high-accuracy reference run is compared with the others' to measure how well the force models agree, and each timed run is compared with its own tool's reference to measure its integration error.
 
 | Reference runs after one day | Position difference | Velocity difference |
 |:---|---:|---:|
 | Epicycle and Orekit | 0.6 mm | 0.7 µm/s |
 | Epicycle and GMAT | 11.0 cm | 99.5 µm/s |
 
-The difference from GMAT comes from a convention for Earth's axes: Epicycle applies the IERS
-celestial-pole offsets and GMAT's Earth-fixed frame does not. With GMAT's convention the two agree
-to 2.3 cm.
+The difference from GMAT comes from a convention for Earth's axes: Epicycle applies the IERS celestial-pole offsets and GMAT's Earth-fixed frame does not. With GMAT's convention the two agree to 2.3 cm.
 
-| Fastest setting reaching a few millimetres | Setting | Position error | Time |
+| Fastest setting reaching a few millimeters | Setting | Position error | Time |
 |:---|:---|---:|---:|
 | Epicycle | Verner 7, 1e-11 | 0.2 mm | 0.25 s |
 | GMAT | RungeKutta89, 1e-9 | 3.1 mm | 0.49 s |
 | Orekit | Dormand-Prince 8(5,3), 1e-8 m | 8.0 mm | 1.20 s |
 
-With matched methods and tolerances Epicycle's runs are 2.0 to 3.1 times shorter, and with the
-same 10 s fixed step about 2.2 times shorter. The full comparison, with the method and machine, is
-on the [Benchmarks](benchmarks.md) page, and the force models compared one at a time over five
-orbits are on the [Verification](verification.md) page.
+With matched methods and tolerances Epicycle's runs are 2.0 to 3.1 times shorter, and with the same 10 s fixed step about 2.2 times shorter. The full comparison, with the method and machine, is on the [Benchmarks](benchmarks.md) page, and the force models compared one at a time over five orbits are on the [Verification](verification.md) page.
 
 # Time, Frames and States
 
@@ -69,8 +60,7 @@ Precision orbit determination depends on time scales, Earth orientation and coor
 | Body-fixed axes, the Sun and nine planets | SPICE `sxform` with `pck00011` | Under 10 µas |
 | Lunar frames | SPICE `sxform` with the DE440 lunar kernels | Under 0.03 µas |
 
-The details, with every known difference from each reference, are on the
-[Verification](verification.md) page.
+The details, with every known difference from each reference, are on the [Verification](verification.md) page.
 
 # GEO Transfer
 
@@ -122,7 +112,7 @@ A transfer from an L1 to an L2 Lyapunov orbit of equal energy in the Earth-Moon 
 
 # Gravity Assist
 
-An Earth-Earth-Venus trajectory that maximizes the mass delivered into a Venus parking orbit, with a launch vehicle mass model, a C3 limit and a minimum flyby altitude. Each leg is a patched-conic arc with one deep-space maneuver, and IPOPT solves for the epochs, v∞ and maneuvers. The solution delivers 91.6 kg after 512 days.
+An Earth-Earth-Venus trajectory, with circular coplanar planet orbits, that maximizes the mass delivered into a Venus parking orbit, with a launch vehicle mass model, a C3 limit and a minimum flyby altitude. Each leg is a patched-conic arc with one deep-space maneuver, and IPOPT solves for the epochs, v∞ and maneuvers. The solution delivers 91.6 kg after 512 days.
 
 ![Gravity assist](assets/gallery/Ex_GravityAssistMGA.avif)
 
@@ -147,7 +137,7 @@ evolve!(search)
 
 # Europa Clipper Global Search
 
-A global search finds Europa Clipper's flyby sequence and its Mars flyby date with no a priori information. The search covers Clipper's 2024 launch period at its maximum launch C3 of 41.69 km²/s², with up to four flybys of Venus, Earth and Mars, at most six years of flight, and insertion into an 11 × 265 Jupiter-radii orbit. The sequence Clipper flew, Mars then Earth, comes second at 1.309 km/s, 10 m/s behind a Mars, Venus, Earth tour. It launches on 17 October 2024 and flies Mars on 1 March 2025, the day Clipper did.
+A global search finds the flyby sequence Europa Clipper flew, and its Mars flyby date, without being given either. The search covers Clipper's 2024 launch period at its maximum launch C3 of 41.69 km²/s², with up to four flybys of Venus, Earth and Mars, at most six years of flight, and insertion into an 11 × 265 Jupiter-radii orbit. The sequence Clipper flew, Mars then Earth, comes second at 1.309 km/s, 10 m/s behind a Mars, Venus, Earth tour. It launches on 17 October 2024 and flies Mars on 1 March 2025, the day Clipper did.
 
 ![Europa Clipper best transfers](assets/gallery/GlobalSearch_Europa_Clipper_Best.png)
 
@@ -165,9 +155,7 @@ A low-thrust global search to Saturn delivers 2736 kg. It is set up as the Jupit
 
 # Halo Orbit Manifolds
 
-A Sun-Earth L2 halo orbit with an out-of-plane amplitude of about 200,000 km, started from JPL's
-three-body periodic orbit catalog, with its stable manifold in the circular restricted three-body
-problem. The red trajectories are the transfers from near Earth with the lowest perigee.
+A Sun-Earth L2 halo orbit with an out-of-plane amplitude of about 200,000 km, started from JPL's three-body periodic orbit catalog, with its stable manifold in the circular restricted three-body problem. The red trajectories are the transfers from near Earth with the lowest perigee.
 
 ![Halo orbit and its stable manifold](assets/gallery/HaloManifolds.png)
 
@@ -179,8 +167,7 @@ The Sun-Earth L2 northern halo family, solved using continuation with Bifurcatio
 
 # Stepped Kalman Filter
 
-Stepping the filter one observation at a time, with the postfit residuals and the formal sigma
-recorded at each update.
+Stepping the filter one observation at a time, with the postfit residuals and the formal sigma recorded at each update.
 
 ![Stepped Kalman filter](assets/gallery/Ex_SteppedKalmanFilter.png)
 
