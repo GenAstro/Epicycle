@@ -27,15 +27,11 @@ twenty-one stations; the hollow points are the normal points the editing left ou
 
 Thirty-five days of MESSENGER's approach to Mercury in 2011 from DSN Doppler, range and ΔDOR, with
 an eight-plate sunshade and solar panels oriented by the reconstructed attitude, and Moyer's solar
-corona model. Post-fit residuals in Hz, meters and seconds.
+corona model. Post-fit residuals in Hz, meters and seconds. With ΔDOR the solution stays within
+4.3 km of the navigation team's od431 reconstruction over the 35 days; without it the difference
+reaches 21 km.
 
 ![MESSENGER residuals](assets/gallery/MESSENGER_Residuals.png)
-
-The same fit differenced with the navigation team's od431 reconstruction: 1.0 km radial, 2.1 km
-along-track, 1.2 km cross-track and 13 nrad on the plane of the sky. Without ΔDOR the cross-track
-difference grows to 13.5 km.
-
-![MESSENGER against od431, with and without ΔDOR](assets/gallery/MESSENGER_DDOR_Compare.png)
 
 ## Propagation and Targeting
 
