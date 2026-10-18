@@ -19,46 +19,95 @@
 # =============================================================================
 
 """
-    element(StateT, subject, cs, field) -> value
-    element(StateT, subject, cs, field, params) -> value
+    element(subject, StateT[, cs], field[, params]) -> value
 
-One element of representation `StateT`, read in `cs`.
+One element of representation `StateT` of `subject`, measured in `cs` or the subject's own frame.
 
-The gravitational parameter comes from the coordinate system's origin, so it is
-not a separate argument.
+# Arguments
+- `subject`: a `Spacecraft`, an `AstroFrames.Coordinate`, or anything else implementing the
+  subject interface.
+- `StateT`: the representation, such as `KeplerianState` or `DelaunayState`.
+- `cs`: the coordinate system the element is measured in.
+- `field`: the element's field name in `StateT`, such as `:sma`; see `to_vector` for each
+  representation's fields.
+- `params`: data for an orbit-relative coordinate system, as the other readers take it.
+
+# Notes
+- The subject comes first, as for every quantity, so `element` works wherever a quantity does:
+  `history(Calc(element, sat, KeplerianState, :sma))`, `StopAt(element, sat, DelaunayState, :l;
+  equals = π)`, `Constraint`, and `Vary` on a spacecraft.
+- In a `Calc`, it is labelled by representation and field, "Delaunay L", with the field's unit.
+- The gravitational parameter comes from the coordinate system's origin.
+- Settable on a spacecraft with [`element!`](@ref).
+
+# Returns
+The field's value, in its own units: km, km/s, rad, km²/s or km²/s², or dimensionless.
 
 # Examples
 ```julia
-element(KeplerianState,         sat, EarthMJ2000Eq, :sma)
-element(OutGoingAsymptoteState, sat, EarthMJ2000Eq, :c3)
+sat = Spacecraft(state = CartesianState([7000.0, 300.0, 1200.0, -0.4, 7.4, 0.9]))
+element(sat, KeplerianState, :sma)
+element(sat, OutGoingAsymptoteState, EarthMJ2000Eq, :c3)
+element(sat, DelaunayState, EarthMJ2000Ec, :H)
 ```
-
-# Returns
-The requested field from `StateT`. Units follow the selected state field.
 """
-function element(StateT, subject, cs::AbstractCoordinateSystem, field::Symbol,
+function element(subject, StateT::Type, cs::AbstractCoordinateSystem, field::Symbol,
                  params::NamedTuple)
     cart = CartesianState(Coordinate(subject, cs, params))
     return getfield(StateT(cart, get_gravparam(cs.origin)), field)
 end
 
-element(StateT, subject, cs::AbstractCoordinateSystem, field::Symbol) =
-    element(StateT, subject, cs, field, NamedTuple())
+element(subject, StateT::Type, cs::AbstractCoordinateSystem, field::Symbol) =
+    element(subject, StateT, cs, field, NamedTuple())
 
-element(StateT, subject, field::Symbol) =
-    element(StateT, subject, frame_of(subject), field, NamedTuple())
+element(subject, StateT::Type, field::Symbol) =
+    element(subject, StateT, frame_of(subject), field, NamedTuple())
 
 """
-    set_element!(StateT, subject, cs, field[, params]; to) -> subject
+    element!(sat, StateT[, cs], field[, params]; to) -> sat
 
-Write one element of representation `StateT`, measured in `cs`, holding the rest of the
-representation. The write counterpart of [`element`](@ref), and the one place a setter
-converts: the subject's state is read into `StateT` in `cs`, `field` is replaced by `to`, and the
-result is converted back and stored through [`set_state!`](@ref) in the subject's own frame.
+Set one element of representation `StateT` of `sat` to `to`, measured in `cs` or the
+spacecraft's own frame, holding the rest of the representation in that frame.
 
 # Arguments
-- `StateT`: the representation the element belongs to, such as `KeplerianState`.
+See [`element`](@ref).
+- `to`: the new value, in the units of the field.
+
+# Returns
+`sat`, mutated. Throws `ArgumentError`, and leaves `sat` unchanged, when the elements that
+result do not describe an orbit.
+
+# Examples
+```julia
+sat = Spacecraft(state = CartesianState([7000.0, 300.0, 1200.0, -0.4, 7.4, 0.9]))
+element!(sat, EquinoctialState, :h; to = 0.0)
+element!(sat, DelaunayState, EarthMJ2000Eq, :l; to = 1.0)
+```
+"""
+element!(sat::Spacecraft, StateT::Type, cs::AbstractCoordinateSystem, field::Symbol,
+         params::NamedTuple = NamedTuple(); to) =
+    set_element!(sat, StateT, cs, field, params; to = to)
+element!(sat::Spacecraft, StateT::Type, field::Symbol; to) =
+    set_element!(sat, StateT, frame_of(sat), field; to = to)
+
+EpicycleBase.set_quantity!(sat::Spacecraft, ::typeof(element), StateT::Type,
+                           cs::AbstractCoordinateSystem, field::Symbol,
+                           params::NamedTuple = NamedTuple(); to) =
+    element!(sat, StateT, cs, field, params; to = to)
+EpicycleBase.set_quantity!(sat::Spacecraft, ::typeof(element), StateT::Type, field::Symbol; to) =
+    element!(sat, StateT, field; to = to)
+
+"""
+    set_element!(subject, StateT, cs, field[, params]; to) -> subject
+
+Write one element of representation `StateT`, measured in `cs`, holding the rest of the
+representation. The one place a setter converts: the subject's state is read into `StateT` in
+`cs`, `field` is replaced by `to`, and the result is converted back and stored through
+[`set_state!`](@ref) in the subject's own frame. [`element!`](@ref) is the user-facing form.
+
+# Arguments
 - `subject`: a subject with a `set_state!` method.
+- `StateT`: the representation the element belongs to, such as `KeplerianState`.
 - `cs`: the coordinate system the element is measured in.
 - `field`: the element's field name in `StateT`, such as `:sma`.
 - `params`: data for an orbit-relative coordinate system, as the readers take it.
@@ -68,12 +117,14 @@ result is converted back and stored through [`set_state!`](@ref) in the subject'
 `subject`, mutated. Throws `ArgumentError` when the new elements do not define an orbit, and
 leaves the subject unchanged.
 """
-function set_element!(StateT, subject, cs::AbstractCoordinateSystem, field::Symbol,
+function set_element!(subject, StateT::Type, cs::AbstractCoordinateSystem, field::Symbol,
                       params::NamedTuple = NamedTuple(); to)
     mu   = get_gravparam(cs.origin)
     held = StateT(CartesianState(Coordinate(subject, cs, params)), mu)
     vals = [f === field ? to : getfield(held, f) for f in fieldnames(typeof(held))]
-    new  = StateT(promote(vals...)...)
+    # Six numbers promote to one type; a Cartesian state's two vectors go to its own constructor,
+    # which converts them.
+    new  = all(v -> v isa Number, vals) ? StateT(promote(vals...)...) : StateT(vals...)
     _check_elements(new)
     cart = CartesianState(new, mu)
     all(isfinite, to_vector(cart)) || throw(ArgumentError(
@@ -153,11 +204,11 @@ for (fn, field, what) in
          (:true_anomaly,         :ta,   "True anomaly, in radians."))
     @eval begin
         $fn(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
-            element(KeplerianState, subject, cs, $(QuoteNode(field)), params)
+            element(subject, KeplerianState, cs, $(QuoteNode(field)), params)
         $fn(subject, cs::AbstractCoordinateSystem) =
-            element(KeplerianState, subject, cs, $(QuoteNode(field)))
+            element(subject, KeplerianState, cs, $(QuoteNode(field)))
         $fn(subject) =
-            element(KeplerianState, subject, frame_of(subject), $(QuoteNode(field)))
+            element(subject, KeplerianState, frame_of(subject), $(QuoteNode(field)))
     end
 end
 
@@ -195,7 +246,7 @@ for (fn, field, what, unit) in
     @eval begin
         function $fn!(sat::Spacecraft, cs::AbstractCoordinateSystem = frame_of(sat),
                       params::NamedTuple = NamedTuple(); to::Real)
-            return set_element!(KeplerianState, sat, cs, $(QuoteNode(field)), params; to = to)
+            return set_element!(sat, KeplerianState, cs, $(QuoteNode(field)), params; to = to)
         end
         @doc $doc $fn!
         EpicycleBase.set_quantity!(sat::Spacecraft, ::typeof($fn),
@@ -301,11 +352,11 @@ mean_long_sma(sat, EarthMJ2000Eq)
 ```
 """
 mean_long_sma(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
-    element(BrouwerMeanLongState, subject, cs, :sma, params)
+    element(subject, BrouwerMeanLongState, cs, :sma, params)
 mean_long_sma(subject, cs::AbstractCoordinateSystem) =
-    element(BrouwerMeanLongState, subject, cs, :sma)
+    element(subject, BrouwerMeanLongState, cs, :sma)
 mean_long_sma(subject) =
-    element(BrouwerMeanLongState, subject, frame_of(subject), :sma)
+    element(subject, BrouwerMeanLongState, frame_of(subject), :sma)
 
 """
     mean_long_sma!(sat[, cs][, params]; to) -> sat
@@ -330,7 +381,7 @@ mean_long_sma!(sat; to = 7000.0)
 """
 mean_long_sma!(sat::Spacecraft, cs::AbstractCoordinateSystem = frame_of(sat),
                params::NamedTuple = NamedTuple(); to::Real) =
-    set_element!(BrouwerMeanLongState, sat, cs, :sma, params; to = to)
+    set_element!(sat, BrouwerMeanLongState, cs, :sma, params; to = to)
 
 EpicycleBase.set_quantity!(sat::Spacecraft, ::typeof(mean_long_sma),
                            cs::AbstractCoordinateSystem = frame_of(sat),
@@ -357,11 +408,11 @@ outgoing_rla(sat, EarthMJ2000Eq)
 ```
 """
 outgoing_rla(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
-    element(OutGoingAsymptoteState, subject, cs, :rla, params)
+    element(subject, OutGoingAsymptoteState, cs, :rla, params)
 outgoing_rla(subject, cs::AbstractCoordinateSystem) =
-    element(OutGoingAsymptoteState, subject, cs, :rla)
+    element(subject, OutGoingAsymptoteState, cs, :rla)
 outgoing_rla(subject) =
-    element(OutGoingAsymptoteState, subject, frame_of(subject), :rla)
+    element(subject, OutGoingAsymptoteState, frame_of(subject), :rla)
 
 # --- position and velocity components ---------------------------------------
 
@@ -547,7 +598,7 @@ for (fn, field, what, unit) in
                       params::NamedTuple = NamedTuple(); to::Real)
             $fn(sat, cs, params) > 0 || throw(ArgumentError(
                 $("the $what is zero, so there is no direction to hold; set the vector instead.")))
-            return set_element!(SphericalRADECState, sat, cs, $(QuoteNode(field)), params; to = to)
+            return set_element!(sat, SphericalRADECState, cs, $(QuoteNode(field)), params; to = to)
         end
         @doc $doc $fn!
         EpicycleBase.set_quantity!(sat::Spacecraft, ::typeof($fn),
@@ -895,6 +946,61 @@ EpicycleBase.label(::typeof(mean_long_sma))        = "Long-period mean semi-majo
 EpicycleBase.label(::typeof(outgoing_rla))         = "Outgoing RLA"
 EpicycleBase.label(::typeof(delta_v_magnitude))    = "Delta-V magnitude"
 EpicycleBase.label(::typeof(gravitational_parameter)) = "Gravitational parameter"
+EpicycleBase.label(::typeof(element))              = "Orbit element"
+
+# What one element of a representation is: its unit, and whether it is an angle that wraps at 2π.
+# A field name alone is not enough, because the sets reuse names: `h` is dimensionless in the
+# equinoctial sets and an angle in the Delaunay set, `L` is an angle in the modified equinoctial
+# set and a momentum in the Delaunay set. A `Calc` of `element` reads its label, unit and wrap
+# from here, so it reports as "Delaunay L, km²/s".
+const _ELEMENT_TRAITS = Dict{Tuple{Symbol, Symbol}, Tuple{String, Bool}}(
+    (:CartesianState, :position) => ("km", false), (:CartesianState, :velocity) => ("km/s", false),
+    (:KeplerianState, :sma) => ("km", false), (:KeplerianState, :ecc) => ("", false),
+    (:KeplerianState, :inc) => ("rad", false), (:KeplerianState, :raan) => ("rad", true),
+    (:KeplerianState, :aop) => ("rad", true), (:KeplerianState, :ta) => ("rad", true),
+    (:ModifiedKeplerianState, :rp) => ("km", false), (:ModifiedKeplerianState, :ra) => ("km", false),
+    (:ModifiedKeplerianState, :inc) => ("rad", false), (:ModifiedKeplerianState, :raan) => ("rad", true),
+    (:ModifiedKeplerianState, :aop) => ("rad", true), (:ModifiedKeplerianState, :ta) => ("rad", true),
+    (:SphericalRADECState, :r) => ("km", false), (:SphericalRADECState, :ra) => ("rad", true),
+    (:SphericalRADECState, :dec) => ("rad", false), (:SphericalRADECState, :v) => ("km/s", false),
+    (:SphericalRADECState, :rav) => ("rad", true), (:SphericalRADECState, :decv) => ("rad", false),
+    (:SphericalAZIFPAState, :r) => ("km", false), (:SphericalAZIFPAState, :ra) => ("rad", true),
+    (:SphericalAZIFPAState, :dec) => ("rad", false), (:SphericalAZIFPAState, :v) => ("km/s", false),
+    (:SphericalAZIFPAState, :vazi) => ("rad", true), (:SphericalAZIFPAState, :fpa) => ("rad", false),
+    (:ModifiedEquinoctialState, :p) => ("km", false), (:ModifiedEquinoctialState, :f) => ("", false),
+    (:ModifiedEquinoctialState, :g) => ("", false), (:ModifiedEquinoctialState, :h) => ("", false),
+    (:ModifiedEquinoctialState, :k) => ("", false), (:ModifiedEquinoctialState, :L) => ("rad", true),
+    (:EquinoctialState, :a) => ("km", false), (:EquinoctialState, :h) => ("", false),
+    (:EquinoctialState, :k) => ("", false), (:EquinoctialState, :p) => ("", false),
+    (:EquinoctialState, :q) => ("", false), (:EquinoctialState, :mlong) => ("rad", true),
+    (:AlternateEquinoctialState, :a) => ("km", false), (:AlternateEquinoctialState, :h) => ("", false),
+    (:AlternateEquinoctialState, :k) => ("", false), (:AlternateEquinoctialState, :altp) => ("", false),
+    (:AlternateEquinoctialState, :altq) => ("", false), (:AlternateEquinoctialState, :mlong) => ("rad", true),
+    (:NonsingularKeplerianState, :sma) => ("km", false), (:NonsingularKeplerianState, :e1) => ("", false),
+    (:NonsingularKeplerianState, :e2) => ("", false), (:NonsingularKeplerianState, :e3) => ("", false),
+    (:NonsingularKeplerianState, :e4) => ("", false), (:NonsingularKeplerianState, :e5) => ("rad", true),
+    (:DelaunayState, :l) => ("rad", true), (:DelaunayState, :g) => ("rad", true),
+    (:DelaunayState, :h) => ("rad", true), (:DelaunayState, :L) => ("km²/s", false),
+    (:DelaunayState, :G) => ("km²/s", false), (:DelaunayState, :H) => ("km²/s", false))
+for S in (:OutGoingAsymptoteState, :IncomingAsymptoteState)
+    for (f, t) in ((:rp, ("km", false)), (:c3, ("km²/s²", false)), (:rla, ("rad", true)),
+                   (:dla, ("rad", false)), (:bpa, ("rad", true)), (:ta, ("rad", true)))
+        _ELEMENT_TRAITS[(S, f)] = t
+    end
+end
+for S in (:BrouwerMeanLongState, :BrouwerMeanShortState)
+    for (f, t) in ((:sma, ("km", false)), (:ecc, ("", false)), (:inc, ("rad", false)),
+                   (:raan, ("rad", true)), (:aop, ("rad", true)), (:ma, ("rad", true)))
+        _ELEMENT_TRAITS[(S, f)] = t
+    end
+end
+
+"Unit and wrap of `field` in `StateT`; an unknown pair is unitless and does not wrap."
+_element_traits(StateT::Type, field::Symbol) = get(_ELEMENT_TRAITS, (nameof(StateT), field), ("", false))
+
+"The label a `Calc` of `element` reports: the representation without `State`, then the field."
+_element_label(StateT::Type, field::Symbol) =
+    string(replace(String(nameof(StateT)), r"State$" => ""), " ", field)
 
 # The unit of the value each quantity returns. Undeclared quantities (`epoch`, `state`, whose values
 # are a time or a mixed vector) fall back to "".
@@ -940,7 +1046,7 @@ subject_type(::Any) = Any
 for f in (:position_vector, :velocity_vector, :position_x, :position_y, :position_z,
           :position_magnitude, :velocity_magnitude, :position_dot_velocity,
           :semi_major_axis, :eccentricity, :inclination, :raan, :argument_of_periapsis,
-          :true_anomaly, :mean_long_sma, :outgoing_rla, :epoch)
+          :true_anomaly, :mean_long_sma, :outgoing_rla, :epoch, :element)
     @eval subject_type(::typeof($f)) = Union{Spacecraft, Coordinate}
 end
 subject_type(::typeof(state))                   = Spacecraft

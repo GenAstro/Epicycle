@@ -89,9 +89,9 @@ end
     sat = _subject()
     eq  = CoordinateSystem(earth, MJ2000Eq())
 
-    @test element(KeplerianState, sat, eq, :sma) ≈ semi_major_axis(sat, eq) rtol = 1e-12
-    @test isfinite(element(OutGoingAsymptoteState, sat, eq, :c3))
-    @test isfinite(element(ModifiedEquinoctialState, sat, eq, :p))
+    @test element(sat, KeplerianState, eq, :sma) ≈ semi_major_axis(sat, eq) rtol = 1e-12
+    @test isfinite(element(sat, OutGoingAsymptoteState, eq, :c3))
+    @test isfinite(element(sat, ModifiedEquinoctialState, eq, :p))
 end
 
 @testset "Calc evaluates to the same number as the direct call" begin

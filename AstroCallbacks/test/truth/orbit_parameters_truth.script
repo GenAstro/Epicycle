@@ -1,0 +1,78 @@
+% Reference values for test_correctness_orbit_parameters.jl and test_correctness_element_sets.jl,
+% from GMAT R2026a.
+%
+% Six orbits, each a Cartesian state in EarthMJ2000Eq with Earth's GM set to the value Epicycle
+% uses. GMAT writes orbit_parameters_truth.txt to its output folder; the numbers are copied into
+% the test. Run with GmatConsole.exe orbit_parameters_truth.script.
+
+GMAT Earth.Mu = 398600.4418;
+
+Create Spacecraft leo molniya polar retrograde hyp_out hyp_in;
+GMAT leo.CoordinateSystem        = EarthMJ2000Eq;
+GMAT molniya.CoordinateSystem    = EarthMJ2000Eq;
+GMAT polar.CoordinateSystem      = EarthMJ2000Eq;
+GMAT retrograde.CoordinateSystem = EarthMJ2000Eq;
+GMAT hyp_out.CoordinateSystem    = EarthMJ2000Eq;
+GMAT hyp_in.CoordinateSystem     = EarthMJ2000Eq;
+
+Create ReportFile truth;
+GMAT truth.Filename = 'orbit_parameters_truth.txt';
+GMAT truth.Precision = 16;
+GMAT truth.WriteHeaders = true;
+
+BeginMissionSequence;
+
+leo.X = 7000.0
+leo.Y = 300.0
+leo.Z = 1200.0
+leo.VX = -0.4
+leo.VY = 7.4
+leo.VZ = 0.9
+
+molniya.X = 4637.031328726552
+molniya.Y = 178.53697947901998
+molniya.Z = -5679.055240387162
+molniya.VX = 6.252424682730313
+molniya.VY = 6.928411997008257
+molniya.VZ = 2.5730558589825416
+
+polar.X = 1731.6965430023222
+polar.Y = -2999.386395771405
+polar.Z = -7427.270441381914
+polar.VX = -3.0611710106575205
+polar.VY = 5.302103721115798
+polar.VZ = -2.5783940176845728
+
+retrograde.X = -5967.240072871029
+retrograde.Y = 10335.562987173626
+retrograde.Z = 6.230821664531257e-13
+retrograde.VX = 3.6791756283823123
+retrograde.VY = 3.4619800616646623
+retrograde.VZ = -2.8389753744567603
+
+hyp_out.X = -3701.281373968369
+hyp_out.Y = 7485.70648182266
+hyp_out.Z = 4011.578013161604
+hyp_out.VX = -9.268115532432553
+hyp_out.VY = -1.7246408988602304
+hyp_out.VZ = 4.13619682261008
+
+hyp_in.X = 6729.261014450535
+hyp_in.Y = 6167.260026326277
+hyp_in.Z = -1584.29588904432
+hyp_in.VX = -8.0185180311041
+hyp_in.VY = 3.909714301621651
+hyp_in.VZ = 5.137896317799944
+
+Report truth leo.Earth.MA leo.Earth.EA leo.Earth.Energy leo.EarthMJ2000Eq.HX leo.EarthMJ2000Eq.HY leo.EarthMJ2000Eq.HZ leo.Earth.HMAG leo.Earth.OrbitPeriod leo.Earth.SMA leo.Earth.VelApoapsis leo.Earth.VelPeriapsis leo.EarthMJ2000Eq.RAAN leo.EarthMJ2000Eq.AOP leo.Earth.TA
+Report truth molniya.Earth.MA molniya.Earth.EA molniya.Earth.Energy molniya.EarthMJ2000Eq.HX molniya.EarthMJ2000Eq.HY molniya.EarthMJ2000Eq.HZ molniya.Earth.HMAG molniya.Earth.OrbitPeriod molniya.Earth.SMA molniya.Earth.VelApoapsis molniya.Earth.VelPeriapsis molniya.EarthMJ2000Eq.RAAN molniya.EarthMJ2000Eq.AOP molniya.Earth.TA
+Report truth polar.Earth.MA polar.Earth.EA polar.Earth.Energy polar.EarthMJ2000Eq.HX polar.EarthMJ2000Eq.HY polar.EarthMJ2000Eq.HZ polar.Earth.HMAG polar.Earth.OrbitPeriod polar.Earth.SMA polar.Earth.VelApoapsis polar.Earth.VelPeriapsis polar.EarthMJ2000Eq.RAAN polar.EarthMJ2000Eq.AOP polar.Earth.TA
+Report truth retrograde.Earth.MA retrograde.Earth.EA retrograde.Earth.Energy retrograde.EarthMJ2000Eq.HX retrograde.EarthMJ2000Eq.HY retrograde.EarthMJ2000Eq.HZ retrograde.Earth.HMAG retrograde.Earth.OrbitPeriod retrograde.Earth.SMA retrograde.Earth.VelApoapsis retrograde.Earth.VelPeriapsis retrograde.EarthMJ2000Eq.RAAN retrograde.EarthMJ2000Eq.AOP retrograde.Earth.TA
+Report truth hyp_out.Earth.MA hyp_out.Earth.HA hyp_out.Earth.Energy hyp_out.EarthMJ2000Eq.HX hyp_out.EarthMJ2000Eq.HY hyp_out.EarthMJ2000Eq.HZ hyp_out.Earth.HMAG hyp_out.Earth.C3Energy hyp_out.Earth.SMA hyp_out.Earth.VelPeriapsis hyp_out.EarthMJ2000Eq.RAAN hyp_out.EarthMJ2000Eq.AOP hyp_out.Earth.TA
+Report truth hyp_in.Earth.MA hyp_in.Earth.HA hyp_in.Earth.Energy hyp_in.EarthMJ2000Eq.HX hyp_in.EarthMJ2000Eq.HY hyp_in.EarthMJ2000Eq.HZ hyp_in.Earth.HMAG hyp_in.Earth.C3Energy hyp_in.Earth.SMA hyp_in.Earth.VelPeriapsis hyp_in.EarthMJ2000Eq.RAAN hyp_in.EarthMJ2000Eq.AOP hyp_in.Earth.TA
+Report truth leo.EarthMJ2000Eq.Delaunayl leo.EarthMJ2000Eq.Delaunayg leo.EarthMJ2000Eq.Delaunayh leo.EarthMJ2000Eq.DelaunayL leo.EarthMJ2000Eq.DelaunayG leo.EarthMJ2000Eq.DelaunayH
+Report truth molniya.EarthMJ2000Eq.Delaunayl molniya.EarthMJ2000Eq.Delaunayg molniya.EarthMJ2000Eq.Delaunayh molniya.EarthMJ2000Eq.DelaunayL molniya.EarthMJ2000Eq.DelaunayG molniya.EarthMJ2000Eq.DelaunayH
+Report truth polar.EarthMJ2000Eq.Delaunayl polar.EarthMJ2000Eq.Delaunayg polar.EarthMJ2000Eq.Delaunayh polar.EarthMJ2000Eq.DelaunayL polar.EarthMJ2000Eq.DelaunayG polar.EarthMJ2000Eq.DelaunayH
+Report truth retrograde.EarthMJ2000Eq.Delaunayl retrograde.EarthMJ2000Eq.Delaunayg retrograde.EarthMJ2000Eq.Delaunayh retrograde.EarthMJ2000Eq.DelaunayL retrograde.EarthMJ2000Eq.DelaunayG retrograde.EarthMJ2000Eq.DelaunayH
+Report truth hyp_out.EarthMJ2000Eq.BdotT hyp_out.EarthMJ2000Eq.BdotR hyp_out.EarthMJ2000Eq.BVectorMag hyp_out.EarthMJ2000Eq.BVectorAngle hyp_out.EarthMJ2000Ec.BdotT hyp_out.EarthMJ2000Ec.BdotR hyp_out.EarthMJ2000Ec.BVectorAngle
+Report truth hyp_in.EarthMJ2000Eq.BdotT hyp_in.EarthMJ2000Eq.BdotR hyp_in.EarthMJ2000Eq.BVectorMag hyp_in.EarthMJ2000Eq.BVectorAngle hyp_in.EarthMJ2000Ec.BdotT hyp_in.EarthMJ2000Ec.BdotR hyp_in.EarthMJ2000Ec.BVectorAngle

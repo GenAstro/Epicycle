@@ -81,23 +81,46 @@ subject's coordinate system.
 
 A settable quantity is set with its name followed by `!`, with the value as the keyword `to`: `semi_major_axis!(sat; to = 7200.0)`. `is_settable(subject, quantity)` answers whether a pair can be written.
 
-Every quantity takes its subject first. Quantities that depend on a frame take an optional coordinate system second, and an optional `params` third for an orbit-relative coordinate system whose origin does not carry the reference orbit.  The table below illustrates a few built-in quantities. 
+Every quantity takes its subject first. Quantities that depend on a frame take an optional coordinate system second, and an optional `params` third for an orbit-relative coordinate system whose origin does not carry the reference orbit. Quantities tied to a body's shape, rotation or lighting take the body second instead, as in `altitude(sat, moon)`; without it they use the central body of the subject's frame. A quantity undefined for the orbit, such as the period of a hyperbola, throws an `ArgumentError` saying why. The table below lists the built-in quantities.
 
-| Quantity | Subject | Units | Takes a coordinate system | Settable |
+| Quantity | Subject | Units | Second argument | Settable |
 |---|---|---|---|---|
-| `position_vector`, `velocity_vector` | spacecraft or coordinate | km, km/s | yes | on a spacecraft |
-| `position_x`, `position_y`, `position_z` | spacecraft or coordinate | km | yes | on a spacecraft |
-| `position_magnitude`, `velocity_magnitude` | spacecraft or coordinate | km, km/s | yes | on a spacecraft |
-| `semi_major_axis` | spacecraft or coordinate | km | yes | on a spacecraft |
-| `eccentricity` | spacecraft or coordinate | none | yes | on a spacecraft |
-| `inclination`, `raan`, `argument_of_periapsis`, `true_anomaly` | spacecraft or coordinate | rad | yes | on a spacecraft |
-| `mean_long_sma` | spacecraft or coordinate | km | yes | on a spacecraft |
-| `outgoing_rla` | spacecraft or coordinate on a hyperbolic orbit | rad | yes | no |
-| `state` | spacecraft | km, km/s | no | yes |
-| `epoch` | spacecraft or coordinate | `Time` | no | on a spacecraft |
-| `delta_v` | maneuver | km/s | no | yes |
-| `delta_v_magnitude` | maneuver | km/s | no | yes |
-| `gravitational_parameter` | celestial body | km³/s² | no | yes |
+| `position_vector`, `velocity_vector` | spacecraft or coordinate | km, km/s | coordinate system | on a spacecraft |
+| `position_x`, `position_y`, `position_z` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
+| `position_magnitude`, `velocity_magnitude` | spacecraft or coordinate | km, km/s | coordinate system | on a spacecraft |
+| `semi_major_axis` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
+| `eccentricity` | spacecraft or coordinate | none | coordinate system | on a spacecraft |
+| `inclination`, `raan`, `argument_of_periapsis`, `true_anomaly` | spacecraft or coordinate | rad | coordinate system | on a spacecraft |
+| `mean_anomaly` | spacecraft or coordinate | rad | coordinate system | on a spacecraft |
+| `eccentric_anomaly`, `hyperbolic_anomaly` | spacecraft or coordinate | rad | coordinate system | no |
+| `argument_of_latitude`, `longitude_of_periapsis`, `descending_node_right_ascension`, `true_longitude` | spacecraft or coordinate | rad | coordinate system | no |
+| `apoapsis_radius`, `periapsis_radius` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
+| `semilatus_rectum` | spacecraft or coordinate | km | coordinate system | no |
+| `specific_energy`, `c3` | spacecraft or coordinate | km²/s² | coordinate system | no |
+| `hyperbolic_excess_speed`, `apoapsis_speed`, `periapsis_speed` | spacecraft or coordinate | km/s | coordinate system | no |
+| `angular_momentum`, `angular_momentum_magnitude` | spacecraft or coordinate | km²/s | coordinate system | no |
+| `orbit_normal`, `eccentricity_vector` | spacecraft or coordinate | none | coordinate system | no |
+| `orbital_angular_velocity`, `mean_motion` | spacecraft or coordinate | rad/s | coordinate system | no |
+| `orbital_period` | spacecraft or coordinate | s | coordinate system | no |
+| `b_dot_t`, `b_dot_r`, `b_magnitude` | spacecraft or coordinate on a hyperbolic orbit | km | coordinate system | no |
+| `b_plane_angle` | spacecraft or coordinate on a hyperbolic orbit | rad | coordinate system | no |
+| `mean_long_sma` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
+| `element` | spacecraft or coordinate | the field's | representation, then coordinate system and field | on a spacecraft |
+| `outgoing_rla` | spacecraft or coordinate on a hyperbolic orbit | rad | coordinate system | no |
+| `altitude`, `apoapsis_altitude`, `periapsis_altitude` | spacecraft or coordinate | km | body | no |
+| `geodetic_latitude`, `longitude`, `velocity_azimuth` | spacecraft or coordinate | rad | body | no |
+| `meridian_hour_angle`, `local_sidereal_time`, `mean_geographic_longitude` | spacecraft or coordinate | rad | body | no |
+| `nodal_precession_rate` | spacecraft or coordinate | rad/s | body, and `j2` away from the Earth | no |
+| `beta_angle`, `lunar_beta_angle`, `orbit_normal_sun_angle` | spacecraft or coordinate | rad | body | no |
+| `sun_earth_spacecraft_angle`, `sun_spacecraft_earth_angle`, `sun_spacecraft_moon_angle`, `moon_earth_sun_angle`, `moon_earth_spacecraft_angle`, `moon_spacecraft_earth_angle` | spacecraft or coordinate | rad | none | no |
+| `true_local_time` | spacecraft or coordinate | h | body | no |
+| `mean_local_time` | spacecraft or coordinate about the Earth | h | none | no |
+| `earth_shadow_fraction`, `moon_shadow_fraction` | spacecraft or coordinate | none | none | no |
+| `state` | spacecraft | km, km/s | none | yes |
+| `epoch` | spacecraft or coordinate | `Time` | none | on a spacecraft |
+| `delta_v` | maneuver | km/s | none | yes |
+| `delta_v_magnitude` | maneuver | km/s | none | yes |
+| `gravitational_parameter` | celestial body | km³/s² | none | yes |
 
 For a complete list of implemented quantities (you can easily write your own don't forget!) you can use the quantities function as illustrated below.
 

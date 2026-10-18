@@ -191,9 +191,10 @@ end
 # ── Rows for a targeting sequence (the event graph) ──────────────────────────────────────────────
 
 _quantity(calc) = calc isa Calc ? calc.f : nothing
-_quantity_label(calc) = (q = _quantity(calc); q === nothing ? string(nameof(typeof(calc))) :
-                                                               EpicycleBase.label(q))
-_quantity_unit(calc)  = (q = _quantity(calc); q === nothing ? "" : EpicycleBase.unit(q))
+# Asked of the `Calc`, not its function: a `Calc` passes the traits through, and refines them where
+# they depend on the arguments, as for `element`, which reports as "Delaunay L" in km²/s.
+_quantity_label(calc) = calc isa Calc ? EpicycleBase.label(calc) : string(nameof(typeof(calc)))
+_quantity_unit(calc)  = calc isa Calc ? EpicycleBase.unit(calc) : ""
 
 # Component names: a burn's axes (VNB → V, N, B), X Y Z for a Cartesian vector, else 1, 2, 3.
 function _component_names(calc, n::Int)
@@ -204,7 +205,7 @@ function _component_names(calc, n::Int)
         a == "Inertial" && return ["X", "Y", "Z"]
         (length(a) == 3 && all(isuppercase, a)) && return [string(c) for c in a]
     end
-    if q !== nothing && n == 3 && EpicycleBase.unit(q) in ("km", "km/s")
+    if q !== nothing && n == 3 && EpicycleBase.unit(calc) in ("km", "km/s")
         return ["X", "Y", "Z"]
     end
     return [string(i) for i in 1:n]

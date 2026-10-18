@@ -30,7 +30,7 @@ const _W_EPOCH = Time(2458849.5, 0.0, TDB(), JD())
 _w_sat() = Spacecraft(CartesianState([7000.0, 1000.0, 2000.0, 1.5, 6.5, 1.0]), _W_EPOCH;
                       coord_sys = EarthMJ2000Eq)
 
-_kep(sat, cs) = [element(KeplerianState, sat, cs, f) for f in (:sma, :ecc, :inc, :raan, :aop, :ta)]
+_kep(sat, cs) = [element(sat, KeplerianState, cs, f) for f in (:sma, :ecc, :inc, :raan, :aop, :ta)]
 
 @testset "state! replaces the state, and the bridge reaches it" begin
     sat = _w_sat()
@@ -56,7 +56,7 @@ end
     sat    = _w_sat()
     before = _kep(sat, EarthMJ2000Eq)
 
-    @test set_element!(KeplerianState, sat, EarthMJ2000Eq, :sma; to = 8000.0) === sat
+    @test set_element!(sat, KeplerianState, EarthMJ2000Eq, :sma; to = 8000.0) === sat
     after = _kep(sat, EarthMJ2000Eq)
     @test after[1] ≈ 8000.0 rtol = 1e-12
     @test after[2:6] ≈ before[2:6] rtol = 1e-10
@@ -70,7 +70,7 @@ end
     ec0      = _kep(sat, EarthMJ2000Ec)
     eq0      = _kep(sat, EarthMJ2000Eq)
 
-    set_element!(KeplerianState, sat, EarthMJ2000Ec, :inc; to = deg2rad(30.0))
+    set_element!(sat, KeplerianState, EarthMJ2000Ec, :inc; to = deg2rad(30.0))
     ec1 = _kep(sat, EarthMJ2000Ec)
     @test ec1[3] ≈ deg2rad(30.0) rtol = 1e-12
     @test ec1[[1, 2, 4, 5, 6]] ≈ ec0[[1, 2, 4, 5, 6]] rtol = 1e-10
@@ -218,7 +218,7 @@ end
 
 _leo() = Spacecraft(CartesianState(KeplerianState(7000.0, 0.01, 0.9, 0.3, 0.2, 0.1), 398600.4418),
                     _W_EPOCH; coord_sys = EarthMJ2000Eq)
-_mean(sat) = [element(BrouwerMeanLongState, sat, EarthMJ2000Eq, f)
+_mean(sat) = [element(sat, BrouwerMeanLongState, EarthMJ2000Eq, f)
               for f in (:sma, :ecc, :inc, :raan, :aop, :ma)]
 
 @testset "mean_long_sma! writes the mean semi-major axis and holds the other mean elements" begin

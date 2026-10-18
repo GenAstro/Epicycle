@@ -34,7 +34,7 @@ export position_vector, velocity_vector, raan
 export state, state!
 
 # Quantity readers, and the deferred form. See quantity_readers.jl and calc.jl.
-export element, epoch, epoch!
+export element, element!, epoch, epoch!
 export delta_v, delta_v!
 export semi_major_axis, eccentricity, inclination, argument_of_periapsis, true_anomaly
 export semi_major_axis!, eccentricity!, inclination!, raan!, argument_of_periapsis!,
@@ -45,6 +45,21 @@ export position_magnitude!, velocity_magnitude!
 export position_dot_velocity
 export mean_long_sma, mean_long_sma!, outgoing_rla, delta_v_magnitude, delta_v_magnitude!
 export gravitational_parameter, gravitational_parameter!
+export mean_anomaly, mean_anomaly!, eccentric_anomaly, hyperbolic_anomaly
+export specific_energy, hyperbolic_excess_speed, apoapsis_speed, periapsis_speed
+export angular_momentum, angular_momentum_magnitude, orbit_normal, orbital_angular_velocity
+export eccentricity_vector, orbital_period, mean_motion
+export argument_of_latitude, longitude_of_periapsis, descending_node_right_ascension
+export apoapsis_radius, apoapsis_radius!, periapsis_radius, periapsis_radius!, semilatus_rectum, c3,
+       true_longitude
+export b_dot_t, b_dot_r, b_magnitude, b_plane_angle
+export altitude, geodetic_latitude, longitude, velocity_azimuth, apoapsis_altitude,
+       periapsis_altitude, meridian_hour_angle, local_sidereal_time, mean_geographic_longitude,
+       nodal_precession_rate
+export beta_angle, lunar_beta_angle, orbit_normal_sun_angle, sun_earth_spacecraft_angle,
+       sun_spacecraft_earth_angle, sun_spacecraft_moon_angle, moon_earth_sun_angle,
+       moon_earth_spacecraft_angle, moon_spacecraft_earth_angle, true_local_time,
+       mean_local_time, earth_shadow_fraction, moon_shadow_fraction
 export Calc, reapply
 export history, quantities
 export label, set_quantity!, is_settable, output_partial   # from EpicycleBase, so writing a quantity needs only AstroCallbacks
@@ -201,6 +216,8 @@ for f in (
     "maneuvercalc_deltavmag.jl",
     "frame_aware_quantities.jl",
     "quantity_readers.jl",
+    "orbit_parameters.jl",
+    "body_parameters.jl",
     "calc.jl",
     "history.jl",
 )

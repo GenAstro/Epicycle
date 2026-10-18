@@ -104,7 +104,7 @@ writing, through `set_quantity!(subject, quantity, deps...; to = value)`, so
 function set_calc!(c::Calc, value)
     EpicycleBase.is_settable(first(c.args), c.f, Base.tail(c.args)...) ||
         throw(ArgumentError(
-            "$(EpicycleBase.label(c.f)) cannot be set on a " *
+            "$(EpicycleBase.label(c)) cannot be set on a " *
             "$(nameof(typeof(first(c.args)))); a solver can vary only a quantity " *
             "that has a `set_quantity!` method for its subject."))
     return EpicycleBase.set_quantity!(first(c.args), c.f, Base.tail(c.args)...; to = value)
@@ -152,9 +152,19 @@ calc_is_settable(c::AbstractCalc) =
 EpicycleBase.label(c::Calc) = EpicycleBase.label(c.f)
 
 """Traits pass through to the quantity, so a `Calc` on an angle remains cyclic."""
+EpicycleBase.unit(c::Calc)      = EpicycleBase.unit(c.f)
 EpicycleBase.is_cyclic(c::Calc) = EpicycleBase.is_cyclic(c.f)
 EpicycleBase.cycle(c::Calc)     = EpicycleBase.cycle(c.f)
 EpicycleBase.tag(c::Calc)       = EpicycleBase.tag(c.f)
+
+# An element's label, unit and wrap depend on which element it is, so a `Calc` of `element` reads
+# them from its arguments, (subject, StateT[, cs], field[, params]), rather than from the function.
+_element_args(c::Calc{typeof(element)}) =
+    (c.args[2], c.args[3] isa Symbol ? c.args[3] : c.args[4])
+EpicycleBase.label(c::Calc{typeof(element)}) = _element_label(_element_args(c)...)
+EpicycleBase.unit(c::Calc{typeof(element)})  = _element_traits(_element_args(c)...)[1]
+EpicycleBase.is_cyclic(c::Calc{typeof(element)}) = _element_traits(_element_args(c)...)[2]
+EpicycleBase.cycle(c::Calc{typeof(element)})     = 2π
 
 function Base.show(io::IO, c::Calc)
     print(io, "Calc(", EpicycleBase.label(c.f))

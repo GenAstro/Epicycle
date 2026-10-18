@@ -54,3 +54,43 @@ end
     @test r_old.info === :Solve_Succeeded
     @test a_new ≈ a_old rtol = 1e-7
 end
+
+# `element` is a quantity like any other (#11): the same targeting problem written with it alone,
+# varying the Keplerian semi-major axis and constraining the spherical radius, must land on the
+# same analytic answer. A stop on an element and a history of one go through the same doors.
+@testset "Vary and Constraint on element reach the same apoapsis" begin
+    a_exact = _VE_RA / (1 + _VE_ECC)
+    sat  = _ve_sat()
+    prop = OrbitPropagator(ForceModel(PointMassGravity(earth, ())),
+                           IntegratorConfig(Tsit5(); dt = 10.0, reltol = 1e-11, abstol = 1e-11))
+    var  = Vary(element, sat, KeplerianState, :sma; guess = 7500.0,
+                lower_bound = 7000.0, upper_bound = 12000.0)
+    con  = Constraint(element, sat, SphericalRADECState, EarthMJ2000Eq, :r; equals = _VE_RA)
+    seq  = Sequence()
+    add_sequence!(seq,
+        Event(name = "Set the orbit", event = () -> nothing, vars = [var], funcs = []),
+        Event(name = "Propagate to apoapsis",
+              event = () -> propagate!(prop, sat, StopAt(position_dot_velocity, sat;
+                                                         equals = 0.0, direction = -1)),
+              funcs = [con]))
+    result = solve_trajectory!(seq)
+    @test result.info === :Solve_Succeeded
+    @test first(result.variables) ≈ a_exact rtol = 1e-7
+
+    # The status box and the report name each by representation and field, with its unit
+    @test AstroSolve._quantity_label(var.calc) == "Keplerian sma"
+    @test AstroSolve._quantity_unit(var.calc)  == "km"
+    @test AstroSolve._quantity_label(con.calc) == "SphericalRADEC r"
+end
+
+@testset "StopAt and history take element" begin
+    sat  = _ve_sat()
+    prop = OrbitPropagator(ForceModel(PointMassGravity(earth, ())),
+                           IntegratorConfig(Tsit5(); dt = 10.0, reltol = 1e-11, abstol = 1e-11))
+    propagate!(prop, sat, StopAt(element, sat, SphericalRADECState, :r; equals = 8000.0))
+    @test position_magnitude(sat) ≈ 8000.0 rtol = 1e-9
+    sma, r = history(Calc(element, sat, KeplerianState, :sma),
+                     Calc(element, sat, SphericalRADECState, :r))
+    @test all(isapprox.(sma, sma[1]; rtol = 1e-9))          # two-body: a holds
+    @test r[end] ≈ 8000.0 rtol = 1e-9
+end
