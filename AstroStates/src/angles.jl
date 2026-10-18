@@ -76,6 +76,39 @@ function _orbit_orientation(h̄v::AbstractVector, ēv::AbstractVector, e, tol)
 end
 
 """
+    _eccentric_longitude(λ, h, k; tol=1e-14, maxiter=60)
+
+Solve the equinoctial form of Kepler's equation, `F + h cos F - k sin F = λ`, for the eccentric
+longitude `F`, with `h² + k² < 1` and `λ` reduced to [0, 2π). Unlike `ω + Ω + E` from
+[`_eccentric_anomaly`](@ref), it never forms the longitude of periapsis `atan(h, k)`, so `F` is a
+smooth function of `h` and `k` through `h = k = 0` and its derivative is defined on a circular
+orbit. Newton from `F = λ`, kept inside the bracket [λ - 1, λ + 1], which holds the root because
+`|h cos F - k sin F| ≤ e < 1`; a step that leaves it is replaced by bisection.
+"""
+function _eccentric_longitude(λ, h, k; tol=1e-14, maxiter=60)
+    λr = mod(λ, 2 * oftype(λ, π))
+    lo, hi = λr - 1, λr + 1
+    F = λr + zero(h) + zero(k)
+    for _ in 1:maxiter
+        sinF, cosF = sincos(F)
+        f = F + h * cosF - k * sinF - λr
+        if f < 0
+            lo = F
+        elseif f > 0
+            hi = F
+        end
+        Fnew = F - f / (1 - h * sinF - k * cosF)
+        if !(lo < Fnew < hi)
+            Fnew = (lo + hi) / 2
+        end
+        converged = abs(Fnew - F) < tol * (1 + abs(F))
+        F = Fnew
+        converged && break
+    end
+    return F
+end
+
+"""
     _eccentric_anomaly(M, e; tol=1e-14, maxiter=60)
 
 Solve Kepler's equation `E - e sin E = M` for an ellipse, `0 ≤ e < 1`, with `M` reduced to

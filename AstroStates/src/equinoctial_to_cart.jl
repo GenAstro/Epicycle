@@ -58,10 +58,9 @@ function equinoctial_to_cart(eq::AbstractVector{<:Real}, μ::Real; tol::Real = 1
         return fill(T(NaN), 6)
     end
 
-    # Eccentric longitude F from the mean longitude. With F = φ + E, φ = atan(h, k) the longitude
-    # of periapsis, λ = F + h cos F - k sin F is Kepler's equation λ - φ = E - e sin E.
-    φ = atan(h, k)
-    F = φ + _eccentric_anomaly(λ - φ, e)
+    # Eccentric longitude F from the mean longitude, λ = F + h cos F - k sin F, solved in F
+    # directly so the derivative stays defined at e = 0
+    F = _eccentric_longitude(λ, h, k)
 
     # Radius
     sqrt1 = sqrt(1 - h^2 - k^2)
