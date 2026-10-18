@@ -124,7 +124,7 @@ end
             S(hyp, _ES_MU)
         end
         @test all(isnan, to_vector(s))
-        @test_logs (:warn, r"closed orbit") S(hyp, _ES_MU)
+        @test_logs (:warn, r"hyperbolic|closed orbit") S(hyp, _ES_MU)
     end
 end
 
@@ -141,16 +141,58 @@ end
     @test NonsingularKeplerianState(7000, 0.01, 0.0, 0.1, 0.2, 1.0) isa NonsingularKeplerianState{Float64}
 end
 
+_es_to_ns(c)   = equinoctial_to_nonsingular(cart_to_equinoctial(c, _ES_MU))
+_es_from_ns(n) = equinoctial_to_cart(nonsingular_to_equinoctial(n), _ES_MU)
+
 @testset "differentiable: Cartesian → elements → Cartesian has an identity Jacobian" begin
-    to_ns(c)   = kep_to_nonsingular(cart_to_kep(c, _ES_MU))
-    from_ns(n) = kep_to_cart(nonsingular_to_kep(n), _ES_MU)
     to_d(c)    = kep_to_delaunay(cart_to_kep(c, _ES_MU), _ES_MU)
     from_d(d)  = kep_to_cart(delaunay_to_kep(d, _ES_MU), _ES_MU)
-    for name in keys(_ES_STATES), (f, g) in ((to_ns, from_ns), (to_d, from_d))
+    for name in keys(_ES_STATES), (f, g) in ((_es_to_ns, _es_from_ns), (to_d, from_d))
         c = _ES_STATES[name]
         J = ForwardDiff.jacobian(g, f(c)) * ForwardDiff.jacobian(f, c)
         @test J ≈ I(6) atol = 1e-8
     end
+end
+
+@testset "the nonsingular set is differentiable at e = 0 and i = 0" begin
+    # The point of the set: a circular or equatorial orbit has a finite Jacobian, which a solver
+    # varying these elements needs. Truth: the identity, and central differences.
+    for (e, i) in ((0.0, 0.3), (0.01, 0.0), (0.0, 0.0))
+        c = kep_to_cart([7000.0, e, i, 0.4, 0.5, 0.6], _ES_MU)
+        n = _es_to_ns(c)
+        Jfrom = ForwardDiff.jacobian(_es_from_ns, n)
+        @test all(isfinite, Jfrom)
+        @test Jfrom * ForwardDiff.jacobian(_es_to_ns, c) ≈ I(6) atol = 1e-8
+        δ = 1e-6 .* max.(abs.(n), 1e-3)
+        Jcd = reduce(hcat, [(_es_from_ns(n .+ δ[k] .* (1:6 .== k)) .-
+                             _es_from_ns(n .- δ[k] .* (1:6 .== k))) ./ (2δ[k]) for k in 1:6])
+        @test Jfrom ≈ Jcd rtol = 1e-6
+    end
+end
+
+@testset "circular and equatorial orbits read back with the Keplerian conventions" begin
+    # Truth: the conversion from CartesianState, which sets ω = 0 on a circular orbit and Ω = 0
+    # on an equatorial one.
+    for (e, i) in ((0.0, 0.3), (0.01, 0.0), (0.0, 0.0))
+        cart = CartesianState(kep_to_cart([7000.0, e, i, 0.4, 0.5, 0.6], _ES_MU))
+        from_ns   = to_vector(KeplerianState(NonsingularKeplerianState(cart, _ES_MU), _ES_MU))
+        from_cart = to_vector(KeplerianState(cart, _ES_MU))
+        @test from_ns[1:3] ≈ from_cart[1:3] rtol = 1e-12 atol = 1e-12
+        for k in 4:6
+            @test _es_angle_diff(from_ns[k], from_cart[k]) < 1e-10
+        end
+    end
+end
+
+@testset "the nonsingular set is singular at i = π" begin
+    retro = KeplerianState(7000.0, 0.01, π, 0.0, 0.5, 0.6)
+    ns = with_logger(NullLogger()) do
+        NonsingularKeplerianState(retro, _ES_MU)
+    end
+    @test all(isnan, to_vector(ns))
+    @test all(isnan, with_logger(NullLogger()) do
+        nonsingular_to_equinoctial([7000.0, 0.01, 0.0, 0.0, 1.0, 0.6])
+    end)
 end
 
 nothing
