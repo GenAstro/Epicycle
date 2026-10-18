@@ -31,6 +31,8 @@ export outasymptote_to_kep, cart_to_outasymptote, to_vector, cart_to_inasymptote
 export inasymptote_to_kep, sphazfpa_to_cart, cart_to_sphazfpa, equinoctial_to_alt_equinoctial
 export alt_equinoctial_to_equinoctial, equinoctial_to_cart, cart_to_equinoctial
 export modkep_to_kep, kep_to_modkep
+export NonsingularKeplerianState, NonsingularKeplerian, kep_to_nonsingular, nonsingular_to_kep
+export DelaunayState, Delaunay, kep_to_delaunay, delaunay_to_kep
 export state_tag_to_type, state_type_to_tag
 
 struct Cartesian <: AbstractOrbitStateType end
@@ -931,6 +933,8 @@ and angles in radians.
 | `AlternateEquinoctialState` | a, h, k, altp, altq, mlong |
 | `OutGoingAsymptoteState`, `IncomingAsymptoteState` | rp, c3, rla, dla, bpa, ta |
 | `BrouwerMeanLongState`, `BrouwerMeanShortState` | sma, ecc, inc, raan, aop, ma |
+| `NonsingularKeplerianState` | sma, e1, e2, e3, e4, e5 |
+| `DelaunayState` | l, g, h, L, G, H |
 
 For an `OrbitState` it returns the stored vector itself, not a copy.
 
@@ -1288,6 +1292,8 @@ AlternateEquinoctialState(b::BrouwerMeanShortState, μ::Real) = AlternateEquinoc
 # =============================================================================
 
 include("brouwer.jl")
+include("nonsingular_keplerian.jl")
+include("delaunay.jl")
 
 KeplerianState(state::AbstractOrbitState, μ::Real) = error("No conversion defined from $(typeof(state)) to KeplerianState")
 SphericalRADECState(state::AbstractOrbitState, μ::Real) = error("No conversion defined from $(typeof(state)) to SphericalRADECState")
