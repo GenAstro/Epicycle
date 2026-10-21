@@ -107,6 +107,7 @@ include("ephemeris/epochs.jl")
 include("ephemeris/segments.jl")
 include("ephemeris/names.jl")
 include("ephemeris/oem.jl")
+include("ephemeris/stk.jl")
 
 # A plot published in the last fraction of a second must not be the one that gets dropped
 # because the process ended.
