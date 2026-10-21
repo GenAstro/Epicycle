@@ -43,6 +43,17 @@ using Sockets
 # change here cannot reach plotting and the plotting tests need no spacecraft.
 using AstroModels: Spacecraft, HistorySegment
 using AstroEpochs: Time
+
+# Ephemeris files. Frames, centres and time systems are named in files, so reading and writing
+# them needs the objects those names stand for; interpolation lives in AstroRoutines.
+import AstroEpochs
+using AstroFrames: ICRF, GCRF, CIRS, TIRS, ITRF, MJ2000Eq, MODEq, TODEq, MJ2000Ec, PEF, TEME,
+                   MoonPA, MoonME, CelestialBodyFixed
+using AstroUniverse: sun, mercury, venus, earth, moon, mars, jupiter, saturn, uranus, neptune, pluto
+using AstroRoutines: AbstractInterpolationMethod, Lagrange, Hermite, required_points
+using StaticArrays: SVector, SMatrix
+using Printf: @sprintf
+import Dates
 using Dates: DateTime, Millisecond
 
 # Our wrappers are named after the Plotly traces they draw, which is the point — the name is
@@ -90,6 +101,12 @@ include("gl/palette.jl")
 include("gl/czml.jl")
 include("gl/segments.jl")
 include("gl/orbitview.jl")
+
+include("ephemeris/diagnostics.jl")
+include("ephemeris/epochs.jl")
+include("ephemeris/segments.jl")
+include("ephemeris/names.jl")
+include("ephemeris/oem.jl")
 
 # A plot published in the last fraction of a second must not be the one that gets dropped
 # because the process ended.
