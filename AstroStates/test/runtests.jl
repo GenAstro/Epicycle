@@ -47,7 +47,6 @@ types = collect(keys(states))
                          to_type === :ModifiedKeplerianState ? ModifiedKeplerianState(from_state, μ) :
                          to_type === :EquinoctialState       ? EquinoctialState(from_state,μ) :
                          to_type === :AlternateEquinoctialState ? AlternateEquinoctialState(from_state,μ) :
-                         to_type === :NonsingularKeplerianState ? NonsingularKeplerianState(from_state, μ) :
                          to_type === :DelaunayState          ? DelaunayState(from_state, μ) :
                          nothing
 

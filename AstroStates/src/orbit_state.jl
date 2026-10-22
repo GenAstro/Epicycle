@@ -97,9 +97,6 @@ end
 function _construct_state(vec, ::BrouwerMeanShort)
     BrouwerMeanShortState(vec...)
 end
-function _construct_state(vec, ::NonsingularKeplerian)
-    NonsingularKeplerianState(vec...)
-end
 function _construct_state(vec, ::Delaunay)
     DelaunayState(vec...)
 end
@@ -117,7 +114,6 @@ _state_to_vector(es::EquinoctialState) = [es.a, es.h, es.k, es.p, es.q, es.mlong
 _state_to_vector(ae::AlternateEquinoctialState) = [ae.a, ae.h, ae.k, ae.altp, ae.altq, ae.mlong]
 _state_to_vector(b::BrouwerMeanLongState) = [b.sma, b.ecc, b.inc, b.raan, b.aop, b.ma]
 _state_to_vector(b::BrouwerMeanShortState) = [b.sma, b.ecc, b.inc, b.raan, b.aop, b.ma]
-_state_to_vector(n::NonsingularKeplerianState) = [n.sma, n.e1, n.e2, n.e3, n.e4, n.e5]
 _state_to_vector(d::DelaunayState) = [d.l, d.g, d.h, d.L, d.G, d.H]
 
 """

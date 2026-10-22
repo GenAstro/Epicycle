@@ -60,7 +60,7 @@ end
     reps = (CartesianState, KeplerianState, ModifiedKeplerianState, SphericalRADECState,
             SphericalAZIFPAState, ModifiedEquinoctialState, EquinoctialState,
             AlternateEquinoctialState, OutGoingAsymptoteState, IncomingAsymptoteState,
-            BrouwerMeanLongState, BrouwerMeanShortState, NonsingularKeplerianState, DelaunayState)
+            BrouwerMeanLongState, BrouwerMeanShortState, DelaunayState)
     for S in reps, f in fieldnames(S)
         @test haskey(AstroCallbacks._ELEMENT_TRAITS, (nameof(S), f))
     end

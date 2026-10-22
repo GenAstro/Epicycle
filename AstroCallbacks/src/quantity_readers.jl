@@ -976,9 +976,6 @@ const _ELEMENT_TRAITS = Dict{Tuple{Symbol, Symbol}, Tuple{String, Bool}}(
     (:AlternateEquinoctialState, :a) => ("km", false), (:AlternateEquinoctialState, :h) => ("", false),
     (:AlternateEquinoctialState, :k) => ("", false), (:AlternateEquinoctialState, :altp) => ("", false),
     (:AlternateEquinoctialState, :altq) => ("", false), (:AlternateEquinoctialState, :mlong) => ("rad", true),
-    (:NonsingularKeplerianState, :sma) => ("km", false), (:NonsingularKeplerianState, :e1) => ("", false),
-    (:NonsingularKeplerianState, :e2) => ("", false), (:NonsingularKeplerianState, :e3) => ("", false),
-    (:NonsingularKeplerianState, :e4) => ("", false), (:NonsingularKeplerianState, :e5) => ("rad", true),
     (:DelaunayState, :l) => ("rad", true), (:DelaunayState, :g) => ("rad", true),
     (:DelaunayState, :h) => ("rad", true), (:DelaunayState, :L) => ("km²/s", false),
     (:DelaunayState, :G) => ("km²/s", false), (:DelaunayState, :H) => ("km²/s", false))

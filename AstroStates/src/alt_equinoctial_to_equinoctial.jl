@@ -50,8 +50,10 @@ function alt_equinoctial_to_equinoctial(alt::AbstractVector{<:Real}; tol::Real =
         return fill(NaN, 6)
     end
 
-    p = altp / cos(i / 2)
-    q = altq / cos(i / 2)
+    # cos(i/2) from altp and altq directly: through i it has no derivative at i = 0
+    cos_half_i = sqrt(1 - altp^2 - altq^2)
+    p = altp / cos_half_i
+    q = altq / cos_half_i
 
     return [a, h, k, p, q, λ]
 end

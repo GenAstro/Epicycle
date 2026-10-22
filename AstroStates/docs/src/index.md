@@ -55,9 +55,8 @@ Every type converts to every other, so a state can be created in whichever form 
 | `KeplerianState` | Classical elements: semi-major axis, eccentricity, inclination, right ascension of the ascending node, argument of periapsis and true anomaly. Elliptic and hyperbolic orbits. |
 | `ModifiedKeplerianState` | Keplerian elements with the periapsis and apoapsis radii in place of the semi-major axis and eccentricity. |
 | `EquinoctialState` | Semi-major axis, two eccentricity components, two tan(i/2) inclination components and the mean longitude. Defined at zero eccentricity and inclination; elliptic orbits only. |
-| `AlternateEquinoctialState` | Equinoctial elements with sin(i/2) in place of tan(i/2) in the inclination components. |
+| `AlternateEquinoctialState` | Equinoctial elements with sin(i/2) in place of tan(i/2) in the inclination components: Lyddane's nonsingular variables. Defined, with their derivatives, at zero eccentricity and inclination; elliptic orbits only. |
 | `ModifiedEquinoctialState` | Semi-latus rectum, two eccentricity components, two inclination components and the true longitude. Defined at zero eccentricity and inclination, for elliptic and hyperbolic orbits. |
-| `NonsingularKeplerianState` | Semi-major axis, two eccentricity components, two sin(i/2) inclination components and the mean longitude, after Lyddane. Defined at zero eccentricity and inclination. |
 | `DelaunayState` | The angles l = M, g = ω, h = Ω and their conjugate momenta L, G, H, the canonical set of two-body perturbation theory. Elliptic orbits only. |
 | `OutGoingAsymptoteState` | Periapsis radius, C3, the right ascension and declination of the outgoing asymptote, the B-plane angle and the true anomaly. |
 | `IncomingAsymptoteState` | The same quantities for the incoming asymptote. |

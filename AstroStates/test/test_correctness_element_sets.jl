@@ -2,13 +2,13 @@
 # SPDX-License-Identifier: MIT
 
 # =============================================================================
-# Nonsingular Keplerian and Delaunay elements (#11, section 5).
+# Delaunay elements (#11, section 5), and the alternate equinoctial set at e = 0 and i = 0.
 #
 # Truth, strongest first:
 # - External reference: GMAT R2026a Delaunay elements for four orbits, from
 #   AstroCallbacks/test/truth/orbit_parameters_truth.script.
 # - Analytic: each element from its definition in Keplerian terms, round trips through Cartesian,
-#   and the nonsingular set staying finite and continuous at e = 0 and i = 0.
+#   and the alternate equinoctial set staying finite and continuous at e = 0 and i = 0.
 # - Differentiability: ForwardDiff Jacobians of Cartesian → elements → Cartesian are the identity.
 # =============================================================================
 
@@ -66,13 +66,13 @@ end
             E = atan(sqrt(1 - e^2) * sin(ν), e + cos(ν))
             M = mod(E - e * sin(E), 2π)
 
-            ns = NonsingularKeplerianState(cart, _ES_MU)
-            @test ns.sma ≈ a
-            @test ns.e1 ≈ e * cos(Ω + ω) atol = 1e-14
-            @test ns.e2 ≈ e * sin(Ω + ω) atol = 1e-14
-            @test ns.e3 ≈ sin(i / 2) * sin(Ω) atol = 1e-14
-            @test ns.e4 ≈ sin(i / 2) * cos(Ω) atol = 1e-14
-            @test _es_angle_diff(ns.e5, Ω + ω + M) < 1e-12
+            alt = AlternateEquinoctialState(cart, _ES_MU)
+            @test alt.a ≈ a
+            @test alt.h ≈ e * sin(Ω + ω) atol = 1e-14
+            @test alt.k ≈ e * cos(Ω + ω) atol = 1e-14
+            @test alt.altp ≈ sin(i / 2) * sin(Ω) atol = 1e-14
+            @test alt.altq ≈ sin(i / 2) * cos(Ω) atol = 1e-14
+            @test _es_angle_diff(alt.mlong, Ω + ω + M) < 1e-12
 
             d = DelaunayState(cart, _ES_MU)
             @test d.L ≈ sqrt(_ES_MU * a)
@@ -85,41 +85,42 @@ end
 @testset "round trips through Cartesian and between representations" begin
     for name in keys(_ES_STATES)
         cart = CartesianState(_ES_STATES[name])
-        for S in (NonsingularKeplerianState, DelaunayState)
+        for S in (AlternateEquinoctialState, DelaunayState)
             back = CartesianState(S(cart, _ES_MU), _ES_MU)
             @test to_vector(back) ≈ _ES_STATES[name] rtol = 1e-12 atol = 1e-9
         end
-        # Through the other representations and back, by way of KeplerianState
-        ns = NonsingularKeplerianState(cart, _ES_MU)
-        for S in (EquinoctialState, ModifiedEquinoctialState, SphericalRADECState, DelaunayState)
-            again = NonsingularKeplerianState(S(ns, _ES_MU), _ES_MU)
-            @test to_vector(again)[1:5] ≈ to_vector(ns)[1:5] rtol = 1e-11 atol = 1e-12
-            @test _es_angle_diff(again.e5, ns.e5) < 1e-10
+        # Delaunay through the other representations and back, by way of KeplerianState
+        d = DelaunayState(cart, _ES_MU)
+        for S in (EquinoctialState, AlternateEquinoctialState, ModifiedEquinoctialState, SphericalRADECState)
+            again = DelaunayState(S(d, _ES_MU), _ES_MU)
+            @test to_vector(again)[4:6] ≈ to_vector(d)[4:6] rtol = 1e-11 atol = 1e-8
+            for k in 1:3
+                @test _es_angle_diff(to_vector(again)[k], to_vector(d)[k]) < 1e-10
+            end
         end
     end
 end
 
-@testset "the nonsingular set is finite and continuous at e = 0 and i = 0" begin
+@testset "the alternate equinoctial set is finite and continuous at e = 0 and i = 0" begin
     # Circular and equatorial: Ω, ω and ν are each undefined, the mean longitude is not.
     for (e, i) in ((0.0, 0.3), (0.01, 0.0), (0.0, 0.0))
         λ = 1.2
         kep = KeplerianState(7000.0, e, i, 0.0, 0.0, λ)
-        ns  = NonsingularKeplerianState(kep, _ES_MU)
-        @test all(isfinite, to_vector(ns))
-        @test _es_angle_diff(ns.e5, _true_to_mean(λ, e)) < 1e-12
-        back = CartesianState(ns, _ES_MU)
+        alt = AlternateEquinoctialState(kep, _ES_MU)
+        @test all(isfinite, to_vector(alt))
+        @test _es_angle_diff(alt.mlong, _true_to_mean(λ, e)) < 1e-12
+        back = CartesianState(alt, _ES_MU)
         @test to_vector(back) ≈ to_vector(CartesianState(kep, _ES_MU)) rtol = 1e-12 atol = 1e-9
     end
     # A small change in eccentricity gives a small change in the elements, through e = 0.
-    near = [to_vector(NonsingularKeplerianState(KeplerianState(7000.0, e, 0.3, 0.4, 0.5, 0.6), _ES_MU))
+    near = [to_vector(AlternateEquinoctialState(KeplerianState(7000.0, e, 0.3, 0.4, 0.5, 0.6), _ES_MU))
             for e in (1e-8, 1e-12)]
     @test maximum(abs, near[1] .- near[2]) < 1e-7
 end
 
-
 @testset "a hyperbola warns and converts to NaN" begin
     hyp = KeplerianState(-20000.0, 1.4, 0.5, 1.0, 0.3, 0.4)
-    for S in (NonsingularKeplerianState, DelaunayState)
+    for S in (AlternateEquinoctialState, DelaunayState)
         s = with_logger(NullLogger()) do
             S(hyp, _ES_MU)
         end
@@ -129,7 +130,7 @@ end
 end
 
 @testset "OrbitState tags, vector constructors and display" begin
-    for (S, tag) in ((NonsingularKeplerianState, NonsingularKeplerian()), (DelaunayState, Delaunay()))
+    for (S, tag) in ((AlternateEquinoctialState, AlternateEquinoctial()), (DelaunayState, Delaunay()))
         @test state_tag_to_type(tag) === S
         @test state_type_to_tag(S) === tag
         s = S(CartesianState(_ES_STATES[:leo]), _ES_MU)
@@ -138,34 +139,34 @@ end
         @test occursin(string(nameof(S)), sprint(show, s))
         @test_throws ArgumentError S([1.0, 2.0, 3.0])
     end
-    @test NonsingularKeplerianState(7000, 0.01, 0.0, 0.1, 0.2, 1.0) isa NonsingularKeplerianState{Float64}
+    @test DelaunayState(1.0, 2.0, 3, 53000.0, 52000.0, 51000) isa DelaunayState{Float64}
 end
 
-_es_to_ns(c)   = equinoctial_to_nonsingular(cart_to_equinoctial(c, _ES_MU))
-_es_from_ns(n) = equinoctial_to_cart(nonsingular_to_equinoctial(n), _ES_MU)
+_es_to_alt(c)   = equinoctial_to_alt_equinoctial(cart_to_equinoctial(c, _ES_MU))
+_es_from_alt(n) = equinoctial_to_cart(alt_equinoctial_to_equinoctial(n), _ES_MU)
 
 @testset "differentiable: Cartesian → elements → Cartesian has an identity Jacobian" begin
     to_d(c)    = kep_to_delaunay(cart_to_kep(c, _ES_MU), _ES_MU)
     from_d(d)  = kep_to_cart(delaunay_to_kep(d, _ES_MU), _ES_MU)
-    for name in keys(_ES_STATES), (f, g) in ((_es_to_ns, _es_from_ns), (to_d, from_d))
+    for name in keys(_ES_STATES), (f, g) in ((_es_to_alt, _es_from_alt), (to_d, from_d))
         c = _ES_STATES[name]
         J = ForwardDiff.jacobian(g, f(c)) * ForwardDiff.jacobian(f, c)
         @test J ≈ I(6) atol = 1e-8
     end
 end
 
-@testset "the nonsingular set is differentiable at e = 0 and i = 0" begin
+@testset "the alternate equinoctial set is differentiable at e = 0 and i = 0" begin
     # The point of the set: a circular or equatorial orbit has a finite Jacobian, which a solver
     # varying these elements needs. Truth: the identity, and central differences.
     for (e, i) in ((0.0, 0.3), (0.01, 0.0), (0.0, 0.0))
         c = kep_to_cart([7000.0, e, i, 0.4, 0.5, 0.6], _ES_MU)
-        n = _es_to_ns(c)
-        Jfrom = ForwardDiff.jacobian(_es_from_ns, n)
+        n = _es_to_alt(c)
+        Jfrom = ForwardDiff.jacobian(_es_from_alt, n)
         @test all(isfinite, Jfrom)
-        @test Jfrom * ForwardDiff.jacobian(_es_to_ns, c) ≈ I(6) atol = 1e-8
+        @test Jfrom * ForwardDiff.jacobian(_es_to_alt, c) ≈ I(6) atol = 1e-8
         δ = 1e-6 .* max.(abs.(n), 1e-3)
-        Jcd = reduce(hcat, [(_es_from_ns(n .+ δ[k] .* (1:6 .== k)) .-
-                             _es_from_ns(n .- δ[k] .* (1:6 .== k))) ./ (2δ[k]) for k in 1:6])
+        Jcd = reduce(hcat, [(_es_from_alt(n .+ δ[k] .* (1:6 .== k)) .-
+                             _es_from_alt(n .- δ[k] .* (1:6 .== k))) ./ (2δ[k]) for k in 1:6])
         @test Jfrom ≈ Jcd rtol = 1e-6
     end
 end
@@ -175,24 +176,21 @@ end
     # on an equatorial one.
     for (e, i) in ((0.0, 0.3), (0.01, 0.0), (0.0, 0.0))
         cart = CartesianState(kep_to_cart([7000.0, e, i, 0.4, 0.5, 0.6], _ES_MU))
-        from_ns   = to_vector(KeplerianState(NonsingularKeplerianState(cart, _ES_MU), _ES_MU))
+        from_alt  = to_vector(KeplerianState(AlternateEquinoctialState(cart, _ES_MU), _ES_MU))
         from_cart = to_vector(KeplerianState(cart, _ES_MU))
-        @test from_ns[1:3] ≈ from_cart[1:3] rtol = 1e-12 atol = 1e-12
+        @test from_alt[1:3] ≈ from_cart[1:3] rtol = 1e-12 atol = 1e-12
         for k in 4:6
-            @test _es_angle_diff(from_ns[k], from_cart[k]) < 1e-10
+            @test _es_angle_diff(from_alt[k], from_cart[k]) < 1e-10
         end
     end
 end
 
-@testset "the nonsingular set is singular at i = π" begin
-    retro = KeplerianState(7000.0, 0.01, π, 0.0, 0.5, 0.6)
-    ns = with_logger(NullLogger()) do
-        NonsingularKeplerianState(retro, _ES_MU)
-    end
-    @test all(isnan, to_vector(ns))
+@testset "the alternate equinoctial set is singular at i = π" begin
+    singular = [7000.0, 0.01, 0.0, 0.0, 1.0, 0.6]          # sin(i/2) = 1
     @test all(isnan, with_logger(NullLogger()) do
-        nonsingular_to_equinoctial([7000.0, 0.01, 0.0, 0.0, 1.0, 0.6])
+        alt_equinoctial_to_equinoctial(singular)
     end)
+    @test_logs (:warn, r"180°") alt_equinoctial_to_equinoctial(singular)
 end
 
 nothing

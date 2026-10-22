@@ -34,12 +34,8 @@ truth_equinoct = EquinoctialState(8000.0 , 0.1879385241571815, 0.068404028665133
 truth_altequinoct = AlternateEquinoctialState(8000.0 , 0.1879385241571815, 0.0684040286651338, -0.08572231482903742, 0.07192956275670796, deg2rad(28.36066564454829))
 
 # Analytic, from the definitions applied to the Keplerian truth above (a, e, i, Ω, ω) and the
-# equinoctial truth's mean longitude; GMAT has no nonsingular Keplerian set, and its Delaunay
-# output is tested against four other orbits in test_correctness_element_sets.jl.
-truth_nonsingular = NonsingularKeplerianState(8000.0, 0.2 * cosd(430.0), 0.2 * sind(430.0),
-                                              sind(12.85 / 2) * sind(310.0), sind(12.85 / 2) * cosd(310.0),
-                                              deg2rad(28.36066564454829))
-
+# equinoctial truth's mean longitude; GMAT's Delaunay output is tested against four other orbits
+# in test_correctness_element_sets.jl.
 truth_delaunay = DelaunayState(deg2rad(28.36066564454829 - 430.0 + 720.0), deg2rad(120.0), deg2rad(310.0),
                                sqrt(398600.4415 * 8000.0), sqrt(398600.4415 * 8000.0 * (1 - 0.2^2)),
                                sqrt(398600.4415 * 8000.0 * (1 - 0.2^2)) * cosd(12.85))
@@ -55,6 +51,5 @@ states = Dict(
     :ModifiedKeplerianState => truth_modkep,
     :EquinoctialState => truth_equinoct,
     :AlternateEquinoctialState => truth_altequinoct,
-    :NonsingularKeplerianState => truth_nonsingular,
     :DelaunayState => truth_delaunay
 )

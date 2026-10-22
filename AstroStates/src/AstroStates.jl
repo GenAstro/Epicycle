@@ -27,7 +27,7 @@ export AbstractState, AbstractOrbitState, AbstractOrbitStateType
 export CartesianState, KeplerianState, SphericalRADECState, ModifiedEquinoctialState
 export OutGoingAsymptoteState, IncomingAsymptoteState, ModifiedKeplerianState, SphericalAZIFPAState
 export EquinoctialState, AlternateEquinoctialState, BrouwerMeanLongState, BrouwerMeanShortState
-export NonsingularKeplerianState, DelaunayState
+export DelaunayState
 
 # Export conversion functions 
 export cart_to_kep, kep_to_cart, sphradec_to_cart, cart_to_sphradec, cart_to_mee, mee_to_cart
@@ -35,7 +35,7 @@ export outasymptote_to_kep, cart_to_outasymptote, to_vector, cart_to_inasymptote
 export inasymptote_to_kep, sphazfpa_to_cart, cart_to_sphazfpa, equinoctial_to_alt_equinoctial
 export alt_equinoctial_to_equinoctial, equinoctial_to_cart, cart_to_equinoctial
 export modkep_to_kep, kep_to_modkep
-export equinoctial_to_nonsingular, nonsingular_to_equinoctial, kep_to_delaunay, delaunay_to_kep
+export kep_to_delaunay, delaunay_to_kep
 export state_tag_to_type, state_type_to_tag
 
 struct Cartesian <: AbstractOrbitStateType end
@@ -50,7 +50,6 @@ struct ModifiedKeplerian <: AbstractOrbitStateType end
 struct AlternateEquinoctial <: AbstractOrbitStateType end
 struct BrouwerMeanLong <: AbstractOrbitStateType end
 struct BrouwerMeanShort <: AbstractOrbitStateType end
-struct NonsingularKeplerian <: AbstractOrbitStateType end
 struct Delaunay <: AbstractOrbitStateType end
 
 export AbstractOrbitStateType, Cartesian, Keplerian, Equinoctial, SphericalRADEC, SphericalAZIFPA
@@ -58,7 +57,7 @@ export ModifiedEquinoctial, OutGoingAsymptote, IncomingAsymptote,ModifiedKepleri
 export OrbitState, to_state
 export BrouwerMeanLongState, BrouwerMeanShortState
 export BrouwerMeanLong, BrouwerMeanShort
-export NonsingularKeplerian, Delaunay
+export Delaunay
 export kep_to_brouwer_mean_long, brouwer_mean_long_to_kep
 export kep_to_brouwer_mean_short, brouwer_mean_short_to_kep
 
@@ -89,9 +88,6 @@ include("cart_to_equinoctial.jl")
 
 include("modkep_to_kep.jl")
 include("kep_to_modkep.jl")
-
-include("equinoctial_to_nonsingular.jl")
-include("nonsingular_to_equinoctial.jl")
 
 include("kep_to_delaunay.jl")
 include("delaunay_to_kep.jl")
@@ -669,12 +665,18 @@ Alternate equinoctial elements representation.
 
 # Notes
 - Parametric so automatic differentiation and high-precision types are supported.
-- Alternative to standard equinoctial elements using sin(i/2) instead of tan(i/2).
-- Singularities reduced compared to classical elements.
+- The same as `EquinoctialState` but for the inclination pair, sin(i/2) in place of tan(i/2). These
+  are Lyddane's nonsingular variables (Lyddane, 1963, Astronomical Journal 68, 555), with the
+  semi-major axis in place of the Delaunay L.
+- Defined, with their derivatives, at e = 0 and i = 0, where Ω, ω and the mean anomaly separately
+  are not. Singular at i = π, where a conversion returns a state of `NaN`s with a warning.
+- A circular or equatorial orbit converted to `KeplerianState` takes the Keplerian conventions for
+  the angles undefined there, as a conversion from `CartesianState` does.
 
 # Examples
 ```julia
 alteq = AlternateEquinoctialState(7000.0, 0.01, 0.0, 0.05, 0.0, π/4)
+CartesianState(alteq, 398600.4418)
 ```
 """
 struct AlternateEquinoctialState{T<:Real} <: AbstractOrbitState
@@ -803,58 +805,6 @@ function show(io::IO, state::BrouwerMeanShortState)
 end
 
 """
-    NonsingularKeplerianState(sma, e1, e2, e3, e4, e5)
-
-Nonsingular Keplerian elements of a closed orbit: the semi-major axis, the eccentricity and
-inclination as vectors pointing at the periapsis and the node, and the mean longitude. They follow
-Lyddane's nonsingular variables (Lyddane, 1963, Astronomical Journal 68, 555), with the
-semi-major axis in place of the Delaunay L, and are defined at zero eccentricity and zero
-inclination, where Ω, ω and M separately are not.
-
-# Fields
-- `sma`: semi-major axis a, km.
-- `e1`: e cos(Ω + ω).
-- `e2`: e sin(Ω + ω).
-- `e3`: sin(i/2) sin Ω.
-- `e4`: sin(i/2) cos Ω.
-- `e5`: mean longitude Ω + ω + M, rad, in [0, 2π).
-
-# Notes
-- Defined for closed orbits, 0 ≤ e < 1, and singular at i = π, where Ω + ω is undefined. A
-  hyperbola or a retrograde equatorial orbit converts to a state of `NaN`s with a warning, as
-  other singular conversions do.
-- They differ from `EquinoctialState` only in the inclination pair, sin(i/2) in place of
-  tan(i/2), and convert through it, so the conversions and their derivatives are defined at
-  e = 0 and i = 0.
-- A circular or equatorial orbit converted to `KeplerianState` takes the Keplerian conventions
-  for the angles undefined there, as a conversion from `CartesianState` does.
-
-# Examples
-```julia
-ns = NonsingularKeplerianState(KeplerianState(7000.0, 0.01, 0.5, 1.0, 2.0, 0.3), 398600.4418)
-CartesianState(ns, 398600.4418)
-```
-"""
-struct NonsingularKeplerianState{T<:Real} <: AbstractOrbitState
-    sma::T
-    e1::T
-    e2::T
-    e3::T
-    e4::T
-    e5::T
-end
-
-function show(io::IO, state::NonsingularKeplerianState)
-    println(io, "NonsingularKeplerianState:")
-    println(io, @sprintf("  sma        = %14.6f", state.sma))
-    println(io, @sprintf("  e1         = %14.8f", state.e1))
-    println(io, @sprintf("  e2         = %14.8f", state.e2))
-    println(io, @sprintf("  e3         = %14.8f", state.e3))
-    println(io, @sprintf("  e4         = %14.8f", state.e4))
-    println(io, @sprintf("  e5   (deg) = %14.6f", rad2deg(state.e5)))
-end
-
-"""
     DelaunayState(l, g, h, L, G, H)
 
 Delaunay elements of a closed orbit: three angles and their conjugate momenta, the canonical set
@@ -938,9 +888,7 @@ end
 @inline state_tag_to_type(::BrouwerMeanShort) = BrouwerMeanShortState
 @inline state_type_to_tag(::Type{<:BrouwerMeanLongState})  = BrouwerMeanLong()
 @inline state_type_to_tag(::Type{<:BrouwerMeanShortState}) = BrouwerMeanShort()
-@inline state_tag_to_type(::NonsingularKeplerian) = NonsingularKeplerianState
 @inline state_tag_to_type(::Delaunay)             = DelaunayState
-@inline state_type_to_tag(::Type{<:NonsingularKeplerianState}) = NonsingularKeplerian()
 @inline state_type_to_tag(::Type{<:DelaunayState})             = Delaunay()
 
 # --- Documentation for the representation tags and the tag mapping -----------
@@ -972,7 +920,6 @@ for (tag, state) in ((:Cartesian, :CartesianState), (:Keplerian, :KeplerianState
                      (:AlternateEquinoctial, :AlternateEquinoctialState),
                      (:BrouwerMeanLong, :BrouwerMeanLongState),
                      (:BrouwerMeanShort, :BrouwerMeanShortState),
-                     (:NonsingularKeplerian, :NonsingularKeplerianState),
                      (:Delaunay, :DelaunayState))
     @eval @doc """
         $($(string(tag)))()
@@ -1049,7 +996,6 @@ and angles in radians.
 | `AlternateEquinoctialState` | a, h, k, altp, altq, mlong |
 | `OutGoingAsymptoteState`, `IncomingAsymptoteState` | rp, c3, rla, dla, bpa, ta |
 | `BrouwerMeanLongState`, `BrouwerMeanShortState` | sma, ecc, inc, raan, aop, ma |
-| `NonsingularKeplerianState` | sma, e1, e2, e3, e4, e5 |
 | `DelaunayState` | l, g, h, L, G, H |
 
 For an `OrbitState` it returns the stored vector itself, not a copy.
@@ -1114,9 +1060,6 @@ end
 function to_vector(state::BrouwerMeanShortState)
     [state.sma, state.ecc, state.inc, state.raan, state.aop, state.ma]
 end
-function to_vector(state::NonsingularKeplerianState)
-    [state.sma, state.e1, state.e2, state.e3, state.e4, state.e5]
-end
 function to_vector(state::DelaunayState)
     [state.l, state.g, state.h, state.L, state.G, state.H]
 end
@@ -1145,8 +1088,6 @@ EquinoctialState(state::EquinoctialState, μ::Real) = state
 EquinoctialState(state::EquinoctialState) = state
 AlternateEquinoctialState(state::AlternateEquinoctialState, μ::Real) = state
 AlternateEquinoctialState(state::AlternateEquinoctialState) = state
-NonsingularKeplerianState(state::NonsingularKeplerianState, μ::Real) = state
-NonsingularKeplerianState(state::NonsingularKeplerianState) = state
 DelaunayState(state::DelaunayState, μ::Real) = state
 DelaunayState(state::DelaunayState) = state
 
@@ -1167,8 +1108,6 @@ CartesianState(outasymptote::OutGoingAsymptoteState, μ::Real) = CartesianState(
                    kep_to_cart(outasymptote_to_kep(to_vector(outasymptote), μ),μ))
 CartesianState(inasymptote::IncomingAsymptoteState, μ::Real) = CartesianState(
                    kep_to_cart(inasymptote_to_kep(to_vector(inasymptote), μ),μ))
-CartesianState(ns::NonsingularKeplerianState, μ::Real) = CartesianState(
-                   equinoctial_to_cart(nonsingular_to_equinoctial(to_vector(ns)), μ))
 CartesianState(d::DelaunayState, μ::Real) = CartesianState(kep_to_cart(delaunay_to_kep(to_vector(d), μ), μ))
 
 # Conversions to KeplerianState
@@ -1193,7 +1132,6 @@ KeplerianState(outasymptote::OutGoingAsymptoteState, μ::Real) = KeplerianState(
                    outasymptote_to_kep(to_vector(outasymptote), μ)...)
 KeplerianState(inasymptote::IncomingAsymptoteState, μ::Real) = KeplerianState(
                    inasymptote_to_kep(to_vector(inasymptote), μ)...)
-KeplerianState(ns::NonsingularKeplerianState, μ::Real) = KeplerianState(CartesianState(ns, μ), μ)
 KeplerianState(d::DelaunayState, μ::Real) = KeplerianState(delaunay_to_kep(to_vector(d), μ)...)
 
 # Conversions to SphericalRADECState
@@ -1223,7 +1161,6 @@ SphericalRADECState(inasymptote::IncomingAsymptoteState, μ::Real) = SphericalRA
 
 SphericalRADECState(b::BrouwerMeanLongState, μ::Real)  = SphericalRADECState(KeplerianState(b, μ), μ)
 SphericalRADECState(b::BrouwerMeanShortState, μ::Real) = SphericalRADECState(KeplerianState(b, μ), μ)
-SphericalRADECState(ns::NonsingularKeplerianState, μ::Real) = SphericalRADECState(CartesianState(ns, μ), μ)
 SphericalRADECState(d::DelaunayState, μ::Real) = SphericalRADECState(KeplerianState(d, μ), μ)
 
 # Conversions to SphericalAZIFPAState
@@ -1253,7 +1190,6 @@ SphericalAZIFPAState(inasymptote::IncomingAsymptoteState, μ::Real) = SphericalA
 
 SphericalAZIFPAState(b::BrouwerMeanLongState, μ::Real)  = SphericalAZIFPAState(KeplerianState(b, μ), μ)
 SphericalAZIFPAState(b::BrouwerMeanShortState, μ::Real) = SphericalAZIFPAState(KeplerianState(b, μ), μ)
-SphericalAZIFPAState(ns::NonsingularKeplerianState, μ::Real) = SphericalAZIFPAState(CartesianState(ns, μ), μ)
 SphericalAZIFPAState(d::DelaunayState, μ::Real) = SphericalAZIFPAState(KeplerianState(d, μ), μ)
 
 # Conversions to ModifiedEquinoctialState
@@ -1282,7 +1218,6 @@ ModifiedEquinoctialState(inasymptote::IncomingAsymptoteState, μ::Real) = Modifi
 
 ModifiedEquinoctialState(b::BrouwerMeanLongState, μ::Real)  = ModifiedEquinoctialState(KeplerianState(b, μ), μ)
 ModifiedEquinoctialState(b::BrouwerMeanShortState, μ::Real) = ModifiedEquinoctialState(KeplerianState(b, μ), μ)
-ModifiedEquinoctialState(ns::NonsingularKeplerianState, μ::Real) = ModifiedEquinoctialState(CartesianState(ns, μ), μ)
 ModifiedEquinoctialState(d::DelaunayState, μ::Real) = ModifiedEquinoctialState(KeplerianState(d, μ), μ)
 
 # Conversions to OutGoingAsymptoteState
@@ -1314,7 +1249,6 @@ OutGoingAsymptoteState(inasymptote::IncomingAsymptoteState, μ::Real) = OutGoing
 
 OutGoingAsymptoteState(b::BrouwerMeanLongState, μ::Real)  = OutGoingAsymptoteState(KeplerianState(b, μ), μ)
 OutGoingAsymptoteState(b::BrouwerMeanShortState, μ::Real) = OutGoingAsymptoteState(KeplerianState(b, μ), μ)
-OutGoingAsymptoteState(ns::NonsingularKeplerianState, μ::Real) = OutGoingAsymptoteState(CartesianState(ns, μ), μ)
 OutGoingAsymptoteState(d::DelaunayState, μ::Real) = OutGoingAsymptoteState(KeplerianState(d, μ), μ)
 
 # Conversions to IncomingAsymptoteState
@@ -1347,7 +1281,6 @@ IncomingAsymptoteState(outasymptote::OutGoingAsymptoteState, μ::Real) = Incomin
 
 IncomingAsymptoteState(b::BrouwerMeanLongState, μ::Real)  = IncomingAsymptoteState(KeplerianState(b, μ), μ)
 IncomingAsymptoteState(b::BrouwerMeanShortState, μ::Real) = IncomingAsymptoteState(KeplerianState(b, μ), μ)
-IncomingAsymptoteState(ns::NonsingularKeplerianState, μ::Real) = IncomingAsymptoteState(CartesianState(ns, μ), μ)
 IncomingAsymptoteState(d::DelaunayState, μ::Real) = IncomingAsymptoteState(KeplerianState(d, μ), μ)
 
 # Conversions to Modified Keplerian State
@@ -1374,7 +1307,6 @@ ModifiedKeplerianState(inasymptote::IncomingAsymptoteState, μ::Real) = Modified
 
 ModifiedKeplerianState(b::BrouwerMeanLongState, μ::Real)  = ModifiedKeplerianState(KeplerianState(b, μ), μ)
 ModifiedKeplerianState(b::BrouwerMeanShortState, μ::Real) = ModifiedKeplerianState(KeplerianState(b, μ), μ)
-ModifiedKeplerianState(ns::NonsingularKeplerianState, μ::Real) = ModifiedKeplerianState(CartesianState(ns, μ), μ)
 ModifiedKeplerianState(d::DelaunayState, μ::Real) = ModifiedKeplerianState(KeplerianState(d, μ), μ)
 
 # Conversions to EquinoctialState
@@ -1402,7 +1334,6 @@ EquinoctialState(inasymptote::IncomingAsymptoteState, μ::Real) = EquinoctialSta
 
 EquinoctialState(b::BrouwerMeanLongState, μ::Real)  = EquinoctialState(KeplerianState(b, μ), μ)
 EquinoctialState(b::BrouwerMeanShortState, μ::Real) = EquinoctialState(KeplerianState(b, μ), μ)
-EquinoctialState(ns::NonsingularKeplerianState, μ::Real) = EquinoctialState(nonsingular_to_equinoctial(to_vector(ns))...)
 EquinoctialState(d::DelaunayState, μ::Real) = EquinoctialState(KeplerianState(d, μ), μ)
 
 # Conversions to AlternateEquinoctialState
@@ -1432,35 +1363,7 @@ AlternateEquinoctialState(inasymptote::IncomingAsymptoteState, μ::Real) = Alter
 # =============================================================================
 AlternateEquinoctialState(b::BrouwerMeanLongState, μ::Real)  = AlternateEquinoctialState(KeplerianState(b, μ), μ)
 AlternateEquinoctialState(b::BrouwerMeanShortState, μ::Real) = AlternateEquinoctialState(KeplerianState(b, μ), μ)
-AlternateEquinoctialState(ns::NonsingularKeplerianState, μ::Real) = AlternateEquinoctialState(
-       equinoctial_to_alt_equinoctial(nonsingular_to_equinoctial(to_vector(ns)))...)
 AlternateEquinoctialState(d::DelaunayState, μ::Real) = AlternateEquinoctialState(KeplerianState(d, μ), μ)
-
-# Conversions to NonsingularKeplerianState
-NonsingularKeplerianState(s::AbstractVector{T}, μ::Real) where {T<:Real} = begin
-    length(s) == 6 || throw(ArgumentError("A state vector must have 6 elements; got $(length(s))."))
-    NonsingularKeplerianState{T}(s[1], s[2], s[3], s[4], s[5], s[6])
-end
-NonsingularKeplerianState(s::AbstractVector{T}) where {T<:Real} =
-    NonsingularKeplerianState(s, zero(T))
-NonsingularKeplerianState(equinoct::EquinoctialState, μ::Real) = NonsingularKeplerianState(
-                           equinoctial_to_nonsingular(to_vector(equinoct))...)
-NonsingularKeplerianState(equinoct::AlternateEquinoctialState, μ::Real) = NonsingularKeplerianState(
-                           equinoctial_to_nonsingular(alt_equinoctial_to_equinoctial(to_vector(equinoct)))...)
-NonsingularKeplerianState(cart::CartesianState, μ::Real) = NonsingularKeplerianState(
-                           equinoctial_to_nonsingular(cart_to_equinoctial(to_vector(cart), μ))...)
-NonsingularKeplerianState(keplerian::KeplerianState, μ::Real) = NonsingularKeplerianState(EquinoctialState(keplerian, μ), μ)
-NonsingularKeplerianState(modkep::ModifiedKeplerianState, μ::Real) = NonsingularKeplerianState(EquinoctialState(modkep, μ), μ)
-NonsingularKeplerianState(sph::SphericalRADECState, μ::Real) = NonsingularKeplerianState(EquinoctialState(sph, μ), μ)
-NonsingularKeplerianState(sph::SphericalAZIFPAState, μ::Real) = NonsingularKeplerianState(EquinoctialState(sph, μ), μ)
-NonsingularKeplerianState(mee::ModifiedEquinoctialState, μ::Real) = NonsingularKeplerianState(EquinoctialState(mee, μ), μ)
-NonsingularKeplerianState(outasymptote::OutGoingAsymptoteState, μ::Real) = NonsingularKeplerianState(
-                           EquinoctialState(outasymptote, μ), μ)
-NonsingularKeplerianState(inasymptote::IncomingAsymptoteState, μ::Real) = NonsingularKeplerianState(
-                           EquinoctialState(inasymptote, μ), μ)
-NonsingularKeplerianState(b::BrouwerMeanLongState, μ::Real)  = NonsingularKeplerianState(EquinoctialState(b, μ), μ)
-NonsingularKeplerianState(b::BrouwerMeanShortState, μ::Real) = NonsingularKeplerianState(EquinoctialState(b, μ), μ)
-NonsingularKeplerianState(d::DelaunayState, μ::Real) = NonsingularKeplerianState(EquinoctialState(d, μ), μ)
 
 # Conversions to DelaunayState
 DelaunayState(s::AbstractVector{T}, μ::Real) where {T<:Real} = begin
@@ -1481,7 +1384,6 @@ DelaunayState(outasymptote::OutGoingAsymptoteState, μ::Real) = DelaunayState(Ke
 DelaunayState(inasymptote::IncomingAsymptoteState, μ::Real) = DelaunayState(KeplerianState(inasymptote, μ), μ)
 DelaunayState(b::BrouwerMeanLongState, μ::Real)  = DelaunayState(KeplerianState(b, μ), μ)
 DelaunayState(b::BrouwerMeanShortState, μ::Real) = DelaunayState(KeplerianState(b, μ), μ)
-DelaunayState(ns::NonsingularKeplerianState, μ::Real) = DelaunayState(KeplerianState(ns, μ), μ)
 
 # Fallbacks for unsupported conversions
 # =============================================================================
@@ -1498,7 +1400,6 @@ EquinoctialState(state::AbstractOrbitState, μ::Real) = error("No conversion def
 AlternateEquinoctialState(state::AbstractOrbitState, μ::Real) = error("No conversion defined from $(typeof(state)) to AlternateEquinoctialState")
 OutGoingAsymptoteState(state::AbstractOrbitState, μ::Real) = error("No conversion defined from $(typeof(state)) to OutGoingAsymptoteState")
 IncomingAsymptoteState(state::AbstractOrbitState, μ::Real) = error("No conversion defined from $(typeof(state)) to IncomingAsymptoteState")
-NonsingularKeplerianState(state::AbstractOrbitState, μ::Real) = error("No conversion defined from $(typeof(state)) to NonsingularKeplerianState")
 DelaunayState(state::AbstractOrbitState, μ::Real) = error("No conversion defined from $(typeof(state)) to DelaunayState")
 
 # =============================================================================
@@ -1511,7 +1412,7 @@ DelaunayState(state::AbstractOrbitState, μ::Real) = error("No conversion define
 for S in (:KeplerianState, :SphericalRADECState, :SphericalAZIFPAState, :ModifiedEquinoctialState,
           :OutGoingAsymptoteState, :IncomingAsymptoteState, :ModifiedKeplerianState,
           :EquinoctialState, :AlternateEquinoctialState, :BrouwerMeanLongState,
-          :BrouwerMeanShortState, :NonsingularKeplerianState, :DelaunayState)
+          :BrouwerMeanShortState, :DelaunayState)
     @eval $S(a::Real, b::Real, c::Real, d::Real, e::Real, f::Real) = $S(promote(a, b, c, d, e, f)...)
 end
 
