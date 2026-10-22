@@ -112,6 +112,7 @@ mutable struct _OEMSegment
     breaks::Vector{Int}               # indices where a skipped line splits the data
     skipped::Vector{Int}              # lines dropped at those breaks
     usable::Bool                      # metadata complete: the segment can be returned
+    cov_unsorted::Bool                # covariance epochs out of order: sorted once, at the end
     has_acc::Union{Nothing, Bool}
     cov_epoch::Union{Nothing, Tuple{Time, Int}}
     cov_frame::String
@@ -120,7 +121,7 @@ mutable struct _OEMSegment
     cov_shape_noted::Bool
 end
 _OEMSegment(line) = _OEMSegment(line, Dict{String, Tuple{String, Int}}(), String[],
-                                EphemerisSegmentData(), false, Int[], Int[], Int[], false, nothing,
+                                EphemerisSegmentData(), false, Int[], Int[], Int[], false, false, nothing,
                                 nothing, "", Float64[], 0, false)
 
 mutable struct _OEMParser
@@ -536,7 +537,7 @@ function _oem_flush_cov!(p::_OEMParser, i)
                 _fixed!(p.d, c.cov_line, "covariance", "covariance epochs not increasing (§5.2.5.7); sorted")
             end
             push!(cov, CovarianceRecord(t, isempty(c.cov_frame) ? c.seg.frame : c.cov_frame, SMatrix{6, 6}(m)))
-            sort!(cov; by = r -> _seconds(cov[1].epoch, r.epoch))
+            c.cov_unsorted |= length(cov) > 1 && _seconds(cov[end - 1].epoch, t) <= 0
         end
     end
     c.cov_epoch, c.cov_values, c.cov_frame = nothing, Float64[], ""
@@ -556,6 +557,10 @@ function _oem_close_segment!(p::_OEMParser)
     p.current = nothing
     c.ready || return
     seg = c.seg
+    if c.cov_unsorted
+        ref = seg.covariances[1].epoch
+        sort!(seg.covariances; by = r -> _seconds(ref, r.epoch))
+    end
     if isempty(seg.times)
         return _error!(d, c.start_line, "data", "the segment starting at line $(c.start_line) has no ephemeris lines")
     end

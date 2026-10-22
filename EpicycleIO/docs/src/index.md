@@ -12,9 +12,13 @@ EpicycleIO.auto_open!(false)
 # EpicycleIO
 
 The EpicycleIO module provides plotting, reporting, and three-dimensional trajectory
-visualization for Epicycle results. Plots are drawn by Plotly.js and trajectories by Cesium, both
-in a browser page served from the local machine. The page updates while a script is still
-running, so a propagation or a solver iteration can be watched as it proceeds.
+visualization for Epicycle results, and reads and writes ephemeris files. Plots are drawn by
+Plotly.js and trajectories by Cesium, both in a browser page served from the local machine. The
+page updates while a script is still running, so a propagation or a solver iteration can be
+watched as it proceeds.
+
+Ephemeris files in the formats other tools exchange, CCSDS OEM, STK `.e` and JPL SPK, read into
+and are written from the trajectory a spacecraft records; see [Ephemeris Files](ephemeris.md).
 
 The plotting and reporting functions take arrays, and have no knowledge of spacecraft, states
 or coordinate systems. `history` in AstroCallbacks produces the arrays. Data from two spacecraft

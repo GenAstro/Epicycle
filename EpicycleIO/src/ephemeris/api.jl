@@ -272,7 +272,10 @@ length(coverage(sat))
 ```
 """
 function coverage(eph::Union{SpacecraftHistory, Spacecraft})
-    iv = sort([_usable(s) for s in _segments(eph)]; by = x -> _seconds(first(_usable(_segments(eph)[1])), x[1]))
+    segs = _segments(eph)
+    isempty(segs) && return Tuple{Time, Time}[]
+    ref = first(_usable(segs[1]))
+    iv = sort([_usable(s) for s in segs]; by = x -> _seconds(ref, x[1]))
     out = Tuple{Time, Time}[]
     for (a, b) in iv
         if !isempty(out) && _seconds(out[end][2], a) <= 0
@@ -415,23 +418,51 @@ function _interpolate_segment(s::HistorySegment, t::Time)
     # One state, as a maneuver records: exact at its epoch, which is all it covers.
     length(s.times) == 1 && return Coordinate(s.states[1], s.coordinate_system, t)
     t0 = first(s.times)
-    x = [_seconds(t0, ti) for ti in s.times]
-    xt = clamp(_seconds(t0, t), first(x), last(x))             # within _EDGE of an end: that end
-    n = length(x)
+    N = length(s.times)
+    xt = clamp(_seconds(t0, t), 0.0, _seconds(t0, last(s.times)))   # within _EDGE of an end: that end
     m = get(s.metadata, _META.interpolation, nothing)
-    m === nothing && (m = Lagrange(min(7, n - 1)))
-    n >= required_points(m) || (m = m isa Hermite ? Hermite(2n - 1) : Lagrange(n - 1))
-    vals = [to_vector(st) for st in s.states]
-    r = [SVector{3}(v[1:3]) for v in vals]
-    v = [SVector{3}(v[4:6]) for v in vals]
-    if all(w -> all(isnan, w), v)                              # positions only
-        pos, vel = interpolate_with_derivative(m isa Hermite ? Lagrange(min(7, n - 1)) : m, x, r, xt)
+    m === nothing && (m = Lagrange(min(7, N - 1)))
+    N >= required_points(m) || (m = m isa Hermite ? Hermite(2N - 1) : Lagrange(N - 1))
+    # Positions only (an STK EphemerisTimePos file): Lagrange through the positions, the velocity
+    # from the polynomial's derivative.
+    positions_only = all(isnan, to_vector(s.states[1])[4:6])
+    positions_only && m isa Hermite && (m = Lagrange(min(7, N - 1)))
+    # Only the points the method uses are touched, so a call costs the same for any segment length.
+    idx = _window(s.times, t0, xt, required_points(m))
+    x = [_seconds(t0, s.times[i]) for i in idx]
+    vals = [to_vector(s.states[i]) for i in idx]
+    r = [SVector{3}(w[1:3]) for w in vals]
+    v = [SVector{3}(w[4:6]) for w in vals]
+    if positions_only
+        pos, vel = interpolate_with_derivative(m, x, r, xt)
     elseif m isa Hermite
         pos, vel = interpolate_with_derivative(m, x, r, v, xt)
     else
         pos, vel = interpolate(m, x, r, xt), interpolate(m, x, v, xt)
     end
     return Coordinate(CartesianState(vcat(pos, vel)), s.coordinate_system, t)
+end
+
+# The n consecutive points AstroRoutines would choose around xt (seconds from t0) in the whole
+# table: centred where the table allows, shifted inward at its ends, the extra point of an odd
+# count on the nearer side. Found by binary search, so only these points are converted.
+function _window(times::AbstractVector{<:Time}, t0::Time, xt::Real, n::Integer)
+    N = length(times)
+    sec(i) = _seconds(t0, times[i])
+    lo, hi = 1, N                                       # largest k with sec(k) <= xt
+    while lo < hi
+        mid = (lo + hi + 1) ÷ 2
+        sec(mid) <= xt ? (lo = mid) : (hi = mid - 1)
+    end
+    k = clamp(lo, 1, N - 1)
+    if iseven(n)
+        first = k - n ÷ 2 + 1
+    else
+        nearer = (xt - sec(k)) <= (sec(k + 1) - xt) ? k : k + 1
+        first = nearer - (n - 1) ÷ 2
+    end
+    first = clamp(first, 1, N - n + 1)
+    return first:first + n - 1
 end
 
 """

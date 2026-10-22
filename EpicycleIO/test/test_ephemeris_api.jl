@@ -157,3 +157,62 @@ end
     lone = SpacecraftHistory([HistorySegment([at(5000.0)], [CartesianState(circ(5000.0))], CoordinateSystem(earth, ICRF()))])
     @test occursin("one state", try write_ephemeris(tempname() * ".oem", lone); "" catch e sprint(showerror, e) end)
 end
+
+@testset "ephemeris API: state_at uses only its window, with the same result" begin
+    # The window state_at picks by binary search is the one AstroRoutines picks in the whole
+    # table, so the result is identical; uneven spacing exercises the odd-count rule.
+    ts = cumsum(vcat(0.0, [40.0 + 25.0 * sin(k) for k in 1:299]))
+    full_x = ts
+    for m in (Lagrange(7), Lagrange(6), Hermite(7), Hermite(5))
+        h = history(ts; interp = m)
+        r = [SVector{3}(circ(s)[1:3]) for s in ts]
+        v = [SVector{3}(circ(s)[4:6]) for s in ts]
+        for s in (0.0, 13.7, ts[2] + 1.0, ts[150] + 3.3, ts[end] - 0.5, ts[end])
+            got = pos(state_at(h, at(s)))
+            want = m isa Hermite ? EA.interpolate(m, full_x, r, v, s) : EA.interpolate(m, full_x, r, s)
+            @test maximum(abs.(got - want)) < 1e-8                      # km; epochs pass through Time
+        end
+    end
+    # Positions only: Lagrange through positions, velocity from its derivative.
+    h = history(ts)
+    h.segments[1].states .= [CartesianState(vcat(circ(s)[1:3], fill(NaN, 3))) for s in ts]
+    c = to_vector(CartesianState(state_at(h, at(ts[100] + 7.0))))
+    @test maximum(abs.(c[4:6] - circ(ts[100] + 7.0)[4:6])) < 1e-8
+end
+
+@testset "ephemeris API: cost does not grow with the table" begin
+    small, large = history(0.0:10.0:20_000.0), history(0.0:10.0:200_000.0)       # 2 001 and 20 001 points
+    probe(h) = (t = at(1234.5); state_at(h, t); @elapsed for _ in 1:200; state_at(h, t); end)
+    probe(small)
+    @test probe(large) < 20 * max(probe(small), 1e-4)                             # O(log N), not O(N)
+    @test (@elapsed position_difference(large, large)) < 30.0
+end
+
+# The GMAT reference files committed with the examples: every format of one trajectory.
+const GMAT_EXAMPLES = joinpath(@__DIR__, "..", "..", "Epicycle", "examples")
+if isdir(joinpath(GMAT_EXAMPLES, "Ephemeris_OEM"))
+    @testset "ephemeris API: GMAT's OEM, .e and SPK of one orbit agree" begin
+        oem = read_ephemeris(joinpath(GMAT_EXAMPLES, "Ephemeris_OEM", "gmat_leo.oem"); strict = true)
+        stk = read_ephemeris(joinpath(GMAT_EXAMPLES, "Ephemeris_STK", "gmat_leo.e"); strict = true)
+        spk = read_ephemeris(joinpath(GMAT_EXAMPLES, "Ephemeris_SPK", "gmat_leo.bsp"))
+        for e in (oem, stk, spk)
+            @test length(epochs(e)) == 121 && length(e.segments) == 1
+        end
+        @test oem.segments[1].metadata["interpolation"] == Lagrange(7)
+        @test stk.segments[1].metadata["interpolation"] == Lagrange(5)       # GMAT writes no InterpolationSamplesM1
+        @test spk.segments[1].metadata["interpolation"] == Hermite(7)
+        @test to_vector(oem.segments[1].states[1]) == [7000.0, 0.0, 1300.0, 0.0, 7.35, 1.0]
+        # The OEM and .e are both EME2000 and agree to millimetres, GMAT's .e epochs carrying
+        # about 1 µs of rounding.
+        @test maximum(position_difference(oem, stk)) < 1e-5                # km
+        # GMAT's SPK and OEM of the same orbit differ, read by Epicycle under each format's own
+        # frame definition (CCSDS EME2000 as FK5 J2000, NAIF J2000 as ICRF), by a fixed rotation of
+        # a few tens of mas and GMAT's SPK epochs 25.6 µs from its OEM's: about 1.3 m here. This
+        # records the measured difference so a change in either is seen; it is an open question
+        # how GMAT's EME2000 relates to ICRF, not a tolerance.
+        d = position_difference(oem, spk)
+        @test 0.5e-3 < maximum(d) < 2.0e-3
+        gap = [EA._seconds(a, b) for (a, b) in zip(epochs(oem), epochs(spk))]
+        @test all(g -> -30e-6 < g < -20e-6, gap)
+    end
+end
