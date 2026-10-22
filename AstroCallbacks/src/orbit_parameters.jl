@@ -2,18 +2,31 @@
 # SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 # =============================================================================
-# Orbit parameters that are two-body formulas of the current state (#11, sections 1 and 2).
+# Orbit parameters of the current state (#11, sections 1, 2 and 6).
 #
-# Each reads the subject in `cs`, or in its own frame without one, and takes the gravitational
-# parameter from the coordinate system's origin, as `raan` does. A parameter undefined for the
+# The mathematics lives below this package. A value a state representation already carries is
+# read from that representation: the apsis radii from ModifiedKeplerianState, the semi-latus
+# rectum and true longitude from ModifiedEquinoctialState, and the B-plane from
+# IncomingAsymptoteState. Two-body formulas of the state and the anomaly conversions are
+# AstroRoutines functions; the two-body ones are the same functions, given a method here that
+# takes a spacecraft. What stays here is the quantity interface: the frame, the gravitational
+# parameter of the frame's origin, the domain errors, labels, units and setters.
+#
+# Each reads the subject in `cs`, or in its own frame without one. A parameter undefined for the
 # orbit throws an ArgumentError saying why, rather than returning NaN, because a NaN in a
 # constraint or a stopping condition fails somewhere far from its cause.
 #
 # Every reader is generic in the state's element type, so ForwardDiff passes through.
 # =============================================================================
 
-using AstroStates: KeplerianState, ModifiedKeplerianState, CartesianState, to_vector
-using LinearAlgebra: cross, dot, norm
+using AstroStates: KeplerianState, ModifiedKeplerianState, ModifiedEquinoctialState,
+                   IncomingAsymptoteState, CartesianState, to_vector
+using AstroRoutines: true_to_mean_anomaly, true_to_eccentric_anomaly, mean_to_true_anomaly,
+                     true_to_hyperbolic_anomaly, hyperbolic_to_mean_anomaly,
+                     mean_to_hyperbolic_anomaly, hyperbolic_to_true_anomaly
+import AstroRoutines: specific_energy, hyperbolic_excess_speed, apoapsis_speed, periapsis_speed,
+                      angular_momentum, angular_momentum_magnitude, orbit_normal,
+                      orbital_angular_velocity, eccentricity_vector, orbital_period, mean_motion
 
 # --- shared reads ------------------------------------------------------------
 
@@ -23,21 +36,17 @@ function _rvμ(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
     return x[1:3], x[4:6], get_gravparam(cs.origin)
 end
 
-"Keplerian elements and gravitational parameter of `subject` in `cs`."
-function _keplerian(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    μ = get_gravparam(cs.origin)
-    return KeplerianState(CartesianState(Coordinate(subject, cs, params)), μ), μ
+"The state of `subject` in `cs` as representation `S`, about the origin's gravitational parameter."
+function _state(S, subject, cs::AbstractCoordinateSystem, params::NamedTuple)
+    return S(CartesianState(Coordinate(subject, cs, params)), get_gravparam(cs.origin))
 end
 
-_specific_energy(r, v, μ) = dot(v, v) / 2 - μ / norm(r)
+"Keplerian elements and gravitational parameter of `subject` in `cs`."
+function _keplerian(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
+    return _state(KeplerianState, subject, cs, params), get_gravparam(cs.origin)
+end
 
 _wrap2π(x) = mod(x, 2π)
-
-# True anomaly is stored in [0, 2π); a hyperbola's lies in (-π, π), negative on the way in.
-_signed_true_anomaly(ν) = ν > π ? ν - 2π : ν
-
-_eccentric_from_true(ν, e)  = atan(sqrt(1 - e^2) * sin(ν), e + cos(ν))
-_hyperbolic_from_true(ν, e) = asinh(sqrt(e^2 - 1) * sin(ν) / (1 + e * cos(ν)))
 
 function _require_closed(e, what)
     e < 1 || throw(ArgumentError(
@@ -83,13 +92,8 @@ mean_anomaly(sat, EarthMJ2000Ec)
 function mean_anomaly(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
     kep, _ = _keplerian(subject, cs, params)
     e, ν = kep.ecc, kep.ta
-    if e < 1
-        E = _eccentric_from_true(ν, e)
-        return _wrap2π(E - e * sin(E))
-    elseif e > 1
-        H = _hyperbolic_from_true(_signed_true_anomaly(ν), e)
-        return e * sinh(H) - H
-    end
+    e < 1 && return _wrap2π(true_to_mean_anomaly(ν, e))
+    e > 1 && return hyperbolic_to_mean_anomaly(true_to_hyperbolic_anomaly(ν, e), e)
     throw(ArgumentError("a parabolic orbit (eccentricity 1) has no mean anomaly."))
 end
 
@@ -118,7 +122,7 @@ eccentric_anomaly(sat)
 function eccentric_anomaly(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
     kep, _ = _keplerian(subject, cs, params)
     _require_closed(kep.ecc, "Eccentric anomaly")
-    return _wrap2π(_eccentric_from_true(kep.ta, kep.ecc))
+    return _wrap2π(true_to_eccentric_anomaly(kep.ta, kep.ecc))
 end
 
 """
@@ -145,7 +149,7 @@ hyperbolic_anomaly(sat)
 function hyperbolic_anomaly(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
     kep, _ = _keplerian(subject, cs, params)
     _require_hyperbolic(kep.ecc, "Hyperbolic anomaly")
-    return _hyperbolic_from_true(_signed_true_anomaly(kep.ta), kep.ecc)
+    return true_to_hyperbolic_anomaly(kep.ta, kep.ecc)
 end
 
 # --- energy and speed --------------------------------------------------------
@@ -172,10 +176,8 @@ sat = Spacecraft(state = CartesianState([7000.0, 300.0, 1200.0, -0.4, 7.4, 0.9])
 specific_energy(sat)
 ```
 """
-function specific_energy(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    return _specific_energy(r, v, μ)
-end
+specific_energy(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    specific_energy(_rvμ(subject, cs, params)...)
 
 """
     hyperbolic_excess_speed(subject[, cs][, params])
@@ -199,14 +201,8 @@ sat = Spacecraft(state = CartesianState([7000.0, 300.0, 0.0, 0.0, 12.5, 1.0]))
 hyperbolic_excess_speed(sat)
 ```
 """
-function hyperbolic_excess_speed(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    ε = _specific_energy(r, v, μ)
-    ε > 0 || throw(ArgumentError(
-        "Hyperbolic excess speed is defined only on an escape orbit (positive specific energy); " *
-        "this orbit has specific energy $ε km²/s²."))
-    return sqrt(2ε)
-end
+hyperbolic_excess_speed(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    hyperbolic_excess_speed(_rvμ(subject, cs, params)...)
 
 """
     apoapsis_speed(subject[, cs][, params])
@@ -229,12 +225,8 @@ sat = Spacecraft(state = CartesianState([7000.0, 300.0, 1200.0, -0.4, 7.4, 0.9])
 apoapsis_speed(sat)
 ```
 """
-function apoapsis_speed(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    e = norm(_eccentricity_vector(r, v, μ))
-    _require_closed(e, "Apoapsis speed")
-    return μ * (1 - e) / norm(cross(r, v))
-end
+apoapsis_speed(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    apoapsis_speed(_rvμ(subject, cs, params)...)
 
 """
     periapsis_speed(subject[, cs][, params])
@@ -258,10 +250,8 @@ sat = Spacecraft(state = CartesianState([7000.0, 300.0, 1200.0, -0.4, 7.4, 0.9])
 periapsis_speed(sat)
 ```
 """
-function periapsis_speed(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    return μ * (1 + norm(_eccentricity_vector(r, v, μ))) / norm(cross(r, v))
-end
+periapsis_speed(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    periapsis_speed(_rvμ(subject, cs, params)...)
 
 # --- angular momentum and the orbit plane ------------------------------------
 
@@ -286,7 +276,7 @@ angular_momentum(sat, EarthMJ2000Ec)
 """
 function angular_momentum(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
     r, v, _ = _rvμ(subject, cs, params)
-    return cross(r, v)
+    return angular_momentum(r, v)
 end
 
 """
@@ -309,7 +299,7 @@ angular_momentum_magnitude(sat)
 """
 function angular_momentum_magnitude(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
     r, v, _ = _rvμ(subject, cs, params)
-    return norm(cross(r, v))
+    return angular_momentum_magnitude(r, v)
 end
 
 """
@@ -322,7 +312,7 @@ subject's own frame.
 See [`position_vector`](@ref).
 
 # Notes
-Undefined for rectilinear motion, where r × v is zero; the result is then not finite.
+Undefined for rectilinear motion, where r × v is zero, and throws there.
 
 # Returns
 A three-element unit vector, in the axes of `cs`.
@@ -335,8 +325,7 @@ orbit_normal(sat)
 """
 function orbit_normal(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
     r, v, _ = _rvμ(subject, cs, params)
-    h = cross(r, v)
-    return h ./ norm(h)
+    return orbit_normal(r, v)
 end
 
 """
@@ -363,10 +352,8 @@ orbital_angular_velocity(sat)
 """
 function orbital_angular_velocity(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
     r, v, _ = _rvμ(subject, cs, params)
-    return cross(r, v) ./ dot(r, r)
+    return orbital_angular_velocity(r, v)
 end
-
-_eccentricity_vector(r, v, μ) = ((dot(v, v) - μ / norm(r)) .* r .- dot(r, v) .* v) ./ μ
 
 """
     eccentricity_vector(subject[, cs][, params])
@@ -390,10 +377,8 @@ sat = Spacecraft(state = CartesianState([7000.0, 300.0, 1200.0, -0.4, 7.4, 0.9])
 eccentricity_vector(sat)
 ```
 """
-function eccentricity_vector(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    return _eccentricity_vector(r, v, μ)
-end
+eccentricity_vector(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    eccentricity_vector(_rvμ(subject, cs, params)...)
 
 # --- period and motion -------------------------------------------------------
 
@@ -418,15 +403,8 @@ sat = Spacecraft(state = CartesianState([7000.0, 300.0, 1200.0, -0.4, 7.4, 0.9])
 orbital_period(sat)
 ```
 """
-function orbital_period(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    ε = _specific_energy(r, v, μ)
-    ε < 0 || throw(ArgumentError(
-        "Orbital period is defined only for a closed orbit (negative specific energy); this " *
-        "orbit has specific energy $ε km²/s²."))
-    a = -μ / (2ε)
-    return 2π * sqrt(a^3 / μ)
-end
+orbital_period(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    orbital_period(_rvμ(subject, cs, params)...)
 
 """
     mean_motion(subject[, cs][, params])
@@ -449,12 +427,8 @@ sat = Spacecraft(state = CartesianState([7000.0, 300.0, 1200.0, -0.4, 7.4, 0.9])
 mean_motion(sat)
 ```
 """
-function mean_motion(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    ε = _specific_energy(r, v, μ)
-    ε == 0 && throw(ArgumentError("a parabolic orbit (zero specific energy) has no mean motion."))
-    return sqrt(μ / abs(μ / (2ε))^3)
-end
+mean_motion(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    mean_motion(_rvμ(subject, cs, params)...)
 
 # --- angles in the orbit plane -----------------------------------------------
 
@@ -536,8 +510,8 @@ end
 
 # --- named shortcuts (#11, section 2) ----------------------------------------
 #
-# Each is reachable through `element` on some representation today; a name makes it usable
-# directly in a constraint or a report.
+# Each is a field of a state representation, read from it; a name makes it usable directly in a
+# constraint or a report.
 
 """
     apoapsis_radius(subject[, cs][, params])
@@ -561,10 +535,9 @@ apoapsis_radius(sat)
 ```
 """
 function apoapsis_radius(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    e = norm(_eccentricity_vector(r, v, μ))
-    _require_closed(e, "Apoapsis radius")
-    return dot(cross(r, v), cross(r, v)) / μ / (1 - e)
+    radii = _state(ModifiedKeplerianState, subject, cs, params)
+    _require_closed((radii.ra - radii.rp) / (radii.ra + radii.rp), "Apoapsis radius")
+    return radii.ra
 end
 
 """
@@ -587,11 +560,8 @@ sat = Spacecraft(state = CartesianState([7000.0, 300.0, 1200.0, -0.4, 7.4, 0.9])
 periapsis_radius(sat)
 ```
 """
-function periapsis_radius(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    e = norm(_eccentricity_vector(r, v, μ))
-    return dot(cross(r, v), cross(r, v)) / μ / (1 + e)
-end
+periapsis_radius(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    _state(ModifiedKeplerianState, subject, cs, params).rp
 
 """
     semilatus_rectum(subject[, cs][, params])
@@ -611,11 +581,8 @@ sat = Spacecraft(state = CartesianState([7000.0, 300.0, 1200.0, -0.4, 7.4, 0.9])
 semilatus_rectum(sat)
 ```
 """
-function semilatus_rectum(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    h = cross(r, v)
-    return dot(h, h) / μ
-end
+semilatus_rectum(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    _state(ModifiedEquinoctialState, subject, cs, params).p
 
 """
     c3(subject[, cs][, params])
@@ -639,10 +606,10 @@ sat = Spacecraft(state = CartesianState([7000.0, 300.0, 0.0, 0.0, 12.5, 1.0]))
 c3(sat)
 ```
 """
-function c3(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    return 2 * _specific_energy(r, v, μ)
-end
+# The asymptote states carry C3 too, but their conversion fails on a circular orbit, where C3 is
+# still defined; twice the specific energy is defined everywhere.
+c3(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    2 * specific_energy(_rvμ(subject, cs, params)...)
 
 """
     true_longitude(subject[, cs][, params])
@@ -665,10 +632,8 @@ sat = Spacecraft(state = CartesianState([7000.0, 300.0, 1200.0, -0.4, 7.4, 0.9])
 true_longitude(sat)
 ```
 """
-function true_longitude(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    kep, _ = _keplerian(subject, cs, params)
-    return _wrap2π(kep.raan + kep.aop + kep.ta)
-end
+true_longitude(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    _wrap2π(_state(ModifiedEquinoctialState, subject, cs, params).L)
 
 for (fn, field, what, other) in
         ((:apoapsis_radius,  :ra, "apoapsis radius",  "periapsis radius"),
@@ -710,21 +675,23 @@ end
 # The B-plane is normal to the incoming asymptote Ŝ and passes through the body's centre. T̂ lies
 # along Ŝ × Ẑ, with Ẑ the coordinate system's Z axis, and R̂ = Ŝ × T̂. B points from the centre to
 # where the incoming asymptote pierces the plane; its length is the impact parameter h/v∞.
+#
+# IncomingAsymptoteState carries the B-plane: its periapsis radius and C3 give |B|, and its
+# B-vector azimuth, measured from R̂ toward T̂ (GMAT's IncomingBVAZI, counter-clockwise from
+# south), gives the direction, so B·T = |B| sin(azimuth) and B·R = |B| cos(azimuth).
 
-"B·T and B·R of a hyperbolic state, in km."
-function _b_plane(r, v, μ, what)
-    ev = _eccentricity_vector(r, v, μ)
-    e  = norm(ev)
-    _require_hyperbolic(e, what)
-    h  = cross(r, v)
-    ĥ  = h ./ norm(h)
-    ê  = ev ./ e
-    Ŝ  = ê ./ e .+ sqrt(1 - 1 / e^2) .* cross(ĥ, ê)
-    T  = cross(Ŝ, [zero(e), zero(e), one(e)])
-    T̂  = T ./ norm(T)
-    R̂  = cross(Ŝ, T̂)
-    B  = (norm(h) / sqrt(2 * _specific_energy(r, v, μ))) .* cross(Ŝ, ĥ)
-    return dot(B, T̂), dot(B, R̂)
+"|B|, B·T and B·R of a hyperbolic state, from its incoming asymptote, in km."
+function _b_plane(subject, cs::AbstractCoordinateSystem, params::NamedTuple, what)
+    asymptote = _state(IncomingAsymptoteState, subject, cs, params)
+    μ = get_gravparam(cs.origin)
+    any(isnan, to_vector(asymptote)) && throw(ArgumentError(
+        "$what is undefined for this state: its incoming asymptote could not be formed (the " *
+        "orbit is circular or parabolic, or the asymptote lies along the Z axis of the " *
+        "coordinate system)."))
+    rp, c3, azimuth = asymptote.rp, asymptote.c3, asymptote.bpa
+    _require_hyperbolic(1 + rp * c3 / μ, what)
+    magnitude = sqrt(rp^2 + 2μ * rp / c3)
+    return magnitude, magnitude * sin(azimuth), magnitude * cos(azimuth)
 end
 
 """
@@ -751,10 +718,8 @@ b_dot_t(sat)
 b_dot_t(sat, EarthMJ2000Ec)
 ```
 """
-function b_dot_t(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    return _b_plane(r, v, μ, "B·T")[1]
-end
+b_dot_t(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    _b_plane(subject, cs, params, "B·T")[2]
 
 """
     b_dot_r(subject[, cs][, params])
@@ -777,10 +742,8 @@ sat = Spacecraft(state = CartesianState([7000.0, 300.0, 0.0, 0.0, 12.5, 1.0]))
 b_dot_r(sat)
 ```
 """
-function b_dot_r(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    return _b_plane(r, v, μ, "B·R")[2]
-end
+b_dot_r(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    _b_plane(subject, cs, params, "B·R")[3]
 
 """
     b_magnitude(subject[, cs][, params])
@@ -804,11 +767,8 @@ sat = Spacecraft(state = CartesianState([7000.0, 300.0, 0.0, 0.0, 12.5, 1.0]))
 b_magnitude(sat)
 ```
 """
-function b_magnitude(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    bt, br = _b_plane(r, v, μ, "B-vector magnitude")
-    return sqrt(bt^2 + br^2)
-end
+b_magnitude(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    _b_plane(subject, cs, params, "B-vector magnitude")[1]
 
 """
     b_plane_angle(subject[, cs][, params])
@@ -820,7 +780,10 @@ measured in `cs` or the subject's own frame.
 See [`position_vector`](@ref).
 
 # Notes
-Depends on the coordinate system, as [`b_dot_t`](@ref) does. Defined only for a hyperbolic orbit.
+- GMAT's `BVectorAngle`. It is 90° less the B-vector azimuth that `IncomingAsymptoteState` carries
+  (GMAT's `IncomingBVAZI`), which is measured from R̂ toward T̂.
+- Depends on the coordinate system, as [`b_dot_t`](@ref) does. Defined only for a hyperbolic
+  orbit.
 
 # Returns
 The B-plane angle in radians.
@@ -832,8 +795,7 @@ b_plane_angle(sat)
 ```
 """
 function b_plane_angle(subject, cs::AbstractCoordinateSystem, params::NamedTuple)
-    r, v, μ = _rvμ(subject, cs, params)
-    bt, br = _b_plane(r, v, μ, "B-plane angle")
+    _, bt, br = _b_plane(subject, cs, params, "B-plane angle")
     return _wrap2π(atan(br, bt))
 end
 
@@ -858,19 +820,8 @@ end
 # --- setting the mean anomaly ------------------------------------------------
 
 "True anomaly for mean anomaly `M` and eccentricity `e`, from Kepler's equation."
-function _true_from_mean(M, e)
-    if e < 1
-        E = AstroStates._eccentric_anomaly(M, e)        # the bracketed solver the state conversions use
-        return _wrap2π(2 * atan(sqrt(1 + e) * sin(E / 2), sqrt(1 - e) * cos(E / 2)))
-    end
-    H = asinh(M / e)
-    for _ in 1:50
-        δ = (e * sinh(H) - H - M) / (e * cosh(H) - 1)
-        H -= δ
-        abs(δ) < 1e-14 * max(1, abs(H)) && break
-    end
-    return 2 * atan(sqrt((e + 1) / (e - 1)) * tanh(H / 2))
-end
+_true_from_mean(M, e) = e < 1 ? _wrap2π(mean_to_true_anomaly(rem2pi(M, RoundNearest), e)) :
+                        hyperbolic_to_true_anomaly(mean_to_hyperbolic_anomaly(M, e), e)
 
 """
     mean_anomaly!(sat[, cs][, params]; to) -> sat

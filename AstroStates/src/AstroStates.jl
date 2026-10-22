@@ -439,7 +439,8 @@ Outgoing asymptote parameters for hyperbolic trajectories.
   * Range: [0, 2π).
 - `dla`: Declination of asymptote (rad). 
   * Range: [-π/2, π/2].
-- `bpa`: B-plane angle (rad). 
+- `bpa`: B-vector azimuth at infinity (rad), measured counter-clockwise from south, as GMAT's BVAZI.
+  The B-plane angle from T̂ toward R̂ (GMAT's BVectorAngle) is π/2 − bpa.
   * Range: [0, 2π).
 - `ta`: True anomaly of the current position (rad).
   * Range: [0, 2π).
@@ -493,7 +494,8 @@ Incoming asymptote parameters for hyperbolic trajectories.
   * Range: [0, 2π).
 - `dla`: Declination of incoming asymptote (rad). 
   * Range: [-π/2, π/2].
-- `bpa`: B-plane angle (rad). 
+- `bpa`: B-vector azimuth at infinity (rad), measured counter-clockwise from south, as GMAT's BVAZI.
+  The B-plane angle from T̂ toward R̂ (GMAT's BVectorAngle) is π/2 − bpa.
   * Range: [0, 2π).
 - `ta`: True anomaly of the current position (rad).
   * Range: [0, 2π).

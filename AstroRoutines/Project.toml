@@ -1,7 +1,7 @@
 name = "AstroRoutines"
 uuid = "4f255373-1537-45e9-840a-8c00864979f6"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [compat]
 julia = "1.10"

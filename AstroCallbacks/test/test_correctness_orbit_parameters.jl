@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 # =============================================================================
-# Orbit parameters that are two-body formulas of the current state (#11, section 1).
+# Orbit parameters of the current state (#11, sections 1, 2 and 6): the quantities that read a
+# state representation or call an AstroRoutines formula, tested here end to end through a
+# Spacecraft, in two frames.
 #
 # Truth, strongest first:
 # - External reference: GMAT R2026a, from truth/orbit_parameters_truth.script, for the mean,
@@ -24,6 +26,7 @@ using AstroFrames
 using AstroUniverse
 using EpicycleBase: label, unit, is_cyclic, is_settable, set_quantity!
 using LinearAlgebra: cross, dot, norm
+using Logging: with_logger, NullLogger
 
 const _OP_MU    = 398600.4418                       # Earth, as EarthMJ2000Eq carries it
 const _OP_EPOCH = Time("2024-01-01T12:00:00", UTC(), ISOT())
@@ -75,6 +78,20 @@ const _OP_TRUTH = Dict(
 const _OP_CLOSED = (:leo, :molniya, :polar, :retrograde)
 const _OP_OPEN   = (:hyp_out, :hyp_in)
 
+# GMAT's MJ2000Eq and MJ2000Ec belong to the IAU 1976/1980 chain, so the comparisons with it run
+# with Epicycle's frame theory set to FK5, and restored after. The planets come from the same
+# DE440 kernel in both tools (see the truth script).
+function _op_fk5(f)
+    original = frame_theory()
+    set_frame_theory!(FK5())
+    try
+        f()
+    finally
+        set_frame_theory!(original)
+    end
+end
+
+_op_fk5() do
 @testset "agree with an external reference (GMAT)" begin
     for name in (_OP_CLOSED..., _OP_OPEN...)
         @testset "$name" begin
@@ -95,6 +112,7 @@ const _OP_OPEN   = (:hyp_out, :hyp_in)
             end
         end
     end
+end
 end
 
 @testset "satisfy the two-body identities" begin
@@ -225,6 +243,7 @@ const _OP_BPLANE_TRUTH = Dict(
     :hyp_in  => (eq = (19013.84571804536, 4740.64035868236, 19595.91794226542, 13.99987568053744),
                  ec = (17625.14972566177, 8564.700645557023, 25.91680101329081)))
 
+_op_fk5() do
 @testset "B-plane agrees with an external reference (GMAT)" begin
     for name in _OP_OPEN
         @testset "$name" begin
@@ -240,6 +259,58 @@ const _OP_BPLANE_TRUTH = Dict(
         end
     end
 end
+end
+
+# GMAT about the Moon and Mars, in Luna- and Mars-centred MJ2000Eq frames with the GMs Epicycle
+# uses. Angles in degrees; GMAT reports a hyperbola's mean anomaly in degrees too.
+const _OP_LUNA = CoordinateSystem(moon, MJ2000Eq())
+const _OP_MARS = CoordinateSystem(mars, MJ2000Eq())
+const _OP_BODY_TRUTH = (
+    (name = "lunar orbit", cs = _OP_LUNA, x = [1900.0, 300.0, -200.0, 0.2, 1.55, 0.4],
+     MA = 69.7726056615227, energy = -1.23392752650758, h = [430.0, -800.0, 2885.0],
+     period = 7945.927046849652, ra = 2476.483212765156, rp = 1496.84576699797,
+     p = 1865.898058252427, tlong = 8.113027814548889),
+    (name = "Mars orbit", cs = _OP_MARS, x = [4000.0, -1500.0, 900.0, 1.0, 2.9, 1.1],
+     MA = 25.93171952074533, energy = -4.500025825036821,
+     h = [-4259.999999999998, -3499.999999999998, 13099.99999999999],
+     period = 9966.529681395987, ra = 5205.766311992815, rp = 4311.595783067953,
+     p = 4716.676712357893, tlong = 341.5084555550559))
+const _OP_FLYBY_TRUTH = (x = [-8000.0, 3000.0, 1500.0, 2.5, -4.0, 1.0], MA = -99.28898203902548,
+                         HA = -49.93835373824788, energy = 6.687826984161758,
+                         h = [9000.0, 11749.99999999999, 24500.00000000001], rp = 5254.192206971382,
+                         p = 19130.13267270009, bt = 6932.778552291419, br = -3631.885995759158,
+                         angle = -27.64876754629629)
+
+_op_fk5() do
+@testset "agree with an external reference (GMAT) about the Moon and Mars" begin
+    for t in _OP_BODY_TRUTH
+        @testset "$(t.name)" begin
+            sat = Spacecraft(state = CartesianState(t.x), time = _OP_EPOCH, coord_sys = t.cs)
+            @test rad2deg(mean_anomaly(sat, t.cs)) ≈ t.MA rtol = 1e-11
+            @test specific_energy(sat, t.cs) ≈ t.energy rtol = 1e-12
+            @test angular_momentum(sat, t.cs) ≈ t.h rtol = 1e-12
+            @test orbital_period(sat, t.cs) ≈ t.period rtol = 1e-12
+            @test apoapsis_radius(sat, t.cs) ≈ t.ra rtol = 1e-12
+            @test periapsis_radius(sat, t.cs) ≈ t.rp rtol = 1e-12
+            @test semilatus_rectum(sat, t.cs) ≈ t.p rtol = 1e-12
+            @test rad2deg(true_longitude(sat, t.cs)) ≈ t.tlong rtol = 1e-11
+        end
+    end
+    @testset "Mars flyby" begin
+        t = _OP_FLYBY_TRUTH
+        sat = Spacecraft(state = CartesianState(t.x), time = _OP_EPOCH, coord_sys = _OP_MARS)
+        @test rad2deg(mean_anomaly(sat, _OP_MARS)) ≈ t.MA rtol = 1e-11
+        @test rad2deg(hyperbolic_anomaly(sat, _OP_MARS)) ≈ t.HA rtol = 1e-11
+        @test specific_energy(sat, _OP_MARS) ≈ t.energy rtol = 1e-12
+        @test angular_momentum(sat, _OP_MARS) ≈ t.h rtol = 1e-12
+        @test periapsis_radius(sat, _OP_MARS) ≈ t.rp rtol = 1e-12
+        @test semilatus_rectum(sat, _OP_MARS) ≈ t.p rtol = 1e-12
+        @test b_dot_t(sat, _OP_MARS) ≈ t.bt rtol = 1e-11
+        @test b_dot_r(sat, _OP_MARS) ≈ t.br rtol = 1e-11
+        @test rem(rad2deg(b_plane_angle(sat, _OP_MARS)) - t.angle, 360, RoundNearest) ≈ 0 atol = 1e-9
+    end
+end
+end
 
 @testset "B-plane satisfies its geometry" begin
     sat = _op_sat(:hyp_out)
@@ -251,7 +322,22 @@ end
     @test b_dot_t(sat)^2 + b_dot_r(sat)^2 ≈ b_magnitude(sat)^2 rtol = 1e-12
     @test b_plane_angle(sat) ≈ mod(atan(b_dot_r(sat), b_dot_t(sat)), 2π)
     @test is_cyclic(b_plane_angle) && unit(b_dot_t) == "km" && label(b_plane_angle) == "B-plane angle"
+    # GMAT's BVectorAngle is 90° less the B-vector azimuth the incoming asymptote state carries
+    azimuth = IncomingAsymptoteState(CartesianState(x), _OP_MU).bpa
+    @test rem2pi(b_plane_angle(sat) - (π / 2 - azimuth), RoundNearest) ≈ 0 atol = 1e-12
     @test_throws ArgumentError b_dot_t(_op_sat(:leo))
+    # A circular orbit has no asymptote; the error says so instead of passing a NaN on
+    circular = Spacecraft(state = CartesianState([7000.0, 0.0, 0.0, 0.0, sqrt(_OP_MU / 7000.0), 0.0]),
+                          time = _OP_EPOCH, coord_sys = EarthMJ2000Eq)
+    message = try
+        with_logger(NullLogger()) do
+            b_plane_angle(circular)
+        end
+        ""
+    catch err
+        sprint(showerror, err)
+    end
+    @test occursin("incoming asymptote could not be formed", message)
 end
 
 # --- differentiability --------------------------------------------------------
@@ -271,7 +357,8 @@ end
 @testset "differentiable: ForwardDiff matches central differences" begin
     scalars = (mean_anomaly, eccentric_anomaly, specific_energy, apoapsis_speed, periapsis_speed,
                angular_momentum_magnitude, orbital_period, mean_motion, argument_of_latitude,
-               longitude_of_periapsis, descending_node_right_ascension)
+               longitude_of_periapsis, descending_node_right_ascension, apoapsis_radius,
+               periapsis_radius, semilatus_rectum, c3, true_longitude)
     vectors = (angular_momentum, orbit_normal, orbital_angular_velocity, eccentricity_vector)
     x = _OP_STATES[:polar]
     for q in scalars

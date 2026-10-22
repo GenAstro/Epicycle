@@ -17,7 +17,7 @@ A 6-element vector: `[rₚ, C₃, λₐ, δₐ, θᵦ, ν]`
 - C₃ : characteristic energy
 - λₐ : right ascension of incoming asymptote, in [0, 2π)
 - δₐ : declination of incoming asymptote, in [-π/2, π/2]
-- θᵦ : B-plane angle, in [0, 2π)
+- θᵦ : B-vector azimuth at infinity, counter-clockwise from south (GMAT's BVAZI), in [0, 2π)
 - ν : true anomaly, in [0, 2π)
 
 For an elliptic orbit (C₃ < 0) there is no asymptote, and the apoapsis direction is used in its

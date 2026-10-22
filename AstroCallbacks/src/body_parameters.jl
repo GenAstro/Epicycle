@@ -192,7 +192,7 @@ end
 
 function _apsis_altitude(subject, body::CelestialBody, which::Symbol)
     r, v, μ = _rvμ(subject, _inertial_frame(body), NamedTuple())
-    ev = _eccentricity_vector(r, v, μ)
+    ev = eccentricity_vector(r, v, μ)
     e  = norm(ev)
     p  = dot(cross(r, v), cross(r, v)) / μ
     if which === :apoapsis
@@ -363,8 +363,7 @@ function mean_geographic_longitude(subject, body::CelestialBody)
     to_equator(w) = [dot(w, x̂), dot(w, ŷ), dot(w, ẑ)]
     kep = KeplerianState(CartesianState([to_equator(r); to_equator(v)]), μ)
     _require_closed(kep.ecc, "Mean geographic longitude")
-    E = _eccentric_from_true(kep.ta, kep.ecc)
-    M = E - kep.ecc * sin(E)
+    M = true_to_mean_anomaly(kep.ta, kep.ecc)
     return _wrap2π(kep.raan + kep.aop + M - meridian_hour_angle(subject, body))
 end
 
@@ -396,8 +395,8 @@ nodal_precession_rate(sat)
 function nodal_precession_rate(subject, body::CelestialBody; j2 = nothing)
     J2 = j2 === nothing ? _default_j2(body) : j2
     r, v, μ = _rvμ(subject, _inertial_frame(body), NamedTuple())
-    ε = _specific_energy(r, v, μ)
-    e = norm(_eccentricity_vector(r, v, μ))
+    ε = specific_energy(r, v, μ)
+    e = norm(eccentricity_vector(r, v, μ))
     _require_closed(e, "Nodal precession rate")
     a = -μ / (2ε)
     h = cross(r, v)
