@@ -168,84 +168,6 @@ for (fn, vertex, a, b, doc_a, doc_v, doc_b) in (
     end
 end
 
-# --- shadow --------------------------------------------------------------------
-
-"""
-Fraction of the Sun's disk hidden by an occulting sphere, seen from the origin of `s` and `o`:
-`s` and `o` point from the observer to the Sun and to the occulter. Circular disks; the area of
-overlap of two circles of angular radius `a` (Sun) and `b` (occulter) at separation `c`.
-"""
-function _shadow_fraction(s, o, R_sun, R_occ)
-    norm(o) < norm(s) || return zero(eltype(s))          # the occulter is behind the Sun
-    a = asin(R_sun / norm(s))
-    b = asin(clamp(R_occ / norm(o), -1, 1))
-    c = _angle_between(s, o)
-    c >= a + b && return zero(c)                         # full sun
-    c <= b - a && return one(c)                          # umbra
-    c <= a - b && return (b / a)^2                       # annular, the occulter inside the disk
-    x = (c^2 + a^2 - b^2) / (2c)
-    y = sqrt(max(a^2 - x^2, zero(x)))
-    A = a^2 * acos(clamp(x / a, -1, 1)) + b^2 * acos(clamp((c - x) / b, -1, 1)) - c * y
-    return A / (π * a^2)
-end
-
-"""
-    earth_shadow_fraction(subject)
-
-Fraction of the Sun's disk hidden by the Earth, seen from `subject`: 0 in full sun, 1 in umbra,
-in between in penumbra.
-
-# Arguments
-- `subject`: a `Spacecraft`, an `AstroFrames.Coordinate`, or anything else implementing the
-  subject interface.
-
-# Notes
-The Sun and the Earth are spheres of their equatorial radii; the Earth's atmosphere and
-oblateness are not modeled.
-
-# Returns
-The hidden fraction, from 0 to 1.
-
-# Examples
-```julia
-sat = Spacecraft(state = CartesianState([-7000.0, 0.0, 0.0, 0.0, -7.5, 0.0]))
-earth_shadow_fraction(sat)
-```
-"""
-function earth_shadow_fraction(subject)
-    r = _from_earth(subject)
-    return _shadow_fraction(_sun_from(earth, subject) .- r, -r, sun.equatorial_radius,
-                            earth.equatorial_radius)
-end
-
-"""
-    moon_shadow_fraction(subject)
-
-Fraction of the Sun's disk hidden by the Moon, seen from `subject`: 0 in full sun, 1 in umbra,
-in between in penumbra.
-
-# Arguments
-- `subject`: a `Spacecraft`, an `AstroFrames.Coordinate`, or anything else implementing the
-  subject interface.
-
-# Notes
-The Sun and the Moon are spheres of their equatorial radii.
-
-# Returns
-The hidden fraction, from 0 to 1.
-
-# Examples
-```julia
-sat = Spacecraft(state = CartesianState([7000.0, 300.0, 1200.0, -0.4, 7.4, 0.9]))
-moon_shadow_fraction(sat)
-```
-"""
-function moon_shadow_fraction(subject)
-    r = _from_earth(subject)
-    return _shadow_fraction(_sun_from(earth, subject) .- r, _moon_from(earth, subject) .- r,
-                            sun.equatorial_radius, moon.equatorial_radius)
-end
-
 # --- the shorter methods, and traits -------------------------------------------
 
 const _BODY_PARAMETERS = (:beta_angle, :lunar_beta_angle, :orbit_normal_sun_angle)
@@ -263,9 +185,7 @@ for (f, l, u) in (
         (:sun_spacecraft_moon_angle,   "Sun–spacecraft–Moon angle",      "rad"),
         (:moon_earth_sun_angle,        "Moon–Earth–Sun angle",           "rad"),
         (:moon_earth_spacecraft_angle, "Moon–Earth–spacecraft angle",    "rad"),
-        (:moon_spacecraft_earth_angle, "Moon–spacecraft–Earth angle",    "rad"),
-        (:earth_shadow_fraction,       "Earth shadow fraction",          ""),
-        (:moon_shadow_fraction,        "Moon shadow fraction",           ""))
+        (:moon_spacecraft_earth_angle, "Moon–spacecraft–Earth angle",    "rad"))
     @eval EpicycleBase.label(::typeof($f)) = $l
     isempty(u) || @eval EpicycleBase.unit(::typeof($f)) = $u
     @eval subject_type(::typeof($f)) = Union{Spacecraft, Coordinate}

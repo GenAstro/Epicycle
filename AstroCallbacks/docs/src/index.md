@@ -109,7 +109,7 @@ Every quantity takes its subject first. Quantities that depend on a frame take a
 | `outgoing_rla` | spacecraft or coordinate on a hyperbolic orbit | rad | coordinate system | no |
 | `beta_angle`, `lunar_beta_angle`, `orbit_normal_sun_angle` | spacecraft or coordinate | rad | body | no |
 | `sun_earth_spacecraft_angle`, `sun_spacecraft_earth_angle`, `sun_spacecraft_moon_angle`, `moon_earth_sun_angle`, `moon_earth_spacecraft_angle`, `moon_spacecraft_earth_angle` | spacecraft or coordinate | rad | none | no |
-| `earth_shadow_fraction`, `moon_shadow_fraction` | spacecraft or coordinate | none | none | no |
+| `earth_shadow_fraction`, `moon_shadow_fraction`, from AstroProp | spacecraft or coordinate | none | none | no |
 | `state` | spacecraft | km, km/s | none | yes |
 | `epoch` | spacecraft or coordinate | `Time` | none | on a spacecraft |
 | `delta_v` | maneuver | km/s | none | yes |

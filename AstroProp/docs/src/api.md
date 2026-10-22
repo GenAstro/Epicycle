@@ -33,7 +33,7 @@ Order   = [:type, :function, :macro, :constant]
 Public  = true
 Private = false
 Pages   = ["point_mass_gravity.jl", "harmonic_gravity.jl", "zonal_gravity.jl",
-           "atmospheric_drag.jl", "exponential_atmosphere.jl", "spherical_srp.jl",
+           "atmospheric_drag.jl", "exponential_atmosphere.jl", "spherical_srp.jl", "shadow_quantities.jl",
            "external_force.jl", "force_context.jl"]
 ```
 

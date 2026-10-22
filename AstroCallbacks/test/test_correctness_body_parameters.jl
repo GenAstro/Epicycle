@@ -10,8 +10,8 @@
 #   Sun from the same DE440 kernel in both tools. The beta angle's tolerance is loose because
 #   the two tools' frame models differ; it confirms the definition, and the self-consistency
 #   test (test_correctness_sun_moon_frames.jl) is where its accuracy and precision are tested.
-# - Geometry with a known answer: a spacecraft behind the Earth or the Moon, the angles of a
-#   triangle summing to π.
+# - Geometry with a known answer: the angles of a triangle summing to π. The shadow fractions
+#   moved to AstroProp with the eclipse model they share (test_correctness_shadow_quantities.jl).
 # - Differentiability: ForwardDiff against central differences.
 # =============================================================================
 
@@ -133,31 +133,6 @@ end
     @test_throws ArgumentError lunar_beta_angle(_bp_lunar())
 end
 
-@testset "shadow" begin
-    ŝ = normalize(translate(earth, sun, _BP_JD))
-    behind = Coordinate([-7000.0 .* ŝ; 0.0; 0.0; 0.0], EarthMJ2000Eq, _BP_EPOCH)
-    sunlit = Coordinate([ 7000.0 .* ŝ; 0.0; 0.0; 0.0], EarthMJ2000Eq, _BP_EPOCH)
-    @test earth_shadow_fraction(behind) == 1
-    @test earth_shadow_fraction(sunlit) == 0
-
-    # Crossing the shadow edge sideways, the hidden fraction rises continuously from 0 to 1.
-    side = normalize(cross(ŝ, [0.0, 0.0, 1.0]))
-    fracs = map(range(6300.0, 6460.0; length = 81)) do y
-        earth_shadow_fraction(Coordinate([-7000.0 .* ŝ .+ y .* side; 0.0; 0.0; 0.0],
-                                         EarthMJ2000Eq, _BP_EPOCH))
-    end
-    @test fracs[1] == 1 && fracs[end] == 0
-    @test issorted(fracs; rev = true)
-    @test any(f -> 0 < f < 1, fracs)
-
-    # 2000 km behind the Moon, in line with the Sun: inside its umbra, which is 374,000 km long.
-    m  = translate(earth, moon, _BP_JD)
-    ŝm = normalize(translate(moon, sun, _BP_JD))
-    lunar_shadow = Coordinate([m .- 2000.0 .* ŝm; 0.0; 0.0; 0.0], EarthMJ2000Eq, _BP_EPOCH)
-    @test moon_shadow_fraction(lunar_shadow) == 1
-    @test moon_shadow_fraction(_bp_sat(:leo)) == 0
-end
-
 # --- differentiability --------------------------------------------------------
 
 const _BP_H = [1e-3, 1e-3, 1e-3, 1e-6, 1e-6, 1e-6]
@@ -184,9 +159,8 @@ end
 
 @testset "labels, units and wrapping" begin
     @test label(beta_angle) == "Beta angle" && unit(beta_angle) == "rad"
-    @test label(earth_shadow_fraction) == "Earth shadow fraction" && unit(earth_shadow_fraction) == ""
     @test !is_cyclic(beta_angle)
-    @test beta_angle in quantities(Spacecraft) && earth_shadow_fraction in quantities(Coordinate)
+    @test beta_angle in quantities(Spacecraft) && beta_angle in quantities(Coordinate)
 end
 
 nothing

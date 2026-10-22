@@ -55,8 +55,7 @@ export apoapsis_radius, apoapsis_radius!, periapsis_radius, periapsis_radius!, s
 export b_dot_t, b_dot_r, b_magnitude, b_plane_angle
 export beta_angle, lunar_beta_angle, orbit_normal_sun_angle, sun_earth_spacecraft_angle,
        sun_spacecraft_earth_angle, sun_spacecraft_moon_angle, moon_earth_sun_angle,
-       moon_earth_spacecraft_angle, moon_spacecraft_earth_angle, earth_shadow_fraction,
-       moon_shadow_fraction
+       moon_earth_spacecraft_angle, moon_spacecraft_earth_angle
 export Calc, reapply
 export history, quantities
 export label, set_quantity!, is_settable, output_partial   # from EpicycleBase, so writing a quantity needs only AstroCallbacks
