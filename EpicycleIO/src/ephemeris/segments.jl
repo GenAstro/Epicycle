@@ -121,5 +121,7 @@ Base.@kwdef mutable struct EphemerisFileData
     diagnostics::Vector{Diagnostic} = Diagnostic[]
 end
 
-# Seconds from a to b, both Times; a and b may be in different scales.
-_seconds(a::Time, b::Time) = (b - getproperty(a, b.scale)) * 86400.0
+# Seconds from a to b, measured in a's time scale; b may be in another. One scale throughout
+# matters: elapsed TDB and elapsed UTC differ by about 1 µs an hour, so a table of epochs and the
+# time it is interpolated at must be measured the same way.
+_seconds(a::Time, b::Time) = (getproperty(b, a.scale) - a) * 86400.0

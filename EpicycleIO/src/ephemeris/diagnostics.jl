@@ -11,8 +11,8 @@ One problem found while reading an ephemeris file.
 
 # Fields
 - `severity`: `:fixed` for a departure from the format that the reader corrected, `:error` for
-  one it could not, and `:note` for an assumption made reading a valid file, such as an
-  override you gave or `ITRF2000` read as Epicycle's ITRF.
+  one it could not, and `:note` for an assumption made reading a valid file, such as a
+  caller's override or `ITRF2000` read as Epicycle's ITRF.
 - `line`: The line number in the file, or 0 when the problem is not on one line.
 - `field`: The keyword or part of the file involved, such as `"REF_FRAME"` or `"data"`.
 - `message`: What was found, what was expected, and what was done or needs doing.
