@@ -24,7 +24,6 @@ const EXAMPLE_NAV = example_pages(
                        "Propagation about the Moon" => "Ex_Propagation_Moon",
                        "Propagation about Mars" => "Ex_Propagation_Mars"],
      "Orbit parameters" => ["Orbit parameters from a state" => "Ex_OrbitParameters",
-                            "Ground track and local time" => "Ex_GroundTrack",
                             "Beta angle, eclipses and Sun-Moon geometry" => "Ex_SunMoonGeometry",
                             "Alternate equinoctial and Delaunay elements" => "Ex_ElementSets",
                             "B-plane targeting of an Earth flyby" => "Ex_BPlaneTargeting"],

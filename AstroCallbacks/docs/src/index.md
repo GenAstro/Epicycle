@@ -81,7 +81,7 @@ subject's coordinate system.
 
 A settable quantity is set with its name followed by `!`, with the value as the keyword `to`: `semi_major_axis!(sat; to = 7200.0)`. `is_settable(subject, quantity)` answers whether a pair can be written.
 
-Every quantity takes its subject first. Quantities that depend on a frame take an optional coordinate system second, and an optional `params` third for an orbit-relative coordinate system whose origin does not carry the reference orbit. Quantities tied to a body's shape, rotation or lighting take the body second instead, as in `altitude(sat, moon)`; without it they use the central body of the subject's frame. A quantity undefined for the orbit, such as the period of a hyperbola, throws an `ArgumentError` saying why. The table below lists the built-in quantities.
+Every quantity takes its subject first. Quantities that depend on a frame take an optional coordinate system second, and an optional `params` third for an orbit-relative coordinate system whose origin does not carry the reference orbit. Quantities tied to a body take the body second instead, as in `beta_angle(sat, moon)`; without it they use the central body of the subject's frame. A quantity undefined for the orbit, such as the period of a hyperbola, throws an `ArgumentError` saying why. The table below lists the built-in quantities.
 
 | Quantity | Subject | Units | Second argument | Settable |
 |---|---|---|---|---|
@@ -107,14 +107,8 @@ Every quantity takes its subject first. Quantities that depend on a frame take a
 | `mean_long_sma` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
 | `element` | spacecraft or coordinate | the field's | representation, then coordinate system and field | on a spacecraft |
 | `outgoing_rla` | spacecraft or coordinate on a hyperbolic orbit | rad | coordinate system | no |
-| `altitude`, `apoapsis_altitude`, `periapsis_altitude` | spacecraft or coordinate | km | body | no |
-| `geodetic_latitude`, `longitude`, `velocity_azimuth` | spacecraft or coordinate | rad | body | no |
-| `meridian_hour_angle`, `local_sidereal_time`, `mean_geographic_longitude` | spacecraft or coordinate | rad | body | no |
-| `nodal_precession_rate` | spacecraft or coordinate | rad/s | body, and `j2` away from the Earth | no |
 | `beta_angle`, `lunar_beta_angle`, `orbit_normal_sun_angle` | spacecraft or coordinate | rad | body | no |
 | `sun_earth_spacecraft_angle`, `sun_spacecraft_earth_angle`, `sun_spacecraft_moon_angle`, `moon_earth_sun_angle`, `moon_earth_spacecraft_angle`, `moon_spacecraft_earth_angle` | spacecraft or coordinate | rad | none | no |
-| `true_local_time` | spacecraft or coordinate | h | body | no |
-| `mean_local_time` | spacecraft or coordinate about the Earth | h | none | no |
 | `earth_shadow_fraction`, `moon_shadow_fraction` | spacecraft or coordinate | none | none | no |
 | `state` | spacecraft | km, km/s | none | yes |
 | `epoch` | spacecraft or coordinate | `Time` | none | on a spacecraft |

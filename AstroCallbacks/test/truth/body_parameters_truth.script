@@ -2,8 +2,14 @@
 %
 % Three Earth orbits at 20 Mar 2024 12:00:00 UTC, each a Cartesian state in EarthMJ2000Eq, with
 % Earth's GM, equatorial radius and flattening set to the values Epicycle uses. GMAT writes
-% body_parameters_truth.txt to its output folder; the numbers are copied into the test.
+% body_parameters_truth.txt to its output folder; the numbers are copied into the test. The Sun
+% comes from the same SPICE kernel Epicycle loads by default; copy epicycle_de440_1950-2100.bsp
+% from AstroUniverse's kernel folder (see download_spice_kernel) into GMAT's
+% data/planetary_ephem/spk folder before running.
 % Run with GmatConsole.exe body_parameters_truth.script.
+
+GMAT SolarSystem.EphemerisSource = 'SPICE';
+GMAT SolarSystem.SPKFilename = '../data/planetary_ephem/spk/epicycle_de440_1950-2100.bsp';
 
 GMAT Earth.Mu = 398600.4418;
 GMAT Earth.EquatorialRadius = 6378.137;
@@ -48,6 +54,6 @@ polar.VX = -3.0611710106575205
 polar.VY = 5.302103721115798
 polar.VZ = -2.5783940176845728
 
-Report truth leo.Earth.RadApo leo.Earth.RadPer leo.Earth.SemilatusRectum leo.Earth.C3Energy leo.Earth.BetaAngle leo.Earth.Altitude leo.Earth.Latitude leo.Earth.Longitude leo.Earth.MHA leo.Earth.LST
-Report truth molniya.Earth.RadApo molniya.Earth.RadPer molniya.Earth.SemilatusRectum molniya.Earth.C3Energy molniya.Earth.BetaAngle molniya.Earth.Altitude molniya.Earth.Latitude molniya.Earth.Longitude molniya.Earth.MHA molniya.Earth.LST
-Report truth polar.Earth.RadApo polar.Earth.RadPer polar.Earth.SemilatusRectum polar.Earth.C3Energy polar.Earth.BetaAngle polar.Earth.Altitude polar.Earth.Latitude polar.Earth.Longitude polar.Earth.MHA polar.Earth.LST
+Report truth leo.Earth.RadApo leo.Earth.RadPer leo.Earth.SemilatusRectum leo.Earth.C3Energy leo.Earth.BetaAngle
+Report truth molniya.Earth.RadApo molniya.Earth.RadPer molniya.Earth.SemilatusRectum molniya.Earth.C3Energy molniya.Earth.BetaAngle
+Report truth polar.Earth.RadApo polar.Earth.RadPer polar.Earth.SemilatusRectum polar.Earth.C3Energy polar.Earth.BetaAngle
