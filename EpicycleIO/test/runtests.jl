@@ -425,6 +425,7 @@ EpicycleIO.close_dashboard()
 
 include("test_ephemeris_oem.jl")
 include("test_ephemeris_stk.jl")
+include("test_ephemeris_spk.jl")
 include("test_misuse.jl")
 include("test_orbitview.jl")
 include("test_narration.jl")

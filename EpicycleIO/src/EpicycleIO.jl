@@ -50,7 +50,8 @@ import AstroEpochs
 using AstroFrames: ICRF, GCRF, CIRS, TIRS, ITRF, MJ2000Eq, MODEq, TODEq, MJ2000Ec, PEF, TEME,
                    MoonPA, MoonME, CelestialBodyFixed
 using AstroUniverse: sun, mercury, venus, earth, moon, mars, jupiter, saturn, uranus, neptune, pluto
-using AstroRoutines: AbstractInterpolationMethod, Lagrange, Hermite, required_points
+using AstroRoutines: AbstractInterpolationMethod, Lagrange, Hermite, required_points, interpolate
+import SPICE
 using StaticArrays: SVector, SMatrix
 using Printf: @sprintf
 import Dates
@@ -108,6 +109,7 @@ include("ephemeris/segments.jl")
 include("ephemeris/names.jl")
 include("ephemeris/oem.jl")
 include("ephemeris/stk.jl")
+include("ephemeris/spk.jl")
 
 # A plot published in the last fraction of a second must not be the one that gets dropped
 # because the process ended.

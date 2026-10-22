@@ -652,15 +652,16 @@ end
 # ============================================================================================
 
 """
-    write_oem(path, data::EphemerisFileData; digits = 9)
+    write_oem(path, data::EphemerisFileData; digits = 9, version)
 
-Write `data` as a CCSDS Orbit Ephemeris Message in keyword = value form, version
-`data.version` (`"3.0"`, or `"2.0"` for older tools).
+Write `data` as a CCSDS Orbit Ephemeris Message in keyword = value form, version `"3.0"`, or
+`"2.0"` for older tools.
 
 # Arguments
 - `path`: The file to write. It is replaced if it exists.
 - `data`: The header and segments to write.
 - `digits`: Decimal places of seconds in epochs, 0 to 9. Default 9.
+- `version`: `"3.0"` or `"2.0"`. Default: `data.version` for data read from an OEM, else `"3.0"`.
 
 # Notes
 - Everything is checked before the file is opened, and every problem is reported in one
@@ -694,9 +695,10 @@ readline(path)
 "CCSDS_OEM_VERS       = 3.0"
 ```
 """
-function write_oem(path::AbstractString, data::EphemerisFileData; digits::Integer = 9)
+function write_oem(path::AbstractString, data::EphemerisFileData; digits::Integer = 9,
+                   version::AbstractString = data.format == :oem ? data.version : "3.0")
     0 <= digits <= 9 || throw(ArgumentError("write_oem: digits must be 0 to 9; got $digits"))
-    lines = _oem_lines(data, digits)                         # throws, listing every problem
+    lines = _oem_lines(data, digits, String(version))                         # throws, listing every problem
     dir = dirname(abspath(path))
     isdir(dir) || throw(ArgumentError("write_oem: folder $dir does not exist"))
     tmp, io = mktemp(dir)
@@ -722,9 +724,8 @@ function _check_text!(problems, what, s; mandatory = false)
     all(c -> isascii(c) && isprint(c), s) || push!(problems, "$what has characters other than printable ASCII (§7.3.4)")
 end
 
-function _oem_lines(data::EphemerisFileData, digits)
+function _oem_lines(data::EphemerisFileData, digits, v)
     problems = String[]
-    v = data.version
     v in _OEM_WRITE_VERSIONS || push!(problems, "version $(repr(v)) cannot be written; use \"3.0\" or \"2.0\"")
     if v == "2.0"
         isempty(data.message_id) || push!(problems, "MESSAGE_ID is an OEM 3.0 keyword; it cannot be written in version 2.0")
