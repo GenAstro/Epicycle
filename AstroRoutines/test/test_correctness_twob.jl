@@ -1,7 +1,7 @@
 # Copyright (C) 2026 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 
-# Correctness dimension (TestingStandards.md §2) for the two-body quantities (FR-TWOB-1…8).
+# Correctness dimension (testing standards §2) for the two-body quantities (FR-TWOB-1…8).
 #
 # Truth source: tier-1 analytic. Each state is built from classical elements (a, e, i, Ω, ω, ν)
 # with the perifocal closed form, and each quantity is checked against its expression in those

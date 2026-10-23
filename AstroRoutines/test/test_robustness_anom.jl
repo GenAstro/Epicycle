@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 
-# Robustness / input-validation dimension (TestingStandards.md §2; CodingStandards.md §9) for the
+# Robustness / input-validation dimension (testing standards §2; coding standards §9) for the
 # anomaly-conversion functional area. Satisfies FR-ANOM-7: non-elliptic eccentricity fails loudly.
 #
 # The @testitem runs in its own isolated module and is self-contained.
@@ -16,7 +16,7 @@
         @test_throws ArgumentError f(1.0, -0.1)            # e < 0
     end
 
-    # The message names the offending argument (CodingStandards §9.4).
+    # The message names the offending argument (coding standards §9.4).
     msg = try
         mean_to_eccentric_anomaly(1.0, 1.0)
     catch err

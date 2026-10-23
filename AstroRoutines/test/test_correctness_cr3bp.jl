@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 
-# Correctness dimension (TestingStandards.md §2) for the circular restricted
+# Correctness dimension (testing standards §2) for the circular restricted
 # three-body functional area.
 #
 # Truth source: the problem's own invariants, which is stronger here than a

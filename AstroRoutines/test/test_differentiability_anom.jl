@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 
-# Differentiability dimension (TestingStandards.md §3) for the anomaly-conversion functional area.
+# Differentiability dimension (testing standards §3) for the anomaly-conversion functional area.
 # Validation tier "AD vs analytic": ForwardDiff partials are checked against the hand-derived
 # analytic derivatives, and against finite differences for the closed forms. Satisfies SR-AD-1.
 #

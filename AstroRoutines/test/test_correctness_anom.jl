@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 
-# Correctness dimension (TestingStandards.md §2) for the anomaly-conversion functional area.
+# Correctness dimension (testing standards §2) for the anomaly-conversion functional area.
 #
 # Truth source: tier-1 analytic. `eccentric_to_mean_anomaly` (M = E − e·sin E) is exact, so it is
 # the reference the iterative `mean_to_eccentric_anomaly` is checked against; E↔ν closed forms are

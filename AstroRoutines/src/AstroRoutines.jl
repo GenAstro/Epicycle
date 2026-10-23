@@ -26,7 +26,7 @@ export jacobi_constant, libration_point
 export cr3bp_stm_eom!, cr3bp_stm_initial
 
 # Internal: validate eccentricity is in the elliptic domain [0, 1). Fails loudly on bad input
-# (FR-ANOM-7; CodingStandards §9.2, §9.4) rather than returning a plausible wrong value.
+# (FR-ANOM-7; coding standards §9.2, §9.4) rather than returning a plausible wrong value.
 function _check_elliptic_eccentricity(e::Real)
     if e < 0 || e >= 1
         throw(ArgumentError("eccentricity e must be in [0, 1) for elliptic anomaly conversions; got e = $(e)"))

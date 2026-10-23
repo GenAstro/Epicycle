@@ -1,7 +1,7 @@
 # Copyright (C) 2026 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 
-# Differentiability dimension (TestingStandards.md §3) for the two-body quantities. Validation
+# Differentiability dimension (testing standards §3) for the two-body quantities. Validation
 # tier "AD vs finite difference": ForwardDiff gradients and Jacobians with respect to the state and
 # μ are checked against FiniteDiff. Satisfies SR-AD-1 for this area.
 #

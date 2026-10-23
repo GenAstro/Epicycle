@@ -1,7 +1,7 @@
 # Copyright (C) 2026 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 
-# Robustness / input-validation dimension (TestingStandards.md §2; CodingStandards.md §9) for the
+# Robustness / input-validation dimension (testing standards §2; coding standards §9) for the
 # two-body quantities. Satisfies FR-TWOB-9: a quantity undefined for the orbit fails loudly, and
 # its message names the energy or eccentricity.
 #
