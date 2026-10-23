@@ -112,7 +112,7 @@ end
 # So for this problem the check is made where the answer is unique: at a fixed point, before any
 # solve. What the solver receives through the declared pattern has to be the dense Jacobian:
 #
-#   - the pattern is in the order the value vector is filled in, column-major, because SNOW
+#   - the pattern is in the order the value vector is filled in, column-major, because the solver
 #     pairs value k with pattern position k;
 #   - each value `get_jacobian_values!` writes equals the dense entry at its position. The two are
 #     separate fills of the same chunks, which is why comparing them means something;

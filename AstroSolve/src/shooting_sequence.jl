@@ -399,7 +399,7 @@ end
 # solve_trajectory! for shooting sequences
 # ─────────────────────────────────────────────────────────────────────────────
 
-function solve_trajectory_shooting!(seq::Sequence, options::SNOW.Options)
+function solve_trajectory_shooting!(seq::Sequence, options::NLPOptions)
     sm = _get_or_build_sm(seq)
     options = _with_grouped_rows(options, ShootingRows, sm)
 
@@ -416,7 +416,7 @@ function solve_trajectory_shooting!(seq::Sequence, options::SNOW.Options)
         return get_objective(sm)
     end
 
-    xopt, fopt, info = SNOW.minimize(fun!, x0, ng, lx, ux, lg, ug, options)
+    xopt, fopt, info = solve_nlp(fun!, x0, ng, lx, ux, lg, ug, options)
     set_decision_vector!(sm, xopt)
     return (variables = xopt, objective = fopt, info = info,
             manager = sm)
@@ -430,8 +430,8 @@ function solve_trajectory_shooting!(seq::Sequence)
         "output_file"      => tempname() * "_ipopt.out",
         "file_print_level" => 5,
     )
-    options = SNOW.Options(derivatives = SNOW.UserDeriv(),
-                           solver      = _ipopt(ip_options))
+    options = NLPOptions(derivatives = :user,
+                         solver      = _ipopt(ip_options))
     solve_trajectory_shooting!(seq, options)
 end
 

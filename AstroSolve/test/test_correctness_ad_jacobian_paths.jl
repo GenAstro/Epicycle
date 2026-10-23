@@ -18,7 +18,6 @@
 # small steps, or converges somewhere plausible and wrong, which is how the dense-sparsity
 # defect behaved for months before anyone measured it.
 
-using SNOW
 using LinearAlgebra
 using EpicycleBase
 using AstroSolve

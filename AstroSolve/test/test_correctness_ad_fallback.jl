@@ -22,7 +22,6 @@
 #
 # Covers autodiff.jl, which every other file in this suite bypasses by declaring its partials.
 
-using SNOW
 using LinearAlgebra
 using EpicycleBase
 using AstroSolve

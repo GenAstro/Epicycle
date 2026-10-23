@@ -6,7 +6,7 @@
 # The box is checked through what it prints: widths at several terminal sizes, the in-place
 # redraw (the cursor-up count must equal the lines the last frame drew, so nothing earlier is ever
 # erased), the resize rules, messages landing above the box, and final-frame-only output when not
-# a terminal. The driver is checked against SNOW's own IPOPT driver on a small problem, then on a
+# a terminal. The driver is checked against the known optimum of a small problem, then on a
 # targeting sequence end to end. Terminal width and "is a terminal" are injected, since a test's
 # stdout is neither.
 
@@ -247,10 +247,10 @@ function _sm_nlp!(g, x)
 end
 
 function _sm_solve(solver; rows = nothing)
-    opts = AstroSolve.SNOW.Options(derivatives = AstroSolve.SNOW.ForwardFD(), solver = solver)
+    opts = AstroSolve.NLPOptions(derivatives = :fd, solver = solver)
     rows === nothing || (opts = _SM._with_rows(opts, rows))
-    return AstroSolve.SNOW.minimize(_sm_nlp!, [0.0, 0.0], 2, [-10.0, -10.0], [10.0, 10.0],
-                                    [2.0, 0.2], [2.0, Inf], opts)
+    return AstroSolve.solve_nlp(_sm_nlp!, [0.0, 0.0], 2, [-10.0, -10.0], [10.0, 10.0],
+                                [2.0, 0.2], [2.0, Inf], opts)
 end
 
 _sm_opts() = Dict{String,Any}("print_level" => 0, "tol" => 1e-8,
@@ -263,19 +263,20 @@ _SM.monitor_rows(r::_SMThrowingRows, x, g) = throw(r.err)
 
 @testset "IPOPT driver" begin
 
-    @testset "solves as SNOW's IPOPT driver does, with the monitor on or off" begin
-        xs, fs, is, _ = _sm_solve(AstroSolve.SNOW.IPOPT(_sm_opts()))
+    @testset "solves to the known optimum, the same with the monitor on or off" begin
+        # Truth: on x1 + x2 = 2 the objective is minimized at x = (0.5, 1.5), f = 0.5, with the
+        # bound x1 ≥ 0.2 inactive.
         local xo, fo, io
         out_off = _sm_capture(live = true) do
-            xo, fo, io, _ = _sm_solve(_SM._ipopt(_sm_opts(); monitor = false))
+            xo, fo, io = _sm_solve(_SM._ipopt(_sm_opts(); monitor = false))
         end
         local xm, fm, im
         out_on = _sm_capture(live = true) do
-            xm, fm, im, _ = _sm_solve(_SM._ipopt(_sm_opts(); monitor = true))
+            xm, fm, im = _sm_solve(_SM._ipopt(_sm_opts(); monitor = true))
         end
-        @test is == io == im == :Solve_Succeeded
-        @test isapprox(xo, xs; atol = 1e-8) && isapprox(xm, xs; atol = 1e-8)
-        @test isapprox(xs, [0.5, 1.5]; atol = 1e-6)
+        @test io == im == :Solve_Succeeded
+        @test isapprox(xo, [0.5, 1.5]; atol = 1e-6) && isapprox(fo, 0.5; atol = 1e-8)
+        @test xm == xo && fm == fo
         @test !occursin("┌", out_off)                       # monitor off: no box
         @test occursin("✓ converged", out_on)
         @test occursin("Equalities (1)", out_on)            # generic rows for an unnamed problem
@@ -289,7 +290,7 @@ _SM.monitor_rows(r::_SMThrowingRows, x, g) = throw(r.err)
         local x, info
         out = _sm_capture(live = true) do
             @test_logs (:warn, r"status display hit an error") match_mode = :any begin
-                x, _, info, _ = _sm_solve(_SM._ipopt(_sm_opts(); monitor = true);
+                x, _, info = _sm_solve(_SM._ipopt(_sm_opts(); monitor = true);
                                           rows = _SMThrowingRows(ErrorException("boom")))
             end
         end
@@ -300,7 +301,7 @@ _SM.monitor_rows(r::_SMThrowingRows, x, g) = throw(r.err)
     @testset "an interrupt stops the solve cleanly" begin
         local info
         _sm_capture(live = true) do
-            _, _, info, _ = _sm_solve(_SM._ipopt(_sm_opts(); monitor = true);
+            _, _, info = _sm_solve(_SM._ipopt(_sm_opts(); monitor = true);
                                       rows = _SMThrowingRows(InterruptException()))
         end
         @test info == :User_Requested_Stop
@@ -578,15 +579,15 @@ end
     end
 
     @testset "rows that cannot be named fall back to counts, with one warning" begin
-        opts = AstroSolve.SNOW.Options(derivatives = AstroSolve.SNOW.UserDeriv(),
-                                       solver = _SM._ipopt(_sm_opts(); monitor = true))
+        opts = AstroSolve.NLPOptions(derivatives = :user,
+                                    solver = _SM._ipopt(_sm_opts(); monitor = true))
         local same
         @test_logs (:warn, r"could not name this problem's rows") begin
             same = AstroSolve._with_collocation_rows(opts, nothing)
         end
         @test same === opts
-        off = AstroSolve.SNOW.Options(derivatives = AstroSolve.SNOW.UserDeriv(),
-                                      solver = _SM._ipopt(_sm_opts(); monitor = false))
+        off = AstroSolve.NLPOptions(derivatives = :user,
+                                   solver = _SM._ipopt(_sm_opts(); monitor = false))
         @test AstroSolve._with_collocation_rows(off, nothing) === off     # box off: not built
     end
 end
@@ -817,8 +818,8 @@ end
 end
 
 @testset "A shooting problem whose rows cannot be named still solves" begin
-    opts = AstroSolve.SNOW.Options(derivatives = AstroSolve.SNOW.UserDeriv(),
-                                   solver = _SM._ipopt(_sm_opts(); monitor = true))
+    opts = AstroSolve.NLPOptions(derivatives = :user,
+                                solver = _SM._ipopt(_sm_opts(); monitor = true))
     local same
     @test_logs (:warn, r"could not name this problem's rows") begin
         same = AstroSolve._with_grouped_rows(opts, _SM.ShootingRows, nothing)

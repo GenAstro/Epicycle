@@ -56,10 +56,10 @@ const _SV_BLS = AstroSolve.BatchLeastSquares
 
     # :fd picks forward finite differences, anything else the user's derivatives, and `extra`
     # overrides the defaults it collides with.
-    fd   = AstroSolve._snow(Optimize(derivatives = :fd, extra = Dict("tol" => 1e-3)))
-    user = AstroSolve._snow(Optimize())
-    @test fd.derivatives isa AstroSolve.SNOW.ForwardFD
-    @test user.derivatives isa AstroSolve.SNOW.UserDeriv
+    fd   = AstroSolve._nlp_options(Optimize(derivatives = :fd, extra = Dict("tol" => 1e-3)))
+    user = AstroSolve._nlp_options(Optimize())
+    @test fd.derivatives === :fd
+    @test user.derivatives === :user
     @test fd.solver.options["tol"] == 1e-3
 
     # Two solves in one session must not share an IPOPT log, which IPOPT keeps open.

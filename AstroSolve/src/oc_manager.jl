@@ -491,16 +491,16 @@ function initialize_oc!(seq::Sequence)
 end
 
 # =============================================================================
-# solve_trajectory_oc! — SNOW driver for the unified manager
+# solve_trajectory_oc! — the solver driver for the unified manager
 # =============================================================================
 
 """
     solve_trajectory_oc!(seq[, options])
 
-SNOW + IPOPT wrapper that drives the unified [`OCManager`](@ref).  Supports
+IPOPT driver for the unified [`OCManager`](@ref). Supports
 any mix of collocation and shooting phases linked via `add_continuity!`.
 """
-function solve_trajectory_oc!(seq::Sequence, options::SNOW.Options)
+function solve_trajectory_oc!(seq::Sequence, options::NLPOptions)
     om = _get_or_build_oc(seq)
     options = _with_grouped_rows(options, OCRows, om)
 
@@ -517,7 +517,7 @@ function solve_trajectory_oc!(seq::Sequence, options::SNOW.Options)
         return get_objective(om)
     end
 
-    xopt, fopt, info = SNOW.minimize(fun!, x0, ng, lx, ux, lg, ug, options)
+    xopt, fopt, info = solve_nlp(fun!, x0, ng, lx, ux, lg, ug, options)
     set_decision_vector!(om, xopt)
     return (variables = xopt, objective = fopt, info = info, manager = om)
 end
@@ -530,7 +530,7 @@ function solve_trajectory_oc!(seq::Sequence)
         "output_file"      => tempname() * "_ipopt.out",
         "file_print_level" => 5,
     )
-    options = SNOW.Options(derivatives = SNOW.UserDeriv(),
-                           solver      = _ipopt(ip_options))
+    options = NLPOptions(derivatives = :user,
+                         solver      = _ipopt(ip_options))
     solve_trajectory_oc!(seq, options)
 end

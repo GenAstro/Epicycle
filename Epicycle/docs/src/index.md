@@ -286,7 +286,7 @@ Epicycle builds upon the foundational work of many contributors to the aerospace
   models
 - Hammerhead Space for AstroForceModels.jl and its work on differentiable astrodynamics force
   models
-- BYU FLOW Lab for SNOW.jl used in AstroSolve
+- BYU FLOW Lab for SNOW.jl, which AstroSolve's IPOPT driver began from
 - Julia Space Mission Design for the TEMPO.jl library used in AstroEpochs 
 - Wächter & Biegler for the IPOPT nonlinear programming solver
 

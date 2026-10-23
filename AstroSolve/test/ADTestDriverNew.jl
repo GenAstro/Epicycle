@@ -4,7 +4,6 @@
 
 
 
-using SNOW
 using CommonSolve: solve
 using OrdinaryDiffEqHighOrderRK: DP8
 using LinearAlgebra

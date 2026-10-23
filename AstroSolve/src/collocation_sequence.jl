@@ -121,7 +121,7 @@ struct JacobianIndex
     nx::Int
 end
 
-function JacobianIndex(pattern::SNOW.SparsePattern, ng::Int, nx::Int)
+function JacobianIndex(pattern::JacobianPattern, ng::Int, nx::Int)
     order  = sortperm(collect(zip(pattern.cols, pattern.rows)))
     rowval = [pattern.rows[k] for k in order]
     cols   = [pattern.cols[k] for k in order]
@@ -175,9 +175,9 @@ function evaluate!(seq::Sequence, x::Vector{Float64})
 end
 
 # ─────────────────────────────────────────────────────────────────────────────
-# solve_trajectory! — thin SNOW wrapper for collocation NLP
+# solve_trajectory! — the collocation NLP handed to the solver
 #
-# Uses SNOW's UserDeriv mode: fun!(g, df, dg, x) fills constraints g,
+# With user derivatives: fun!(g, df, dg, x) fills constraints g,
 # objective gradient df, and Jacobian matrix dg (ng×nx), and returns
 # the scalar objective.  All derivatives are analytic.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -233,10 +233,10 @@ function _dense_pattern(ng::Int, nx::Int)
         rows[k] = r
         cols[k] = c
     end
-    return SNOW.SparsePattern(rows, cols)
+    return JacobianPattern(rows, cols)
 end
 
-"""The constraint Jacobian sparsity pattern declared to the solver, as SNOW's `SparsePattern`.
+"""The constraint Jacobian sparsity pattern declared to the solver, as a `JacobianPattern`.
 
 Built from the transcription's stencil rather than from an evaluation. The rule an omitted entry
 breaks is not a tolerance: the solver never asks for that derivative, nothing reports it, and the
@@ -355,7 +355,7 @@ function jacobian_pattern(seq::Sequence, ng::Int, nx::Int; dense::Bool = _DENSE_
 
     # Column-major, so the value vector walks the dense Jacobian in memory order.
     sorted = sort!(collect(entries), by = e -> (e[2], e[1]))
-    return SNOW.SparsePattern([e[1] for e in sorted], [e[2] for e in sorted])
+    return JacobianPattern([e[1] for e in sorted], [e[2] for e in sorted])
 end
 
 # =============================================================================
@@ -453,7 +453,7 @@ function check_sparsity(seq::Sequence; n_samples::Int = 24, seed::Int = 20260922
     return length(omitted)
 end
 
-function _solve_phases!(seq::Sequence, options::SNOW.Options)
+function _solve_phases!(seq::Sequence, options::NLPOptions)
     !isempty(sequence_sf_phases(seq)) && return solve_trajectory_shooting!(seq, options)
     options  = _with_collocation_rows(options, _get_or_build_cm(seq))
     x0       = get_decision_vector(seq)
@@ -461,24 +461,23 @@ function _solve_phases!(seq::Sequence, options::SNOW.Options)
     lg, ug   = get_constraint_bounds(seq)
     ng       = length(lg)
 
-    # SNOW defaults to DensePattern, which tells IPOPT every constraint depends on every variable.
-    # Declaring the pattern changes what `fun!` is handed: `dg` arrives as a value vector in pattern
-    # order rather than as an ng x nx matrix.
+    # Without a pattern the Jacobian is dense, which tells IPOPT every constraint depends on every
+    # variable. Declaring the pattern changes what `fun!` is handed: `dg` arrives as a value vector
+    # in pattern order rather than as an ng x nx matrix.
     #
-    # Only the user-derivative path is declared. Under `derivatives = :fd` SNOW computes the
-    # Jacobian itself through a different cache, and a pattern there is separate work.
+    # Only the user-derivative path is declared; finite differences are always dense.
     # The dense route is kept deliberately, and it is the one `dense_jacobian!` selects. It assembles
     # the whole matrix, so it cannot serve a large problem, but it is a second implementation of the
     # same answer — which is what makes the differential in
     # `test_correctness_jacobian_sparsity_differential.jl` worth running. If both routes shared the
     # fill, a mistake in the fill would move both answers the same way and the comparison would see
     # nothing.
-    if options.derivatives isa SNOW.UserDeriv && !_DENSE_JACOBIAN[]
+    if options.derivatives === :user && !_DENSE_JACOBIAN[]
         pattern = jacobian_pattern(seq, ng, length(x0); dense = false)
         index   = JacobianIndex(pattern, ng, length(x0))
-        options = SNOW.Options(sparsity    = pattern,
-                               derivatives = options.derivatives,
-                               solver      = options.solver)
+        options = NLPOptions(sparsity    = pattern,
+                             derivatives = options.derivatives,
+                             solver      = options.solver)
 
         function fun_sparse!(g, df, dg, x)
             evaluate!(seq, x)
@@ -488,7 +487,7 @@ function _solve_phases!(seq::Sequence, options::SNOW.Options)
             return get_objective(seq)
         end
 
-        xopt, fopt, info = SNOW.minimize(fun_sparse!, x0, ng, lx, ux, lg, ug, options)
+        xopt, fopt, info = solve_nlp(fun_sparse!, x0, ng, lx, ux, lg, ug, options)
         evaluate!(seq, xopt)   # leave phase state at optimum
         return (variables = xopt, objective = fopt, info = info)
     end
@@ -501,7 +500,7 @@ function _solve_phases!(seq::Sequence, options::SNOW.Options)
         return get_objective(seq)
     end
 
-    xopt, fopt, info = SNOW.minimize(fun!, x0, ng, lx, ux, lg, ug, options)
+    xopt, fopt, info = solve_nlp(fun!, x0, ng, lx, ux, lg, ug, options)
     evaluate!(seq, xopt)   # leave phase state at optimum
     return (variables = xopt, objective = fopt, info = info)
 end
@@ -509,9 +508,9 @@ end
 # The status box's rows for a phased solve, built by `rows_for(manager, tolerance)`. Building them
 # reads the problem's structure, so a failure there must not stop the solve: the box falls back to
 # the generic counts with one warning.
-function _with_grouped_rows(options::SNOW.Options, rows_for, manager)
+function _with_grouped_rows(options::NLPOptions, rows_for, manager)
     s = options.solver
-    (s isa AstroIPOPT && s.monitor) || return options
+    s.monitor || return options
     rows = try
         rows_for(manager, _constr_viol_tol(options))
     catch err
@@ -523,7 +522,7 @@ function _with_grouped_rows(options::SNOW.Options, rows_for, manager)
     return _with_rows(options, rows)
 end
 
-_with_collocation_rows(options::SNOW.Options, cm) =
+_with_collocation_rows(options::NLPOptions, cm) =
     _with_grouped_rows(options, CollocationRows, cm)
 
 function _solve_phases!(seq::Sequence)
@@ -535,8 +534,8 @@ function _solve_phases!(seq::Sequence)
         "output_file"      => tempname() * "_ipopt.out",
         "file_print_level" => 5,
     )
-    options = SNOW.Options(derivatives = SNOW.UserDeriv(),
-                           solver      = _ipopt(ip_options))
+    options = NLPOptions(derivatives = :user,
+                         solver      = _ipopt(ip_options))
     _solve_phases!(seq, options)
 end
 
@@ -964,7 +963,7 @@ Base.show(io::IO, pf::PhaseFunction) =
 
 """
     solve_trajectory!(seq::Sequence; record_iterations = false)
-    solve_trajectory!(seq::Sequence, options::SNOW.Options; record_iterations = false)
+    solve_trajectory!(seq::Sequence, options::NLPOptions; record_iterations = false)
 
 Solve the trajectory optimization problem the sequence describes.
 
@@ -975,8 +974,10 @@ program and hands it to the solver with analytic derivatives.
 
 # Arguments
 - `seq`: the sequence to solve.
-- `options`: SNOW solver options. Defaults differ by problem: an event graph
-  uses finite differences, a transcribed phase uses its analytic derivatives.
+- `options`: the solver options, an [`NLPOptions`](@ref). Defaults differ by
+  problem: an event graph uses finite differences, a transcribed phase uses its
+  analytic derivatives. Most scripts call `solve!(seq, Optimize(...))` instead,
+  which builds these from the `Optimize` settings.
 
 # Keyword Arguments
 - `record_iterations`: keep each solver iteration in spacecraft history, for
@@ -993,7 +994,7 @@ add_sequence!(seq, toi_event, prop_event)
 result = solve_trajectory!(seq)
 ```
 """
-function solve_trajectory!(seq::Sequence, options::SNOW.Options;
+function solve_trajectory!(seq::Sequence, options::NLPOptions;
                            record_iterations::Bool = false)
     if isempty(sequence_phases(seq)) && isempty(sequence_sf_phases(seq))
         return _solve_event_graph!(seq, options; record_iterations = record_iterations)

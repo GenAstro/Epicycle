@@ -375,14 +375,15 @@ end
         seq = Sequence()
         add_events!(seq, prop_event, [toi_event]) 
         
-        # Create custom SNOW options - use same tolerance as default for reliability
+        # Custom solver options - the same tolerance as the default, for reliability
         custom_ip_options = Dict(
             "max_iter" => 500,
             "tol" => 1e-6,  # Same as default, not tighter
             "file_print_level" => 0,
             "output_file" => "ipopt_custom_$(time_ns())_$(rand(UInt32)).out"
         )
-        custom_options = Options(derivatives=ForwardFD(), solver=IPOPT(custom_ip_options))
+        custom_options = AstroSolve.NLPOptions(derivatives = :fd,
+                                               solver = AstroSolve._ipopt(custom_ip_options; monitor = false))
         
         # Test custom solve_trajectory!(seq, options) - call only once
         result = nothing
@@ -398,16 +399,16 @@ end
     end
     
     @testset "Default Options Function Test" begin
-        # Test AstroSolve.default_snow_options() directly (fully qualified)
-        @test_nowarn options = AstroSolve.default_snow_options()
+        # Test AstroSolve.default_solve_options() directly (fully qualified)
+        @test_nowarn options = AstroSolve.default_solve_options()
         
-        options = AstroSolve.default_snow_options()
+        options = AstroSolve.default_solve_options()
         
-        # Verify it returns SNOW.Options
-        @test isa(options, Options)
+        # Verify it returns the solver options
+        @test isa(options, AstroSolve.NLPOptions)
         
         # Verify it has expected components (basic structure test)
-        @test isa(options.derivatives, ForwardFD)
+        @test options.derivatives === :fd
         @test isa(options.solver, AstroSolve.AstroIPOPT)   # AstroSolve's IPOPT driver, with the status box
         
         # Test that default options work with solve_trajectory! using simple working config
@@ -453,7 +454,7 @@ end
         
         # Use default options explicitly - call only once
         result = nothing
-        @test_nowarn result = solve_trajectory!(seq, AstroSolve.default_snow_options())
+        @test_nowarn result = solve_trajectory!(seq, AstroSolve.default_solve_options())
         
         @test result.info isa Union{Bool, Symbol}
     end

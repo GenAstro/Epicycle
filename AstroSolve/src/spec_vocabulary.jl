@@ -1481,7 +1481,7 @@ _est(m) = getfield(AstroSolve, m)
 #
 # The method says how. The subject carries its own variables. The names avoid
 # IPOPT, BatchLeastSquares and ExtendedKalmanFilter, which are already taken by
-# SNOW and by the estimation modules — this codebase has been bitten twice by
+# Ipopt.jl and by the estimation modules — this codebase has been bitten twice by
 # two subsystems claiming one name.
 # =============================================================================
 
@@ -1612,14 +1612,14 @@ _ipopt_log() = joinpath(tempdir(),
     "ipopt_" * Dates.format(Dates.now(), "yyyy-mm-dd_HH-MM-SS") *
     "_" * string(time_ns()) * ".out")
 
-function _snow(m::Optimize)
+function _nlp_options(m::Optimize)
     opts = Dict{String,Any}("max_iter"    => m.max_iter,
                             "tol"         => m.tol,
                             "print_level" => something(m.print_level, 5),
                             "output_file" => _ipopt_log())
     merge!(opts, m.extra)
-    return SNOW.Options(
-        derivatives = m.derivatives === :fd ? SNOW.ForwardFD() : SNOW.UserDeriv(),
+    return NLPOptions(
+        derivatives = m.derivatives === :fd ? :fd : :user,
         solver = _ipopt(opts; monitor = something(m.monitor, _MONITOR_DEFAULT[])))
 end
 
@@ -1844,12 +1844,12 @@ function solve!(seq::Sequence; method::Optimize = Optimize())
         # when only the first was checked — it went down the event-graph path
         # and died in Ipopt on untyped bounds.
         if isempty(sequence_phases(seq)) && isempty(sequence_sf_phases(seq))
-            return AstroSolve.solve_trajectory!(seq, _snow(method);
+            return AstroSolve.solve_trajectory!(seq, _nlp_options(method);
                        record_iterations = method.record_iterations)
         end
-        return solve_trajectory!(seq, _snow(method))
+        return solve_trajectory!(seq, _nlp_options(method))
     end
-    return solve_trajectory_oc!(seq, _snow(method))
+    return solve_trajectory_oc!(seq, _nlp_options(method))
 end
 
 """

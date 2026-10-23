@@ -17,7 +17,6 @@
 # has been renamed is invisible until a user displays the object, and then it throws in the one
 # place a user is least able to work around.
 
-using SNOW
 using LinearAlgebra
 using EpicycleBase
 using AstroSolve

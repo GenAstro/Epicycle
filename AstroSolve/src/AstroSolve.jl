@@ -14,7 +14,7 @@ module AstroSolve
 
 using ForwardDiff
 using NLsolve
-using SNOW
+import Ipopt
 using LinearAlgebra
 using Printf
 import Random        # check_sparsity samples the variable bounds repeatably

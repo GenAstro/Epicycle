@@ -25,7 +25,6 @@
 # The problem is the regression suite's uc19, recorded at 4.571044 under LGL. This file transcribes
 # it with Hermite-Simpson.
 
-using SNOW
 using LinearAlgebra
 using EpicycleBase
 using AstroSolve

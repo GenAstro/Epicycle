@@ -22,7 +22,6 @@
 # The problem is the regression suite's uc14, recorded at 0.9375 under LGL. This file transcribes
 # it with Hermite-Simpson.
 
-using SNOW
 using LinearAlgebra
 using EpicycleBase
 using AstroSolve

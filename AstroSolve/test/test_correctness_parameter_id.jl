@@ -23,7 +23,6 @@
 # The problem is the regression suite's uc15, recorded at 0.1 under LGL. This file transcribes it
 # with Hermite-Simpson.
 
-using SNOW
 using LinearAlgebra
 using EpicycleBase
 using AstroSolve

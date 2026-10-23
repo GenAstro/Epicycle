@@ -24,7 +24,6 @@
 # Covers sims_flanagan.jl and the shooting half of diagnostics.jl, neither of which any other
 # open-tier test reaches.
 
-using SNOW
 using LinearAlgebra
 using EpicycleBase
 using AstroSolve
