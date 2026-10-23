@@ -29,7 +29,7 @@ using AstroModels: HistorySegment, SpacecraftHistory, push_segment!
 using AstroCallbacks: OrbitCalc, get_calc, Calc
 import AstroCallbacks
 
-using SatelliteToolboxTransformations: r_eci_to_ecef, ecef_to_geodetic, fetch_iers_eop,
+using SatelliteToolboxTransformations: r_eci_to_ecef, ecef_to_geodetic,
                                        J2000, ITRF, DCM
 import SatelliteToolboxBase: EARTH_ANGULAR_SPEED
 using StaticArrays: SVector, SMatrix
