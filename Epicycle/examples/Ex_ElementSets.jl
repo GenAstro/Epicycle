@@ -44,9 +44,9 @@ println(get_state(sat, AlternateEquinoctial()))
 println(get_state(sat, Delaunay()))
 
 # Read single elements in a named coordinate system
-println("mean longitude, MJ2000Eq : ", round(rad2deg(element(sat, AlternateEquinoctialState, EarthMJ2000Eq, :mlong)), digits = 6), " deg")
-println("Delaunay L               : ", round(element(sat, DelaunayState, EarthMJ2000Eq, :L), digits = 3), " km²/s")
-println("Delaunay G               : ", round(element(sat, DelaunayState, EarthMJ2000Eq, :G), digits = 3), " km²/s")
+println("mean longitude, MJ2000Eq : ", round(rad2deg(mean_longitude(sat, EarthMJ2000Eq)), digits = 6), " deg")
+println("Delaunay L               : ", round(delaunay_L(sat, EarthMJ2000Eq), digits = 3), " km²/s")
+println("Delaunay G               : ", round(delaunay_G(sat, EarthMJ2000Eq), digits = 3), " km²/s")
 
 #' ## Follow the elements over a week
 #'
@@ -61,8 +61,8 @@ propagate!(prop, sat, StopAt(sat, PropDurationDays(), 7.0))
 t, Ω, ω, k, altp = history(Calc(epoch, sat),
                           Calc(raan, sat),
                           Calc(argument_of_periapsis, sat),
-                          Calc(element, sat, AlternateEquinoctialState, :k),
-                          Calc(element, sat, AlternateEquinoctialState, :altp))
+                          Calc(equinoctial_k, sat),
+                          Calc(alternate_equinoctial_p, sat))
 days = [(ti - t[1]) for ti in t]
 
 # Report the range each quantity covers in the week

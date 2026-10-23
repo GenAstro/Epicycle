@@ -30,7 +30,8 @@ const _W_EPOCH = Time(2458849.5, 0.0, TDB(), JD())
 _w_sat() = Spacecraft(CartesianState([7000.0, 1000.0, 2000.0, 1.5, 6.5, 1.0]), _W_EPOCH;
                       coord_sys = EarthMJ2000Eq)
 
-_kep(sat, cs) = [element(sat, KeplerianState, cs, f) for f in (:sma, :ecc, :inc, :raan, :aop, :ta)]
+_kep(sat, cs) = [f(sat, cs) for f in (semi_major_axis, eccentricity, inclination, raan,
+                                      argument_of_periapsis, true_anomaly)]
 
 @testset "state! replaces the state, and the bridge reaches it" begin
     sat = _w_sat()
@@ -218,16 +219,18 @@ end
 
 _leo() = Spacecraft(CartesianState(KeplerianState(7000.0, 0.01, 0.9, 0.3, 0.2, 0.1), 398600.4418),
                     _W_EPOCH; coord_sys = EarthMJ2000Eq)
-_mean(sat) = [element(sat, BrouwerMeanLongState, EarthMJ2000Eq, f)
-              for f in (:sma, :ecc, :inc, :raan, :aop, :ma)]
+_mean(sat) = [f(sat, EarthMJ2000Eq)
+              for f in (brouwer_long_semi_major_axis, brouwer_long_eccentricity,
+                        brouwer_long_inclination, brouwer_long_raan,
+                        brouwer_long_argument_of_periapsis, brouwer_long_mean_anomaly)]
 
-@testset "mean_long_sma! writes the mean semi-major axis and holds the other mean elements" begin
+@testset "brouwer_long_semi_major_axis! writes the mean semi-major axis and holds the rest" begin
     # The mean-to-osculating conversion iterates to a tolerance, so this is not machine precision.
     # Measured: sma within 2.4e-6 km; ecc, inc and raan within 2e-9; aop and ma within 6e-7, and
     # opposite, because periapsis is poorly defined on a near-circular orbit.
     sat = _leo()
     m0  = _mean(sat)
-    @test mean_long_sma!(sat; to = 7100.0) === sat
+    @test brouwer_long_semi_major_axis!(sat; to = 7100.0) === sat
     m1 = _mean(sat)
     @test m1[1] ≈ 7100.0 atol = 1e-4
     @test m1[2:4] ≈ m0[2:4] atol = 1e-7
@@ -235,12 +238,12 @@ _mean(sat) = [element(sat, BrouwerMeanLongState, EarthMJ2000Eq, f)
     @test m1[5] + m1[6] ≈ m0[5] + m0[6] atol = 1e-8        # the argument of latitude holds tightly
 
     b = _leo()
-    set_quantity!(b, mean_long_sma; to = 7100.0)
+    set_quantity!(b, brouwer_long_semi_major_axis; to = 7100.0)
     @test state(b) == state(sat)
 
     # Outside the theory's domain the write is refused.
     x0 = copy(state(sat))
-    @test_throws ArgumentError mean_long_sma!(sat; to = 2000.0)     # periapsis below 3000 km
+    @test_throws ArgumentError brouwer_long_semi_major_axis!(sat; to = 2000.0)   # periapsis below 3000 km
     @test state(sat) == x0
 end
 

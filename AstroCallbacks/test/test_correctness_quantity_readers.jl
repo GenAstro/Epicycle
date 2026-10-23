@@ -83,15 +83,15 @@ end
     @test velocity_magnitude(sat, itrf) < velocity_magnitude(sat)
 end
 
-@testset "element reaches any representation" begin
-    # No registry and no declared state tag: `element` takes the
-    # representation as an argument, and the quantity names it in its body.
+@testset "a quantity names its representation in its body" begin
+    # No registry and no declared state tag: each quantity converts to the representation it
+    # belongs to.
     sat = _subject()
     eq  = CoordinateSystem(earth, MJ2000Eq())
 
-    @test element(sat, KeplerianState, eq, :sma) ≈ semi_major_axis(sat, eq) rtol = 1e-12
-    @test isfinite(element(sat, OutGoingAsymptoteState, eq, :c3))
-    @test isfinite(element(sat, ModifiedEquinoctialState, eq, :p))
+    @test semi_major_axis(sat, eq) ≈ KeplerianState(CartesianState(Coordinate(sat, eq)), earth.mu).sma rtol = 1e-12
+    @test isfinite(outgoing_asymptote_declination(sat, eq))
+    @test isfinite(semilatus_rectum(sat, eq))
 end
 
 @testset "Calc evaluates to the same number as the direct call" begin

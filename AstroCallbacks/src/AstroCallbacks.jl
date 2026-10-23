@@ -34,7 +34,7 @@ export position_vector, velocity_vector, raan
 export state, state!
 
 # Quantity readers, and the deferred form. See quantity_readers.jl and calc.jl.
-export element, element!, epoch, epoch!
+export epoch, epoch!
 export delta_v, delta_v!
 export semi_major_axis, eccentricity, inclination, argument_of_periapsis, true_anomaly
 export semi_major_axis!, eccentricity!, inclination!, raan!, argument_of_periapsis!,
@@ -71,7 +71,7 @@ export outgoing_asymptote_right_ascension, outgoing_asymptote_declination,
        incoming_asymptote_declination!, incoming_b_vector_azimuth!
 export position_magnitude!, velocity_magnitude!
 export position_dot_velocity
-export mean_long_sma, mean_long_sma!, outgoing_rla, delta_v_magnitude, delta_v_magnitude!
+export delta_v_magnitude, delta_v_magnitude!
 export gravitational_parameter, gravitational_parameter!
 export mean_anomaly, mean_anomaly!, eccentric_anomaly, hyperbolic_anomaly
 export specific_energy, hyperbolic_excess_speed, apoapsis_speed, periapsis_speed

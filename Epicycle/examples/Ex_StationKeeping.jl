@@ -63,7 +63,7 @@ end
 function reboost!(sat, prop; target_mean_sma)
 
     # Seed both burns with the analytic Hohmann solution
-    dv1_guess, dv2_guess = hohmann_dvs(mean_long_sma(sat), target_mean_sma, earth.mu)
+    dv1_guess, dv2_guess = hohmann_dvs(brouwer_long_semi_major_axis(sat), target_mean_sma, earth.mu)
 
     # Seed the two VNB maneuvers
     toi = ImpulsiveManeuver(axes = VNB(),
@@ -102,7 +102,7 @@ function reboost!(sat, prop; target_mean_sma)
                            lower_bound = [0.0, 0.0, 0.0],
                            upper_bound = [0.05, 0.0, 0.0],
                            name = "moi")],
-              funcs = [Constraint(mean_long_sma, sat; equals = target_mean_sma)]))
+              funcs = [Constraint(brouwer_long_semi_major_axis, sat; equals = target_mean_sma)]))
 
     # Solve the re-boost
     solve!(seq; method = Optimize(derivatives = :fd, monitor = true))
@@ -126,21 +126,21 @@ while true
 
     # Coast to the trigger, or to the end of the simulation
     propagate!(prop, sat,
-               StopAt(mean_long_sma, sat; equals = MEAN_SMA_TRIGGER, direction = -1),
+               StopAt(brouwer_long_semi_major_axis, sat; equals = MEAN_SMA_TRIGGER, direction = -1),
                StopAt(sat, PropDurationSeconds(), t_remain))
 
     # Stop when the budget, rather than the trigger, ended the coast
     elapsed_sec(sat) >= SIM_BUDGET_SEC - 1.0 && break
 
     # Solve the re-boost and record what it took
-    sma_before = mean_long_sma(sat)
+    sma_before = brouwer_long_semi_major_axis(sat)
     dv1_guess, dv2_guess, dv1, dv2 = reboost!(sat, prop; target_mean_sma = MEAN_SMA_NOMINAL)
 
     global cycle += 1
     push!(log, (cycle = cycle,
                 day = elapsed_sec(sat) / 86400.0,
                 sma_before = sma_before,
-                sma_after = mean_long_sma(sat),
+                sma_after = brouwer_long_semi_major_axis(sat),
                 dv1_mps = 1e3 * dv1,
                 dv2_mps = 1e3 * dv2))
 end

@@ -114,9 +114,6 @@ Every quantity takes its subject first. Quantities that depend on a frame take a
 | `delaunay_L`, `delaunay_G`, `delaunay_H` | spacecraft or coordinate on a closed orbit | km²/s | coordinate system | on a spacecraft |
 | `brouwer_long_semi_major_axis`, `brouwer_long_eccentricity`, `brouwer_long_inclination`, `brouwer_long_raan`, `brouwer_long_argument_of_periapsis`, `brouwer_long_mean_anomaly`, and the same six beginning `brouwer_short_` | spacecraft or coordinate | km, none, rad | coordinate system | on a spacecraft |
 | `outgoing_asymptote_right_ascension`, `outgoing_asymptote_declination`, `outgoing_b_vector_azimuth`, and the same three beginning `incoming_` | spacecraft or coordinate | rad | coordinate system | on a spacecraft |
-| `mean_long_sma` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
-| `element` | spacecraft or coordinate | the field's | representation, then coordinate system and field | on a spacecraft |
-| `outgoing_rla` | spacecraft or coordinate on a hyperbolic orbit | rad | coordinate system | no |
 | `beta_angle`, `lunar_beta_angle`, `orbit_normal_sun_angle` | spacecraft or coordinate | rad | body | no |
 | `sun_earth_spacecraft_angle`, `sun_spacecraft_earth_angle`, `sun_spacecraft_moon_angle`, `moon_earth_sun_angle`, `moon_earth_spacecraft_angle`, `moon_spacecraft_earth_angle` | spacecraft or coordinate | rad | none | no |
 | `earth_shadow_fraction`, `moon_shadow_fraction`, from AstroProp | spacecraft or coordinate | none | none | no |
