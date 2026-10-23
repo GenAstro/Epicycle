@@ -206,8 +206,10 @@ arc   = trajectory(phase)
 arc_x = arc[1, :] ./ AU
 arc_y = arc[2, :] ./ AU
 
-# Place each impulse at the midpoint of the segment it acts on
-u_all = hcat(forward_control(phase), backward_control(phase))
+# Place each impulse at the midpoint of the segment it acts on. The backward controls are stored
+# from the arrival end, and each is the impulse added stepping back in time, so the thrust on
+# segment N + 1 - k is the negative of backward control k.
+u_all = hcat(forward_control(phase), -backward_control(phase)[:, end:-1:1])
 mid_x = [0.5 * (arc_x[k] + arc_x[k+1]) for k in 1:size(u_all, 2)]
 mid_y = [0.5 * (arc_y[k] + arc_y[k+1]) for k in 1:size(u_all, 2)]
 

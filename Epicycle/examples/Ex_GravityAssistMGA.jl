@@ -422,12 +422,12 @@ result = solve!(seq; method = Optimize(max_iter = 500, tol = 1e-6, monitor = tru
 @printf("delivered mass : %.3f kg
 ",
         orbit_insertion_delivered(oi, phase2.mf_var.value[1], phase2.vinf_arr_var.value))
-@printf("departure Vinf : %.4f km/s   (truth 3.944)
+@printf("departure Vinf : %.4f km/s   (paper 3.944)
 ", norm(phase1.vinf_dep_var.value))
-@printf("flyby Vinf     : %.4f km/s   (truth 3.962)
+@printf("flyby Vinf     : %.4f km/s   (paper 3.962)
 ", norm(phase1.vinf_arr_var.value))
-@printf("arrival Vinf   : %.4f km/s   (truth 3.141)
+@printf("arrival Vinf   : %.4f km/s   (paper 3.141)
 ", norm(phase2.vinf_arr_var.value))
-@printf("duration       : %.1f days   (truth 540)
+@printf("duration       : %.1f days   (paper 540)
 ",
         (phase2.tf_var.value[1] - phase1.t0_var.value[1]) / 86400.0)
