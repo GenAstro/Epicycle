@@ -118,7 +118,10 @@ function SNOW.optimize(solver::AstroIPOPT, cache, x0, lx, ux, lg, ug, rows, cols
     logfile = String(get(solver.options, "output_file", "ipopt.out"))
     Ipopt.OpenIpoptOutputFile(prob, logfile, solver.file_level)
 
-    box = solver.monitor ? StatusBox() : nothing
+    # The log's path is named when a solve fails, unless the file was opened at level 0 and so
+    # holds nothing.
+    box = solver.monitor ?
+          StatusBox(log = solver.file_level > 0 ? abspath(logfile) : "") : nothing
     if box !== nothing
         ctol   = Float64(get(solver.options, "constr_viol_tol", 1e-4))
         tol    = Float64(get(solver.options, "tol", 1e-8))

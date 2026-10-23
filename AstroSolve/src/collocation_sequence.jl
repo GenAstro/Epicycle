@@ -506,13 +506,14 @@ function _solve_phases!(seq::Sequence, options::SNOW.Options)
     return (variables = xopt, objective = fopt, info = info)
 end
 
-# The status box's rows for a collocation solve. Building them reads the problem's structure, so a
-# failure there must not stop the solve: the box falls back to the generic counts with one warning.
-function _with_collocation_rows(options::SNOW.Options, cm)
+# The status box's rows for a phased solve, built by `rows_for(manager, tolerance)`. Building them
+# reads the problem's structure, so a failure there must not stop the solve: the box falls back to
+# the generic counts with one warning.
+function _with_grouped_rows(options::SNOW.Options, rows_for, manager)
     s = options.solver
     (s isa AstroIPOPT && s.monitor) || return options
     rows = try
-        CollocationRows(cm, _constr_viol_tol(options))
+        rows_for(manager, _constr_viol_tol(options))
     catch err
         err isa InterruptException && rethrow()
         @warn "The solver status display could not name this problem's rows; it shows counts " *
@@ -521,6 +522,9 @@ function _with_collocation_rows(options::SNOW.Options, cm)
     end
     return _with_rows(options, rows)
 end
+
+_with_collocation_rows(options::SNOW.Options, cm) =
+    _with_grouped_rows(options, CollocationRows, cm)
 
 function _solve_phases!(seq::Sequence)
     !isempty(sequence_sf_phases(seq)) && return solve_trajectory_shooting!(seq)
