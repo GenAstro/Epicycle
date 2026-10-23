@@ -185,11 +185,12 @@ report_solution(seq, result)
 ```
 
 `monitor = true` shows a status box in the terminal while the solve runs: every varied component
-and every constraint by name, with its unit, its current value and its error. The box redraws in place each
-iteration. A goal shows ✓ once its violation is within IPOPT's constraint-violation tolerance, which
+and every constraint by name, with its unit, its current value and its error. The box redraws in
+place as the solve iterates, up to ten times a second. A goal shows ✓ once its violation is within IPOPT's constraint-violation tolerance, which
 is the test the solver itself applies, and the bar along the bottom fills as the worst violation
 falls. Angles show in degrees. The box is at most 80 columns, narrows to fit a smaller terminal,
-and leaves earlier output where it is; warnings logged during the solve appear above it. Where the
+and in a short terminal folds rows into "+ N more" while the solve runs, restoring them in the
+final frame. It leaves earlier output where it is; warnings logged during the solve appear above it. Where the
 output is not an interactive terminal, such as a file or a CI log, only the final frame is printed.
 
 `monitor = false` turns the box off and prints IPOPT's own log instead, at `print_level`. A solve

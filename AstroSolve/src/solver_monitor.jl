@@ -12,8 +12,13 @@
 # Rules the display keeps:
 #   - It never erases output it did not draw. A redraw moves up over exactly the lines the last
 #     frame drew.
+#   - A redraw overwrites the last frame in place in one write, so the box never flashes blank,
+#     and happens at most every 0.1 s.
 #   - It is at most 80 columns, narrows to fit a smaller terminal, and becomes one status line
 #     below 64 columns.
+#   - While live it is no taller than the terminal: variable and goal rows collapse into
+#     "+ N more" until it fits, and it becomes one status line when even that does not. The final
+#     frame is drawn whole.
 #   - The width is checked before every frame. Wider: redraw in place. Narrower: the terminal has
 #     re-wrapped the old frame, so its line count can't be trusted; leave it and draw a fresh frame
 #     below.
@@ -52,11 +57,15 @@ solver_monitor!(true)    # back to the status box
 """
 solver_monitor!(on::Bool) = (_MONITOR_DEFAULT[] = on)
 
-# Test hooks: a fixed terminal width, and whether output counts as an interactive terminal.
-const _MONITOR_COLS = Ref{Union{Nothing, Int}}(nothing)
-const _MONITOR_LIVE = Ref{Union{Nothing, Bool}}(nothing)
+# Test hooks: a fixed terminal width and height, whether output counts as an interactive terminal,
+# and the shortest time between live redraws, in seconds.
+const _MONITOR_COLS     = Ref{Union{Nothing, Int}}(nothing)
+const _MONITOR_ROWS     = Ref{Union{Nothing, Int}}(nothing)
+const _MONITOR_LIVE     = Ref{Union{Nothing, Bool}}(nothing)
+const _MONITOR_INTERVAL = Ref(0.1)
 
 _term_cols() = something(_MONITOR_COLS[], displaysize(stdout)[2])
+_term_rows() = something(_MONITOR_ROWS[], displaysize(stdout)[1])
 _term_live() = something(_MONITOR_LIVE[], stdout isa Base.TTY)
 
 # ── The solver-neutral iteration record ──────────────────────────────────────────────────────────
@@ -858,10 +867,11 @@ mutable struct StatusBox
     top::Float64                            # the bar's left end: the first frame's measure
     last::Union{Nothing, IterationRecord}
     log::String                             # IPOPT's log file; empty when it holds nothing
+    drawn::Float64                          # when the last live frame was drawn, from time()
 end
 
 StatusBox(; log::AbstractString = "") =
-    StatusBox(_inner_width(_term_cols()), _term_live(), 0, NaN, nothing, String(log))
+    StatusBox(_inner_width(_term_cols()), _term_live(), 0, NaN, nothing, String(log), 0.0)
 
 _name_width(box) = clamp(box.W - 50, 12, 28)
 _bar_width(box)  = clamp(box.W - 46, 10, 32)
@@ -927,18 +937,18 @@ end
 
 # One row per goal: the desired and achieved values, unit and error. More than fit show the unmet
 # goals with the largest errors first.
-function _goal_lines!(lines, box, nw, goals::Vector{MonitorGoal})
+function _goal_lines!(lines, box, nw, goals::Vector{MonitorGoal}, max_goals = _MAX_GOALS)
     push!(lines, _box_row(box, @sprintf("%-*s %13s %13s  %-6s %9s", nw, "Goals", "desired",
                                         "achieved", "unit", "error")))
-    shown = length(goals) <= _MAX_GOALS ? goals :
-            sort(goals; by = g -> g.met ? -Inf : g.error, rev = true)[1:_MAX_GOALS]
+    shown = length(goals) <= max_goals ? goals :
+            sort(goals; by = g -> g.met ? -Inf : g.error, rev = true)[1:max_goals]
     for g in shown
         push!(lines, _box_row(box, "  " * _fit_name(g.name, nw - 2) * " " * _rcol(g.desired, 13) *
                                    " " * _rcol(g.achieved, 13) * "  " * _fit(g.unit, 6) *
                                    @sprintf(" %9.1e ", g.error) * (g.met ? "✓" : "✗")))
     end
-    length(goals) > _MAX_GOALS &&
-        push!(lines, _box_row(box, "  + $(length(goals) - _MAX_GOALS) more"))
+    length(goals) > max_goals &&
+        push!(lines, _box_row(box, "  + $(length(goals) - max_goals) more"))
     return lines
 end
 
@@ -948,14 +958,14 @@ const _WHERE_W = 22                         # the "worst at" column; adapters ke
 # One row per group: how many of its rows are met, where the worst one is and its error. Up to
 # `_MAX_GOALS` groups show in the order the adapter gives, which is trajectory order. More than
 # that show the unmet groups first, then the largest errors, and a last line counts the rest.
-function _goal_lines!(lines, box, nw, groups::Vector{MonitorGroup})
+function _goal_lines!(lines, box, nw, groups::Vector{MonitorGroup}, max_goals = _MAX_GOALS)
     push!(lines, _box_row(box, @sprintf("%-*s %*s  %-*s %9s", nw, "Goals", _MET_W, "met",
                                         _WHERE_W, "worst at", "error")))
     shown, hidden = groups, MonitorGroup[]
-    if length(groups) > _MAX_GOALS
+    if length(groups) > max_goals
         order  = sort(groups; by = g -> (_is_met(g), -g.error))
-        shown  = order[1:_MAX_GOALS]
-        hidden = order[_MAX_GOALS+1:end]
+        shown  = order[1:max_goals]
+        hidden = order[max_goals+1:end]
     end
     for g in shown
         ok = _is_met(g)
@@ -972,25 +982,26 @@ function _goal_lines!(lines, box, nw, groups::Vector{MonitorGroup})
     return lines
 end
 
-function _frame(box::StatusBox, rec::IterationRecord)
+function _frame(box::StatusBox, rec::IterationRecord; max_vars = _MAX_VARS,
+                max_goals = _MAX_GOALS)
     nw   = _name_width(box)
     head = "─ $(rec.solver) · $(rec.problem) ─── iter $(lpad(rec.iter, 3)) ─── $(_state_text(rec)) ─── " *
            @sprintf("%.1f s ", rec.elapsed)
     lines = ["┌" * rpad(_clip(head, box.W), box.W, '─') * "┐"]
 
     push!(lines, _box_row(box, @sprintf("%-*s %13s  %s", nw, "Variables", "value", "unit")))
-    for v in rec.vars[1:min(end, _MAX_VARS)]
+    for v in rec.vars[1:min(end, max_vars)]
         push!(lines, _box_row(box, "  " * _fit_name(v.name, nw - 2) * " " * _fmt(v.value) * "  " * v.unit))
     end
-    length(rec.vars) > _MAX_VARS &&
-        push!(lines, _box_row(box, "  + $(length(rec.vars) - _MAX_VARS) more"))
+    length(rec.vars) > max_vars &&
+        push!(lines, _box_row(box, "  + $(length(rec.vars) - max_vars) more"))
     for n in rec.notes
         push!(lines, _box_row(box, "  " * n))
     end
     push!(lines, _box_row(box, ""))
 
     if !isempty(rec.goals)
-        _goal_lines!(lines, box, nw, rec.goals)
+        _goal_lines!(lines, box, nw, rec.goals, max_goals)
         push!(lines, _box_row(box, ""))
     end
 
@@ -1032,9 +1043,44 @@ function _clear_for_redraw!(box::StatusBox)
     return nothing
 end
 
-function _draw!(box::StatusBox, rec::IterationRecord)
-    lines = box.W == 0 ? [_status_line(rec, _term_cols())] : _frame(box, rec)
-    foreach(l -> println(stdout, l), lines)
+# Before a live redraw. Same width or wider: the old frame is drawn over in place. Narrower: the
+# terminal re-wrapped the old frame and its line count can't be trusted, so leave it and start a
+# fresh frame below.
+function _resize!(box::StatusBox)
+    W = _inner_width(_term_cols())
+    W < box.W && (box.nlines = 0)
+    box.W = W
+    return nothing
+end
+
+# Fewer rows to try, in order, when a live frame is taller than the terminal: variable rows go
+# first, then goal rows. A cursor cannot move above the top of the window, so a frame taller than
+# it could not be drawn over and would leave its top lines behind on every redraw.
+const _FIT_STEPS = ((_MAX_VARS, _MAX_GOALS), (4, _MAX_GOALS), (4, 4), (2, 4), (0, 4), (0, 2),
+                    (0, 0))
+
+function _fitted_frame(box::StatusBox, rec::IterationRecord)
+    room = _term_rows() - 1                 # the line the cursor rests on stays free
+    for (nv, ng) in _FIT_STEPS
+        lines = _frame(box, rec; max_vars = nv, max_goals = ng)
+        length(lines) <= room && return lines
+    end
+    return [_status_line(rec, _term_cols())]
+end
+
+# Draw a frame over the last one. Each old line is overwritten and cleared to its end, and only
+# the old lines below the new frame are cleared, all in one write, so the terminal never shows the
+# box half drawn. Live frames are fitted to the terminal's height; the final frame is drawn whole,
+# since nothing redraws over it.
+function _draw!(box::StatusBox, rec::IterationRecord; fit::Bool = box.live)
+    lines = box.W == 0 ? [_status_line(rec, _term_cols())] :
+            fit ? _fitted_frame(box, rec) : _frame(box, rec)
+    eol = box.live ? "\e[K\n" : "\n"
+    buf = IOBuffer()
+    box.nlines > 0 && print(buf, "\e[$(box.nlines)A\r")
+    foreach(l -> print(buf, l, eol), lines)
+    length(lines) < box.nlines && print(buf, "\e[J")
+    write(stdout, take!(buf))
     flush(stdout)
     box.nlines = length(lines)
     return nothing
@@ -1043,15 +1089,19 @@ end
 """
     show_iteration!(box::StatusBox, rec::IterationRecord) -> Bool
 
-Show one iteration. In an interactive terminal the box is redrawn in place; elsewhere nothing is
-printed until the final record. Returns `true`; a solver that reads `false` would stop.
+Show one iteration. In an interactive terminal the box is redrawn in place, at most once every
+0.1 s, since a fast solve iterates faster than anyone can read; elsewhere nothing is printed until
+the final record. Returns `true`; a solver that reads `false` would stop.
 """
 function show_iteration!(box::StatusBox, rec::IterationRecord)
     isnan(box.top) && (box.top = rec.worst)
     box.last = rec
     if box.live
-        _clear_for_redraw!(box)
+        now = time()
+        box.nlines > 0 && now - box.drawn < _MONITOR_INTERVAL[] && return true
+        _resize!(box)
         _draw!(box, rec)
+        box.drawn = now
     end
     return true
 end
@@ -1074,8 +1124,8 @@ function finish!(box::StatusBox, status::Symbol)
                             rec.objective, rec.inf_pr, rec.inf_du, rec.mu, rec.worst, rec.tol,
                             rec.elapsed, status)
     box.last = final
-    box.live ? _clear_for_redraw!(box) : (box.W = _inner_width(_term_cols()))
-    _draw!(box, final)
+    box.live ? _resize!(box) : (box.W = _inner_width(_term_cols()))
+    _draw!(box, final; fit = false)
     verb = _converged(status) ? "Converged in" : "Stopped after"
     @printf(stdout, "%s %d iterations, %.1f s (%s)\n", verb, final.iter, final.elapsed, status)
     _say_log(box, status)

@@ -16,10 +16,13 @@ using AstroProp: Vern9
 
 const _SM = AstroSolve
 
-# Run f with stdout captured, a fixed terminal width, and live redraw on or off.
-function _sm_capture(f; cols = 100, live = true)
-    _SM._MONITOR_COLS[] = cols
-    _SM._MONITOR_LIVE[] = live
+# Run f with stdout captured, a fixed terminal size, and live redraw on or off. Every iteration is
+# drawn unless `interval` says otherwise.
+function _sm_capture(f; cols = 100, rows = 200, live = true, interval = 0.0)
+    _SM._MONITOR_COLS[]     = cols
+    _SM._MONITOR_ROWS[]     = rows
+    _SM._MONITOR_LIVE[]     = live
+    _SM._MONITOR_INTERVAL[] = interval
     path, io = mktemp()
     try
         try
@@ -29,13 +32,15 @@ function _sm_capture(f; cols = 100, live = true)
         end
         return read(path, String)
     finally
-        _SM._MONITOR_COLS[] = nothing
-        _SM._MONITOR_LIVE[] = nothing
+        _SM._MONITOR_COLS[]     = nothing
+        _SM._MONITOR_ROWS[]     = nothing
+        _SM._MONITOR_LIVE[]     = nothing
+        _SM._MONITOR_INTERVAL[] = 0.1
         rm(path; force = true)
     end
 end
 
-_sm_strip(s) = replace(s, r"\e\[\d+A" => "", "\e[J" => "")
+_sm_strip(s) = replace(s, r"\e\[\d+A\r?" => "", "\e[J" => "", "\e[K" => "")
 _sm_box_lines(s) = [l for l in split(_sm_strip(s), '\n') if startswith(l, r"[┌│└]")]
 _sm_ups(s) = [parse(Int, m.captures[1]) for m in eachmatch(r"\e\[(\d+)A", s)]
 
@@ -138,10 +143,71 @@ end
         end
         frames = split(out, "┌")[2:end]
         before = [split(out, "┌")[i] for i in 1:length(frames)]
-        erased = [occursin(r"\e\[\d+A\e\[J$", b) for b in before]
-        widths = [textwidth("┌" * first(split(f, '\n'))) for f in frames]
-        @test erased == [false, true, false, true, true]
+        over   = [occursin(r"\e\[\d+A\r$", b) for b in before]
+        widths = [textwidth("┌" * _sm_strip(first(split(f, '\n')))) for f in frames]
+        @test over == [false, true, false, true, true]
         @test widths == [80, 80, 66, 66, 80]
+    end
+
+    @testset "a redraw overwrites in place and never blanks the box first" begin
+        out = _sm_capture(live = true) do
+            box = _SM.StatusBox()
+            for k in 0:3
+                _SM.show_iteration!(box, _sm_record(k))
+            end
+        end
+        @test length(_sm_ups(out)) == 3
+        @test !occursin(r"\e\[\d+A\e\[J", out)        # no erase between moving up and drawing
+        @test occursin(r"\e\[\d+A\r┌", out)            # the new frame starts on the old one's line
+
+        # A shorter frame clears only the old lines left below it.
+        out = _sm_capture(live = true) do
+            box = _SM.StatusBox()
+            _SM.show_iteration!(box, _sm_record(0; nvars = 6))
+            _SM.show_iteration!(box, _sm_record(1; nvars = 2))
+        end
+        @test endswith(out, "\e[J")
+    end
+
+    @testset "a live frame fits the terminal's height; the final frame is whole" begin
+        full = length(_sm_box_lines(_sm_capture(live = false) do
+            box = _SM.StatusBox(); _SM.show_iteration!(box, _sm_record(0; nvars = 8, ngoals = 8))
+            _SM.finish!(box, :Solve_Succeeded)
+        end))
+        rows = 16
+        @test full > rows - 1                           # the case this guards
+        out = _sm_capture(live = true, rows = rows) do
+            box = _SM.StatusBox()
+            for k in 0:3
+                _SM.show_iteration!(box, _sm_record(k; nvars = 8, ngoals = 8))
+            end
+            _SM.finish!(box, :Solve_Succeeded)
+        end
+        frames = split(_sm_strip(out), "┌")[2:end]
+        heights = [count(==('\n'), first(split(f, "┘"))) + 1 for f in frames]
+        @test all(<=(rows - 1), heights[1:end-1])
+        @test occursin("more", frames[1])
+        @test heights[end] == full
+        @test all(<=(rows - 1), _sm_ups(out))           # never asks to move above the window
+
+        # Too short for any box: one status line.
+        out = _sm_capture(live = true, rows = 6) do
+            box = _SM.StatusBox()
+            _SM.show_iteration!(box, _sm_record(0))
+        end
+        @test !occursin("┌", out) && occursin("iter 0", out)
+    end
+
+    @testset "live redraws are spaced, and the final frame is always drawn" begin
+        out = _sm_capture(live = true, interval = 60.0) do
+            box = _SM.StatusBox()
+            for k in 0:9
+                _SM.show_iteration!(box, _sm_record(k))
+            end
+            _SM.finish!(box, :Solve_Succeeded)
+        end
+        @test count("┌", out) == 2                      # the first frame, then the final one
+        @test occursin("iter   9", out)
     end
 
     @testset "messages land above the box, and the box is redrawn below them" begin
