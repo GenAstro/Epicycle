@@ -43,6 +43,23 @@ using Sockets
 # change here cannot reach plotting and the plotting tests need no spacecraft.
 using AstroModels: Spacecraft, HistorySegment
 using AstroEpochs: Time
+
+# Ephemeris files. Frames, centres and time systems are named in files, so reading and writing
+# them needs the objects those names stand for; interpolation lives in AstroRoutines.
+import AstroEpochs
+using AstroFrames: ICRF, GCRF, CIRS, TIRS, ITRF, MJ2000Eq, MODEq, TODEq, MJ2000Ec, PEF, TEME,
+                   MoonPA, MoonME, CelestialBodyFixed
+using AstroUniverse: sun, mercury, venus, earth, moon, mars, jupiter, saturn, uranus, neptune, pluto
+using AstroRoutines: AbstractInterpolationMethod, Lagrange, Hermite, required_points, interpolate,
+                     interpolate_with_derivative
+import SPICE
+using AstroModels: SpacecraftHistory
+using AstroFrames: CoordinateSystem, Coordinate
+using AstroStates: CartesianState, to_vector
+using AstroEpochs: UTC
+using StaticArrays: SVector, SMatrix
+using Printf: @sprintf
+import Dates
 using Dates: DateTime, Millisecond
 
 # Our wrappers are named after the Plotly traces they draw, which is the point — the name is
@@ -72,6 +89,10 @@ export scatterpolar!, bar!, histogram!, contour!, heatmap!, scattergeo!, scatter
 export report
 export orbitview, orbitview!
 export open_dashboard
+
+# Ephemeris files: CCSDS OEM, STK .e and JPL SPK, read into and written from a SpacecraftHistory.
+export read_ephemeris, write_ephemeris, state_at, epochs, span, coverage, diagnostics, position_difference
+export OEM, STKEphemeris, SPK, EphemerisReadError
 # Reached rarely enough to be qualified. An export is a name in every user's namespace and, once
 # registered, a semver contract, so the bar is whether a user calls it often rather than whether it
 # is public. `EpicycleIO.narrate(...)` is public and unexported, which is the usual place for a
@@ -90,6 +111,15 @@ include("gl/palette.jl")
 include("gl/czml.jl")
 include("gl/segments.jl")
 include("gl/orbitview.jl")
+
+include("ephemeris/diagnostics.jl")
+include("ephemeris/epochs.jl")
+include("ephemeris/segments.jl")
+include("ephemeris/names.jl")
+include("ephemeris/oem.jl")
+include("ephemeris/stk.jl")
+include("ephemeris/spk.jl")
+include("ephemeris/api.jl")
 
 # A plot published in the last fraction of a second must not be the one that gets dropped
 # because the process ended.

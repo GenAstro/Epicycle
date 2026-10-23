@@ -3,7 +3,14 @@ uuid = "4f255373-1537-45e9-840a-8c00864979f6"
 authors = ["Steve Hughes <steven.hughes@genastro.org>"]
 version = "0.1.0"
 
+[weakdeps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+
+[extensions]
+AstroRoutinesForwardDiffExt = "ForwardDiff"
+
 [compat]
+ForwardDiff = "0.10, 1"
 julia = "1.10"
 
 [extras]
@@ -13,6 +20,8 @@ ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
 TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
+DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [targets]
-test = ["Test", "LinearAlgebra", "ForwardDiff", "FiniteDiff", "TestItems", "TestItemRunner"]
+test = ["Test", "LinearAlgebra", "ForwardDiff", "FiniteDiff", "TestItems", "TestItemRunner", "DataInterpolations", "StaticArrays"]
