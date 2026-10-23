@@ -86,13 +86,13 @@ end
     on_sc = quantities(Spacecraft)
     @test state in on_sc && semi_major_axis in on_sc && position_dot_velocity in on_sc
     @test !(delta_v in on_sc) && !(gravitational_parameter in on_sc)
-    @test length(on_sc) == 54
+    @test length(on_sc) == 98
 
     # A bare state reads the orbital quantities, but it is not a spacecraft, so not `state`.
     on_coord = quantities(Coordinate)
     @test inclination in on_coord && !(state in on_coord)
 
-    @test length(quantities()) == 57
+    @test length(quantities()) == 101
     @test issorted(String.(nameof.(quantities())))
 
     # A script's own quantity, found in the script's module.

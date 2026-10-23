@@ -79,7 +79,7 @@ In Epicycle, a quantity like `semi_major_axis` is a function of a subject, such 
 subject, as in `inclination(sat, EarthMJ2000Ec)`; without one, they use the
 subject's coordinate system.
 
-A settable quantity is set with its name followed by `!`, with the value as the keyword `to`: `semi_major_axis!(sat; to = 7200.0)`. `is_settable(subject, quantity)` answers whether a pair can be written.
+A settable quantity is set with its name followed by `!`, with the value as the keyword `to`: `semi_major_axis!(sat; to = 7200.0)`. Setting an element of a state representation holds the rest of that representation, and each setter's docstring names what it holds: `equinoctial_h!` holds the semi-major axis, `equinoctial_k`, `equinoctial_p`, `equinoctial_q` and the mean longitude. `is_settable(subject, quantity)` answers whether a pair can be written.
 
 Every quantity takes its subject first. Quantities that depend on a frame take an optional coordinate system second, and an optional `params` third for an orbit-relative coordinate system whose origin does not carry the reference orbit. Quantities tied to a body take the body second instead, as in `beta_angle(sat, moon)`; without it they use the central body of the subject's frame. A quantity undefined for the orbit, such as the period of a hyperbola, throws an `ArgumentError` saying why. The table below lists the built-in quantities.
 
@@ -88,14 +88,17 @@ Every quantity takes its subject first. Quantities that depend on a frame take a
 | `position_vector`, `velocity_vector` | spacecraft or coordinate | km, km/s | coordinate system | on a spacecraft |
 | `position_x`, `position_y`, `position_z` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
 | `position_magnitude`, `velocity_magnitude` | spacecraft or coordinate | km, km/s | coordinate system | on a spacecraft |
+| `velocity_x`, `velocity_y`, `velocity_z` | spacecraft or coordinate | km/s | coordinate system | on a spacecraft |
+| `right_ascension`, `declination`, `velocity_right_ascension`, `velocity_declination`, `velocity_azimuth`, `flight_path_angle` | spacecraft or coordinate | rad | coordinate system | on a spacecraft |
 | `semi_major_axis` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
 | `eccentricity` | spacecraft or coordinate | none | coordinate system | on a spacecraft |
 | `inclination`, `raan`, `argument_of_periapsis`, `true_anomaly` | spacecraft or coordinate | rad | coordinate system | on a spacecraft |
 | `mean_anomaly` | spacecraft or coordinate | rad | coordinate system | on a spacecraft |
 | `eccentric_anomaly`, `hyperbolic_anomaly` | spacecraft or coordinate | rad | coordinate system | no |
-| `argument_of_latitude`, `longitude_of_periapsis`, `descending_node_right_ascension`, `true_longitude` | spacecraft or coordinate | rad | coordinate system | no |
+| `argument_of_latitude`, `longitude_of_periapsis`, `descending_node_right_ascension` | spacecraft or coordinate | rad | coordinate system | no |
+| `true_longitude` | spacecraft or coordinate | rad | coordinate system | on a spacecraft |
 | `apoapsis_radius`, `periapsis_radius` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
-| `semilatus_rectum` | spacecraft or coordinate | km | coordinate system | no |
+| `semilatus_rectum` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
 | `specific_energy`, `c3` | spacecraft or coordinate | km²/s² | coordinate system | no |
 | `hyperbolic_excess_speed`, `apoapsis_speed`, `periapsis_speed` | spacecraft or coordinate | km/s | coordinate system | no |
 | `angular_momentum`, `angular_momentum_magnitude` | spacecraft or coordinate | km²/s | coordinate system | no |
@@ -104,6 +107,13 @@ Every quantity takes its subject first. Quantities that depend on a frame take a
 | `orbital_period` | spacecraft or coordinate | s | coordinate system | no |
 | `b_dot_t`, `b_dot_r`, `b_magnitude` | spacecraft or coordinate on a hyperbolic orbit | km | coordinate system | no |
 | `b_plane_angle` | spacecraft or coordinate on a hyperbolic orbit | rad | coordinate system | no |
+| `equinoctial_h`, `equinoctial_k`, `equinoctial_p`, `equinoctial_q`, `alternate_equinoctial_p`, `alternate_equinoctial_q` | spacecraft or coordinate on a closed orbit | none | coordinate system | on a spacecraft |
+| `mean_longitude` | spacecraft or coordinate on a closed orbit | rad | coordinate system | on a spacecraft |
+| `modified_equinoctial_f`, `modified_equinoctial_g`, `modified_equinoctial_h`, `modified_equinoctial_k` | spacecraft or coordinate | none | coordinate system | on a spacecraft |
+| `delaunay_l`, `delaunay_g`, `delaunay_h` | spacecraft or coordinate on a closed orbit | rad | coordinate system | on a spacecraft |
+| `delaunay_L`, `delaunay_G`, `delaunay_H` | spacecraft or coordinate on a closed orbit | km²/s | coordinate system | on a spacecraft |
+| `brouwer_long_semi_major_axis`, `brouwer_long_eccentricity`, `brouwer_long_inclination`, `brouwer_long_raan`, `brouwer_long_argument_of_periapsis`, `brouwer_long_mean_anomaly`, and the same six beginning `brouwer_short_` | spacecraft or coordinate | km, none, rad | coordinate system | on a spacecraft |
+| `outgoing_asymptote_right_ascension`, `outgoing_asymptote_declination`, `outgoing_b_vector_azimuth`, and the same three beginning `incoming_` | spacecraft or coordinate | rad | coordinate system | on a spacecraft |
 | `mean_long_sma` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
 | `element` | spacecraft or coordinate | the field's | representation, then coordinate system and field | on a spacecraft |
 | `outgoing_rla` | spacecraft or coordinate on a hyperbolic orbit | rad | coordinate system | no |

@@ -138,7 +138,7 @@ end
 # give a state that reads back as different elements from the ones written.
 _check_elements(::Any) = nothing
 
-function _check_elements(b::BrouwerMeanLongState)
+function _check_elements(b::Union{BrouwerMeanLongState, BrouwerMeanShortState})
     0 <= b.ecc < 0.99 || throw(ArgumentError(
         "mean eccentricity must be at least 0 and below 0.99 for the Brouwer-Lyddane theory; got " *
         "$(b.ecc). The state was not changed."))
@@ -153,6 +153,9 @@ function _check_elements(s::SphericalRADECState)
         "a position magnitude must be positive; got $(s.r) km. The state was not changed."))
     s.v >= 0 || throw(ArgumentError(
         "a velocity magnitude must be zero or more; got $(s.v) km/s. The state was not changed."))
+    abs(s.dec) <= π/2 && abs(s.decv) <= π/2 || throw(ArgumentError(
+        "a declination must be between −π/2 and π/2 rad; got $(s.dec) for the position and " *
+        "$(s.decv) for the velocity. The state was not changed."))
     return nothing
 end
 
@@ -425,6 +428,30 @@ for (fn, idx, what) in ((:position_x, 1, "X"), (:position_y, 2, "Y"), (:position
     end
 end
 
+for (fn, idx, axis) in ((:velocity_x, 1, "X"), (:velocity_y, 2, "Y"), (:velocity_z, 3, "Z"))
+    doc = """
+        $fn(subject[, cs][, params])
+
+    $axis velocity component in km/s, expressed in `cs` or the subject's frame. Settable with
+    [`$(fn)!`](@ref).
+
+    # Returns
+    The $axis velocity component in km/s.
+
+    # Example
+    ```julia
+    $fn(sat, EarthMJ2000Eq)
+    ```
+    """
+    @eval begin
+        $fn(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+            velocity_vector(subject, cs, params)[$idx]
+        $fn(subject, cs::AbstractCoordinateSystem) = velocity_vector(subject, cs)[$idx]
+        $fn(subject) = velocity_vector(subject)[$idx]
+        @doc $doc $fn
+    end
+end
+
 """
     position_x(subject[, cs][, params])
 
@@ -489,12 +516,15 @@ for (fn, idx, what, unit) in
         ((:position_x,      1:1, "X component of position", "km"),
          (:position_y,      2:2, "Y component of position", "km"),
          (:position_z,      3:3, "Z component of position", "km"),
+         (:velocity_x,      4:4, "X component of velocity", "km/s"),
+         (:velocity_y,      5:5, "Y component of velocity", "km/s"),
+         (:velocity_z,      6:6, "Z component of velocity", "km/s"),
          (:position_vector, 1:3, "position vector",         "km"),
          (:velocity_vector, 4:6, "velocity vector",         "km/s"))
     fn! = Symbol(fn, "!")
     scalar = length(idx) == 1
-    example = scalar ? "7000.0" : (fn === :position_vector ? "[7000.0, 0.0, 0.0]" :
-                                                             "[0.0, 7.5, 0.0]")
+    example = scalar ? (unit == "km" ? "7000.0" : "7.5") :
+                       (fn === :position_vector ? "[7000.0, 0.0, 0.0]" : "[0.0, 7.5, 0.0]")
     doc = """
         $(fn!)(sat[, cs][, params]; to) -> sat
 
@@ -882,7 +912,8 @@ EpicycleBase.output_partial(subject, ::typeof(position_vector)) =
 EpicycleBase.output_partial(subject, ::typeof(velocity_vector)) =
     hcat(zeros(3, 3), Matrix{Float64}(I, 3, 3))
 
-for (fn, idx) in ((:position_x, 1), (:position_y, 2), (:position_z, 3))
+for (fn, idx) in ((:position_x, 1), (:position_y, 2), (:position_z, 3),
+                  (:velocity_x, 4), (:velocity_y, 5), (:velocity_z, 6))
     @eval EpicycleBase.output_partial(subject, ::typeof($fn)) =
         reshape(Float64[i == $idx for i in 1:6], 1, 6)
 end
@@ -936,6 +967,9 @@ EpicycleBase.label(::typeof(velocity_vector))      = "Velocity"
 EpicycleBase.label(::typeof(position_x))           = "X"
 EpicycleBase.label(::typeof(position_y))           = "Y"
 EpicycleBase.label(::typeof(position_z))           = "Z"
+EpicycleBase.label(::typeof(velocity_x))           = "VX"
+EpicycleBase.label(::typeof(velocity_y))           = "VY"
+EpicycleBase.label(::typeof(velocity_z))           = "VZ"
 EpicycleBase.label(::typeof(position_magnitude))   = "Position magnitude"
 EpicycleBase.label(::typeof(velocity_magnitude))   = "Velocity magnitude"
 EpicycleBase.label(::typeof(epoch))                = "Epoch"
@@ -1005,6 +1039,7 @@ for (f, u) in ((:semi_major_axis, "km"), (:inclination, "rad"), (:raan, "rad"),
                (:argument_of_periapsis, "rad"), (:true_anomaly, "rad"),
                (:position_vector, "km"), (:velocity_vector, "km/s"),
                (:position_x, "km"), (:position_y, "km"), (:position_z, "km"),
+               (:velocity_x, "km/s"), (:velocity_y, "km/s"), (:velocity_z, "km/s"),
                (:position_magnitude, "km"), (:velocity_magnitude, "km/s"),
                (:delta_v, "km/s"), (:position_dot_velocity, "km²/s"),
                (:mean_long_sma, "km"), (:outgoing_rla, "rad"),
@@ -1041,7 +1076,7 @@ AstroCallbacks.subject_type(delta_v)          # ImpulsiveManeuver
 subject_type(::Any) = Any
 
 for f in (:position_vector, :velocity_vector, :position_x, :position_y, :position_z,
-          :position_magnitude, :velocity_magnitude, :position_dot_velocity,
+          :velocity_x, :velocity_y, :velocity_z, :position_magnitude, :velocity_magnitude, :position_dot_velocity,
           :semi_major_axis, :eccentricity, :inclination, :raan, :argument_of_periapsis,
           :true_anomaly, :mean_long_sma, :outgoing_rla, :epoch, :element)
     @eval subject_type(::typeof($f)) = Union{Spacecraft, Coordinate}
