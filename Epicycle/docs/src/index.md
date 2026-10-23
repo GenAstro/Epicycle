@@ -94,7 +94,7 @@ the IERS file published by IANA. Time conversions are tested against Astropy.
 
 ### States (AstroStates)
 
-Epicycle supports twelve state representations: Cartesian, Keplerian and modified Keplerian, equinoctial, modified equinoctial and alternate equinoctial, spherical with azimuth and flight path angle, spherical with right ascension and declination, incoming and outgoing asymptote, and Brouwer mean short and long. Angles are in radians throughout, and a conversion that encounters a singularity, such as a parabolic orbit, warns rather than returning a plausible wrong answer. Any representation converts to any other feasible representation, and the conversions are differentiable with ForwardDiff and Zygote. A state may change representation during a run, so a problem can be posed in Keplerian elements and integrated in Cartesian. State conversions are tested against GMAT R2022a.
+Epicycle supports thirteen state representations: Cartesian, Keplerian and modified Keplerian, equinoctial, modified equinoctial and alternate equinoctial, spherical with azimuth and flight path angle, spherical with right ascension and declination, incoming and outgoing asymptote, Brouwer mean short and long, and Delaunay. Angles are in radians throughout, and a conversion that encounters a singularity, such as a parabolic orbit, warns rather than returning a plausible wrong answer. Any representation converts to any other feasible representation, and the conversions are differentiable with ForwardDiff and Zygote. A state may change representation during a run, so a problem can be posed in Keplerian elements and integrated in Cartesian. State conversions are tested against GMAT R2022a.
 
 ### Ephemerides, Bodies, ad Frames (AstroUniverse and AstroFrames)
 
@@ -108,7 +108,7 @@ You can add a custom body using ephemeris from SPICE and orientation from an IAU
 
 ### Physical Models (AstroModels)
 
-Epicycle models spacecraft and ground stations. A spacecraft has an orbital state and epoch, a coordinate system, mass, and the physical properties used by drag and solar radiation pressure. Its state can be set and read in any of the twelve representations and any of the coordinate systems described above, and its ephemeris is recorded on the spacecraft so it can be plotted or reported after a run. A spacecraft can also carry a CAD model for three-dimensional views, which will be integrated with Cesium in a coming release. Ground stations are defined by geodetic latitude, longitude and altitude on Earth, with a minimum elevation angle.
+Epicycle models spacecraft and ground stations. A spacecraft has an orbital state and epoch, a coordinate system, mass, and the physical properties used by drag and solar radiation pressure. Its state can be set and read in any of the state representations and any of the coordinate systems described above, and its ephemeris is recorded on the spacecraft so it can be plotted or reported after a run. A spacecraft can also carry a CAD model for three-dimensional views, which will be integrated with Cesium in a coming release. Ground stations are defined by geodetic latitude, longitude and altitude on Earth, with a minimum elevation angle.
 
 ### Dynamics (AstroProp, AstroManeuvers)
 

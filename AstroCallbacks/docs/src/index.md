@@ -63,58 +63,119 @@ semi_major_axis!(sat; to = 7200.0)
 inclination!(sat, EarthMJ2000Ec; to = deg2rad(30.0))
 delta_v!(toi; to = [0.5, 0.0, 0.0])
 
-# Define a quantity held unapplied for later execution
-# This is used for constraints and where execution should be deferred 
-# to the desired point in a simulation.  
-q = Calc(inclination, sat, EarthMJ2000Ec)
-q()
 ```
 
 ## Quantities Overview
 
-A quantity in Epicycle is a function of the thing it describes rather than a method on it. Where an object-oriented library would offer `sat.getSMA()` and `sat.setSMA(value)`, Epicycle reads a spacecraft's semi-major axis with `semi_major_axis(sat)` and sets it with `semi_major_axis!(sat; to = value)`. The `!` is the Julia convention marking a function that changes one of its arguments. Written this way, a new spacecraft or state type supplies its own `semi_major_axis` and every script that already calls that name keeps working, with no change to Epicycle and no recompilation of the original struct.
+A **quantity** is a value you can read from an object in Epicycle, such as a spacecraft's inclination, a maneuver's delta-v, or a celestial body's gravitational parameter. The object is called the **subject**. Quantity functions provide a common interface for reading these values and, where supported, changing them.
 
-In Epicycle, a quantity like `semi_major_axis` is a function of a subject, such as a `Spacecraft` named `sat` (i.e. `semi_major_axis(sat)`).  A subject may be a `Spacecraft`, a maneuver, or a
-`CelestialBody` for example. Frame-dependent quantities accept a coordinate system after the
-subject, as in `inclination(sat, EarthMJ2000Ec)`; without one, they use the
-subject's coordinate system.
+### Reading quantities
 
-A settable quantity is set with its name followed by `!`, with the value as the keyword `to`: `semi_major_axis!(sat; to = 7200.0)`. `is_settable(subject, quantity)` answers whether a pair can be written.
-
-Every quantity takes its subject first. Quantities that depend on a frame take an optional coordinate system second, and an optional `params` third for an orbit-relative coordinate system whose origin does not carry the reference orbit.  The table below illustrates a few built-in quantities. 
-
-| Quantity | Subject | Units | Takes a coordinate system | Settable |
-|---|---|---|---|---|
-| `position_vector`, `velocity_vector` | spacecraft or coordinate | km, km/s | yes | on a spacecraft |
-| `position_x`, `position_y`, `position_z` | spacecraft or coordinate | km | yes | on a spacecraft |
-| `position_magnitude`, `velocity_magnitude` | spacecraft or coordinate | km, km/s | yes | on a spacecraft |
-| `semi_major_axis` | spacecraft or coordinate | km | yes | on a spacecraft |
-| `eccentricity` | spacecraft or coordinate | none | yes | on a spacecraft |
-| `inclination`, `raan`, `argument_of_periapsis`, `true_anomaly` | spacecraft or coordinate | rad | yes | on a spacecraft |
-| `mean_long_sma` | spacecraft or coordinate | km | yes | on a spacecraft |
-| `outgoing_rla` | spacecraft or coordinate on a hyperbolic orbit | rad | yes | no |
-| `state` | spacecraft | km, km/s | no | yes |
-| `epoch` | spacecraft or coordinate | `Time` | no | on a spacecraft |
-| `delta_v` | maneuver | km/s | no | yes |
-| `delta_v_magnitude` | maneuver | km/s | no | yes |
-| `gravitational_parameter` | celestial body | km³/s² | no | yes |
-
-For a complete list of implemented quantities (you can easily write your own don't forget!) you can use the quantities function as illustrated below.
+Call a quantity function with its subject as the first argument:
 
 ```julia
-# List the quantities implemented for various structs
+semi_major_axis(sat)                 # Spacecraft semi-major axis, in km
+delta_v(toi)                         # Maneuver delta-v vector, in km/s
+gravitational_parameter(earth)       # Earth's gravitational parameter, in km³/s²
+```
+
+A quantity may return a scalar, a vector, or another value such as a `Time`. The reference table below lists the units for each quantity; angles are in radians.
+
+### Choosing a coordinate system or body
+
+For frame-dependent quantities, pass the coordinate system as the second argument. If you omit it, the quantity uses the subject's coordinate system.
+
+```julia
+inclination(sat)                     # In the spacecraft's coordinate system
+inclination(sat, EarthMJ2000Ec)       # In EarthMJ2000Ec coordinates
+velocity_vector(sat, EarthFixed)      # In Earth-fixed coordinates, in km/s
+```
+
+The coordinate system determines the origin and axes used in the calculation. Orbital quantities use the gravitational parameter of that origin. When a coordinate system requires additional data, such as a reference state for an orbit-relative frame, pass a `params` named tuple as the third argument. See the quantity's docstring for the supported arguments.
+
+Some quantities take a celestial body as the second argument instead of a coordinate system. For example, `beta_angle(sat, moon)` uses the Moon; omitting the body uses the central body of the subject's frame.
+
+### Setting quantities
+
+For quantities that support writing, call the function with `!` appended to its name and supply the new value with the `to` keyword:
+
+```julia
+semi_major_axis!(sat; to = 7200.0)
+inclination!(sat, EarthMJ2000Ec; to = deg2rad(30.0))
+delta_v!(toi; to = [0.5, 0.0, 0.0])
+```
+
+The `!` follows Julia's convention for functions that modify an argument. Supply values in the same units used by the corresponding reader.
+
+Setting a state element preserves the other elements of the representation used by that setter. This may change values in other representations. Each setter's docstring lists the elements it preserves. For example, `equinoctial_h!` preserves the semi-major axis, `equinoctial_k`, `equinoctial_p`, `equinoctial_q`, and mean longitude.
+
+Use `is_settable(subject, quantity)` to check whether a quantity can be changed on a particular subject:
+
+```julia
+is_settable(sat, semi_major_axis)     # true
+is_settable(sat, position_dot_velocity) # false
+```
+
+## Available quantities
+
+The table summarizes the built-in quantities and their supported subjects. A coordinate subject is an `AstroFrames.Coordinate`. The second argument is optional where shown. The Settable column indicates which subjects support the corresponding `!` function.
+
+Some quantities are defined only for particular orbit types. For example, `orbital_period` is undefined for a hyperbolic orbit and throws an `ArgumentError` explaining the restriction. Check the quantity's docstring for applicability and other requirements.
+
+| Quantity | Subject | Units | Second argument | Settable |
+|---|---|---|---|---|
+| `position_vector`, `velocity_vector` | spacecraft or coordinate | km, km/s | coordinate system | on a spacecraft |
+| `position_x`, `position_y`, `position_z` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
+| `position_magnitude`, `velocity_magnitude` | spacecraft or coordinate | km, km/s | coordinate system | on a spacecraft |
+| `velocity_x`, `velocity_y`, `velocity_z` | spacecraft or coordinate | km/s | coordinate system | on a spacecraft |
+| `right_ascension`, `declination`, `velocity_right_ascension`, `velocity_declination`, `velocity_azimuth`, `flight_path_angle` | spacecraft or coordinate | rad | coordinate system | on a spacecraft |
+| `semi_major_axis` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
+| `eccentricity` | spacecraft or coordinate | none | coordinate system | on a spacecraft |
+| `inclination`, `raan`, `argument_of_periapsis`, `true_anomaly` | spacecraft or coordinate | rad | coordinate system | on a spacecraft |
+| `mean_anomaly` | spacecraft or coordinate | rad | coordinate system | on a spacecraft |
+| `eccentric_anomaly`, `hyperbolic_anomaly` | spacecraft or coordinate | rad | coordinate system | no |
+| `argument_of_latitude`, `longitude_of_periapsis`, `descending_node_right_ascension` | spacecraft or coordinate | rad | coordinate system | no |
+| `true_longitude` | spacecraft or coordinate | rad | coordinate system | on a spacecraft |
+| `apoapsis_radius`, `periapsis_radius` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
+| `semilatus_rectum` | spacecraft or coordinate | km | coordinate system | on a spacecraft |
+| `specific_energy`, `c3` | spacecraft or coordinate | km²/s² | coordinate system | no |
+| `hyperbolic_excess_speed`, `apoapsis_speed`, `periapsis_speed` | spacecraft or coordinate | km/s | coordinate system | no |
+| `angular_momentum`, `angular_momentum_magnitude` | spacecraft or coordinate | km²/s | coordinate system | no |
+| `orbit_normal`, `eccentricity_vector` | spacecraft or coordinate | none | coordinate system | no |
+| `orbital_angular_velocity`, `mean_motion` | spacecraft or coordinate | rad/s | coordinate system | no |
+| `orbital_period` | spacecraft or coordinate | s | coordinate system | no |
+| `b_dot_t`, `b_dot_r`, `b_magnitude` | spacecraft or coordinate on a hyperbolic orbit | km | coordinate system | no |
+| `b_plane_angle` | spacecraft or coordinate on a hyperbolic orbit | rad | coordinate system | no |
+| `equinoctial_h`, `equinoctial_k`, `equinoctial_p`, `equinoctial_q`, `alternate_equinoctial_p`, `alternate_equinoctial_q` | spacecraft or coordinate on a closed orbit | none | coordinate system | on a spacecraft |
+| `mean_longitude` | spacecraft or coordinate on a closed orbit | rad | coordinate system | on a spacecraft |
+| `modified_equinoctial_f`, `modified_equinoctial_g`, `modified_equinoctial_h`, `modified_equinoctial_k` | spacecraft or coordinate | none | coordinate system | on a spacecraft |
+| `delaunay_l`, `delaunay_g`, `delaunay_h` | spacecraft or coordinate on a closed orbit | rad | coordinate system | on a spacecraft |
+| `delaunay_L`, `delaunay_G`, `delaunay_H` | spacecraft or coordinate on a closed orbit | km²/s | coordinate system | on a spacecraft |
+| `brouwer_long_semi_major_axis`, `brouwer_long_eccentricity`, `brouwer_long_inclination`, `brouwer_long_raan`, `brouwer_long_argument_of_periapsis`, `brouwer_long_mean_anomaly`, and the same six beginning `brouwer_short_` | spacecraft or coordinate | km, none, rad | coordinate system | on a spacecraft |
+| `outgoing_asymptote_right_ascension`, `outgoing_asymptote_declination`, `outgoing_b_vector_azimuth`, and the same three beginning `incoming_` | spacecraft or coordinate | rad | coordinate system | on a spacecraft |
+| `beta_angle`, `lunar_beta_angle`, `orbit_normal_sun_angle` | spacecraft or coordinate | rad | body | no |
+| `sun_earth_spacecraft_angle`, `sun_spacecraft_earth_angle`, `sun_spacecraft_moon_angle`, `moon_earth_sun_angle`, `moon_earth_spacecraft_angle`, `moon_spacecraft_earth_angle` | spacecraft or coordinate | rad | none | no |
+| `earth_shadow_fraction`, `moon_shadow_fraction`, from AstroProp | spacecraft or coordinate | none | none | no |
+| `state` | spacecraft | km, km/s | none | yes |
+| `epoch` | spacecraft or coordinate | `Time` | none | on a spacecraft |
+| `delta_v` | maneuver | km/s | none | yes |
+| `delta_v_magnitude` | maneuver | km/s | none | yes |
+| `gravitational_parameter` | celestial body | km³/s² | none | yes |
+Use `quantities` to list the quantity functions available for a subject type:
+
+```julia
 quantities(Spacecraft)
 quantities(ImpulsiveManeuver)
 quantities(CelestialBody)
 ```
 
-!!! note "Extensible Property Access"
+By default, `quantities` searches `AstroCallbacks`. To find quantities defined in your script, pass `Main` as the second argument, for example `quantities(Spacecraft, Main)`.
 
-    A struct's fields are always reachable directly, as `sat.state`, and a mutable field can be
-    assigned with `sat.state = value`. Reaching a value that way is fixed by how the struct was
-    defined, so it cannot be extended without editing Epicycle itself. The quantity functions,
-    `inclination(sat)` and `inclination!(sat; to = value)`, are the extension point: a third party
-    adds a method for their own type and the core structs stay as they are.
+### Extending the interface
+
+Quantity functions can be extended with methods for your own types. Scripts that call these functions can then use those types through the same interface. You can also define new quantities for existing types without changing their fields. See [Writing your own Quantity](@ref) for details.
+
+To store a quantity and its arguments for evaluation later, use `Calc`, as described in [Defining a quantity for later evaluation](@ref).
 
 ## Using Quantities
 
@@ -187,27 +248,6 @@ dragged = Spacecraft(drag = SphericalDrag(c_d = 2.2, drag_area = 4.0))
 is_settable(dragged, drag_area)          # true, so AstroSolve can vary it
 drag_area!(dragged; to = 5.0)
 drag_area(dragged)
-```
-
-## Defining a quantity for later evaluation
-
-There are times when you need to define a quantity to be evaluated later. For example, you may want to report a quantity or plot it during or after a simulation. The code `inclination(sat)` computes the quantity at the point where it appears in the code. A `Calc` allows you to define a quantity to be evaluated later for use in stopping conditions, plots, reports, solver variables, and constraints.
-
-`Calc(quantity, subject, deps...)` holds a quantity together with its subject and coordinate system, unapplied. Calling it evaluates the quantity. 
-
-```julia
-
-# Define a calc for a Spacecraft's Z-component of postion in EarthMJ2000Ec coordinates
-sat = Spacecraft()
-q = Calc(position_z, sat, EarthMJ2000Ec)
-
-# Evaluate the calc
-q()                                  
-
-# Apply the the same quantity and frame to a different Spacecraft
-other = Spacecraft(state = CartesianState([0.0, 7000.0, 0.0, -5.3, 0.0, 5.3]),
-                   time  = Time("2024-01-01T12:00:00", UTC(), ISOT()))
-reapply(q, other)                    
 ```
 
 ## Legacy Calc Interface

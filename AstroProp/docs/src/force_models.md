@@ -241,6 +241,20 @@ that the integrator's error estimate misses, so `propagate!` predicts the bounda
 step at each one. `SmoothedConical` needs no boundary steps. [Verification](@ref) summarizes
 the measured effect of boundary handling.
 
+The eclipse models are also available as quantities, with no force model needed.
+[`earth_shadow_fraction`](@ref) and [`moon_shadow_fraction`](@ref) give the fraction of the Sun's
+disk the Earth or the Moon hides from a spacecraft, 0 in full sun and 1 in umbra. They use
+`DualCone` unless given another model, so pass the model your SRP force uses and a stopping
+condition such as eclipse entry sees the same shadow the force applies.
+
+```julia
+srp = SolarRadiationPressure(earth; shadow = SmoothedConical())
+StopAt(earth_shadow_fraction, sat, SmoothedConical(); equals = 0.5, direction = +1)   # eclipse entry
+```
+
+Like every quantity defined outside AstroCallbacks, they are listed by
+`quantities(Spacecraft, AstroProp)`.
+
 The full signatures are in the reference: [`SolarRadiationPressure`](@ref), [`DualCone`](@ref)
 and [`SmoothedConical`](@ref).
 

@@ -31,17 +31,18 @@ _q_sat()   = Spacecraft(state = CartesianState([7000.0, 300.0, 0.0, 0.0, 7.5, 1.
 _q_hyp()   = Spacecraft(state = CartesianState([7000.0, 300.0, 0.0, 0.0, 12.5, 1.0]),
                         time  = _q_epoch())
 
-@testset "mean_long_sma matches the MeanSMA calc" begin
+@testset "brouwer_long_semi_major_axis matches the MeanSMA calc" begin
     sat = _q_sat()
-    @test mean_long_sma(sat) ≈ _q_scalar(get_calc(OrbitCalc(sat, MeanSMA())))
-    @test label(mean_long_sma) == "Long-period mean semi-major axis"
+    @test brouwer_long_semi_major_axis(sat) ≈ _q_scalar(get_calc(OrbitCalc(sat, MeanSMA())))
+    @test label(brouwer_long_semi_major_axis) == "Brouwer long-period mean semi-major axis"
 end
 
-@testset "outgoing_rla matches the OutGoingRLA calc" begin
+@testset "outgoing_asymptote_right_ascension matches the OutGoingRLA calc" begin
     sat = _q_hyp()
-    @test outgoing_rla(sat) ≈ _q_scalar(get_calc(OrbitCalc(sat, OutGoingRLA())))
+    @test outgoing_asymptote_right_ascension(sat) ≈
+          _q_scalar(get_calc(OrbitCalc(sat, OutGoingRLA())))
     # A right ascension wraps, and a stopping condition has to know that.
-    @test is_cyclic(outgoing_rla)
+    @test is_cyclic(outgoing_asymptote_right_ascension)
 end
 
 @testset "delta_v_magnitude matches the DeltaVMag calc" begin
@@ -86,13 +87,13 @@ end
     on_sc = quantities(Spacecraft)
     @test state in on_sc && semi_major_axis in on_sc && position_dot_velocity in on_sc
     @test !(delta_v in on_sc) && !(gravitational_parameter in on_sc)
-    @test length(on_sc) == 18
+    @test length(on_sc) == 95
 
     # A bare state reads the orbital quantities, but it is not a spacecraft, so not `state`.
     on_coord = quantities(Coordinate)
     @test inclination in on_coord && !(state in on_coord)
 
-    @test length(quantities()) == 21
+    @test length(quantities()) == 98
     @test issorted(String.(nameof.(quantities())))
 
     # A script's own quantity, found in the script's module.

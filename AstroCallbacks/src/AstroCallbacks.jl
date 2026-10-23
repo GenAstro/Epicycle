@@ -34,17 +34,56 @@ export position_vector, velocity_vector, raan
 export state, state!
 
 # Quantity readers, and the deferred form. See quantity_readers.jl and calc.jl.
-export element, epoch, epoch!
+export epoch, epoch!
 export delta_v, delta_v!
 export semi_major_axis, eccentricity, inclination, argument_of_periapsis, true_anomaly
 export semi_major_axis!, eccentricity!, inclination!, raan!, argument_of_periapsis!,
        true_anomaly!
 export position_x, position_y, position_z, position_magnitude, velocity_magnitude
 export position_x!, position_y!, position_z!, position_vector!, velocity_vector!
+export velocity_x, velocity_y, velocity_z, velocity_x!, velocity_y!, velocity_z!
+export right_ascension, declination, velocity_right_ascension, velocity_declination,
+       velocity_azimuth, flight_path_angle,
+       right_ascension!, declination!, velocity_right_ascension!, velocity_declination!,
+       velocity_azimuth!, flight_path_angle!
+export equinoctial_h, equinoctial_k, equinoctial_p, equinoctial_q, alternate_equinoctial_p,
+       alternate_equinoctial_q, mean_longitude,
+       equinoctial_h!, equinoctial_k!, equinoctial_p!, equinoctial_q!, alternate_equinoctial_p!,
+       alternate_equinoctial_q!, mean_longitude!
+export modified_equinoctial_f, modified_equinoctial_g, modified_equinoctial_h,
+       modified_equinoctial_k, modified_equinoctial_f!, modified_equinoctial_g!,
+       modified_equinoctial_h!, modified_equinoctial_k!, semilatus_rectum!, true_longitude!
+export delaunay_l, delaunay_g, delaunay_h, delaunay_L, delaunay_G, delaunay_H,
+       delaunay_l!, delaunay_g!, delaunay_h!, delaunay_L!, delaunay_G!, delaunay_H!
+export brouwer_long_semi_major_axis, brouwer_long_eccentricity, brouwer_long_inclination,
+       brouwer_long_raan, brouwer_long_argument_of_periapsis, brouwer_long_mean_anomaly,
+       brouwer_long_semi_major_axis!, brouwer_long_eccentricity!, brouwer_long_inclination!,
+       brouwer_long_raan!, brouwer_long_argument_of_periapsis!, brouwer_long_mean_anomaly!
+export brouwer_short_semi_major_axis, brouwer_short_eccentricity, brouwer_short_inclination,
+       brouwer_short_raan, brouwer_short_argument_of_periapsis, brouwer_short_mean_anomaly,
+       brouwer_short_semi_major_axis!, brouwer_short_eccentricity!, brouwer_short_inclination!,
+       brouwer_short_raan!, brouwer_short_argument_of_periapsis!, brouwer_short_mean_anomaly!
+export outgoing_asymptote_right_ascension, outgoing_asymptote_declination,
+       outgoing_b_vector_azimuth, incoming_asymptote_right_ascension,
+       incoming_asymptote_declination, incoming_b_vector_azimuth,
+       outgoing_asymptote_right_ascension!, outgoing_asymptote_declination!,
+       outgoing_b_vector_azimuth!, incoming_asymptote_right_ascension!,
+       incoming_asymptote_declination!, incoming_b_vector_azimuth!
 export position_magnitude!, velocity_magnitude!
 export position_dot_velocity
-export mean_long_sma, mean_long_sma!, outgoing_rla, delta_v_magnitude, delta_v_magnitude!
+export delta_v_magnitude, delta_v_magnitude!
 export gravitational_parameter, gravitational_parameter!
+export mean_anomaly, mean_anomaly!, eccentric_anomaly, hyperbolic_anomaly
+export specific_energy, hyperbolic_excess_speed, apoapsis_speed, periapsis_speed
+export angular_momentum, angular_momentum_magnitude, orbit_normal, orbital_angular_velocity
+export eccentricity_vector, orbital_period, mean_motion
+export argument_of_latitude, longitude_of_periapsis, descending_node_right_ascension
+export apoapsis_radius, apoapsis_radius!, periapsis_radius, periapsis_radius!, semilatus_rectum, c3,
+       true_longitude
+export b_dot_t, b_dot_r, b_magnitude, b_plane_angle
+export beta_angle, lunar_beta_angle, orbit_normal_sun_angle, sun_earth_spacecraft_angle,
+       sun_spacecraft_earth_angle, sun_spacecraft_moon_angle, moon_earth_sun_angle,
+       moon_earth_spacecraft_angle, moon_spacecraft_earth_angle
 export Calc, reapply
 export history, quantities
 export label, set_quantity!, is_settable, output_partial   # from EpicycleBase, so writing a quantity needs only AstroCallbacks
@@ -201,6 +240,9 @@ for f in (
     "maneuvercalc_deltavmag.jl",
     "frame_aware_quantities.jl",
     "quantity_readers.jl",
+    "orbit_parameters.jl",
+    "state_element_quantities.jl",
+    "body_parameters.jl",
     "calc.jl",
     "history.jl",
 )

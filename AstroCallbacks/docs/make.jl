@@ -16,6 +16,8 @@ makedocs(;
         assets=String[],
         collapselevel=1,
         sidebar_sitename=false,
+        size_threshold=400 * 2^10,
+        size_threshold_warn=250 * 2^10,
     ),
     pages=[
         "index.md",

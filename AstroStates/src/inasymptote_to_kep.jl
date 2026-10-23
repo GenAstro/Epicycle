@@ -12,7 +12,7 @@ Convert incoming asymptote elements to Keplerian elements.
     - `C₃`  : characteristic energy [length²/time²]
     - `λₐ` : right ascension of the asymptote [rad]
     - `δₐ` : declination of the asymptote [rad]
-    - `θᵦ` : B-plane angle [rad]
+    - `θᵦ` : B-vector azimuth at infinity, counter-clockwise from south [rad]
     - `ν`  : true anomaly [rad]
 
 - `μ`: Gravitational parameter [length³/time²]

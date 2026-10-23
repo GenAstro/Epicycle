@@ -12,7 +12,7 @@ Convert outgoing asymptote elements to Keplerian elements.
     - `C₃`  : characteristic energy [length²/time²]
     - `λₐ` : right ascension of the asymptote [rad]
     - `δₐ` : declination of the asymptote [rad]
-    - `θᵦ` : B-plane angle [rad]
+    - `θᵦ` : B-vector azimuth at infinity, counter-clockwise from south [rad]
     - `ν`  : true anomaly [rad]
 
 - `μ`: Gravitational parameter [length³/time²]
@@ -81,7 +81,7 @@ function _asymptote_to_kep(asym::AbstractVector{<:Real}, μ::Real, dir::Int, tol
         return fill(T(NaN), 6)
     end
 
-    # B-plane axes, and the angular momentum direction from the B-plane angle
+    # B-plane axes, and the angular momentum direction from the B-vector azimuth
     Ê = SVector{3,T}(-ŝ[2], ŝ[1], 0) / sxy          # ẑ × ŝ, normalised
     N̂ = cross(ŝ, Ê)
     sθ, cθ = sincos(θᵦ)

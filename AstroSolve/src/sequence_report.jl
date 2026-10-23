@@ -191,7 +191,7 @@ function get_calc_description(calc)
         # reader recognises, and the function's own name when none is declared.
         if :f in calc_fields
             quantity = getfield(calc, :f)
-            declared = EpicycleBase.label(quantity)
+            declared = EpicycleBase.label(calc)
             return declared == "quantity" ? string(nameof(quantity)) : declared
         end
 

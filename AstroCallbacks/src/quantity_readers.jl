@@ -12,53 +12,25 @@
 # reads a stated fact rather than guessing one.
 #
 # Where a quantity is an element of a state representation, the conversion
-# happens in the function body. Nothing declares it: `element` takes the
-# representation as an argument, so `semi_major_axis` names `KeplerianState`
-# the same way it would name any other. That is what `AbstractCalc` carried as
-# `calc_input_statetag(::SMA) = Keplerian()` and no longer needs to.
+# happens in the function body: `semi_major_axis` converts to `KeplerianState`
+# and reads its field, and nothing else declares it. That is what
+# `AbstractCalc` carried as `calc_input_statetag(::SMA) = Keplerian()` and no
+# longer needs to. Every element of every representation has its own quantity;
+# state_element_quantities.jl holds the ones not defined here.
 # =============================================================================
 
 """
-    element(StateT, subject, cs, field) -> value
-    element(StateT, subject, cs, field, params) -> value
-
-One element of representation `StateT`, read in `cs`.
-
-The gravitational parameter comes from the coordinate system's origin, so it is
-not a separate argument.
-
-# Examples
-```julia
-element(KeplerianState,         sat, EarthMJ2000Eq, :sma)
-element(OutGoingAsymptoteState, sat, EarthMJ2000Eq, :c3)
-```
-
-# Returns
-The requested field from `StateT`. Units follow the selected state field.
-"""
-function element(StateT, subject, cs::AbstractCoordinateSystem, field::Symbol,
-                 params::NamedTuple)
-    cart = CartesianState(Coordinate(subject, cs, params))
-    return getfield(StateT(cart, get_gravparam(cs.origin)), field)
-end
-
-element(StateT, subject, cs::AbstractCoordinateSystem, field::Symbol) =
-    element(StateT, subject, cs, field, NamedTuple())
-
-element(StateT, subject, field::Symbol) =
-    element(StateT, subject, frame_of(subject), field, NamedTuple())
-
-"""
-    set_element!(StateT, subject, cs, field[, params]; to) -> subject
+    set_element!(subject, StateT, cs, field[, params]; to) -> subject
 
 Write one element of representation `StateT`, measured in `cs`, holding the rest of the
-representation. The write counterpart of [`element`](@ref), and the one place a setter
-converts: the subject's state is read into `StateT` in `cs`, `field` is replaced by `to`, and the
-result is converted back and stored through [`set_state!`](@ref) in the subject's own frame.
+representation. The one place a setter converts: the subject's state is read into `StateT` in
+`cs`, `field` is replaced by `to`, and the result is converted back and stored through
+[`set_state!`](@ref) in the subject's own frame. Each element's setter, such as
+[`equinoctial_h!`](@ref), is the user-facing form.
 
 # Arguments
-- `StateT`: the representation the element belongs to, such as `KeplerianState`.
 - `subject`: a subject with a `set_state!` method.
+- `StateT`: the representation the element belongs to, such as `KeplerianState`.
 - `cs`: the coordinate system the element is measured in.
 - `field`: the element's field name in `StateT`, such as `:sma`.
 - `params`: data for an orbit-relative coordinate system, as the readers take it.
@@ -68,12 +40,14 @@ result is converted back and stored through [`set_state!`](@ref) in the subject'
 `subject`, mutated. Throws `ArgumentError` when the new elements do not define an orbit, and
 leaves the subject unchanged.
 """
-function set_element!(StateT, subject, cs::AbstractCoordinateSystem, field::Symbol,
+function set_element!(subject, StateT::Type, cs::AbstractCoordinateSystem, field::Symbol,
                       params::NamedTuple = NamedTuple(); to)
     mu   = get_gravparam(cs.origin)
     held = StateT(CartesianState(Coordinate(subject, cs, params)), mu)
     vals = [f === field ? to : getfield(held, f) for f in fieldnames(typeof(held))]
-    new  = StateT(promote(vals...)...)
+    # Six numbers promote to one type; a Cartesian state's two vectors go to its own constructor,
+    # which converts them.
+    new  = all(v -> v isa Number, vals) ? StateT(promote(vals...)...) : StateT(vals...)
     _check_elements(new)
     cart = CartesianState(new, mu)
     all(isfinite, to_vector(cart)) || throw(ArgumentError(
@@ -87,7 +61,7 @@ end
 # give a state that reads back as different elements from the ones written.
 _check_elements(::Any) = nothing
 
-function _check_elements(b::BrouwerMeanLongState)
+function _check_elements(b::Union{BrouwerMeanLongState, BrouwerMeanShortState})
     0 <= b.ecc < 0.99 || throw(ArgumentError(
         "mean eccentricity must be at least 0 and below 0.99 for the Brouwer-Lyddane theory; got " *
         "$(b.ecc). The state was not changed."))
@@ -102,6 +76,9 @@ function _check_elements(s::SphericalRADECState)
         "a position magnitude must be positive; got $(s.r) km. The state was not changed."))
     s.v >= 0 || throw(ArgumentError(
         "a velocity magnitude must be zero or more; got $(s.v) km/s. The state was not changed."))
+    abs(s.dec) <= π/2 && abs(s.decv) <= π/2 || throw(ArgumentError(
+        "a declination must be between −π/2 and π/2 rad; got $(s.dec) for the position and " *
+        "$(s.decv) for the velocity. The state was not changed."))
     return nothing
 end
 
@@ -153,11 +130,9 @@ for (fn, field, what) in
          (:true_anomaly,         :ta,   "True anomaly, in radians."))
     @eval begin
         $fn(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
-            element(KeplerianState, subject, cs, $(QuoteNode(field)), params)
-        $fn(subject, cs::AbstractCoordinateSystem) =
-            element(KeplerianState, subject, cs, $(QuoteNode(field)))
-        $fn(subject) =
-            element(KeplerianState, subject, frame_of(subject), $(QuoteNode(field)))
+            getfield(_state(KeplerianState, subject, cs, params), $(QuoteNode(field)))
+        $fn(subject, cs::AbstractCoordinateSystem) = $fn(subject, cs, NamedTuple())
+        $fn(subject) = $fn(subject, frame_of(subject))
     end
 end
 
@@ -195,7 +170,7 @@ for (fn, field, what, unit) in
     @eval begin
         function $fn!(sat::Spacecraft, cs::AbstractCoordinateSystem = frame_of(sat),
                       params::NamedTuple = NamedTuple(); to::Real)
-            return set_element!(KeplerianState, sat, cs, $(QuoteNode(field)), params; to = to)
+            return set_element!(sat, KeplerianState, cs, $(QuoteNode(field)), params; to = to)
         end
         @doc $doc $fn!
         EpicycleBase.set_quantity!(sat::Spacecraft, ::typeof($fn),
@@ -277,92 +252,6 @@ true_anomaly(sat)
 
 # `raan` already exists in frame_aware_quantities.jl and is left alone.
 
-"""
-    mean_long_sma(subject[, cs][, params])
-
-Brouwer-Lyddane long-period mean semi-major axis, in km. Settable with
-[`mean_long_sma!`](@ref).
-
-The mean element averages out the short-period variation an osculating
-semi-major axis carries, so a station-keeping box stated in mean elements does
-not chase the once-per-orbit oscillation. The conversion runs the mean-element
-theory and carries its own convergence tolerance, so a round trip agrees to
-about 1e-4 km rather than to machine precision.
-
-Measured in `cs`; without one, in the subject's own frame. See [`element`](@ref).
-
-# Returns
-The mean semi-major axis in km.
-
-# Example
-```julia
-mean_long_sma(sat)
-mean_long_sma(sat, EarthMJ2000Eq)
-```
-"""
-mean_long_sma(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
-    element(BrouwerMeanLongState, subject, cs, :sma, params)
-mean_long_sma(subject, cs::AbstractCoordinateSystem) =
-    element(BrouwerMeanLongState, subject, cs, :sma)
-mean_long_sma(subject) =
-    element(BrouwerMeanLongState, subject, frame_of(subject), :sma)
-
-"""
-    mean_long_sma!(sat[, cs][, params]; to) -> sat
-
-Set the Brouwer-Lyddane long-period mean semi-major axis of `sat` to `to` km, measured in `cs`
-or the spacecraft's own frame. The other mean elements are held in that frame, the mean anomaly
-among them, and the state is stored in the spacecraft's own frame as before.
-
-# Notes
-The conversion back from mean elements iterates to a tolerance, so the value read back agrees
-with `to` to about 1e-4 km. The theory holds for `0 ≤ e < 0.99` and a mean periapsis radius above
-3000 km; outside that the setter throws.
-
-# Returns
-`sat`, mutated. Throws `ArgumentError`, and leaves `sat` unchanged, when the mean elements that
-result are outside the theory's domain.
-
-# Example
-```julia
-mean_long_sma!(sat; to = 7000.0)
-```
-"""
-mean_long_sma!(sat::Spacecraft, cs::AbstractCoordinateSystem = frame_of(sat),
-               params::NamedTuple = NamedTuple(); to::Real) =
-    set_element!(BrouwerMeanLongState, sat, cs, :sma, params; to = to)
-
-EpicycleBase.set_quantity!(sat::Spacecraft, ::typeof(mean_long_sma),
-                           cs::AbstractCoordinateSystem = frame_of(sat),
-                           params::NamedTuple = NamedTuple(); to) =
-    mean_long_sma!(sat, cs, params; to = to)
-
-"""
-    outgoing_rla(subject[, cs][, params])
-
-Right ascension of the outgoing hyperbolic asymptote, in radians.
-
-Defined on a hyperbolic orbit, where it names the direction the spacecraft
-departs along. Reading it from a bound orbit converts through a state that has
-no outgoing asymptote and the result means nothing.
-
-Measured in `cs`; without one, in the subject's own frame. See [`element`](@ref).
-
-# Returns
-The outgoing asymptote right ascension in radians.
-
-# Example
-```julia
-outgoing_rla(sat, EarthMJ2000Eq)
-```
-"""
-outgoing_rla(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
-    element(OutGoingAsymptoteState, subject, cs, :rla, params)
-outgoing_rla(subject, cs::AbstractCoordinateSystem) =
-    element(OutGoingAsymptoteState, subject, cs, :rla)
-outgoing_rla(subject) =
-    element(OutGoingAsymptoteState, subject, frame_of(subject), :rla)
-
 # --- position and velocity components ---------------------------------------
 
 for (fn, idx, what) in ((:position_x, 1, "X"), (:position_y, 2, "Y"), (:position_z, 3, "Z"))
@@ -371,6 +260,30 @@ for (fn, idx, what) in ((:position_x, 1, "X"), (:position_y, 2, "Y"), (:position
             position_vector(subject, cs, params)[$idx]
         $fn(subject, cs::AbstractCoordinateSystem) = position_vector(subject, cs)[$idx]
         $fn(subject) = position_vector(subject)[$idx]
+    end
+end
+
+for (fn, idx, axis) in ((:velocity_x, 1, "X"), (:velocity_y, 2, "Y"), (:velocity_z, 3, "Z"))
+    doc = """
+        $fn(subject[, cs][, params])
+
+    $axis velocity component in km/s, expressed in `cs` or the subject's frame. Settable with
+    [`$(fn)!`](@ref).
+
+    # Returns
+    The $axis velocity component in km/s.
+
+    # Example
+    ```julia
+    $fn(sat, EarthMJ2000Eq)
+    ```
+    """
+    @eval begin
+        $fn(subject, cs::AbstractCoordinateSystem, params::NamedTuple) =
+            velocity_vector(subject, cs, params)[$idx]
+        $fn(subject, cs::AbstractCoordinateSystem) = velocity_vector(subject, cs)[$idx]
+        $fn(subject) = velocity_vector(subject)[$idx]
+        @doc $doc $fn
     end
 end
 
@@ -438,12 +351,15 @@ for (fn, idx, what, unit) in
         ((:position_x,      1:1, "X component of position", "km"),
          (:position_y,      2:2, "Y component of position", "km"),
          (:position_z,      3:3, "Z component of position", "km"),
+         (:velocity_x,      4:4, "X component of velocity", "km/s"),
+         (:velocity_y,      5:5, "Y component of velocity", "km/s"),
+         (:velocity_z,      6:6, "Z component of velocity", "km/s"),
          (:position_vector, 1:3, "position vector",         "km"),
          (:velocity_vector, 4:6, "velocity vector",         "km/s"))
     fn! = Symbol(fn, "!")
     scalar = length(idx) == 1
-    example = scalar ? "7000.0" : (fn === :position_vector ? "[7000.0, 0.0, 0.0]" :
-                                                             "[0.0, 7.5, 0.0]")
+    example = scalar ? (unit == "km" ? "7000.0" : "7.5") :
+                       (fn === :position_vector ? "[7000.0, 0.0, 0.0]" : "[0.0, 7.5, 0.0]")
     doc = """
         $(fn!)(sat[, cs][, params]; to) -> sat
 
@@ -547,7 +463,7 @@ for (fn, field, what, unit) in
                       params::NamedTuple = NamedTuple(); to::Real)
             $fn(sat, cs, params) > 0 || throw(ArgumentError(
                 $("the $what is zero, so there is no direction to hold; set the vector instead.")))
-            return set_element!(SphericalRADECState, sat, cs, $(QuoteNode(field)), params; to = to)
+            return set_element!(sat, SphericalRADECState, cs, $(QuoteNode(field)), params; to = to)
         end
         @doc $doc $fn!
         EpicycleBase.set_quantity!(sat::Spacecraft, ::typeof($fn),
@@ -831,7 +747,8 @@ EpicycleBase.output_partial(subject, ::typeof(position_vector)) =
 EpicycleBase.output_partial(subject, ::typeof(velocity_vector)) =
     hcat(zeros(3, 3), Matrix{Float64}(I, 3, 3))
 
-for (fn, idx) in ((:position_x, 1), (:position_y, 2), (:position_z, 3))
+for (fn, idx) in ((:position_x, 1), (:position_y, 2), (:position_z, 3),
+                  (:velocity_x, 4), (:velocity_y, 5), (:velocity_z, 6))
     @eval EpicycleBase.output_partial(subject, ::typeof($fn)) =
         reshape(Float64[i == $idx for i in 1:6], 1, 6)
 end
@@ -885,14 +802,15 @@ EpicycleBase.label(::typeof(velocity_vector))      = "Velocity"
 EpicycleBase.label(::typeof(position_x))           = "X"
 EpicycleBase.label(::typeof(position_y))           = "Y"
 EpicycleBase.label(::typeof(position_z))           = "Z"
+EpicycleBase.label(::typeof(velocity_x))           = "VX"
+EpicycleBase.label(::typeof(velocity_y))           = "VY"
+EpicycleBase.label(::typeof(velocity_z))           = "VZ"
 EpicycleBase.label(::typeof(position_magnitude))   = "Position magnitude"
 EpicycleBase.label(::typeof(velocity_magnitude))   = "Velocity magnitude"
 EpicycleBase.label(::typeof(epoch))                = "Epoch"
 EpicycleBase.label(::typeof(state))                = "State"
 EpicycleBase.label(::typeof(delta_v))              = "Delta-V"
 EpicycleBase.label(::typeof(position_dot_velocity)) = "r-dot-v"
-EpicycleBase.label(::typeof(mean_long_sma))        = "Long-period mean semi-major axis"
-EpicycleBase.label(::typeof(outgoing_rla))         = "Outgoing RLA"
 EpicycleBase.label(::typeof(delta_v_magnitude))    = "Delta-V magnitude"
 EpicycleBase.label(::typeof(gravitational_parameter)) = "Gravitational parameter"
 
@@ -902,16 +820,16 @@ for (f, u) in ((:semi_major_axis, "km"), (:inclination, "rad"), (:raan, "rad"),
                (:argument_of_periapsis, "rad"), (:true_anomaly, "rad"),
                (:position_vector, "km"), (:velocity_vector, "km/s"),
                (:position_x, "km"), (:position_y, "km"), (:position_z, "km"),
+               (:velocity_x, "km/s"), (:velocity_y, "km/s"), (:velocity_z, "km/s"),
                (:position_magnitude, "km"), (:velocity_magnitude, "km/s"),
                (:delta_v, "km/s"), (:position_dot_velocity, "km²/s"),
-               (:mean_long_sma, "km"), (:outgoing_rla, "rad"),
                (:delta_v_magnitude, "km/s"), (:gravitational_parameter, "km³/s²"))
     @eval EpicycleBase.unit(::typeof($f)) = $u
 end
 
 # Angles wrap. A stopping condition has to unwrap before it brackets a root;
 # nothing else needs to know.
-for f in (:inclination, :raan, :argument_of_periapsis, :true_anomaly, :outgoing_rla)
+for f in (:inclination, :raan, :argument_of_periapsis, :true_anomaly)
     @eval EpicycleBase.is_cyclic(::typeof($f)) = true
     @eval EpicycleBase.cycle(::typeof($f))     = 2π
 end
@@ -938,9 +856,9 @@ AstroCallbacks.subject_type(delta_v)          # ImpulsiveManeuver
 subject_type(::Any) = Any
 
 for f in (:position_vector, :velocity_vector, :position_x, :position_y, :position_z,
-          :position_magnitude, :velocity_magnitude, :position_dot_velocity,
+          :velocity_x, :velocity_y, :velocity_z, :position_magnitude, :velocity_magnitude, :position_dot_velocity,
           :semi_major_axis, :eccentricity, :inclination, :raan, :argument_of_periapsis,
-          :true_anomaly, :mean_long_sma, :outgoing_rla, :epoch)
+          :true_anomaly, :epoch)
     @eval subject_type(::typeof($f)) = Union{Spacecraft, Coordinate}
 end
 subject_type(::typeof(state))                   = Spacecraft

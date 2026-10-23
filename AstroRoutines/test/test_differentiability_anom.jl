@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 
-# Differentiability dimension (TestingStandards.md §3) for the anomaly-conversion functional area.
+# Differentiability dimension (testing standards §3) for the anomaly-conversion functional area.
 # Validation tier "AD vs analytic": ForwardDiff partials are checked against the hand-derived
 # analytic derivatives, and against finite differences for the closed forms. Satisfies SR-AD-1.
 #
@@ -40,4 +40,38 @@ end
     d = ForwardDiff.derivative(g, 1.0)
     @test isfinite(d)
     @test d > 0                                             # ν increases with M on (−π, π)
+end
+
+@testitem "hyperbolic Kepler solve is differentiable (dH/dM, dH/de vs analytic)" tags=[:SR_AD_1, :FR_ANOM_11, :Differentiability] begin
+    using AstroRoutines, ForwardDiff
+    for e in (1.05, 1.5, 4.0)
+        for M in range(-20.0, 20.0; length = 9)
+            H = mean_to_hyperbolic_anomaly(M, e)
+            dHdM = ForwardDiff.derivative(m -> mean_to_hyperbolic_anomaly(m, e), M)
+            dHde = ForwardDiff.derivative(ee -> mean_to_hyperbolic_anomaly(M, ee), e)
+            @test isapprox(dHdM, 1 / (e * cosh(H) - 1); rtol = 1e-10)
+            @test isapprox(dHde, -sinh(H) / (e * cosh(H) - 1); rtol = 1e-10, atol = 1e-12)
+        end
+    end
+end
+
+@testitem "hyperbolic closed forms are differentiable (AD vs finite difference)" tags=[:SR_AD_1, :FR_ANOM_8, :FR_ANOM_9, :FR_ANOM_10, :Differentiability] begin
+    using AstroRoutines, ForwardDiff, FiniteDiff
+    e = 1.7
+    for x in range(-1.5, 1.5; length = 9)                 # inside the asymptotes for ν
+        for f in (H -> hyperbolic_to_true_anomaly(H, e),
+                  ν -> true_to_hyperbolic_anomaly(ν, e),
+                  H -> hyperbolic_to_mean_anomaly(H, e))
+            ad = ForwardDiff.derivative(f, x)
+            fd = FiniteDiff.finite_difference_derivative(f, x)
+            @test isapprox(ad, fd; rtol = 1e-6, atol = 1e-8)
+        end
+        # and with respect to the eccentricity
+        for f in (ee -> hyperbolic_to_true_anomaly(x, ee),
+                  ee -> true_to_hyperbolic_anomaly(x, ee),
+                  ee -> hyperbolic_to_mean_anomaly(x, ee))
+            @test isapprox(ForwardDiff.derivative(f, e), FiniteDiff.finite_difference_derivative(f, e);
+                           rtol = 1e-6, atol = 1e-8)
+        end
+    end
 end

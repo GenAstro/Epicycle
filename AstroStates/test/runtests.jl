@@ -47,6 +47,7 @@ types = collect(keys(states))
                          to_type === :ModifiedKeplerianState ? ModifiedKeplerianState(from_state, μ) :
                          to_type === :EquinoctialState       ? EquinoctialState(from_state,μ) :
                          to_type === :AlternateEquinoctialState ? AlternateEquinoctialState(from_state,μ) :
+                         to_type === :DelaunayState          ? DelaunayState(from_state, μ) :
                          nothing
 
                 @test typeof(result) == typeof(expected);
@@ -135,10 +136,6 @@ types = collect(keys(states))
         end
     end
 end
-# Final Clean Test Summary
-println("\n=========================================")
-println("  AstroStates tests completed.")
-println("=========================================")
 
 @testset "OrbitState Round-Trip Tests" begin
     for (name, state) in states
@@ -276,3 +273,4 @@ println(" Starting state differentiation tests")
 println(" ")
 include("state_differentiation.jl")
 include("test_correctness_conversion_edges.jl")
+include("test_correctness_element_sets.jl")

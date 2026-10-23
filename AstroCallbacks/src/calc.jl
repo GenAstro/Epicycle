@@ -104,7 +104,7 @@ writing, through `set_quantity!(subject, quantity, deps...; to = value)`, so
 function set_calc!(c::Calc, value)
     EpicycleBase.is_settable(first(c.args), c.f, Base.tail(c.args)...) ||
         throw(ArgumentError(
-            "$(EpicycleBase.label(c.f)) cannot be set on a " *
+            "$(EpicycleBase.label(c)) cannot be set on a " *
             "$(nameof(typeof(first(c.args)))); a solver can vary only a quantity " *
             "that has a `set_quantity!` method for its subject."))
     return EpicycleBase.set_quantity!(first(c.args), c.f, Base.tail(c.args)...; to = value)
@@ -152,6 +152,7 @@ calc_is_settable(c::AbstractCalc) =
 EpicycleBase.label(c::Calc) = EpicycleBase.label(c.f)
 
 """Traits pass through to the quantity, so a `Calc` on an angle remains cyclic."""
+EpicycleBase.unit(c::Calc)      = EpicycleBase.unit(c.f)
 EpicycleBase.is_cyclic(c::Calc) = EpicycleBase.is_cyclic(c.f)
 EpicycleBase.cycle(c::Calc)     = EpicycleBase.cycle(c.f)
 EpicycleBase.tag(c::Calc)       = EpicycleBase.tag(c.f)

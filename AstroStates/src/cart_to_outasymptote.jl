@@ -19,7 +19,7 @@ A 6-element vector: `[rₚ, C₃, λₐ, δₐ, θᵦ, ν]`
 - C₃ : characteristic energy
 - λₐ : right ascension of outgoing asymptote, in [0, 2π)
 - δₐ : declination of outgoing asymptote, in [-π/2, π/2]
-- θᵦ : B-plane angle, in [0, 2π)
+- θᵦ : B-vector azimuth at infinity, counter-clockwise from south (GMAT's BVAZI), in [0, 2π)
 - ν : true anomaly, in [0, 2π)
 
 For an elliptic orbit (C₃ < 0) there is no asymptote, and the apoapsis direction is used in its
@@ -100,7 +100,7 @@ function _cart_to_asymptote(cart::AbstractVector{<:Real}, μ::Real, dir::Int, to
         return fill(T(NaN), 6)
     end
 
-    # B-plane axes and the B-plane angle
+    # B-plane axes and the B-vector azimuth
     Ê = SVector{3,T}(-ŝ[2], ŝ[1], 0) / sxy          # ẑ × ŝ, normalised
     N̂ = cross(ŝ, Ê)
     b̄ = cross(h̄, ŝ)

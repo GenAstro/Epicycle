@@ -5,13 +5,14 @@ CurrentModule = AstroRoutines
 # AstroRoutines
 
 The AstroRoutines module provides low-level routines for classical astrodynamics. It currently 
-covers conversions between the mean, eccentric, and true anomalies of an elliptic orbit, and the
-circular restricted three-body problem in the rotating frame. For the three-body problem it 
-provides the equations of motion, their Jacobian, the Jacobi constant, the five libration points,
-and the variational equations for the state transition matrix. The routines are primarily
-function-based rather than struct-based. The anomaly conversions follow Vallado (2013), and the 
-three-body formulation follows Koon, Lo, Marsden, and Ross (2000). The three-body routines are 
-verified against the NASA/JPL SSD three-body periodic orbit database.
+covers conversions between the anomalies of elliptic and hyperbolic orbits, the two-body
+quantities of a single state, and the circular restricted three-body problem in the rotating
+frame. For the three-body problem it provides the equations of motion, their Jacobian, the Jacobi
+constant, the five libration points, and the variational equations for the state transition
+matrix. The routines are primarily function-based rather than struct-based. The anomaly
+conversions follow Vallado (2013), and the three-body formulation follows Koon, Lo, Marsden, and
+Ross (2000). The three-body routines are verified against the NASA/JPL SSD three-body periodic
+orbit database.
 
 References:
 
@@ -94,6 +95,65 @@ using AstroRoutines, ForwardDiff
 ForwardDiff.derivative(m -> mean_to_true_anomaly(m, 0.2), 1.0)
 ```
 
+### Hyperbolic orbits
+
+On a hyperbola the hyperbolic anomaly `H` takes the place of `E`, and Kepler's equation becomes
+`M = e·sinh H − H`. Four conversions cover it: `true_to_hyperbolic_anomaly`,
+`hyperbolic_to_true_anomaly`, `hyperbolic_to_mean_anomaly`, and `mean_to_hyperbolic_anomaly`.
+
+```@example anomalies
+using AstroRoutines
+
+e = 1.5
+M = 2.0                                   # time from periapsis, in units of 1/n
+
+H = mean_to_hyperbolic_anomaly(M, e)      # solves the hyperbolic Kepler equation
+ν = hyperbolic_to_true_anomaly(H, e)
+
+hyperbolic_to_mean_anomaly(true_to_hyperbolic_anomaly(ν, e), e) - M
+```
+
+`M` and `H` are negative before periapsis and positive after. Neither is an angle, and neither
+wraps. `ν` lies between the asymptotes, `cos ν > −1/e`; a true anomaly beyond them throws
+`ArgumentError`, as does an eccentricity of 1 or less. `mean_to_hyperbolic_anomaly` iterates from
+a starter after Danby (1987), which keeps Newton's method well behaved close to a parabola, and
+takes the same `tol` and `maxiter` keywords as its elliptic counterpart. All four are
+differentiable with ForwardDiff.
+
+## Two-body quantities
+
+These are closed forms of one state: the position `r` and velocity `v` of a body relative to a
+central body of gravitational parameter `μ`, in consistent units.
+
+```@example twobody
+using AstroRoutines
+
+μ = 398600.4418                           # Earth, km³/s²
+r = [7000.0, 300.0, 1200.0]               # km
+v = [-0.4, 7.4, 0.9]                      # km/s
+
+specific_energy(r, v, μ), orbital_period(r, v, μ), periapsis_speed(r, v, μ)
+```
+
+| Function | Value |
+|---|---|
+| `specific_energy(r, v, μ)` | `v²/2 − μ/r` |
+| `angular_momentum(r, v)`, `angular_momentum_magnitude(r, v)` | `r × v` and its length |
+| `orbit_normal(r, v)` | unit vector along `r × v` |
+| `orbital_angular_velocity(r, v)` | `(r × v)/r²` |
+| `eccentricity_vector(r, v, μ)` | points to periapsis, length `e` |
+| `orbital_period(r, v, μ)` | `2π·√(a³/μ)`, closed orbits |
+| `mean_motion(r, v, μ)` | `√(μ/abs(a)³)`, closed orbits and hyperbolas |
+| `hyperbolic_excess_speed(r, v, μ)` | `√(2ε)`, escape orbits |
+| `apoapsis_speed(r, v, μ)`, `periapsis_speed(r, v, μ)` | `μ(1 ∓ e)/h`; apoapsis on closed orbits |
+
+A quantity the orbit does not have, such as the period of a hyperbola, throws `ArgumentError`
+naming the orbit's energy or eccentricity rather than returning `NaN`. Each is differentiable with
+ForwardDiff with respect to `r`, `v`, and `μ`.
+
+In Epicycle the same functions also take a spacecraft, `specific_energy(sat)` or
+`orbital_period(sat, EarthMJ2000Ec)`, and read its state in the frame given.
+
 ## The circular restricted three-body problem
 
 These routines use the rotating frame and normalized units: the primaries sit at `(−μ, 0, 0)` and
@@ -174,6 +234,8 @@ The entry points of each area. The full list follows below.
 
 ```@docs
 mean_to_eccentric_anomaly
+mean_to_hyperbolic_anomaly
+specific_energy
 cr3bp_mass_ratio
 libration_point
 cr3bp_eom!
@@ -190,6 +252,6 @@ Modules = [AstroRoutines]
 Public  = true
 Private = false
 Order   = [:function, :type, :constant]
-Filter  = t -> !(t in (mean_to_eccentric_anomaly, cr3bp_mass_ratio, libration_point,
-                       cr3bp_eom!, jacobi_constant))
+Filter  = t -> !(t in (mean_to_eccentric_anomaly, mean_to_hyperbolic_anomaly, specific_energy,
+                       cr3bp_mass_ratio, libration_point, cr3bp_eom!, jacobi_constant))
 ```

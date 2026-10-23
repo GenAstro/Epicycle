@@ -56,6 +56,7 @@ export PointMassGravity, accel_eval!
 export HarmonicGravity, AtmosphericDrag, SolarRadiationPressure
 export Zonal, Exponential
 export DualCone, SmoothedConical
+export earth_shadow_fraction, moon_shadow_fraction
 export AbstractGeopotential, AbstractDensityModel, density, density_gradient
 export geopotential_accel, geopotential_gradient, geopotential_accel_gradient, geopotential_data, max_degree, max_order
 export AbstractTideModel, field_radius, tide_system, atmosphere_body
@@ -152,6 +153,7 @@ include("zonal_gravity.jl")
 include("atmospheric_drag.jl")
 include("exponential_atmosphere.jl")
 include("spherical_srp.jl")
+include("shadow_quantities.jl")
 
 """
     IntegratorConfig
