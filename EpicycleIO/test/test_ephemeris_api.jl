@@ -344,23 +344,29 @@ end
 const GMAT_EXAMPLES = joinpath(@__DIR__, "..", "..", "Epicycle", "examples")
 
 # GMAT propagated point-mass gravity with Epicycle's μ, so the truth is the two-body orbit through
-# each file's first state. Measured 2026-10-24: the OEM within 1.2 µm of it at its epochs and
-# 46 µm between them (Lagrange 7 at 60 s); the .e and SPK within 6 and 8 mm, the error of GMAT's
-# rounded epochs there. Each tolerance is about twice the measured value.
-const GMAT_MU = 398600.4418
-function two_body(x0, dt)
-    a, e, i, Ω, ω, ν = cart_to_kep(x0, GMAT_MU)
-    M = AstroRoutines.true_to_mean_anomaly(ν, e) + sqrt(GMAT_MU / a^3) * dt
-    return kep_to_cart([a, e, i, Ω, ω, AstroRoutines.mean_to_true_anomaly(mod2pi(M), e)], GMAT_MU)
+# each file's first state. Measured 2026-10-24: the Earth orbit's OEM within 1.2 µm of it at its
+# epochs and 46 µm between them (Lagrange 7 at 60 s), its .e and SPK within 6 and 8 mm, the error
+# of GMAT's rounded epochs there; the low lunar orbit's three files within 3.4 and 4.1 mm. Each
+# tolerance is about twice the measured value.
+function two_body(x0, dt, μ)
+    a, e, i, Ω, ω, ν = cart_to_kep(x0, μ)
+    M = AstroRoutines.true_to_mean_anomaly(ν, e) + sqrt(μ / a^3) * dt
+    return kep_to_cart([a, e, i, Ω, ω, AstroRoutines.mean_to_true_anomaly(mod2pi(M), e)], μ)
 end
 @testset "ephemeris API: GMAT's files are the two-body orbit, at their epochs and between" begin
-    for (file, at_epochs, between) in (("Ephemeris_OEM/gmat_leo.oem", 3e-9, 1e-7),     # km
-                                       ("Ephemeris_STK/gmat_leo.e", 1.2e-5, 1.6e-5),
-                                       ("Ephemeris_SPK/gmat_leo.bsp", 1.1e-5, 1.0e-5))
-        eph = read_ephemeris(joinpath(GMAT_EXAMPLES, file))
+    gmat_data = joinpath(@__DIR__, "data", "gmat")
+    for (path, μ, body, at_epochs, between) in (
+            (joinpath(GMAT_EXAMPLES, "Ephemeris_OEM", "gmat_leo.oem"), 398600.4418, earth, 3e-9, 1e-7),     # km
+            (joinpath(GMAT_EXAMPLES, "Ephemeris_STK", "gmat_leo.e"), 398600.4418, earth, 1.2e-5, 1.6e-5),
+            (joinpath(GMAT_EXAMPLES, "Ephemeris_SPK", "gmat_leo.bsp"), 398600.4418, earth, 1.1e-5, 1.0e-5),
+            (joinpath(gmat_data, "gmat_luna.oem"), 4902.8, moon, 7e-6, 8e-6),
+            (joinpath(gmat_data, "gmat_luna.e"), 4902.8, moon, 7e-6, 8e-6),
+            (joinpath(gmat_data, "gmat_luna.bsp"), 4902.8, moon, 3e-6, 3e-6))
+        eph = read_ephemeris(path; strict = true)
         s = only(eph.segments)
+        @test s.coordinate_system.origin == body && length(s.times) == 121
         x0, t0 = to_vector(s.states[1]), s.times[1]
-        truth(t) = two_body(x0, EA._seconds(t0, t))
+        truth(t) = two_body(x0, EA._seconds(t0, t), μ)
         dist(x, y) = sqrt(sum(abs2, x[1:3] - y[1:3]))
         # The stored states, and state_at returning them exactly.
         @test maximum(dist(to_vector(x), truth(t)) for (t, x) in zip(s.times, s.states)) < at_epochs
