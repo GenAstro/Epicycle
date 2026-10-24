@@ -288,13 +288,14 @@ end
     @test all(isapprox.(seg.accelerations, final.accelerations; rtol = 1e-15))
 end
 
-const GMAT_STK = joinpath(homedir(), "Downloads", "gmat-internal-win-R2026a-rc1", "data", "vehicle", "ephem", "stk", "SampleSTKEphem.e")
-if isfile(GMAT_STK)
-    @testset "STK: GMAT's sample file" begin
-        f = ES.read_stk(GMAT_STK)
-        s = only(f.segments)
-        @test length(s.times) == 2610 && s.frame == "EME2000" && s.center == "EARTH"
-        @test s.states[1] == SVector(7100.0, 0.0, 1300.0, 0.0, 7.35, 1.0)
-        @test ES._format_epoch(s.times[1], "UTC", 3) == "2000-01-01T11:59:28.000"
-    end
+# An stk.v.10.0 file from GMAT R2026a's sample data, trimmed (data/gmat/ASSETS.md): three-digit
+# exponents, no interpolation keywords, and its epoch at 11:59:28 UTC.
+@testset "STK: GMAT's sample file" begin
+    f = ES.read_stk(joinpath(@__DIR__, "data", "gmat", "SampleSTKEphem.e"); strict = true)
+    s = only(f.segments)
+    @test f.version == "10.0" && length(s.times) == 22 && s.frame == "EME2000" && s.center == "EARTH"
+    @test s.interpolation == Lagrange(5)                              # STK's default when the file names none
+    @test s.states[1] == SVector(7100.0, 0.0, 1300.0, 0.0, 7.35, 1.0)
+    @test ES._format_epoch(s.times[1], "UTC", 3) == "2000-01-01T11:59:28.000"
+    @test ES._format_epoch(s.times[end], "UTC", 3) == "2000-01-04T11:59:28.000"
 end

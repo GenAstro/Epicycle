@@ -368,16 +368,26 @@ end
     @test occursin("printable ASCII", refused(d))
 end
 
-# GMAT's sample OEMs, when GMAT is installed on this machine: every one reads.
-const GMAT_OEM = joinpath(homedir(), "Downloads", "gmat-internal-win-R2026a-rc1", "data", "vehicle", "ephem", "ccsds")
-if isdir(GMAT_OEM)
-    @testset "OEM: GMAT's sample files" begin
-        for f in filter(endswith(".oem"), readdir(GMAT_OEM; join = true))
-            d = E.read_oem(f)
-            @test !isempty(d.segments) && all(s -> length(s.times) > 8, d.segments)
-            # A value read equals the text in the file.
-            row = split(first(filter(l -> occursin(r"^\d{4}-", l), readlines(f))))
-            @test d.segments[1].states[1][1] == parse(Float64, row[2])
-        end
+# OEM 1.0 files from GMAT R2026a's sample data, trimmed (data/gmat/ASSETS.md): files another tool
+# wrote, read as GMAT users would hand them over.
+@testset "OEM: GMAT's sample files" begin
+    gmat(name) = joinpath(@__DIR__, "data", "gmat", name)
+    for (name, interp, first_epoch, last_epoch) in
+            (("DemoLEO-1.oem", Lagrange(7), "2015-04-28T00:00:00.000", "2015-04-30T00:00:00.000"),
+             ("DemoLuna-1.oem", Lagrange(7), "2018-01-01T00:00:00.000", "2018-01-02T12:00:00.000"),
+             ("SampleOEMEphem.oem", Lagrange(5), "2000-01-01T12:00:00.000", "2000-01-03T12:00:00.000"))
+        d = E.read_oem(gmat(name))
+        s = only(d.segments)
+        @test d.version == "1.0"
+        @test (s.center, s.frame, s.time_system) == ("EARTH", "EME2000", "UTC")
+        @test s.interpolation == interp && length(s.times) == 22
+        @test E._format_epoch(s.times[1], "UTC", 3) == first_epoch && E._format_epoch(s.times[end], "UTC", 3) == last_epoch
+        # A value read equals the text in the file.
+        row = split(first(filter(l -> occursin(r"^\d{4}-", l), readlines(gmat(name)))))
+        @test s.states[1] == SVector{6}(parse.(Float64, row[2:7]))
     end
+    # GMAT's own files read strictly; the GSFC sample's mixed-case "Lagrange" is corrected and recorded.
+    @test isempty(E.read_oem(gmat("DemoLEO-1.oem"); strict = true).diagnostics)
+    d = E.read_oem(gmat("SampleOEMEphem.oem"))
+    @test only(d.diagnostics).field == "INTERPOLATION" && d.comments == ["Orbit data are consistent with planetary ephemeris DE-421"]
 end
