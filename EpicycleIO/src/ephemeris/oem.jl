@@ -476,6 +476,7 @@ end
 
 function _oem_cov_kvn!(p::_OEMParser, i, key, value)
     c = p.current
+    c.ready || return                                       # metadata already reported as unusable
     if key == "EPOCH"
         _oem_flush_cov!(p, i)
         t, notes, problem = _parse_epoch(value, c.seg.time_system)
@@ -496,6 +497,7 @@ end
 
 function _oem_cov_values!(p::_OEMParser, i, s)
     c = p.current
+    c.ready || return
     c.cov_epoch === nothing && return _error!(p.d, i, "EPOCH", "covariance values before an EPOCH line (§5.2.5.3)")
     toks = split(s)
     row = length(c.cov_values)
@@ -666,7 +668,8 @@ Write `data` as a CCSDS Orbit Ephemeris Message in keyword = value form, version
 - `path`: The file to write. It is replaced if it exists.
 - `data`: The header and segments to write.
 - `digits`: Decimal places of seconds in epochs, 0 to 9. Default 9.
-- `version`: `"3.0"` or `"2.0"`. Default: `data.version` for data read from an OEM, else `"3.0"`.
+- `version`: `"3.0"` or `"2.0"`. Default: `data.version` for data read from an OEM 2.0 or 3.0 file,
+  else `"3.0"`, so a 1.0 file is written as 3.0.
 
 # Notes
 - Everything is checked before the file is opened, and every problem is reported in one
@@ -701,7 +704,7 @@ readline(path)
 ```
 """
 function write_oem(path::AbstractString, data::EphemerisFileData; digits::Integer = 9,
-                   version::AbstractString = data.format == :oem ? data.version : "3.0")
+                   version::AbstractString = _default_version(data))
     0 <= digits <= 9 || throw(ArgumentError("write_oem: digits must be 0 to 9; got $digits"))
     lines = _oem_lines(data, digits, String(version))                         # throws, listing every problem
     dir = dirname(abspath(path))
@@ -720,6 +723,11 @@ function write_oem(path::AbstractString, data::EphemerisFileData; digits::Intege
     end
     return path
 end
+
+# The version a file read from an OEM is written back in: its own, unless it is one no longer
+# written (1.0), which becomes the current version.
+_default_version(data::EphemerisFileData) =
+    data.format == :oem && data.version in _OEM_WRITE_VERSIONS ? data.version : "3.0"
 
 _kv(key, value) = rpad(key, _KEY_WIDTH) * " = " * value
 _num(x) = @sprintf("%.15e", x)
@@ -745,7 +753,7 @@ function _oem_lines(data::EphemerisFileData, digits, v)
     length(systems) > 1 && push!(problems, "segments use time systems $(join(systems, ", ")); " *
                                  "§5.2.4.5 requires one per file")
     for (k, s) in enumerate(data.segments)
-        _check_oem_segment!(problems, k, s)
+        _check_oem_segment!(problems, k, s, digits)
     end
     for k in 2:length(data.segments)
         a, b = data.segments[k - 1], data.segments[k]
@@ -812,7 +820,7 @@ function _oem_lines(data::EphemerisFileData, digits, v)
     return out
 end
 
-function _check_oem_segment!(problems, k, s::EphemerisSegmentData)
+function _check_oem_segment!(problems, k, s::EphemerisSegmentData, digits)
     what = "segment $k"
     _check_text!(problems, "$what OBJECT_NAME", s.object_name; mandatory = true)
     _check_text!(problems, "$what OBJECT_ID", s.object_id; mandatory = true)
@@ -828,12 +836,12 @@ function _check_oem_segment!(problems, k, s::EphemerisSegmentData)
     n == length(s.states) || push!(problems, "$what has $n epochs but $(length(s.states)) states")
     n == 0 && return push!(problems, "$what has no states")
     isempty(problem) || return                               # epochs cannot be checked without a time system
-    for j in 2:n
-        if _seconds(s.times[j - 1], s.times[j]) <= 0
-            push!(problems, "$what epochs do not increase strictly at state $j")
-            break
-        end
-    end
+    # Checked as written: epochs that increase can still round to the same text at `digits`
+    # decimal places, and the file would then repeat an epoch. The text compares in time order.
+    written = [_format_epoch(t, sys, digits) for t in s.times]
+    j = findfirst(j -> written[j] <= written[j - 1], 2:n)
+    j === nothing || push!(problems, "$what epochs do not increase strictly at state $(j + 1) as written " *
+                                     "with digits = $digits: $(written[j]), then $(written[j + 1])")
     bad = findfirst(x -> !all(isfinite, x), s.states)
     bad === nothing || push!(problems, "$what state $bad is not finite")
     if s.accelerations !== nothing

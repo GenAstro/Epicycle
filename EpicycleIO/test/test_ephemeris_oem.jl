@@ -63,6 +63,9 @@ utc(s) = Time(s, UTC(), ISOT())
     ls, _, p = E._parse_epoch("2016-12-31T23:59:60.5", "UTC")
     @test isempty(p) && E._format_epoch(ls, "UTC", 3) == "2016-12-31T23:59:60.500"
     @test !isempty(E._parse_epoch("2016-12-31T23:59:60.5", "TAI")[3])
+    # A second of 60 on a minute without a leap second is a problem to report, not a crash.
+    @test occursin("no leap second", E._parse_epoch("2026-10-21T12:00:60", "UTC")[3])
+    @test occursin("no leap second", E._parse_epoch("2026-12-31T23:59:60", "UTC")[3])
     # GPS is TAI less 19 s.
     g, _, _ = E._parse_epoch("2026-01-01T00:00:00", "GPS")
     @test E._format_epoch(g, "TAI", 3) == "2026-01-01T00:00:19.000"
@@ -238,6 +241,9 @@ end
         "short covariance" => oem_text() * "COVARIANCE_START\nEPOCH = 2026-10-21T00:00:00\n1.0\n2.0 3.0\nCOVARIANCE_STOP\n",
         "negative variance" => oem_text() * "COVARIANCE_START\nEPOCH = 2026-10-21T00:00:00\n" *
                                "-1.0\n0 1\n0 0 1\n0 0 0 1\n0 0 0 0 1\n0 0 0 0 0 1\nCOVARIANCE_STOP\n",
+        "a leap second on a day without one" => replace(oem_text(), "2026-10-21T00:03:00" => "2026-10-21T00:02:60"),
+        "covariance under an unsupported time system" => oem_text(system = "UT1") * "COVARIANCE_START\n" *
+            "EPOCH = 2026-10-21T00:00:00\n1.0\n0 1\n0 0 1\n0 0 0 1\n0 0 0 0 1\n0 0 0 0 0 1\nCOVARIANCE_STOP\n",
         "not an OEM" => "hello\nworld\n",
         "empty" => "",
     )
@@ -315,6 +321,10 @@ end
     E.write_oem(path, data)
     @test readline(path) == "CCSDS_OEM_VERS       = 2.0" && !any(startswith("MESSAGE_ID"), readlines(path))
     @test E.read_oem(path; strict = true).version == "2.0"
+    # A 1.0 file, which is no longer written, writes back as 3.0 without being asked.
+    v1 = replace(oem_text(version = "1.0"), "INTERPOLATION = LAGRANGE\nINTERPOLATION_DEGREE = 3\n" => "")
+    E.write_oem(path, E.read_oem(oem_file(v1)))
+    @test readline(path) == "CCSDS_OEM_VERS       = 3.0"
 end
 
 @testset "OEM: the writer refuses, lists every problem, and writes nothing" begin
@@ -346,8 +356,14 @@ end
     @test occursin("ORIGINATOR is empty", refused(d))
     d = good(); push!(d.comments, "x"^260)
     @test occursin("254", refused(d))
-    d = good(); d.version = "1.0"
-    @test occursin("\"3.0\" or \"2.0\"", refused(d))
+    msg = try E.write_oem(path, good(); version = "1.0"); "" catch e sprint(showerror, e) end
+    @test occursin("\"3.0\" or \"2.0\"", msg) && read(path, String) == "existing content"
+    # Epochs that increase but round to the same text at `digits` would repeat an epoch.
+    d = good(); d.segments[1].times[5] = Time(d.segments[1].times[4].jd1, d.segments[1].times[4].jd2 + 0.1 / 86400, :utc, :jd)
+    msg = try E.write_oem(path, d; digits = 0); "" catch e sprint(showerror, e) end
+    @test occursin("increase strictly at state 5", msg) && occursin("digits = 0", msg)
+    @test read(path, String) == "existing content"
+    E.write_oem(tempname() * ".oem", d; digits = 1)                 # one decimal place tells them apart
     d = good(); d.segments[1].object_name = "SATé"
     @test occursin("printable ASCII", refused(d))
 end

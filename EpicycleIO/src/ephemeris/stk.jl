@@ -552,6 +552,9 @@ function write_stk(path::AbstractString, data::EphemerisFileData; digits::Intege
     return path
 end
 
+# A state read from EphemerisTimePos carries NaN for the velocities the file does not have.
+_no_velocity(x) = all(isnan, x[4:6])
+
 function _stk_lines(data::EphemerisFileData, digits)
     problems = String[]
     segs = data.segments
@@ -568,7 +571,8 @@ function _stk_lines(data::EphemerisFileData, digits)
             n == length(s.states) || push!(problems, "segment $k has $n epochs but $(length(s.states)) states")
             n == 0 && (push!(problems, "segment $k has no states"); continue)
             any(j -> _seconds(s.times[j - 1], s.times[j]) <= 0, 2:n) && push!(problems, "segment $k epochs do not increase strictly")
-            any(x -> !all(isfinite, x), s.states) && push!(problems, "segment $k has a state that is not finite")
+            any(x -> !all(isfinite, x[1:3]) || !(all(isfinite, x[4:6]) || _no_velocity(x)), s.states) &&
+                push!(problems, "segment $k has a state that is not finite")
             (s.accelerations === nothing) == (s1.accelerations === nothing) ||
                 push!(problems, "segment $k has accelerations where segment 1 has none, or the reverse")
             s.accelerations === nothing || length(s.accelerations) == n && all(x -> all(isfinite, x), s.accelerations) ||
@@ -596,7 +600,10 @@ function _stk_lines(data::EphemerisFileData, digits)
                   "supported: EME2000 (J2000), ICRF, and about the Earth ITRF (Fixed), TOD, MOD_EARTH, TEME")
         s1.time_system in ("UTC", "TAI", "TT", "TDB", "TCB", "TCG", "GPS") ||
             push!(problems, "time system $(s1.time_system) is not one Epicycle converts")
-        s1.interpolation isa Hermite && any(x -> any(isnan, x), s1.states) &&
+        no_velocity = [_no_velocity(x) for s in segs for x in s.states]
+        any(no_velocity) && !all(no_velocity) &&
+            push!(problems, "some states have velocities and some do not; an STK file gives positions only or positions and velocities throughout")
+        s1.interpolation isa Hermite && any(no_velocity) &&
             push!(problems, "Hermite needs velocities, and some states have none")
     end
     isempty(problems) || throw(ArgumentError("write_stk: nothing written; $(length(problems)) problem$(length(problems) == 1 ? "" : "s"):\n  " *
@@ -611,7 +618,7 @@ function _stk_lines(data::EphemerisFileData, digits)
     m = something(s1.interpolation, Lagrange(5))
     m1 = m isa Hermite ? (m.degree - 1) ÷ 2 : m.degree
     acc = s1.accelerations !== nothing
-    nopos = all(x -> all(isnan, x[4:6]), s1.states)
+    positions_only = all(_no_velocity, s1.states)
     npts = sum(length(s.times) for s in segs)
     out = String["stk.v.$_STK_WRITE_VERSION", "BEGIN Ephemeris"]
     kv(k, v) = push!(out, rpad(k, 23) * " " * v)              # at least one space, even for the longest keyword
@@ -643,12 +650,12 @@ function _stk_lines(data::EphemerisFileData, digits)
         push!(out, "END SegmentBoundaryTimes")
     end
     push!(out, "")
-    push!(out, nopos ? "EphemerisTimePos" : acc ? "EphemerisTimePosVelAcc" : "EphemerisTimePosVel")
+    push!(out, positions_only ? "EphemerisTimePos" : acc ? "EphemerisTimePosVelAcc" : "EphemerisTimePosVel")
     push!(out, "")
     for (k, s) in enumerate(segs)
         k > 1 && push!(out, "")                                # STK's convention: a blank line between duplicate points
         for (j, t) in enumerate(s.times)
-            v = nopos ? s.states[j][1:3] : s.states[j]
+            v = positions_only ? s.states[j][1:3] : s.states[j]
             acc && (v = vcat(v, s.accelerations[j]))
             push!(out, _num(secs(t)) * " " * join(_num.(v .* scale), " "))
         end

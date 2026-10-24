@@ -81,6 +81,13 @@ end
     pos = join(["$(60.0k) 7000 $k 0" for k in 0:7], "\n")
     p = ES.read_stk(stk_file(stk_text(body = pos, kind = "EphemerisTimePos")))
     @test isnan(p.segments[1].states[1][4]) && any(d -> occursin("no velocities", d.message), p.diagnostics)
+    # A positions-only file writes back as one, positions unchanged.
+    path = tempname() * ".e"
+    ES.write_stk(path, p)
+    @test any(==("EphemerisTimePos"), readlines(path))
+    back = ES.read_stk(path)
+    @test [x[1:3] for x in back.segments[1].states] == [x[1:3] for x in p.segments[1].states]
+    @test all(x -> all(isnan, x[4:6]), back.segments[1].states)
     # TimeScale TDB: TDB seconds from the UTC epoch.
     tdb = ES.read_stk(stk_file(stk_text(header = "TimeScale TDB\n")))
     @test tdb.segments[1].time_system == "TDB"
@@ -197,6 +204,8 @@ end
     @test occursin("no STK CoordinateSystem", refused(ES.EphemerisFileData(segments = [s])))
     s = stk_segment(12); s.states[2] = SVector(NaN, 0, 0, 0, 0, 0)
     @test occursin("not finite", refused(ES.EphemerisFileData(segments = [s])))
+    s = stk_segment(12); s.states[2] = SVector(s.states[2][1:3]..., NaN, NaN, NaN)
+    @test occursin("positions only or positions and velocities", refused(ES.EphemerisFileData(segments = [s])))
     s = stk_segment(4)
     @test occursin("needs 8", refused(ES.EphemerisFileData(segments = [s])))
 end

@@ -229,6 +229,8 @@ function _window(m, times, values, derivatives, t)
         "interpolate: t = $t is outside the table, which covers $(times[begin]) to $(times[end]); " *
         "there is no extrapolation"))
 
+    N == 1 && return firstindex(times), 1                  # Hermite(1) on one point, t on it
+
     o = firstindex(times) - 1
     k = clamp(searchsortedlast(times, tv) - o, 1, N - 1)      # times[k] <= t <= times[k+1]
     if iseven(n)

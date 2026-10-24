@@ -35,6 +35,13 @@ end
     @test occursin("needs 4 points", msg) && occursin("has 3", msg)
 end
 
+@testitem "Hermite degree 1 on a single point" tags=[:Interpolation, :Robustness] begin
+    using AstroRoutines
+    @test interpolate(Hermite(1), [2.0], [5.0], [3.0], 2.0) == 5.0
+    @test interpolate_with_derivative(Hermite(1), [2.0], [5.0], [3.0], 2.0) == (5.0, 3.0)
+    @test_throws ArgumentError interpolate(Hermite(1), [2.0], [5.0], [3.0], 2.5)
+end
+
 @testitem "mismatched lengths and unordered times" tags=[:Interpolation, :Robustness] begin
     using AstroRoutines
     t = collect(0.0:1.0:5.0)

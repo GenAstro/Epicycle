@@ -68,7 +68,14 @@ function _parse_epoch(text::AbstractString, system::AbstractString)
         jd1, jd2 = AstroEpochs.dtf2d(:tai, y, mo, d, h, mi, sec)
         return Time(jd1, jd2 - _GPS_MINUS_TAI / 86400, :tai, :jd), notes, ""
     end
-    jd1, jd2 = AstroEpochs.dtf2d(scale, y, mo, d, h, mi, sec)
+    # A UTC second of 60 passes the range check above but is real only in the last minute of a
+    # day that ends with a leap second, which dtf2d knows from the leap-second table.
+    jd1, jd2 = try
+        AstroEpochs.dtf2d(scale, y, mo, d, h, mi, sec)
+    catch e
+        e isa ArgumentError || rethrow()
+        return nothing, notes, @sprintf("seconds %g: %04d-%02d-%02d has no leap second at %02d:%02d", sec, y, mo, d, h, mi)
+    end
     return Time(jd1, jd2, scale, :jd), notes, ""
 end
 
