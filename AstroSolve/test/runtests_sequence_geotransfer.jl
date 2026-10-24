@@ -5,7 +5,6 @@
 
 
 using Test
-using SNOW
 using OrdinaryDiffEqHighOrderRK: DP8
 using LinearAlgebra
 using AstroSolve

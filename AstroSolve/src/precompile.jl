@@ -4,11 +4,11 @@
 # Propagation, compiled again here, while the package precompiles.
 #
 # AstroProp caches the same workload, and on its own that brings a first `propagate!` from 37 s to
-# about 1 s. Loading AstroSolve undid it: SNOW brings in ReverseDiff, whose methods invalidate the
-# code AstroProp cached, and the first propagation went back to 9-16 s (measured 2026-09-16 by
-# loading each dependency on its own). Code compiled here is compiled with ReverseDiff already
-# loaded, so it stays valid for a script that loads the whole stack, which is every script that
-# says `using Epicycle`.
+# about 1 s. Loading AstroSolve once undid it: a dependency it no longer has, SNOW, brought in
+# ReverseDiff, whose methods invalidated the code AstroProp cached, and the first propagation went
+# back to 9-16 s (measured 2026-09-16 by loading each dependency on its own). Code compiled here is
+# compiled with AstroSolve's dependencies already loaded, so it stays valid for a script that loads
+# the whole stack, which is every script that says `using Epicycle`, whatever a dependency adds.
 
 import AstroEpochs, AstroStates, AstroUniverse, AstroModels, AstroProp, AstroCallbacks
 

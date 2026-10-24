@@ -238,7 +238,7 @@ function orbit_insertion_dm_dvinf(model::OrbitInsertionModel,
     m_del = orbit_insertion_delivered(model, mf_helio, vinf_arr)
     return (-m_del / (ve * v_hyp)) .* vinf_arr
 end
-using LinearAlgebra, Printf, SNOW
+using LinearAlgebra, Printf
 
 #' ## Configuration
 #'

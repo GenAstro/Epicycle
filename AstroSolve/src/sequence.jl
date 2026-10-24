@@ -708,7 +708,7 @@ end
 """
     _solve_event_graph!(seq::Sequence; record_iterations::Bool=false)
 
-Solve trajectory sequence using default SNOW/IPOPT configuration.
+Solve trajectory sequence with the default IPOPT configuration.
 
 # Keyword Arguments
 - `record_iterations::Bool=false`: Record solver iteration history for diagnostics.
@@ -721,17 +721,17 @@ Solve trajectory sequence using default SNOW/IPOPT configuration.
 - Final solution respects original recording settings (no forced recording)
 """
 function _solve_event_graph!(seq::Sequence; record_iterations::Bool=false)
-    _solve_event_graph!(seq, default_snow_options(); record_iterations=record_iterations)
+    _solve_event_graph!(seq, default_solve_options(); record_iterations=record_iterations)
 end
 
 """
-    _solve_event_graph!(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
+    _solve_event_graph!(seq::Sequence, options::NLPOptions; record_iterations::Bool=false)
 
-Solve trajectory sequence using specified SNOW optimization options.
+Solve trajectory sequence with the given solver options.
 
 # Arguments
 - `seq::Sequence`: Event sequence defining the trajectory optimization problem
-- `options::SNOW.Options`: SNOW/IPOPT solver options
+- `options::NLPOptions`: how the solver is run, see [`NLPOptions`](@ref)
 
 # Keyword Arguments
 - `record_iterations::Bool=false`: Record solver iteration history for diagnostics.
@@ -751,7 +751,7 @@ Named tuple with:
 - After convergence: restores original flags and records final solution to `segments`
 - Original flag values are preserved and restored after optimization
 """
-function _solve_event_graph!(seq::Sequence, options::SNOW.Options; record_iterations::Bool=false)
+function _solve_event_graph!(seq::Sequence, options::NLPOptions; record_iterations::Bool=false)
     # Get all spacecraft from the sequence
     sm = SequenceManager(seq)
     spacecraft = [obj for obj in sm.stateful_structs if obj isa Spacecraft]
@@ -781,11 +781,11 @@ function _solve_event_graph!(seq::Sequence, options::SNOW.Options; record_iterat
     # Name the status box's rows after the sequence's variables and constraints
     options = _with_rows(options, EventGraphRows(sm, _constr_viol_tol(options)))
 
-    # Create closure for SNOW interface
-    snow_solver_fun!(F, x) = solver_fun!(F, x, sm)
+    # The problem function the solver calls
+    problem_fun!(F, x) = solver_fun!(F, x, sm)
     
     # Run optimization
-    xopt, fopt, info = minimize(snow_solver_fun!, x0, ng, lx, ux, lg, ug, options)
+    xopt, fopt, info = solve_nlp(problem_fun!, x0, ng, lx, ux, lg, ug, options)
     
     # Restore original flags before final evaluation
     for (sc, (seg_flag, iter_flag)) in zip(spacecraft, original_flags)
@@ -805,17 +805,17 @@ function _solve_event_graph!(seq::Sequence, options::SNOW.Options; record_iterat
     # Evaluate constraints at optimal solution and record final trajectory
     # (solver_fun! will reset to initial state with correct flags via reset_stateful_structs!)
     constraint_values = Vector{Float64}(undef, ng)
-    snow_solver_fun!(constraint_values, xopt)
+    problem_fun!(constraint_values, xopt)
     
     return (variables=xopt, objective=fopt, constraints=constraint_values, info=info)
 end
 
 """
-    default_snow_options()
+    default_solve_options()
 
-Create default SNOW optimization options.
+The solver options an event graph uses when none are given.
 """
-function default_snow_options()
+function default_solve_options()
     # Sensible aerospace defaults
     ip_options = Dict(
         "max_iter" => 1000,
@@ -830,5 +830,5 @@ function default_snow_options()
     # Finite differences: the event graph has no derivative route of its own yet. They are only
     # as repeatable as the integrator's step sequence, which differs with a platform's rounding:
     # a one-variable target that converged in 4 iterations on Windows ran 384 on Linux CI.
-    return Options(derivatives=ForwardFD(), solver=_ipopt(ip_options))
+    return NLPOptions(derivatives = :fd, solver = _ipopt(ip_options))
 end

@@ -1418,6 +1418,9 @@ function drain_links!(seq)
     for (l, f, lb, ub, nm) in _PENDING
         p1, p2 = l.phases[1], l.phases[2]
         both_coll = p1 isa CollocationPhase && p2 isa CollocationPhase
+        # A link the script named is called that wherever its rows are shown, as the solver status
+        # box does. `:link` is the default, which names nothing.
+        l.name === :link || (_LINK_NAMES[_link_key(p1, p2)] = String(l.name))
         if mixed || (f === continuity && !both_coll)
             f === continuity ? add_continuity!(seq, p1, p2) :
                 add_continuity!((c1, c2) -> f(c1, c2), seq, p1, p2;
@@ -1430,12 +1433,10 @@ function drain_links!(seq)
             n = _continuity_size(p1, p2)
             lb = ub = zeros(n + 1)
         end
+        # A link constraint written without `name` carries a generated one; the function names it
+        # better wherever it is shown.
+        startswith(nm, "##") && (nm = something(_readable_fname(f), nm))
         if p1 isa CollocationPhase && p2 isa CollocationPhase
-            # A link written without `name` carries a generated one; the function names it better
-            # wherever it is shown, as the solver status box does.
-            if startswith(nm, "##")
-                nm = something(_readable_fname(f), nm)
-            end
             add_linkage!((c1, c2) -> f(c1, c2), seq, p1, p2;
                          lower_bounds = lb, upper_bounds = ub, name = nm)
         else
@@ -1480,7 +1481,7 @@ _est(m) = getfield(AstroSolve, m)
 #
 # The method says how. The subject carries its own variables. The names avoid
 # IPOPT, BatchLeastSquares and ExtendedKalmanFilter, which are already taken by
-# SNOW and by the estimation modules — this codebase has been bitten twice by
+# Ipopt.jl and by the estimation modules — this codebase has been bitten twice by
 # two subsystems claiming one name.
 # =============================================================================
 
@@ -1496,8 +1497,8 @@ _est(m) = getfield(AstroSolve, m)
 - `tol::Float64`: the tolerance the solver's own error measure must fall below before it reports
   success.
 - `print_level::Union{Nothing,Int}`: how much IPOPT logs, from 0 for silence. With the status box
-  on, IPOPT's log goes to its log file only, at this level; with it off, to the terminal as well.
-  `nothing` means 5.
+  on, IPOPT's log goes to its log file only, at this level, and a solve that does not succeed
+  prints the file's path; with it off, to the terminal as well. `nothing` means 5.
 - `derivatives::Symbol`: `:user` to use the partials declared with `@partial`, or `:fd` for finite
   differences throughout.
 - `record_iterations::Bool`: keeps the iterate history where the solver supports it.
@@ -1611,14 +1612,14 @@ _ipopt_log() = joinpath(tempdir(),
     "ipopt_" * Dates.format(Dates.now(), "yyyy-mm-dd_HH-MM-SS") *
     "_" * string(time_ns()) * ".out")
 
-function _snow(m::Optimize)
+function _nlp_options(m::Optimize)
     opts = Dict{String,Any}("max_iter"    => m.max_iter,
                             "tol"         => m.tol,
                             "print_level" => something(m.print_level, 5),
                             "output_file" => _ipopt_log())
     merge!(opts, m.extra)
-    return SNOW.Options(
-        derivatives = m.derivatives === :fd ? SNOW.ForwardFD() : SNOW.UserDeriv(),
+    return NLPOptions(
+        derivatives = m.derivatives === :fd ? :fd : :user,
         solver = _ipopt(opts; monitor = something(m.monitor, _MONITOR_DEFAULT[])))
 end
 
@@ -1843,12 +1844,12 @@ function solve!(seq::Sequence; method::Optimize = Optimize())
         # when only the first was checked — it went down the event-graph path
         # and died in Ipopt on untyped bounds.
         if isempty(sequence_phases(seq)) && isempty(sequence_sf_phases(seq))
-            return AstroSolve.solve_trajectory!(seq, _snow(method);
+            return AstroSolve.solve_trajectory!(seq, _nlp_options(method);
                        record_iterations = method.record_iterations)
         end
-        return solve_trajectory!(seq, _snow(method))
+        return solve_trajectory!(seq, _nlp_options(method))
     end
-    return solve_trajectory_oc!(seq, _snow(method))
+    return solve_trajectory_oc!(seq, _nlp_options(method))
 end
 
 """

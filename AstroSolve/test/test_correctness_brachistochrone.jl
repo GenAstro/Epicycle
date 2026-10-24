@@ -18,7 +18,6 @@
 # baseline records as uc5b at tf = 0.824479, matching uc5's LGL answer to six figures, which is a
 # cross-transcription agreement on top of the analytic check.
 
-using SNOW
 using LinearAlgebra
 using EpicycleBase
 using AstroSolve

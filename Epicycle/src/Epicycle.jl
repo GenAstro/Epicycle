@@ -39,7 +39,6 @@ using .Examples: example_names, example_path, example_source, list_examples,
 @reexport using OrdinaryDiffEqVerner         # Vern7, Vern9
 @reexport using OrdinaryDiffEqHighOrderRK    # DP8
 @reexport using OrdinaryDiffEqLowOrderRK     # RK4
-@reexport using SNOW
 @reexport using NLsolve
 @reexport using SPICE
 

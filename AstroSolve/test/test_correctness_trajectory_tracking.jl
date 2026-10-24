@@ -21,7 +21,6 @@
 # The problem is the regression suite's uc17, recorded at 1.047198 under LGL. This file transcribes
 # it with Hermite-Simpson, so agreement is cross-transcription as well as analytic.
 
-using SNOW
 using LinearAlgebra
 using EpicycleBase
 using AstroSolve

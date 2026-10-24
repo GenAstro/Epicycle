@@ -96,22 +96,29 @@ IERS publishes: UT1−UTC and polar motion. They enter every transformation to o
 Earth-fixed frame. Each frame theory reads its own table, `IAU2006()` the IAU 2000A series and
 `FK5()` the IAU 1980 series.
 
-A table loads the first time a transformation needs it and stays loaded for the session. Loading
-goes through SatelliteToolboxTransformations, which keeps the IERS files in its own on-disk cache
-and downloads a new copy when that cache is missing or out of date. `eop_refresh!` downloads the
-latest series immediately. A run that must not reach the network, or must give the same numbers
-every time, loads a file with `eop_load` or installs a table with `set_eop!` before its first
-transformation.
+A table loads the first time a transformation needs it and stays loaded for the session. It is
+read from a cached copy of the IERS file, which is downloaded again once it is a week old. Each
+series has two sources: the IERS data centre's CSV, then the US Naval Observatory's fixed-width
+file of the same series, which USNO produces as the IERS Rapid Service/Prediction Centre. A
+download replaces the cached copy only once it reads as a table of finite values whose UT1−UTC
+reaches today. If no source supplies usable data, the cached copy is used and a warning gives its
+age; with no copy at all, the error names both sources and how to load a file by hand.
+
+`eop_refresh!` downloads the latest series immediately, and throws if no source supplies usable
+data.
+`eop_load` reads either format from a local file. A run that must not reach the network, or must
+give the same numbers every time, loads a file with `eop_load` or installs a table with
+`set_eop!` before its first transformation.
 
 ```@raw html
 <!-- doc-fragment -->
 ```
 ```julia
 eop()                                              # the active theory's table, loaded on first use
-eop_refresh!()                                     # download the latest IERS series now
+eop_refresh!()                                     # download the latest series now
 eop_refresh!(; theory = FK5())                     # the same for the FK5 table
 
-eop_load("finals2000A.all"; theory = IAU2006())    # a local IERS file, no network
+eop_load("finals2000A.all"; theory = IAU2006())    # a local file, CSV or fixed width, no network
 set_eop!(table)                                    # a table already in hand
 ```
 

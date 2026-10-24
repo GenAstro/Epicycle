@@ -41,16 +41,38 @@ function _eop_file(rows)
     return path
 end
 
-"""Run `f` and put the session's theory and both tables back afterwards."""
+const AU = AstroUniverse
+_url(path) = "file:///" * replace(path, "\\" => "/")
+
+# Every load in this file reads local fixtures: one source per theory served from a file, a cache
+# in a temporary directory, an empty directory in place of SatelliteToolboxTransformations' older
+# cache, and "today" set to a day the fixtures cover. Nothing reaches the network or a real cache
+# unless the live test at the end is asked for. The settings found are put back at the end.
+const _EOP_HOOKS_FOUND = (AU._EOP_SOURCES[], AU._EOP_CACHE_DIR[], AU._EOP_LEGACY_DIR[],
+                          AU._EOP_AGE_LIMIT[], AU._EOP_TODAY_MJD[], AU._EOP_REPLACE[])
+const _FIXTURE_SOURCES = Dict(
+    FK5     => [AU._EopSource(_url(_eop_file(_EOP_1980_ROWS)), :csv)],
+    IAU2006 => [AU._EopSource(_url(_eop_file(_EOP_2000A_ROWS)), :csv)])
+
+function _use_fixture_sources!()
+    AU._EOP_SOURCES[]    = theory -> _FIXTURE_SOURCES[typeof(theory)]
+    AU._EOP_CACHE_DIR[]  = mktempdir()
+    AU._EOP_LEGACY_DIR[] = mktempdir()
+    AU._EOP_AGE_LIMIT[]  = AU._EOP_MAX_AGE
+    AU._EOP_TODAY_MJD[]  = 41685.0
+    AU._EOP_REPLACE[]    = nothing
+end
+_use_fixture_sources!()
+
+"""Run `f` and put the session's theory and both table slots, loaded or not, back afterwards."""
 function _with_eop_restored(f)
     theory = frame_theory()
-    t1980, t2000a = eop(FK5()), eop(IAU2006())
+    t1980, t2000a = AU._eop_1980[], AU._eop_2000a[]
     try
         f()
     finally
         set_frame_theory!(theory)
-        set_eop!(t1980)
-        set_eop!(t2000a)
+        AU._eop_1980[], AU._eop_2000a[] = t1980, t2000a
     end
 end
 
@@ -120,30 +142,287 @@ end
     end
 end
 
-# eop_refresh! downloads even when the cache is fresh, which is its only difference from eop().
-# Truth: SatelliteToolboxTransformations writes a `_timestamp` file beside each IERS file it
-# downloads, in its own scratch space, so a download moves that file's modification time to now.
-# The installed table must also be the one eop() returns, and cover today. Needs the network.
-using Scratch: get_scratch!
+# --- The fixed-width finals file ------------------------------------------------------------------
+#
+# Truth: the same three days as the CSV rows above, exactly as the US Naval Observatory publishes
+# them in finals2000A.all and finals.all. Read through the fixed-width reader they must give the
+# tables the IERS CSV gives, value for value.
 
-const _STB_UUID = Base.UUID("6b019ec1-7a1e-4f04-96c7-a9db1ca5514d")   # SatelliteToolboxTransformations
+const _FINALS_2000A_ROWS = """
+73 1 2 41684.00 I  0.120733 0.009786  0.136966 0.015902  I 0.8084178 0.0002710  0.0000 0.1916  P    -0.766    0.199    -0.720    0.300   .143000   .137000   .8075000   -18.637    -3.667
+73 1 3 41685.00 I  0.118980 0.011039  0.135656 0.013616  I 0.8056163 0.0002710  3.5563 0.1916  P    -0.751    0.199    -0.701    0.300   .141000   .134000   .8044000   -18.636    -3.571
+73 1 4 41686.00 I  0.117227 0.011039  0.134348 0.013616  I 0.8027895 0.0002710  2.6599 0.1916  P    -0.738    0.199    -0.662    0.300   .139000   .131000   .8012000   -18.669    -3.621
+"""
 
-@testset "EOP — eop_refresh! downloads the current IERS series and installs it" begin
+const _FINALS_1980_ROWS = """
+73 1 2 41684.00 I  0.120733 0.009786  0.136966 0.015902  I 0.8084178 0.0002710  0.0000 0.1916  P    44.969     .500     2.839     .300   .143000   .137000   .8075000      .000      .000
+73 1 3 41685.00 I  0.118980 0.011039  0.135656 0.013616  I 0.8056163 0.0002710  3.5563 0.1916  P    45.005     .500     2.762     .300   .141000   .134000   .8044000      .000      .000
+73 1 4 41686.00 I  0.117227 0.011039  0.134348 0.013616  I 0.8027895 0.0002710  2.6599 0.1916  P    45.122     .500     2.851     .300   .139000   .131000   .8012000      .000      .000
+"""
+
+function _finals_file(rows)
+    path = tempname()
+    write(path, rows)
+    return path
+end
+
+const _EOP_FIELDS = (:x, :y, :Δut1_utc, :lod)
+
+@testset "EOP — the fixed-width file reads as the IERS CSV does" begin
     _with_eop_restored() do
-        for (theory, dir, file) in ((IAU2006(), "eop_iau2000A", "finals2000A.all.csv"),
-                                    (FK5(),     "eop_iau1980",  "finals.all.csv"))
-            stamp  = joinpath(get_scratch!(_STB_UUID, dir), file * "_timestamp")
-            before = isfile(stamp) ? mtime(stamp) : 0.0
-
-            table = eop_refresh!(; theory = theory)
-
-            @test mtime(stamp) > before
-            @test mtime(stamp) > time() - 600                  # downloaded now, not earlier
-            @test eop(theory) === table
-            jd_today = time() / 86_400 + 2440587.5              # Unix epoch as a Julian date
-            @test isfinite(table.Δut1_utc(jd_today))
+        for (theory, csv_rows, fw_rows, nut) in
+                ((IAU2006(), _EOP_2000A_ROWS, _FINALS_2000A_ROWS, (:δx, :δy)),
+                 (FK5(),     _EOP_1980_ROWS,  _FINALS_1980_ROWS,  (:δΔψ, :δΔϵ)))
+            from_csv = eop_load(_eop_file(csv_rows); theory = theory)
+            from_fw  = eop_load(_finals_file(fw_rows); theory = theory)
+            for jd in (2441684.5, _JD_1973_01_03, 2441686.5), f in (_EOP_FIELDS..., nut...)
+                @test getproperty(from_fw, f)(jd) == getproperty(from_csv, f)(jd)
+            end
         end
     end
 end
+
+@testset "EOP — fixed-width predictions, signs against the flag, and date-only rows" begin
+    # Truth: a predicted row and the last row of finals2000A.all as published, read directly. The
+    # UT1-UTC value fills its column up to the flag, and a date-only row carries no values.
+    rows = """
+271029 61707.00 P  0.179319 0.017516  0.276208 0.028383  P-0.2081431 0.0254096
+271218 61757.00
+"""
+    csv = tempname()
+    AstroUniverse._finals_to_csv(_finals_file(rows), csv, IAU2006())
+    lines = readlines(csv)
+    @test lines[1] == AstroUniverse._IERS_CSV_HEADER
+    f = split(lines[2], ';')
+    @test length(f) == 37
+    @test f[1:5] == ["61707", "2027", "10", "29", "prediction"]
+    @test parse(Float64, f[6]) == 0.179319 && parse(Float64, f[8]) == 0.276208
+    @test parse(Float64, f[15]) == -0.2081431 && parse(Float64, f[16]) == 0.0254096
+    @test all(isempty, f[17:27])                          # no LOD and no nutation offsets
+    g = split(lines[3], ';')
+    @test g[1:2] == ["61757", "2027"] && all(isempty, g[5:end])
+    @test_throws ArgumentError AstroUniverse._finals_to_csv(_finals_file("<html>Request Rejected</html>"),
+                                                            tempname(), IAU2006())
+end
+
+# --- Sources and the cache --------------------------------------------------------------------------
+#
+# Truth: what each source holds, served from local files. A source that fails, serves something
+# that is not EOP data, or serves data ending before today is passed over for the next; the cache
+# changes only when a source succeeds; and when none does, a cached copy is used with a warning and
+# no copy is an error naming every source. "Today" is set to a day the fixture covers.
+
+_missing_url() = _url(joinpath(tempdir(), "no_such_eop_source_$(time_ns())"))
+
+# `f(cached)` with `sources` for every theory and a cache of its own, where `cached` is the path the
+# IAU 2000A copy is kept at. The file's fixture settings are put back afterwards.
+function _with_sources(f, sources; today = 41685.0)
+    cache = mktempdir()
+    AU._EOP_SOURCES[]   = _ -> sources
+    AU._EOP_CACHE_DIR[] = cache
+    AU._EOP_TODAY_MJD[] = today
+    try
+        f(joinpath(cache, AU._eop_cache_name(IAU2006())))
+    finally
+        _use_fixture_sources!()
+    end
+end
+
+_good_fw()  = AU._EopSource(_url(_finals_file(_FINALS_2000A_ROWS)), :finals)
+_good_csv() = AU._EopSource(_url(_eop_file(_EOP_2000A_ROWS)), :csv)
+_html()     = AU._EopSource(_url(_finals_file("<html><body>Request Rejected</body></html>")), :csv)
+_reads_as_table(path) = AU.read_iers_eop(path, Val(:IAU2000A)) isa EopIau2000A
+
+@testset "EOP — each source is tried in turn until one serves a usable series" begin
+    _with_eop_restored() do
+        sources = [AU._EopSource(_missing_url(), :csv), _html(), _good_fw()]
+        _with_sources(sources) do cached
+            t = eop_refresh!(; theory = IAU2006())
+            @test isfile(cached) && AU._is_iers_csv(cached)        # stored in the CSV layout
+            @test t.δx(_JD_1973_01_03) == -0.751
+            @test eop(IAU2006()) === t
+        end
+        # The CSV source first, when it answers.
+        _with_sources([_good_csv(), _good_fw()]) do cached
+            eop_refresh!(; theory = IAU2006())
+            @test read(cached, String) == AU._IERS_CSV_HEADER * "\n" * _EOP_2000A_ROWS
+        end
+    end
+end
+
+@testset "EOP — a series that ends before today is passed over" begin
+    _with_eop_restored() do
+        _with_sources([_good_csv()]; today = 41700.0) do cached
+            err = try eop_refresh!(; theory = IAU2006()); nothing catch e; e end
+            @test err isa ErrorException
+            @test occursin("before today", sprint(showerror, err))
+            @test !isfile(cached)
+        end
+    end
+end
+
+@testset "EOP — when every source fails a cached copy is used, and a refresh leaves it alone" begin
+    _with_eop_restored() do
+        bad = [AU._EopSource(_missing_url(), :csv), AU._EopSource(_missing_url(), :finals)]
+        _with_sources([_good_fw()]) do cached
+            eop_refresh!(; theory = IAU2006())               # a good copy in the cache
+            before = read(cached)
+            AU._EOP_SOURCES[] = _ -> bad
+
+            # A fresh copy is read without asking any source, so nothing fails and nothing warns.
+            path = @test_logs AU._eop_file(IAU2006())
+            @test path == cached
+
+            # A week-old copy: every source fails, so the copy is used, with a warning.
+            AU._EOP_AGE_LIMIT[] = 0.0
+            path = @test_logs (:warn, r"using the cached copy") AU._eop_file(IAU2006())
+            @test path == cached && read(cached) == before
+
+            # A refresh that was asked for throws, and the copy is unchanged.
+            err = try eop_refresh!(; theory = IAU2006()); nothing catch e; e end
+            @test err isa ErrorException && occursin("is unchanged", sprint(showerror, err))
+            @test read(cached) == before
+        end
+
+        # No copy at all: an error naming every source and how to load a file by hand.
+        _with_sources(bad) do cached
+            err = try AU._eop_file(IAU2006()); nothing catch e; e end
+            msg = sprint(showerror, err)
+            @test err isa ErrorException
+            @test all(s -> occursin(s.url, msg), bad)
+            @test occursin("eop_load", msg)
+            @test !isfile(cached)
+        end
+    end
+end
+
+@testset "EOP — a replacement that fails leaves the cached copy whole" begin
+    # Truth: the cached bytes. The rename that installs a download is made to fail after the
+    # download has been validated, the last point at which the cache could be lost.
+    _with_eop_restored() do
+        _with_sources([_good_fw()]) do cached
+            eop_refresh!(; theory = IAU2006())
+            before = read(cached)
+            AU._EOP_REPLACE[] = (src, dst) -> error("simulated rename failure")
+            err = try eop_refresh!(; theory = IAU2006()); nothing catch e; e end
+            @test err isa ErrorException
+            @test occursin("simulated rename failure", sprint(showerror, err))
+            @test read(cached) == before
+            @test readdir(dirname(cached)) == [basename(cached)]        # no temporary files left
+        end
+    end
+end
+
+@testset "EOP — the rename itself leaves the destination whole when it fails" begin
+    # Truth: the destination's bytes. Renaming a file that does not exist fails in the operating
+    # system's rename, which must not have removed the file it would have replaced.
+    dir = mktempdir()
+    dst = joinpath(dir, "finals2000A.all.csv")
+    write(dst, "the cached copy")
+    @test_throws Base.IOError AU._replace_file(joinpath(dir, "no_such_download"), dst)
+    @test read(dst, String) == "the cached copy"
+
+    src = joinpath(dir, "download")
+    write(src, "a new copy")
+    @test AU._replace_file(src, dst) == dst
+    @test read(dst, String) == "a new copy" && !isfile(src)
+end
+
+@testset "EOP — refreshes in several tasks at once each install a whole file" begin
+    _with_eop_restored() do
+        _with_sources([_good_fw()]) do cached
+            tables = fetch.([Threads.@spawn eop_refresh!(; theory = IAU2006()) for _ in 1:8])
+            @test all(t -> t isa EopIau2000A && t.δx(_JD_1973_01_03) == -0.751, tables)
+            @test _reads_as_table(cached)
+            @test readdir(dirname(cached)) == [basename(cached)]
+        end
+    end
+end
+
+
+# The fixture rows with one field of one row replaced.
+function _eop_rows_with(row, col, value)
+    rows = split(strip(_EOP_2000A_ROWS), '\n')
+    f = split(rows[row], ';')
+    f[col] = value
+    rows[row] = join(f, ';')
+    return join(rows, '\n') * "\n"
+end
+
+@testset "EOP — every value present must be a finite number, and coverage reads either layout" begin
+    # Truth: the fixture's last UT1-UTC date, 41686, in the 37- and 33-column layouts, where
+    # UT1-UTC is column 15 and column 11; and fields made infinite or unreadable, which the table
+    # reader would accept as a value or as a missing one.
+    @test AU._check_eop_csv(_eop_file(_EOP_2000A_ROWS)) == 41686.0
+    for (row, col, value) in ((2, 6, "Inf"), (2, 15, "-Inf"), (3, 15, "garbled"), (1, 24, "NaN"))
+        err = try AU._check_eop_csv(_eop_file(_eop_rows_with(row, col, value))); nothing catch e; e end
+        @test err isa ErrorException && occursin("not a finite number", sprint(showerror, err))
+    end
+
+    drop = i -> !(10 <= i <= 13)                         # the polar-motion rate columns
+    narrow(line) = join([x for (i, x) in enumerate(split(line, ';')) if drop(i)], ';')
+    rows = split(strip(_EOP_2000A_ROWS), '\n')
+    path33 = tempname() * ".csv"
+    write(path33, narrow(_EOP_HEADER) * "\n" * join(narrow.(rows), '\n') * "\n")
+    @test count(==(';'), readline(path33)) + 1 == 33
+    @test AU._check_eop_csv(path33) == 41686.0
+    @test AU.read_iers_eop(path33, Val(:IAU2000A)).Δut1_utc(_JD_1973_01_03) ≈ 0.8056163 atol = 1e-12
+end
+
+@testset "EOP — a download with an infinite value is refused and the cache kept" begin
+    # Truth: the cached bytes. The table reader accepts Inf, so this is the check that stops a
+    # corrupt polar motion from reaching a frame transformation.
+    _with_eop_restored() do
+        _with_sources([_good_fw()]) do cached
+            eop_refresh!(; theory = IAU2006())
+            before = read(cached)
+            corrupt = AU._EopSource(_url(_eop_file(_eop_rows_with(2, 6, "Inf"))), :csv)
+            AU._EOP_SOURCES[] = _ -> [corrupt]
+            err = try eop_refresh!(; theory = IAU2006()); nothing catch e; e end
+            @test err isa ErrorException && occursin("not a finite number", sprint(showerror, err))
+            @test read(cached) == before
+        end
+    end
+end
+
+@testset "EOP — with no cache of its own, the older SatelliteToolboxTransformations copy is read" begin
+    # Truth: the copy placed where SatelliteToolboxTransformations kept it. It is read where it is,
+    # with a warning, and never by a refresh that was asked for.
+    _with_eop_restored() do
+        bad = [AU._EopSource(_missing_url(), :csv)]
+        _with_sources(bad) do cached
+            legacy = joinpath(AU._EOP_LEGACY_DIR[], AU._eop_cache_name(IAU2006()))
+            cp(_eop_file(_EOP_2000A_ROWS), legacy)
+            path = @test_logs (:warn, r"SatelliteToolboxTransformations cached earlier") AU._eop_file(IAU2006())
+            @test path == legacy
+            @test !isfile(cached)                                  # not copied into the cache
+            err = try eop_refresh!(; theory = IAU2006()); nothing catch e; e end
+            @test err isa ErrorException
+        end
+    end
+end
+
+# --- The published sources ------------------------------------------------------------------------
+#
+# Only when asked for, with EPICYCLE_NETWORK_TESTS=1. These are third-party servers, so a test that
+# needs them fails for reasons that are not Epicycle's; asked for, it says which server is serving.
+# Truth: each source, on its own, yields a table that reaches today.
+
+if get(ENV, "EPICYCLE_NETWORK_TESTS", "") == "1"
+    @testset "EOP — each published source serves today's series" begin
+        for theory in (IAU2006(), FK5()), source in AU._eop_sources(theory)
+            @testset "$(source.url)" begin
+                _with_sources([source]; today = nothing) do _
+                    path = joinpath(AU._EOP_CACHE_DIR[], AU._eop_cache_name(theory))
+                    @test AU._download_eop!(path, source, theory) == path
+                end
+            end
+        end
+    end
+end
+
+# Put back the settings this file found.
+AU._EOP_SOURCES[], AU._EOP_CACHE_DIR[], AU._EOP_LEGACY_DIR[], AU._EOP_AGE_LIMIT[],
+    AU._EOP_TODAY_MJD[], AU._EOP_REPLACE[] = _EOP_HOOKS_FOUND
 
 nothing

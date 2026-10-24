@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
 
-using SNOW
 using CommonSolve: solve
 using OrdinaryDiffEqHighOrderRK: DP8
 using LinearAlgebra
@@ -113,10 +112,10 @@ ip_options = Dict(
         "file_print_level" => 0,
         )
 
-options = Options(derivatives= ForwardFD(), solver = IPOPT(ip_options))
+options = AstroSolve.NLPOptions(derivatives = :fd, solver = AstroSolve._ipopt(ip_options; monitor = false))
 
-# Define a closure that matches SNOW's expected signature
-snow_solver_fun!(F, x) = solver_fun!(F, x, sm)
-xopt, fopt, info = minimize(snow_solver_fun!, x0, ng, lx, ux, lg, ug, options)
+# The problem function the solver calls: f = fun!(g, x)
+problem_fun!(F, x) = solver_fun!(F, x, sm)
+xopt, fopt, info = AstroSolve.solve_nlp(problem_fun!, x0, ng, lx, ux, lg, ug, options)
 
 println("Optimal Variables: ", xopt)

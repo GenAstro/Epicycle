@@ -1,6 +1,6 @@
 # Welcome to Epicycle
 
-[![CI](https://github.com/GenAstro/Epicycle/workflows/CI/badge.svg)](https://github.com/GenAstro/Epicycle/actions)
+[![CI](https://github.com/GenAstro/Epicycle/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/GenAstro/Epicycle/actions/workflows/ci.yml?query=branch%3Amain)
 [![codecov](https://codecov.io/gh/GenAstro/Epicycle/branch/main/graph/badge.svg?token=FNHOVC5O5N)](https://codecov.io/gh/GenAstro/Epicycle)
 [![Documentation (stable)](https://img.shields.io/badge/docs-stable-blue.svg)](https://genastro.github.io/Epicycle/Epicycle/stable/)
 [![Documentation (dev)](https://img.shields.io/badge/docs-dev-blue.svg)](https://genastro.github.io/Epicycle/Epicycle/dev/)
