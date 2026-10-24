@@ -4,85 +4,138 @@ CurrentModule = EpicycleIO
 
 # Reporting
 
-`report` writes named columns to a delimited text file: the same arrays that would be plotted,
-in a form that can be read, diffed, or loaded by something else.
+Use [`report`](@ref) to write named data columns to a text file. Reports are
+useful for reviewing simulation results, sharing selected quantities, and
+importing data into other analysis tools. Each keyword supplies a column name
+and its values; the file contains a header followed by one row per sample.
 
-Like the plotting functions, `report` operates on arrays and has no knowledge of where they came
-from, so the examples below build their own data and run as written.
+## Write a report
 
-```julia
-using EpicycleIO
-
-t = collect(0.0:0.25:6.0)
-r = [[7000.0 + 10i, 100.0i, 1300.0] for i in t]
-v = [[0.0, 7.35 - 0.001i, 1.0] for i in t]
-
-report("flight.txt"; time = t, position = r, velocity = v)
-```
-
-## Column Headings
-
-The columns are named by the keywords given, rather than by whatever the quantity is called
-internally. A report is usually read by someone who did not perform the run, and `time` tells
-that reader more than `epoch` does.
-
-A vector-valued column expands into one column per component:
-
-```
-time        position_1    position_2    position_3    velocity_1  …
-```
-
-Columns must be the same length. Columns from two different recordings have their own sample
-times and cannot share a report, so a length mismatch raises an error naming the columns and
-their lengths rather than writing a file that silently misaligns.
-
-Columns carry no units of their own. They are written as given, so a keyword should name what
-the number is when the reader will need to know.
+This example writes three samples of elapsed time and altitude:
 
 ```julia
 using EpicycleIO
 
-t   = collect(0.0:0.25:6.0)
-alt = 400.0 .+ 25.0 .* sin.(t)
+elapsed_s = [0.0, 60.0, 120.0]
+altitude_km = [400.0, 401.5, 403.0]
 
-report("flight.txt"; hours_from_epoch = t, altitude_km = alt)
+path = report("flight.txt";
+              elapsed_s = elapsed_s,
+              altitude_km = altitude_km)
 ```
 
-## Epochs Are Rendered by the Caller
+The file contains the following values, with columns padded for readability:
 
-`report` does not interpret epochs, and this is deliberate. A bare Julian date does not record
-whether it is TT or UTC, and a text writer is the wrong place to make that decision. A `Time`
-passed directly raises an error naming the conversions available.
+```text
+elapsed_s                 altitude_km
+0.0                       400.0
+60.0                      401.5
+120.0                     403.0
+```
+
+Columns appear in the order supplied. The keyword names become the headings
+exactly as written. Include units in those names where useful: `altitude_km`
+is more informative than `altitude`. The writer does not convert units or add
+metadata such as the coordinate system or time scale.
+
+`report` returns the output path. Relative paths are resolved from Julia's
+current working directory. Create the destination directory before writing.
+An existing file is overwritten; each call writes a complete report rather
+than appending rows.
+
+## Include vector data
+
+A column whose samples are vectors expands into one output column per
+component. Supply a vector of sample vectors, with one sample for each row:
 
 ```julia
-using Epicycle
-using EpicycleIO
+position_km = [[7000.0, 0.0, 0.0],
+               [6985.0, 450.0, 0.0],
+               [6940.0, 898.0, 0.0]]
 
-t = [Time(2458849.5 + 0.01k, 0.0, :tdb, :jd) for k in 0:5]
-alt = 400.0 .+ 25.0 .* collect(0.0:5.0)
-
-# Choose the scale and format, and the file then records which was meant
-report("flight.txt"; time = [x.jd   for x in t], altitude = alt)
-report("flight.txt"; time = [x.isot for x in t], altitude = alt)
+report("position.txt";
+       elapsed_s = elapsed_s,
+       position_km = position_km)
 ```
 
-The same rule catches anything else that would break a row. A value whose printed form spans
-several lines would turn one row into several without any error, so `report` refuses it and says
-what to convert.
+The headings are `elapsed_s`, `position_km_1`, `position_km_2`, and
+`position_km_3`. Component numbers follow the order within each sample. Use
+vectors with the same number of components throughout the series.
 
-## The Same Data, Reported and Plotted
+To choose individual component names, supply them as separate columns:
 
-Both take the arrays from one `history` call. There the resemblance stops, and it should. A file
-has column headings that must be called something, so `report` names them with keywords. A plot
-has series, which Plotly names with `name`. The two are alike in taking the same data, not in
-their syntax.
-
-```@raw html
-<!-- doc-fragment -->
-```
 ```julia
-t, r = history(Calc(epoch, sat), Calc(position_vector, sat, EarthMJ2000Eq))
-
-report("flight.txt"; time = [x.jd for x in t], position = r)
-xyplot("Position", t, r; name = ["x", "y", "z"])
+report("position.txt";
+       elapsed_s = elapsed_s,
+       x_km = [r[1] for r in position_km],
+       y_km = [r[2] for r in position_km],
+       z_km = [r[3] for r in position_km])
 ```
+
+The report does not record the position's reference frame. Identify it in the
+headings or accompanying documentation when sharing the file.
+
+## Report epochs
+
+Convert Epicycle `Time` values to numbers or single-line strings before passing
+them to `report`. For an existing sequence of epochs, `sample_epochs`, choose
+the representation needed by the reader:
+
+```julia
+# sample_epochs contains Time values expressed in UTC.
+report("epochs.txt";
+       epoch_utc_isot = [t.isot for t in sample_epochs])
+
+report("julian_dates.txt";
+       epoch_utc_jd = [t.jd for t in sample_epochs])
+```
+
+Use `t.mjd` for modified Julian dates. These examples assume the epochs are
+already in UTC; a column name does not change their time scale. Label the
+heading with the actual scale and representation so readers can interpret the
+values correctly.
+
+Passing `Time` objects directly raises an `ArgumentError` because their printed
+representation spans multiple lines.
+
+## Choose a delimiter
+
+By default, `report` separates columns with two spaces and pads each field to
+a minimum width of 24 characters. Set `delim` to use another separator:
+
+```julia
+report("flight.tsv";
+       delim = "\t",
+       elapsed_s = elapsed_s,
+       altitude_km = altitude_km)
+```
+
+Padding is retained when you change the delimiter. A comma delimiter is also
+accepted; the writer does not quote or escape fields, so a value containing the
+delimiter is refused, and with the default delimiter so is a value containing any
+whitespace. Configure the receiving tool to trim padding if needed. The filename
+extension does not select the delimiter.
+
+## Formatting and data requirements
+
+Integers are written as integers. Other real numbers are written as
+floating-point values in the shortest form that reads back to the same value, so
+a Julian date keeps its full precision. Other values are written using their
+string representation.
+
+Before writing a report:
+
+- Supply at least one named column.
+- Give every column the same number of samples.
+- Align the samples yourself: values at the same index become one row. The
+  writer does not match epochs, interpolate data, or resample series.
+- Convert values whose printed representation spans multiple lines to numbers
+  or single-line strings.
+
+Missing columns, unequal column lengths, multiline values, and values containing
+the delimiter raise an `ArgumentError`. Column names and lengths are checked before the file is opened,
+but values are formatted while writing. A formatting error can therefore leave
+a partially written file or replace an existing file with incomplete output.
+
+For trajectory files that carry epochs, coordinate systems, and other metadata
+in a supported exchange format, see [Ephemeris files](ephemeris.md).

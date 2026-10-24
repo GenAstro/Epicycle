@@ -166,7 +166,9 @@ Lines need not be the same length, so two spacecraft sampled differently share a
 any fuss.
 
 Safe to call from inside a propagation or a solver callback: writes are throttled and happen on
-their own task, so publishing cannot slow the run feeding it. A zoom you set survives the
+their own task, so publishing cannot slow the run feeding it. That task runs when Julia yields,
+at any `sleep`, I/O or `yield()`, so a tight loop that does none of these should call `yield()`
+after plotting for the dashboard to update during the loop. A zoom you set survives the
 update, where [`xyplot`](@ref) resets the view because the data underneath it changed.
 
 # Returns
