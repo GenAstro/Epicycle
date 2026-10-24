@@ -12,8 +12,10 @@
 # CSPICE keeps global state and is not safe to call from several threads at once.
 const _SPICE_LOCK = ReentrantLock()
 
-const _SPK_FRAMES = Dict(1 => "ICRF", 17 => "J2000_ECLIPTIC")      # SPICE frame code → name
-const _SPK_FRAME_NAMES = Dict("ICRF" => "J2000", "J2000_ECLIPTIC" => "ECLIPJ2000")
+const _SPK_FRAMES = Dict(1 => "ICRF", 17 => "ECLIPJ2000")          # SPICE frame code → name; ECLIPJ2000 is rotated to ICRF on reading
+# Written in ICRF only. SPICE's ECLIPJ2000 is the ecliptic of its J2000, which is ICRF, while
+# Epicycle's J2000_ECLIPTIC (MJ2000Ec) is the ecliptic of MJ2000Eq: 23 mas apart, 0.7 m in LEO.
+const _SPK_FRAME_NAMES = Dict("ICRF" => "J2000")
 const _SPK_MAX_DEGREE = 27                                         # types 9 and 13, CSPICE MAXDEG
 const _SPK_SEGID_MAX = 40
 const _J2000_TDB_JD = 2451545.0
@@ -59,7 +61,9 @@ Read the trajectory of one object from a JPL SPK file.
 - Other types are evaluated by SPICE at every `step` seconds. The reader then compares Lagrange
   degree 7 between the samples with SPICE at the midpoints and records the largest difference
   as a note, so the caller can judge the step.
-- SPICE's J2000 frame is read as ICRF, as NAIF defines it; ECLIPJ2000 as J2000_ECLIPTIC.
+- SPICE's J2000 frame is read as ICRF, as NAIF defines it. An ECLIPJ2000 segment is rotated to
+  ICRF with SPICE's own rotation, since ECLIPJ2000 is built on ICRF and Epicycle's
+  J2000_ECLIPTIC is not.
 - Epochs are SPICE ephemeris time (TDB seconds past J2000) and keep its 64-bit precision, about
   0.1 µs in this century.
 
@@ -173,6 +177,14 @@ function _spk_segment!(d, path, k, s, step)
         step > 0 || return (_error!(d, 0, "step", "step must be positive; got $step"); nothing)
         _spk_sample!(d, path, s, seg, Float64(step), where_) || return nothing
     end
+    if seg.frame == "ECLIPJ2000"
+        # SPICE's ecliptic is built on its J2000, which is ICRF; Epicycle has no such axes, so the
+        # states go to ICRF with SPICE's own constant rotation.
+        R = SMatrix{3, 3}(lock(() -> SPICE.pxform("ECLIPJ2000", "J2000", 0.0), _SPICE_LOCK))
+        seg.states = [SVector{6}(vcat(R * x[SVector(1, 2, 3)], R * x[SVector(4, 5, 6)])) for x in seg.states]
+        seg.frame = "ICRF"
+        _note!(d, 0, "frame", "$where_ is in SPICE's ECLIPJ2000; rotated to ICRF, on which SPICE builds it")
+    end
     seg.start_time, seg.stop_time = first(seg.times), last(seg.times)
     return seg
 end
@@ -236,9 +248,10 @@ segment for each Lagrange segment.
 # Notes
 - Everything is checked before the file is opened, and every problem is reported in one
   `ArgumentError`; nothing is written on failure.
-- Segments must be in ICRF (written as SPICE's J2000 frame, as NAIF defines it) or
-  J2000_ECLIPTIC (ECLIPJ2000). Data in EME2000 must be rotated to ICRF first: SPICE's J2000 is
-  ICRF, and EME2000 differs from it by the 23 mas frame bias.
+- Segments must be in ICRF, written as SPICE's J2000 frame, as NAIF defines it. Data in EME2000
+  or J2000_ECLIPTIC must be rotated to ICRF first: EME2000 differs from ICRF by the 23 mas frame
+  bias, and so does Epicycle's J2000_ECLIPTIC from SPICE's ECLIPJ2000, which is built on ICRF.
+  [`write_ephemeris`](@ref) does the rotation.
 - A segment's usable span, where given, becomes its SPK coverage; otherwise its first to last
   epoch. Usable spans of consecutive segments may not overlap, as SPICE would take the later
   segment wherever two cover a time.
@@ -259,8 +272,10 @@ function write_spk(path::AbstractString, data::EphemerisFileData; naif_id, disca
         what = "segment $k"
         body, prob = _center_body(s.center)
         body === nothing && push!(problems, "$what CENTER: $prob")
-        haskey(_SPK_FRAME_NAMES, s.frame) || push!(problems, "$what is in $(s.frame); SPK segments are written in ICRF " *
-            "or J2000_ECLIPTIC" * (s.frame == "EME2000" ? ". Rotate EME2000 to ICRF first: SPICE's J2000 is ICRF" : ""))
+        haskey(_SPK_FRAME_NAMES, s.frame) || push!(problems, "$what is in $(s.frame); SPK segments are written in ICRF, " *
+            "SPICE's J2000. Rotate the states to ICRF first" *
+            (s.frame == "EME2000" ? ": EME2000 differs from it by the 23 mas frame bias" :
+             s.frame == "J2000_ECLIPTIC" ? ": Epicycle's J2000_ECLIPTIC is the ecliptic of EME2000, 23 mas from SPICE's ECLIPJ2000" : ""))
         n = length(s.times)
         n == length(s.states) || push!(problems, "$what has $n epochs but $(length(s.states)) states")
         n == 0 && (push!(problems, "$what has no states"); continue)

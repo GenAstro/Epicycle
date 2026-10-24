@@ -6,7 +6,7 @@
 
 using Test
 using EpicycleIO
-using AstroEpochs
+using AstroEpochs, AstroFrames, AstroUniverse, AstroModels, AstroStates
 using AstroRoutines: Lagrange, Hermite, interpolate
 using StaticArrays
 import SPICE
@@ -147,6 +147,50 @@ end
     @test a.states[5][1] ≈ s.states[5][1] && b.states[5][1] ≈ s.states[5][1] + 100.0
 end
 
+@testset "SPK: ECLIPJ2000 and a usable span narrower than the samples" begin
+    s = spk_segment(20)
+    ets = EK._et.(s.times)
+    # An ECLIPJ2000 segment, as another tool would write it, reads as ICRF with SPICE's rotation.
+    R = SMatrix{3, 3}(lock(() -> SPICE.pxform("J2000", "ECLIPJ2000", 0.0), EK._SPICE_LOCK))
+    eclip = [Vector(vcat(R * x[SVector(1, 2, 3)], R * x[SVector(4, 5, 6)])) for x in s.states]
+    path = tempname() * ".bsp"
+    lock(EK._SPICE_LOCK) do
+        h = SPICE.spkopn(path, "TEST", 0)
+        SPICE.spkw13(h, -900003, 399, "ECLIPJ2000", ets[1], ets[end], "ECLIPTIC", 3, eclip, ets)
+        SPICE.spkcls(h)
+    end
+    f = EK.read_spk(path)
+    seg = only(f.segments)
+    @test seg.frame == "ICRF" && maximum(maximum(abs.(a - b)) for (a, b) in zip(seg.states, s.states)) < 1e-9
+    @test any(d -> occursin("ECLIPJ2000", d.message) && occursin("rotated to ICRF", d.message), f.diagnostics)
+    @test maximum(abs.(spice_state(path, -900003, ets[7])[1:3] - seg.states[7][1:3])) < 1e-9
+
+    # Writing: an ecliptic segment is refused by write_spk and rotated to ICRF by write_ephemeris,
+    # so SPICE reads the position Epicycle's own frames give, not one 23 mas away.
+    e = spk_segment(20); e.frame = "J2000_ECLIPTIC"
+    @test_throws "ECLIPJ2000" EK.write_spk(tempname() * ".bsp", EK.EphemerisFileData(segments = [e]); naif_id = -900004)
+    ec, icrf = CoordinateSystem(earth, MJ2000Ec()), CoordinateSystem(earth, ICRF())
+    hist = SpacecraftHistory([HistorySegment(s.times, [CartesianState(Vector(x)) for x in s.states], ec)])
+    p = tempname() * ".bsp"
+    write_ephemeris(p, hist; naif_id = -900004)
+    for k in (1, 10, 20)
+        ours = to_vector(CartesianState(Coordinate(CartesianState(Vector(s.states[k])), ec, s.times[k]), icrf))[1:3]
+        @test maximum(abs.(spice_state(p, -900004, ets[k])[1:3] - ours)) < 1e-9
+    end
+
+    # A usable stop before the last sample: kept on reading, bounding coverage and state_at, while
+    # the samples beyond it remain for the interpolation.
+    u = spk_segment(20); u.useable_stop = u.times[17]
+    path = tempname() * ".bsp"
+    EK.write_spk(path, EK.EphemerisFileData(segments = [u]); naif_id = -900005)
+    eph = read_ephemeris(path; strict = true)
+    m = only(eph.segments).metadata
+    @test abs(EK._seconds(m["useable_stop"], u.times[17])) < 1e-6 && length(only(eph.segments).times) == 20
+    @test abs(EK._seconds(only(coverage(eph))[2], u.times[17])) < 1e-6
+    @test state_at(eph, u.times[16]) isa Coordinate
+    @test_throws ArgumentError state_at(eph, u.times[19])
+end
+
 @testset "SPK: a damaged file or a bad naif_id is reported, not thrown" begin
     path = tempname() * ".bsp"
     EK.write_spk(path, EK.EphemerisFileData(segments = [spk_segment(20)]); naif_id = -900001)
@@ -200,7 +244,7 @@ end
     refused(data; kw...) = (msg = try EK.write_spk(path, data; kw...); "" catch e sprint(showerror, e) end;
                             @test read(path, String) == "existing"; msg)
     one(s) = EK.EphemerisFileData(segments = [s])
-    @test occursin("Rotate EME2000 to ICRF", refused(one(spk_segment(20; frame = "EME2000")); naif_id = -1))
+    @test occursin("Rotate the states to ICRF first: EME2000", refused(one(spk_segment(20; frame = "EME2000")); naif_id = -1))
     @test occursin("natural body", refused(one(spk_segment(20)); naif_id = 399))
     @test occursin("integer", refused(one(spk_segment(20)); naif_id = "SAT"))
     s = spk_segment(20); s.accelerations = [SVector(0.0, 0, 0) for _ in 1:20]

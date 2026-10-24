@@ -599,8 +599,8 @@ function write_ephemeris(path::AbstractString, source::Union{SpacecraftHistory, 
     fmt isa OEM || isempty(marking) || throw(ArgumentError("write_ephemeris: the source is classified " *
         "$(repr(marking)), and $(fmt isa SPK ? "SPK" : "an STK file") cannot carry the marking; " *
         "give classification = \"\" to write it unmarked"))
-    fmt isa SPK && coordinate_system !== nothing && !(typeof(coordinate_system.axes) in (ICRF, MJ2000Ec)) &&
-        throw(ArgumentError("write_ephemeris: SPK holds states in ICRF or ecliptic axes, not " *
+    fmt isa SPK && coordinate_system !== nothing && !(coordinate_system.axes isa ICRF) &&
+        throw(ArgumentError("write_ephemeris: SPK holds states in ICRF axes (SPICE's J2000), not " *
             "$(nameof(typeof(coordinate_system.axes))); leave coordinate_system out and each segment is rotated to ICRF"))
     segs = _writable(_segments(source))
     isempty(segs) && throw(ArgumentError("write_ephemeris: nothing to write; the history is empty" *
@@ -610,7 +610,7 @@ function write_ephemeris(path::AbstractString, source::Union{SpacecraftHistory, 
     out = EphemerisSegmentData[]
     for s in segs
         target = coordinate_system !== nothing ? coordinate_system :
-                 fmt isa SPK && !(typeof(s.coordinate_system.axes) in (ICRF, MJ2000Ec)) ?
+                 fmt isa SPK && !(s.coordinate_system.axes isa ICRF) ?
                      CoordinateSystem(s.coordinate_system.origin, ICRF()) : s.coordinate_system
         push!(out, _to_segment(s, target, step, interpolation, sys, object_name, object_id, default_name))
     end
