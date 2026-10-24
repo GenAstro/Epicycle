@@ -13,8 +13,8 @@ const _GPS_MINUS_TAI = -19.0                                       # s
 # misread.
 const _UNSUPPORTED_TIME_SYSTEMS = ("UT1", "GMST", "MET", "MRT", "SCLK")
 
-const _CAL = r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)$"
-const _DOY = r"^(\d{4})-(\d{3})T(\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)$"
+const _CAL = r"^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2}(?:\.[0-9]+)?)$"
+const _DOY = r"^([0-9]{4})-([0-9]{3})T([0-9]{2}):([0-9]{2}):([0-9]{2}(?:\.[0-9]+)?)$"
 
 _is_leap_year(y) = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0
 _days_in(y, m) = m == 2 ? (_is_leap_year(y) ? 29 : 28) : (m in (4, 6, 9, 11) ? 30 : 31)
@@ -33,7 +33,7 @@ function _parse_epoch(text::AbstractString, system::AbstractString)
         s = s[1:end-1]
         system == "UTC" || push!(notes, "the Z (UTC) suffix ignored; times are $system, as TIME_SYSTEM says")
     end
-    sep = match(r"^(\d{4}-(?:\d{2}-\d{2}|\d{3}))[ t](\d.*)$", s)
+    sep = match(r"^([0-9]{4}-(?:[0-9]{2}-[0-9]{2}|[0-9]{3}))[ t]([0-9].*)$", s)
     if sep !== nothing
         s = sep[1] * "T" * sep[2]
         push!(notes, "date and time separated by a space or lower-case t; read as T")

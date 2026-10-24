@@ -51,10 +51,10 @@ with `problem` saying why; `note` is non-empty when the reading assumes somethin
 function _frame_axes(name::AbstractString, center::AbstractString)
     n = uppercase(strip(name))
     haskey(_FRAME_AXES, n) && return (_FRAME_AXES[n]..., "")
-    if occursin(r"^(ITRF-?\d{2,4}|DTRF\d{4})$", n)
+    if occursin(r"^(ITRF-?[0-9]{2,4}|DTRF[0-9]{4})$", n)
         return ITRF(), "$n read as ITRF; realizations differ at the centimetre level", ""
     end
-    if occursin(r"^MOON_PA\d{3}$", n)
+    if occursin(r"^MOON_PA[0-9]{3}$", n)
         return nothing, "", "$n is the Moon principal-axes frame of a different planetary " *
             "ephemeris; Epicycle's is MOON_PA440 (DE440). To accept the difference, override " *
             "it with ref_frame = \"MOON_PA440\""

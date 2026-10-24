@@ -244,9 +244,15 @@ end
         "a leap second on a day without one" => replace(oem_text(), "2026-10-21T00:03:00" => "2026-10-21T00:02:60"),
         "covariance under an unsupported time system" => oem_text(system = "UT1") * "COVARIANCE_START\n" *
             "EPOCH = 2026-10-21T00:00:00\n1.0\n0 1\n0 0 1\n0 0 0 1\n0 0 0 0 1\n0 0 0 0 0 1\nCOVARIANCE_STOP\n",
+        "digits of another script in an epoch" => replace(oem_text(), "2026-10-21T00:03:00" => "٢٠٢٦-10-21T00:03:00"),
         "not an OEM" => "hello\nworld\n",
         "empty" => "",
     )
+    # A degree no file uses, large enough to overflow the point count, is corrected like any bad
+    # degree; the six points of this file then fall short of degree 7, which is reported too.
+    msg = try E.read_oem(oem_file(oem_text(interp = "INTERPOLATION = LAGRANGE\nINTERPOLATION_DEGREE = 9223372036854775807\n"))); ""
+          catch e sprint(showerror, e) end
+    @test occursin("INTERPOLATION_DEGREE", msg) && occursin("from 1 to 100", msg) && occursin("needs 8", msg)
     for (what, text) in bad
         @test !isempty(problems(() -> E.read_oem(oem_file(text))))
     end

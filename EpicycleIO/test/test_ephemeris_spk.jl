@@ -147,6 +147,19 @@ end
     @test a.states[5][1] ≈ s.states[5][1] && b.states[5][1] ≈ s.states[5][1] + 100.0
 end
 
+@testset "SPK: a damaged file or a bad naif_id is reported, not thrown" begin
+    path = tempname() * ".bsp"
+    EK.write_spk(path, EK.EphemerisFileData(segments = [spk_segment(20)]); naif_id = -900001)
+    @test_throws "integer NAIF ID" EK.read_spk(path; naif_id = 1.5)
+    # The type 13 window size is the second-to-last word of the segment; make it impossible.
+    ic = only(lock(() -> EK._spk_summaries(EK._Diagnostics(path; strict = false), path), EK._SPICE_LOCK)).ic
+    bytes = read(path)
+    bytes[(ic[6] - 2) * 8 + 1:(ic[6] - 1) * 8] = reinterpret(UInt8, [-5.0])
+    write(path, bytes)
+    msg = try EK.read_spk(path); "" catch e sprint(showerror, e) end
+    @test occursin("damaged", msg)
+end
+
 @testset "SPK: the writer refuses, lists every problem, and writes nothing" begin
     path = tempname() * ".bsp"
     write(path, "existing")

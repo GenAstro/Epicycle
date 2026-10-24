@@ -86,6 +86,8 @@ f = EpicycleIO.read_spk(path)
 """
 function read_spk(path::AbstractString; naif_id = nothing, step = nothing, strict::Bool = false)
     isfile(path) || throw(ArgumentError("read_spk: no file at $path"))
+    naif_id === nothing || naif_id isa Integer || throw(ArgumentError(
+        "read_spk: naif_id is the object's integer NAIF ID, such as -82; got $(repr(naif_id))"))
     d = _Diagnostics(path; strict)
     file = EphemerisFileData(format = :spk, version = "")
     segs = lock(_SPICE_LOCK) do
@@ -153,9 +155,13 @@ function _spk_segment!(d, path, k, s, step)
     seg.frame = frame
     if s.data !== nothing
         n, raw = s.data.n, s.data.raw
+        # Type 9 stores the Lagrange degree, type 13 the Hermite window size less one.
+        p = s.data.param
+        (typ == 9 ? 1 <= p : 0 <= p) && p <= _MAX_DEGREE || return (_error!(d, 0, "file",
+            "$where_ stores an interpolation parameter of $p, which no type $typ segment can have; the file is damaged"); nothing)
         seg.states = [SVector{6, Float64}(raw[6j - 5:6j]) for j in 1:n]
         seg.times = [_from_et(raw[6n + j]) for j in 1:n]
-        seg.interpolation = typ == 9 ? Lagrange(s.data.param) : Hermite(2 * (s.data.param + 1) - 1)
+        seg.interpolation = typ == 9 ? Lagrange(p) : Hermite(2 * (p + 1) - 1)
         first_et, last_et = raw[6n + 1], raw[7n]
         s.dc[1] > first_et && (seg.useable_start = _from_et(s.dc[1]))
         s.dc[2] < last_et && (seg.useable_stop = _from_et(s.dc[2]))

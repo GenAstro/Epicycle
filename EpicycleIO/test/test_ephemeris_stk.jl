@@ -142,11 +142,17 @@ end
         "no END" => replace(stk_text(), "END Ephemeris" => ""),
         "bad value" => replace(stk_text(), "7003.0" => "x7003"),
         "too few points" => replace(stk_text(), "InterpolationSamplesM1 3" => "InterpolationSamplesM1 9"),
+        "digits of another script in the epoch" => replace(stk_text(), "21 Oct 2026" => "21 Oct ٢٠٢٦"),
     )
     for (what, text) in cases
         err = try ES.read_stk(stk_file(text)); nothing catch e e end
         @test err isa ES.EphemerisReadError
     end
+    # A sample count no file uses, large enough to overflow Hermite's degree, is corrected.
+    huge = replace(stk_text(), "InterpolationMethod Lagrange\nInterpolationSamplesM1 3" =>
+                               "InterpolationMethod Hermite\nInterpolationSamplesM1 9223372036854775807")
+    f = ES.read_stk(stk_file(huge))
+    @test f.segments[1].interpolation == Hermite(11) && any(d -> occursin("from 0 to 100", d.message), f.diagnostics)
     # Two problems, both listed, with the frame's suggestion and the override hint.
     msg = try ES.read_stk(stk_file(replace(stk_text(frame = "J200"), "7003.0" => "x7003"))); "" catch e sprint(showerror, e) end
     @test occursin("2 problems", msg) && occursin("Did you mean J2000", msg) && occursin("override", msg)

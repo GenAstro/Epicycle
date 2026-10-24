@@ -398,8 +398,8 @@ function _oem_interpolation!(p::_OEMParser, c::_OEMSegment, mline)
     end
     dtext, dline = c.meta["INTERPOLATION_DEGREE"]
     deg = tryparse(Int, dtext)
-    if deg === nothing || deg < 1
-        _fixed!(d, dline, "INTERPOLATION_DEGREE", "$(repr(dtext)) is not a positive integer; degree 7 used")
+    if deg === nothing || !(1 <= deg <= _MAX_DEGREE)
+        _fixed!(d, dline, "INTERPOLATION_DEGREE", "$(repr(dtext)) is not an integer from 1 to $_MAX_DEGREE; degree 7 used")
         deg = 7
     end
     if u == "HERMITE" && iseven(deg)
@@ -425,7 +425,7 @@ end
 function _oem_number(p::_OEMParser, i, tok)
     x = tryparse(Float64, tok)
     x === nothing || return x
-    if occursin(r"^[+-]?\d*\.?\d*[dD][+-]?\d+$", tok)
+    if occursin(r"^[+-]?[0-9]*\.?[0-9]*[dD][+-]?[0-9]+$", tok)
         _once!(p, :fortran, i, "data", "Fortran D exponents (as in $tok) read as E; §7.5.7 allows E or e only")
         return tryparse(Float64, replace(tok, r"[dD]" => "e"))
     end

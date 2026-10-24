@@ -5,6 +5,11 @@
 # file's time system. The readers produce these and the writers consume them; turning them into
 # Epicycle frames and trajectories is a separate step.
 
+# The highest interpolation degree a file is read with. Ephemerides declare degrees of 3 to 15; a
+# value in the hundreds is a corrupt field, and one near the integer limit would overflow the
+# point count it implies.
+const _MAX_DEGREE = 100
+
 """
     CovarianceRecord
 

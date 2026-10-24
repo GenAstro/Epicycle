@@ -75,7 +75,7 @@ _stk_body(center::AbstractString) = uppercase(center[1]) * lowercase(center[2:en
 
 # "1 Jun 2002 12:00:00.000000000" (UTC, Gregorian).
 function _stk_parse_date(text::AbstractString)
-    m = match(r"^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2}(?:\.\d+)?)$", strip(text))
+    m = match(r"^([0-9]{1,2})\s+([A-Za-z]{3})\s+([0-9]{4})\s+([0-9]{1,2}):([0-9]{2}):([0-9]{2}(?:\.[0-9]+)?)$", strip(text))
     m === nothing && return nothing, "not an STK date; expected dd mmm yyyy hh:mm:ss.s, e.g. 1 Jun 2026 12:00:00.000"
     mo = findfirst(==(titlecase(lowercase(m[2]))), _STK_MONTHS)
     mo === nothing && return nothing, "month $(repr(String(m[2]))) is not a three-letter English month"
@@ -173,7 +173,7 @@ function read_stk(path::AbstractString; strict::Bool = false, skip_bad_lines::Bo
         startswith(s, "#") && continue                    # comments, as STK files written by GMAT use
         u = uppercase(s)
         if state == :version
-            m = match(r"^stk\.v\.(\d+)\.(\d+)$"i, s)
+            m = match(r"^stk\.v\.([0-9]+)\.([0-9]+)$"i, s)
             if m === nothing
                 _error!(d, i, "version", "the first line must be the version stamp, e.g. stk.v.11.0; got $(repr(String(first(s, 40))))")
             else
@@ -361,8 +361,8 @@ function _stk_segment_meta!(d, h, ref_frame, center, file)
         haskey(h, key) || continue
         v, m1line = h[key]
         x = tryparse(Int, v)
-        if x === nothing || x < lowest
-            _fixed!(d, m1line, key, "$(repr(v)) is not an integer of at least $lowest; STK's default of 5 used")
+        if x === nothing || !(lowest <= x <= _MAX_DEGREE)
+            _fixed!(d, m1line, key, "$(repr(v)) is not an integer from $lowest to $_MAX_DEGREE; STK's default of 5 used")
         else
             m1 = x
         end
