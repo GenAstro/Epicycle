@@ -206,6 +206,45 @@ end
     end
 end
 
+@testset "ephemeris API: what each format keeps through a round trip" begin
+    # Two segments about the Earth and then about the Moon, each with a name, an ID, Hermite 5 and
+    # a usable span two minutes inside its data.
+    for body in (earth, moon)
+        cs = CoordinateSystem(body, ICRF())
+        segs = map((0.0:60.0:1800.0, 1800.0:60.0:3600.0)) do r
+            md = Dict{String, Any}("object_name" => "PROBE", "object_id" => "2026-099A", "interpolation" => Hermite(5),
+                                   "useable_start" => at(first(r) + 120), "useable_stop" => at(last(r) - 120))
+            HistorySegment([at(s) for s in r], [CartesianState(circ(s)) for s in r], cs; metadata = md)
+        end
+        h = SpacecraftHistory(collect(segs))
+        near(a, b) = abs(EA._seconds(a, b)) < 1e-6
+        # OEM and SPK keep every one of them; SPK names the object by its NAIF ID.
+        for (ext, kw, id) in ((".oem", (; time_system = TDB()), "2026-099A"), (".bsp", (; naif_id = -900099), "-900099"))
+            p = tempname() * ext
+            write_ephemeris(p, h; kw...)
+            back = read_ephemeris(p; strict = true)
+            @test length(back.segments) == 2
+            for (a, b) in zip(h.segments, back.segments)
+                m = b.metadata
+                @test b.coordinate_system == cs
+                @test m["object_name"] == "PROBE" && m["object_id"] == id && m["interpolation"] == Hermite(5)
+                @test near(m["useable_start"], a.metadata["useable_start"]) && near(m["useable_stop"], a.metadata["useable_stop"])
+                @test near(first(b.times), first(a.times)) && near(last(b.times), last(a.times))
+            end
+            @test maximum(position_difference(back, h)) < 1e-6
+        end
+        # STK has neither an object's name nor a usable span: the writer refuses rather than widen
+        # the coverage, and with discard_unsupported writes the data, read back as UNKNOWN.
+        p = tempname() * ".e"
+        @test_throws "an STK file cannot say so" write_ephemeris(p, h)
+        write_ephemeris(p, h; discard_unsupported = true)
+        back = read_ephemeris(p; strict = true)
+        @test length(back.segments) == 2 && all(s -> s.coordinate_system == cs, back.segments)
+        @test all(s -> s.metadata["object_name"] == "UNKNOWN" && !haskey(s.metadata, "useable_start"), back.segments)
+        @test maximum(position_difference(back, h)) < 1e-6
+    end
+end
+
 @testset "ephemeris API: resampling keeps the usable span" begin
     h = history(0.0:60.0:3600.0)
     h.segments[1].metadata["useable_start"] = at(600.0)

@@ -553,8 +553,8 @@ STK `.e` or JPL SPK.
   `classification = ""` is given.
 - `digits`: OEM and STK. Decimal places of seconds in written epochs. Default 9. An OEM is
   refused if rounding would move an epoch by more than 1 ns, which would shift the trajectory.
-- `discard_unsupported`: SPK. Write without accelerations and covariance, which SPK cannot hold,
-  rather than refuse. Default `false`.
+- `discard_unsupported`: Write without what the format cannot hold, rather than refuse: accelerations
+  and covariance in SPK, a usable span narrower than the data in STK. Default `false`.
 
 # Notes
 - Every rule of the format is checked before the file is opened, and every problem is reported
@@ -620,6 +620,13 @@ function write_ephemeris(path::AbstractString, source::Union{SpacecraftHistory, 
     if fmt isa OEM
         write_oem(path, data; digits, version)
     elseif fmt isa STKEphemeris
+        # STK has no usable span: written without it, the support points beyond it would read
+        # back as trajectory.
+        narrowed = findfirst(s -> s.useable_start !== nothing && _seconds(first(s.times), s.useable_start) > 0 ||
+                                  s.useable_stop !== nothing && _seconds(s.useable_stop, last(s.times)) > 0, out)
+        narrowed === nothing || discard_unsupported || throw(ArgumentError("write_ephemeris: segment $narrowed " *
+            "is usable over less than its data, and an STK file cannot say so; its coverage would read back as " *
+            "the whole data span. Give discard_unsupported = true to write it anyway"))
         write_stk(path, data; digits)
     else
         naif_id === nothing && throw(ArgumentError("write_ephemeris: SPK needs the object's NAIF ID; give naif_id = …, " *
