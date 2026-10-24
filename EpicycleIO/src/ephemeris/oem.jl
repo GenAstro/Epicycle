@@ -44,7 +44,7 @@ Read a CCSDS Orbit Ephemeris Message in keyword = value form, versions 1.0, 2.0 
   one warning.
 - Problems that would change or guess at the data stop the read with an
   [`EphemerisReadError`](@ref) listing every one, with line numbers: a missing or unknown frame,
-  centre or time system, a data line that cannot be read, epochs that go backwards, different
+  center or time system, a data line that cannot be read, epochs that go backwards, different
   states at one epoch, or a segment too short for its declared interpolation.
 
 # Returns
@@ -370,7 +370,7 @@ function _oem_meta_done!(p::_OEMParser, mline)
     end
     seg.interpolation = _oem_interpolation!(p, c, mline)
     # Data lines are read whenever their epochs can be, so one read reports every problem; a
-    # segment with a bad frame or centre is still not returned.
+    # segment with a bad frame or center is still not returned.
     c.ready = !isempty(seg.time_system)
     c.usable = ok
 end
@@ -677,7 +677,7 @@ Write `data` as a CCSDS Orbit Ephemeris Message in keyword = value form, version
 - Everything is checked before the file is opened, and every problem is reported in one
   `ArgumentError`. A file that fails a check is not written, and an existing file at `path` is
   left as it was.
-- Checked: the version; mandatory header and metadata values; frames, centres and time systems
+- Checked: the version; mandatory header and metadata values; frames, centers and time systems
   a reader can map back; one time system for the file (§5.2.4.5); epochs strictly increasing;
   finite values; accelerations on every line of a segment or none; enough points for the
   declared interpolation (§5.2.4.7); declared and usable spans consistent with the data, and

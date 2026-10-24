@@ -147,10 +147,10 @@ function _spk_summaries(d, path)
 end
 
 function _spk_segment!(d, path, k, s, step)
-    target, centre_code, frame_code, typ = s.ic[1], s.ic[2], s.ic[3], s.ic[4]
+    target, center_code, frame_code, typ = s.ic[1], s.ic[2], s.ic[3], s.ic[4]
     where_ = "SPK segment $k ($(isempty(s.name) ? "unnamed" : repr(s.name)))"
-    center = _naif_center(centre_code)
-    center === nothing && return (_error!(d, 0, "center", "$where_ is relative to NAIF body $centre_code, which is not an Epicycle centre"); nothing)
+    center = _naif_center(center_code)
+    center === nothing && return (_error!(d, 0, "center", "$where_ is relative to NAIF body $center_code, which is not an Epicycle center"); nothing)
     frame = get(_SPK_FRAMES, frame_code, nothing)
     seg = EphemerisSegmentData(object_name = isempty(s.name) ? "UNKNOWN" : s.name, object_id = string(target),
                                center = center, time_system = "TDB")
@@ -318,12 +318,12 @@ function write_spk(path::AbstractString, data::EphemerisFileData; naif_id, disca
                 first_et = s.useable_start === nothing ? ets[1] : _et(s.useable_start)
                 last_et = s.useable_stop === nothing ? ets[end] : _et(s.useable_stop)
                 states = [collect(x) for x in s.states]
-                centre = _BODIES[uppercase(s.center)].naifid
+                center = _BODIES[uppercase(s.center)].naifid
                 frame = _SPK_FRAME_NAMES[s.frame]
                 if m isa Hermite
-                    SPICE.spkw13(handle, naif_id, centre, frame, first_et, last_et, s.object_name, m.degree, states, ets)
+                    SPICE.spkw13(handle, naif_id, center, frame, first_et, last_et, s.object_name, m.degree, states, ets)
                 else
-                    SPICE.spkw09(handle, naif_id, centre, frame, first_et, last_et, s.object_name, m.degree, states, ets)
+                    SPICE.spkw09(handle, naif_id, center, frame, first_et, last_et, s.object_name, m.degree, states, ets)
                 end
             end
             SPICE.spkcls(handle)

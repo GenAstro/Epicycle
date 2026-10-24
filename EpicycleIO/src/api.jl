@@ -9,7 +9,7 @@ _split_panel(args) = (!isempty(args) && first(args) isa AbstractString) ?
                      (String(first(args)), Base.tail(args)) : (DEFAULT_PANEL, args)
 
 # The palette, cycled. Shared with the Cesium side so a trajectory and its altitude plot come
-# out the same colour without anyone asking.
+# out the same color without anyone asking.
 const PALETTE = ["rgb(0,220,255)", "rgb(255,165,0)", "rgb(55,255,55)", "rgb(255,80,80)",
                  "rgb(140,100,255)", "rgb(255,220,0)", "rgb(255,120,200)", "rgb(55,200,255)"]
 
@@ -273,7 +273,7 @@ scatterpolar("Sky view", azimuth, rad2deg.(elevation); mode = "lines", name = "P
 panel!("Sky view";
        polar_angularaxis_direction = "clockwise",   # compass sense
        polar_angularaxis_rotation  = 90,            # north at the top
-       polar_radialaxis_range      = [90, 0])       # zenith at the centre
+       polar_radialaxis_range      = [90, 0])       # zenith at the center
 ```
 """
 scatterpolar
@@ -397,8 +397,8 @@ xyplot!("Residuals", t, residual; mode = "markers", name = "residual")
 band
 
 for grid in GRID_WRAPPERS
-    drawn = grid === :contour ? "as labelled contour lines" :
-            grid === :heatmap ? "as coloured cells"         : "as a surface in three axes"
+    drawn = grid === :contour ? "as labeled contour lines" :
+            grid === :heatmap ? "as colored cells"         : "as a surface in three axes"
 
     @eval @doc """
         $($grid)([panel], x, y, Z; attributes...)

@@ -92,7 +92,7 @@ Read an ephemeris file into a `SpacecraftHistory`: CCSDS OEM, STK `.e` or JPL SP
 - `strict`: Treat every correction as an error. Default `false`.
 - `skip_bad_lines`: OEM and STK. Drop an unreadable data line, with a warning, and split the
   segment there. Default `false`.
-- `ref_frame`, `center`: Names to read in place of the file's frame and centre, such as
+- `ref_frame`, `center`: Names to read in place of the file's frame and center, such as
   `"EME2000"` and `"EARTH"`. `time_system`: OEM only. Each override is recorded in the
   diagnostics with the file's original value.
 - `naif_id`: SPK. The object to read, when the file holds more than one.
@@ -140,7 +140,7 @@ function read_ephemeris(path::AbstractString; format = nothing, naif_id = nothin
         read_stk(path; strict, skip_bad_lines, ref_frame = _name(ref_frame), center = _name(center))
     else
         (ref_frame === nothing && center === nothing && time_system === nothing) ||
-            throw(ArgumentError("read_ephemeris: an SPK file names its frame and centre by NAIF code; overrides are for OEM and STK"))
+            throw(ArgumentError("read_ephemeris: an SPK file names its frame and center by NAIF code; overrides are for OEM and STK"))
         read_spk(path; naif_id, step, strict)
     end
     return _to_history(data, path)
@@ -445,7 +445,7 @@ function _interpolate_segment(s::HistorySegment, t::Time)
 end
 
 # The n consecutive points AstroRoutines would choose around xt (seconds from t0) in the whole
-# table: centred where the table allows, shifted inward at its ends, the extra point of an odd
+# table: centered where the table allows, shifted inward at its ends, the extra point of an odd
 # count on the nearer side. Found by binary search, so only these points are converted.
 function _window(times::AbstractVector{<:Time}, t0::Time, xt::Real, n::Integer)
     N = length(times)

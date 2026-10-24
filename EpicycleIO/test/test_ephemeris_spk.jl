@@ -25,11 +25,11 @@ function spk_segment(n; t0 = "2026-10-21T00:00:00", interp = Hermite(7), step = 
 end
 
 # SPICE's own state at `et`, with only `path` loaded for the duration.
-function spice_state(path, target, et, centre = 399)
+function spice_state(path, target, et, center = 399)
     lock(EK._SPICE_LOCK) do
         SPICE.furnsh(path)
         try
-            return SPICE.spkgeo(target, et, "J2000", centre)[1]
+            return SPICE.spkgeo(target, et, "J2000", center)[1]
         finally
             SPICE.unload(path)
         end
@@ -208,14 +208,14 @@ end
     s = spk_segment(20; step = 60.0)
     states = [collect(v) for v in s.states]
     et0, et1 = EK._et(s.times[1]), EK._et(s.times[end])
-    # A file written straight through SPICE: `segments` is a list of (centre, frame, type) to write.
+    # A file written straight through SPICE: `segments` is a list of (center, frame, type) to write.
     function spk_file(segments...)
         p = tempname() * ".bsp"
         lock(EK._SPICE_LOCK) do
             h = SPICE.spkopn(p, "TEST", 0)
-            for (centre, frame, typ) in segments
-                typ == 13 ? SPICE.spkw13(h, -900002, centre, frame, et0, et1, "T", 7, states, EK._et.(s.times)) :
-                            SPICE.spkw08(h, -900002, centre, frame, et0, et1, "T", 7, states, et0, 60.0)
+            for (center, frame, typ) in segments
+                typ == 13 ? SPICE.spkw13(h, -900002, center, frame, et0, et1, "T", 7, states, EK._et.(s.times)) :
+                            SPICE.spkw08(h, -900002, center, frame, et0, et1, "T", 7, states, et0, 60.0)
             end
             SPICE.spkcls(h)
         end
@@ -225,7 +225,7 @@ end
     text = tempname() * ".bsp"; write(text, "not a DAF file\n")
     cases = [
         ("not an SPK file", problem(text), "file", "could not read it as an SPK file"),
-        ("a centre Epicycle does not have", problem(spk_file((3, "J2000", 13))), "center", "NAIF body 3"),
+        ("a center Epicycle does not have", problem(spk_file((3, "J2000", 13))), "center", "NAIF body 3"),
         ("a frame Epicycle does not read", problem(spk_file((399, "GALACTIC", 13))), "frame", "SPICE frame 13"),
         ("a sampled type without step", problem(spk_file((399, "J2000", 8))), "step", "type 8, which stores no samples"),
         ("a step that is not positive", problem(spk_file((399, "J2000", 8)); step = 0.0), "step", "must be positive"),

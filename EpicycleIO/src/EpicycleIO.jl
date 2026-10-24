@@ -44,7 +44,7 @@ using Sockets
 using AstroModels: Spacecraft, HistorySegment
 using AstroEpochs: Time
 
-# Ephemeris files. Frames, centres and time systems are named in files, so reading and writing
+# Ephemeris files. Frames, centers and time systems are named in files, so reading and writing
 # them needs the objects those names stand for; interpolation lives in AstroRoutines.
 import AstroEpochs
 using AstroFrames: ICRF, GCRF, CIRS, TIRS, ITRF, MJ2000Eq, MODEq, TODEq, MJ2000Ec, PEF, TEME,

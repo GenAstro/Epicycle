@@ -1,7 +1,7 @@
 # Copyright (C) 2026 Gen Astro LLC
 # SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
 
-# Frame, centre and time-system names in ephemeris files, and the Epicycle objects they mean.
+# Frame, center and time-system names in ephemeris files, and the Epicycle objects they mean.
 #
 # Sources: CCSDS 502.0-B-3 §3.2.3.2 and §3.2.3.3, and the SANA registries the standard makes
 # normative (Annex B): Celestial Body Reference Frames, Orbit Centers and Time Systems. The two
@@ -52,7 +52,7 @@ function _frame_axes(name::AbstractString, center::AbstractString)
     n = uppercase(strip(name))
     haskey(_FRAME_AXES, n) && return (_FRAME_AXES[n]..., "")
     if occursin(r"^(ITRF-?[0-9]{2,4}|DTRF[0-9]{4})$", n)
-        return ITRF(), "$n read as ITRF; realizations differ at the centimetre level", ""
+        return ITRF(), "$n read as ITRF; realizations differ at the centimeter level", ""
     end
     if occursin(r"^MOON_PA[0-9]{3}$", n)
         return nothing, "", "$n is the Moon principal-axes frame of a different planetary " *
@@ -61,7 +61,7 @@ function _frame_axes(name::AbstractString, center::AbstractString)
     end
     if n == "FIXED_CB"
         center in ("", "EARTH") &&
-            return ITRF(), "FIXED_CB with an Earth centre read as ITRF", ""
+            return ITRF(), "FIXED_CB with an Earth center read as ITRF", ""
         return CelestialBodyFixed(), "", ""
     end
     n in _FRAMES_REGISTERED_UNSUPPORTED &&
@@ -87,7 +87,7 @@ function _frame_name(axes, center_name::AbstractString)
     return name
 end
 
-# --- centres -------------------------------------------------------------------------------
+# --- centers -------------------------------------------------------------------------------
 
 const _BODIES = Dict("SUN" => sun, "MERCURY" => mercury, "VENUS" => venus, "EARTH" => earth,
                      "MOON" => moon, "MARS" => mars, "JUPITER" => jupiter, "SATURN" => saturn,
@@ -106,10 +106,10 @@ function _center_body(name::AbstractString)
     n = uppercase(strip(name))
     haskey(_BODIES, n) && return _BODIES[n], ""
     n in _BARYCENTERS && return nothing,
-        "$n is a barycentre; Epicycle's origins are body centres. If the file's states are " *
+        "$n is a barycenter; Epicycle's origins are body centers. If the file's states are " *
         "relative to the body itself, override with center = \"$(replace(n, " BARYCENTER" => ""))\""
     occursin(r"L[1-5]$", n) && return nothing, "$n is a libration point, which is not an Epicycle origin"
-    return nothing, "$(repr(String(strip(name)))) is not a centre Epicycle provides.$(_did_you_mean(n, keys(_BODIES)))"
+    return nothing, "$(repr(String(strip(name)))) is not a center Epicycle provides.$(_did_you_mean(n, keys(_BODIES)))"
 end
 
 """
@@ -123,7 +123,7 @@ function _center_name(body)
     end
     n = uppercase(body.name)
     haskey(_BODIES, n) && return n
-    throw(ArgumentError("no CENTER_NAME for body $(body.name); supported centres are " *
+    throw(ArgumentError("no CENTER_NAME for body $(body.name); supported centers are " *
                         join(sort!(collect(keys(_BODIES))), ", ")))
 end
 

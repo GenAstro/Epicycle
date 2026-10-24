@@ -207,7 +207,7 @@ end
     p = IO_.get_panel("Residual distribution")
     @test length(p.traces) == 1
     # PlotlyBase's own constructors record the type as a String, where the traces
-    # we build carry a Symbol. Both serialise the same, so compare as text.
+    # we build carry a Symbol. Both serialize the same, so compare as text.
     @test string(fields(p.traces[1])[:type]) == "violin"
     @test fields(p.traces[1])[:name] == "range"
 

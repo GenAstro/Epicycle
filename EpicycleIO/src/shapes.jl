@@ -106,7 +106,7 @@ end
 """
     plotdata(v)
 
-Make a vector safe to serialise, turning anything not finite into `nothing`.
+Make a vector safe to serialize, turning anything not finite into `nothing`.
 
 JSON has no NaN or Infinity — `JSON.json` refuses them outright, so a single gap in a series
 used to take the whole call down. Plotly reads `null` as a break in the line, which is what a

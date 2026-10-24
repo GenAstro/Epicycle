@@ -63,9 +63,9 @@ end
     @test s.states[2] == SVector(7001.0, 450.0, 0.0, 0.0, 7.5, 0.1)
     # Times are TAI seconds from the UTC ScenarioEpoch.
     @test ES._seconds(stk_utc("2026-10-21T00:00:00"), s.times[3]) ≈ 120.0 atol = 1e-9
-    # Metres by default.
+    # Meters by default.
     m = ES.read_stk(stk_file(stk_text(unit = "")))
-    @test m.segments[1].states[2][1] ≈ 7.001 && any(d -> occursin("metres", d.message), m.diagnostics)
+    @test m.segments[1].states[2][1] ≈ 7.001 && any(d -> occursin("meters", d.message), m.diagnostics)
     # Hermite: degree 2·M1 + 1.
     h = ES.read_stk(stk_file(replace(stk_text(), "InterpolationMethod Lagrange" => "InterpolationMethod Hermite")))
     @test h.segments[1].interpolation == Hermite(7)
@@ -147,7 +147,7 @@ end
          11, "data", "no ephemeris data block"),
         ("a TimeScale other than TDB", stk_text(header = "TimeScale UTC\n"), 11, "TimeScale", "not TDB"),
         ("a bad ScenarioEpoch", replace(stk_text(), "21 Oct 2026" => "32 Oct 2026"), 5, "ScenarioEpoch", "day 32"),
-        ("an unknown CentralBody", replace(stk_text(), "CentralBody Earth" => "CentralBody Erth"), 6, "CentralBody", "\"ERTH\" is not a centre"),
+        ("an unknown CentralBody", replace(stk_text(), "CentralBody Earth" => "CentralBody Erth"), 6, "CentralBody", "\"ERTH\" is not a center"),
         ("an unknown DistanceUnit", stk_text(unit = "DistanceUnit Feet\n"), 8, "DistanceUnit", "not Meters or Kilometers"),
         ("Hermite with positions only", replace(stk_text(kind = "EphemerisTimePos", body = pos), "Method Lagrange" => "Method Hermite"),
          9, "InterpolationMethod", "Hermite needs velocities"),
@@ -257,7 +257,7 @@ end
     ES.write_stk(path, ES.EphemerisFileData(segments = [h]))
     @test any(==("InterpolationSamplesM1  3"), readlines(path))
     @test ES.read_stk(path; strict = true).segments[1].interpolation == Hermite(7)
-    # With covariance, everything is in metres and comes back in km.
+    # With covariance, everything is in meters and comes back in km.
     c = stk_segment(12; acc = true)
     m = SMatrix{6, 6}([i == j ? 1e-3 * i : 1e-7 * (i + j) for i in 1:6, j in 1:6])
     c.covariances = [ES.CovarianceRecord(c.times[1], "EME2000", m), ES.CovarianceRecord(c.times[6], "EME2000", 2m)]

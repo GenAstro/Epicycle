@@ -6,8 +6,8 @@
 # EphemerisTimePosVelAcc, with CovarianceTimePos and CovarianceTimePosVel.
 #
 # Times in the data are seconds from ScenarioEpoch, which is UTC; the seconds are TAI seconds, or
-# TDB seconds when `TimeScale TDB` is given. Distances are metres unless DistanceUnit says
-# otherwise. Covariance is in metres regardless.
+# TDB seconds when `TimeScale TDB` is given. Distances are meters unless DistanceUnit says
+# otherwise. Covariance is in meters regardless.
 
 const _STK_WRITE_VERSION = "11.0"
 const _STK_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
@@ -109,8 +109,8 @@ As for [`read_oem`](@ref). `ref_frame` and `center` take the OEM names (e.g. `"E
 
 # Notes
 - Times are seconds from ScenarioEpoch (UTC), counted in TAI seconds, or TDB seconds with
-  `TimeScale TDB`. Positions are converted from DistanceUnit, metres by default, to km.
-  Covariance is converted from metres to km.
+  `TimeScale TDB`. Positions are converted from DistanceUnit, meters by default, to km.
+  Covariance is converted from meters to km.
 - SegmentBoundaryTimes split the data into segments; the repeated record at each boundary
   starts the next segment. A repeated time anywhere else is an error unless the two records
   are identical.
@@ -391,7 +391,7 @@ function _stk_build!(d, file, seg0, h, data_kind, rows, skipped, boundaries, cov
         _error!(d, h["DISTANCEUNIT"][2], "DistanceUnit", "$(repr(h["DISTANCEUNIT"][1])) is not Meters or Kilometers")
         return
     end
-    haskey(h, "DISTANCEUNIT") || _note!(d, 0, "DistanceUnit", "none given; metres, STK's default, used")
+    haskey(h, "DISTANCEUNIT") || _note!(d, 0, "DistanceUnit", "none given; meters, STK's default, used")
     # How many points to read. The file's count includes any line skip_bad_lines dropped.
     if haskey(h, "NUMBEROFEPHEMERISPOINTS")
         v, line = h["NUMBEROFEPHEMERISPOINTS"]
@@ -457,7 +457,7 @@ function _stk_build!(d, file, seg0, h, data_kind, rows, skipped, boundaries, cov
     for (b, line) in boundaries
         any(r -> r[1] == b, rows) || _fixed!(d, line, "SegmentBoundaryTimes", "boundary at $b s matches no data time")
     end
-    # Covariance, in metres: km² is m² × 1e-6, for every element.
+    # Covariance, in meters: km² is m² × 1e-6, for every element.
     covs = CovarianceRecord[]
     cov_lines = Int[]                                    # the line each covariance record came from
     if !isempty(cov_kind)
@@ -477,7 +477,7 @@ function _stk_build!(d, file, seg0, h, data_kind, rows, skipped, boundaries, cov
                 isempty(name) ? _error!(d, line, "CovarianceCoordinateSystem", problem) : (cframe = name)
             end
         end
-        scale == 1.0 && _note!(d, 0, "DistanceUnit", "covariance read in metres, as STK documents it, though distances are in km")
+        scale == 1.0 && _note!(d, 0, "DistanceUnit", "covariance read in meters, as STK documents it, though distances are in km")
         dim = cov_kind == "COVARIANCETIMEPOS" ? 3 : 6
         dim == 3 && _note!(d, 0, "CovarianceTimePos", "position covariance only; velocity terms are NaN")
         # The declared count, as for the ephemeris points: fewer records than declared is a cut file.
@@ -559,13 +559,13 @@ Write `data` as an STK ephemeris file (`.e`), version stamp `stk.v.11.0`.
   CentralBody, CoordinateSystem, DistanceUnit, InterpolationMethod and InterpolationSamplesM1,
   NumberOfEphemerisPoints.
 - Distances are in km, unless the data carry covariance: then every distance, and the
-  covariance, are in metres, so the file does not depend on whether a reader applies
+  covariance, are in meters, so the file does not depend on whether a reader applies
   DistanceUnit to covariance, which STK's documentation leaves open.
 - Consecutive segments must share an endpoint, the time of a maneuver for example: STK
   represents segments by SegmentBoundaryTimes with the time repeated, and has no way to show a gap.
 - Times are written as TAI seconds from ScenarioEpoch with 16 significant digits; a time
   read back agrees within 1e-10 s for spans up to a year.
-- STK's file has one time system, frame and centre: all segments must agree.
+- STK's file has one time system, frame and center: all segments must agree.
 
 # Examples
 ```jldoctest
@@ -613,7 +613,7 @@ function _stk_lines(data::EphemerisFileData, digits)
         s1 = segs[1]
         for (k, s) in enumerate(segs)
             (s.center, s.frame, s.time_system) == (s1.center, s1.frame, s1.time_system) ||
-                push!(problems, "segment $k differs from segment 1 in centre, frame or time system; an STK file has one of each")
+                push!(problems, "segment $k differs from segment 1 in center, frame or time system; an STK file has one of each")
             (s.interpolation === nothing || typeof(s.interpolation) == typeof(s1.interpolation) &&
              s.interpolation.degree == s1.interpolation.degree) ||
                 push!(problems, "segment $k has a different interpolation from segment 1; an STK file has one")

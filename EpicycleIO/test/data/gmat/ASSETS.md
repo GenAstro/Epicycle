@@ -8,11 +8,11 @@ start, stop and usable times, and the final step are those of the original. Line
 | File | Original in the release | Data lines kept | What it covers |
 |---|---|---|---|
 | `DemoLEO-1.oem` | `ccsds/DemoLEO-1.oem` | 22 of 577 | OEM 1.0 as GMAT writes it; a low Earth orbit at 5 min steps |
-| `DemoLuna-1.oem` | `ccsds/DemoLuna-1.oem` | 22 of 2161 | OEM 1.0; an Earth-centred orbit at lunar distance |
+| `DemoLuna-1.oem` | `ccsds/DemoLuna-1.oem` | 22 of 2161 | OEM 1.0; an Earth-centered orbit at lunar distance |
 | `SampleOEMEphem.oem` | `ccsds/SampleOEMEphem.oem` | 22 of 2881 | OEM 1.0 from another originator: a header comment, mixed-case `Lagrange`, microsecond epochs |
 | `SampleSTKEphem.e` | `stk/SampleSTKEphem.e` | 22 of 2610 | `stk.v.10.0`: three-digit exponents, no interpolation keywords. `NumberOfEphemerisPoints` is changed from 2610 to 22 to match |
 
-## Moon-centred reference files
+## Moon-centered reference files
 
 `gmat_luna.oem`, `gmat_luna.e` and `gmat_luna.bsp` are one low lunar orbit, two hours of
 point-mass Moon gravity at 60 s steps, written by GMAT R2026a in all three formats from

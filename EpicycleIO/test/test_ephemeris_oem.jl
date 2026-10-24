@@ -93,7 +93,7 @@ end
     @test occursin("Did you mean EME2000", E._frame_axes("EME200", "EARTH")[3])
     @test occursin("does not provide", E._frame_axes("B1950", "EARTH")[3])
     @test E._frame_axes("FIXED_CB", "MARS")[1] isa E.CelestialBodyFixed
-    @test occursin("barycentre", E._center_body("MARS BARYCENTER")[2])
+    @test occursin("barycenter", E._center_body("MARS BARYCENTER")[2])
     @test occursin("Did you mean EARTH", E._center_body("EATH")[2])
     @test E._center_body("moon")[1] === E.moon
     @test E._time_system("et")[1:2] == ("TDB", "ET read as TDB, as SPICE defines it")
@@ -234,7 +234,7 @@ end
     bad = Dict(
         "missing time system" => replace(oem_text(), "TIME_SYSTEM = UTC\n" => ""),
         "unsupported time system" => oem_text(system = "UT1"),
-        "barycentre" => oem_text(center = "EARTH BARYCENTER"),
+        "barycenter" => oem_text(center = "EARTH BARYCENTER"),
         "different states at one epoch" => replace(oem_text(), "2026-10-21T00:02:00 7002.0" =>
                                                                "2026-10-21T00:01:00 7002.0"),
         "too few points for the interpolation" => oem_text(interp = "INTERPOLATION = LAGRANGE\nINTERPOLATION_DEGREE = 9\n"),
@@ -410,7 +410,7 @@ end
     d = good(); d.segments[1].frame = "EME200"
     @test occursin("Did you mean EME2000", refused(d))
     d = good(); d.segments[1].center = "MARS BARYCENTER"
-    @test occursin("barycentre", refused(d))
+    @test occursin("barycenter", refused(d))
     d = good(); push!(d.segments, make_segment(10; t0 = "2026-10-21T00:05:00")); d.segments[2].time_system = "TDB"
     msg = refused(d)
     @test occursin("one per file", msg) && occursin("overlap", msg) && occursin("2 problems", msg)

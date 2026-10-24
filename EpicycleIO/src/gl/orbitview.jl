@@ -23,7 +23,7 @@ Everything is read from the spacecraft:
 
 - the trajectory, from `sat.history`
 - the epoch, from the earliest recorded sample
-- one coloured arc per propagation segment, from the same palette the plots use
+- one colored arc per propagation segment, from the same palette the plots use
 - the name shown on the entity, from `sat.name`
 
 ```julia
@@ -50,7 +50,7 @@ itself, so the orbit holds still against the stars and the body turns beneath it
 converted to UTC on the way out, whatever scale the history was recorded in, because Cesium
 reads times as UTC.
 
-An impulsive burn is marked with a point labelled with its ΔV, differenced from the velocities
+An impulsive burn is marked with a point labeled with its ΔV, differenced from the velocities
 either side of it rather than taken from whatever commanded it.
 
 Earth is the only central body today.
