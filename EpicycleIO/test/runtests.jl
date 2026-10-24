@@ -417,6 +417,20 @@ end
     struct _Tall end
     Base.show(io::IO, ::_Tall) = print(io, "line one\nline two")
     @test_throws ArgumentError report(path; bad = [_Tall(), _Tall()])
+
+    # Values read back as written: a Julian date to the microsecond and beyond, integers as
+    # integers, text as text.
+    jd = [2461334.500011574, 2461334.5000231482]
+    report(path; jd = jd, count = [1, 2], label = ["TOI", "MCC"])
+    rows = [split(l) for l in readlines(path)[2:end]]
+    @test [parse(Float64, r[1]) for r in rows] == jd
+    @test [r[2] for r in rows] == ["1", "2"] && [r[3] for r in rows] == ["TOI", "MCC"]
+    # A value holding the delimiter would split its column, so it is refused, and another
+    # delimiter writes it.
+    @test_throws "contains whitespace" report(path; label = ["a b", "c"])
+    report(path; delim = ",", label = ["a b", "c"])
+    @test strip.(split(readlines(path)[2], ",")) == ["a b"]
+    @test_throws "contains the delimiter" report(path; delim = ",", label = ["a,b", "c"])
 end
 
 end # testset
