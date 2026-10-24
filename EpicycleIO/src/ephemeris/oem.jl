@@ -668,7 +668,8 @@ Write `data` as a CCSDS Orbit Ephemeris Message in keyword = value form, version
 # Arguments
 - `path`: The file to write. It is replaced if it exists.
 - `data`: The header and segments to write.
-- `digits`: Decimal places of seconds in epochs, 0 to 9. Default 9.
+- `digits`: Decimal places of seconds in epochs, 0 to 9. Default 9. Fewer are written only if no
+  epoch moves by more than 1 ns, since a rounded epoch keeps its state and shifts the trajectory.
 - `version`: `"3.0"` or `"2.0"`. Default: `data.version` for data read from an OEM 2.0 or 3.0 file,
   else `"3.0"`, so a 1.0 file is written as 3.0.
 
@@ -840,6 +841,11 @@ function _check_oem_segment!(problems, k, s::EphemerisSegmentData, digits)
     # Checked as written: epochs that increase can still round to the same text at `digits`
     # decimal places, and the file would then repeat an epoch. The text compares in time order.
     written = [_format_epoch(t, sys, digits) for t in s.times]
+    # Rounding an epoch to `digits` places moves it while its state stays put, which shifts the
+    # trajectory by up to half the last place: 1 km at 0 digits for a TDB file of a UTC grid.
+    moved = maximum(abs(_seconds(t, _parse_epoch(w, sys)[1])) for (t, w) in zip(s.times, written))
+    moved <= 1e-9 || push!(problems, "$what epochs would move by up to $(round(moved; sigdigits = 2)) s rounded to " *
+                                     "digits = $digits; write more decimal places of seconds")
     j = findfirst(j -> written[j] <= written[j - 1], 2:n)
     j === nothing || push!(problems, "$what epochs do not increase strictly at state $(j + 1) as written " *
                                      "with digits = $digits: $(written[j]), then $(written[j + 1])")

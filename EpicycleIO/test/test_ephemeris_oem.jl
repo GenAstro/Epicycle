@@ -428,7 +428,7 @@ end
     msg = try E.write_oem(path, d; digits = 0); "" catch e sprint(showerror, e) end
     @test occursin("increase strictly at state 5", msg) && occursin("digits = 0", msg)
     @test read(path, String) == "existing content"
-    E.write_oem(tempname() * ".oem", d; digits = 1)                 # one decimal place tells them apart
+    E.write_oem(tempname() * ".oem", d)                             # at full precision they are apart
     d = good(); d.segments[1].object_name = "SATé"
     @test occursin("printable ASCII", refused(d))
 end

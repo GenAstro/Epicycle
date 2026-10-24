@@ -162,6 +162,50 @@ end
     @test maximum(abs(EA._seconds(a, b)) for (a, b) in zip(epochs(et), epochs(h))) < 1e-9
 end
 
+@testset "ephemeris API: every writing option reads back strictly" begin
+    # A file written with any combination of options follows its format exactly, so a strict read
+    # accepts it, and it holds the trajectory it was written from: within 1 mm, the resampling
+    # and frame rotation included.
+    h = history(0.0:60.0:1800.0)
+    formats = ((".oem", (;)), (".e", (;)), (".bsp", (naif_id = -900001,)))
+    steps = (nothing, 60.0, 37.5)                                          # 37.5 s leaves a short last step
+    systems = (nothing, CoordinateSystem(earth, MJ2000Eq()))
+    methods = (nothing, Lagrange(5), Hermite(5))
+    for (ext, kw) in formats, step in steps, cs in systems, m in methods
+        ext == ".bsp" && cs !== nothing && continue                           # SPK is ICRF; refused below
+        p = tempname() * ext
+        opts = (; kw..., step, coordinate_system = cs, interpolation = m)
+        write_ephemeris(p, h; opts...)
+        back = try read_ephemeris(p; strict = true) catch e
+            @info "strict read refused" ext step cs m e
+            nothing
+        end
+        @test back !== nothing
+        back === nothing && continue
+        @test maximum(position_difference(back, h)) < 1e-6                       # km
+        m === nothing || @test only(back.segments).metadata["interpolation"] == m
+        step === nothing || @test length(epochs(back)) == length(0.0:step:1800.0) + (1800.0 % step == 0 ? 0 : 1)
+    end
+    # SPK holds ICRF or ecliptic axes only, and says how to write the trajectory instead.
+    @test_throws "leave coordinate_system out" write_ephemeris(tempname() * ".bsp", h; naif_id = -900001,
+                                                               coordinate_system = CoordinateSystem(earth, MJ2000Eq()))
+    # OEM alone: the time system and the decimal places of seconds, each read back strictly.
+    for sys in (UTC(), TDB(), "GPS"), digits in (0, 3, 9)
+        p = tempname() * ".oem"
+        # UTC and GPS epochs of this grid fall on whole seconds; TDB's do not, and rounding them
+        # would move the trajectory, so the writer refuses.
+        if sys isa TDB && digits < 9
+            @test_throws "write more decimal places" write_ephemeris(p, h; time_system = sys, digits)
+            continue
+        end
+        write_ephemeris(p, h; time_system = sys, digits)
+        back = read_ephemeris(p; strict = true)
+        @test maximum(position_difference(back, h)) < 1e-6
+        epoch_text = split(first(filter(l -> occursin(r"^2026-", l), readlines(p))))[1]
+        @test digits == 0 ? !occursin('.', epoch_text) : length(split(epoch_text, '.')[2]) == digits
+    end
+end
+
 @testset "ephemeris API: resampling keeps the usable span" begin
     h = history(0.0:60.0:3600.0)
     h.segments[1].metadata["useable_start"] = at(600.0)

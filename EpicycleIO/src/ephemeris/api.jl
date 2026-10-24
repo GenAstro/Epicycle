@@ -551,7 +551,8 @@ STK `.e` or JPL SPK.
 - `classification`: OEM 3.0. The file's marking. Default: the source's, for a history read from a
   marked OEM. STK and SPK cannot carry a marking, so a marked source is refused unless
   `classification = ""` is given.
-- `digits`: OEM and STK. Decimal places of seconds in written epochs. Default 9.
+- `digits`: OEM and STK. Decimal places of seconds in written epochs. Default 9. An OEM is
+  refused if rounding would move an epoch by more than 1 ns, which would shift the trajectory.
 - `discard_unsupported`: SPK. Write without accelerations and covariance, which SPK cannot hold,
   rather than refuse. Default `false`.
 
@@ -598,6 +599,9 @@ function write_ephemeris(path::AbstractString, source::Union{SpacecraftHistory, 
     fmt isa OEM || isempty(marking) || throw(ArgumentError("write_ephemeris: the source is classified " *
         "$(repr(marking)), and $(fmt isa SPK ? "SPK" : "an STK file") cannot carry the marking; " *
         "give classification = \"\" to write it unmarked"))
+    fmt isa SPK && coordinate_system !== nothing && !(typeof(coordinate_system.axes) in (ICRF, MJ2000Ec)) &&
+        throw(ArgumentError("write_ephemeris: SPK holds states in ICRF or ecliptic axes, not " *
+            "$(nameof(typeof(coordinate_system.axes))); leave coordinate_system out and each segment is rotated to ICRF"))
     segs = _writable(_segments(source))
     isempty(segs) && throw(ArgumentError("write_ephemeris: nothing to write; the history is empty" *
         (source isa Spacecraft ? " (was the spacecraft propagated?)" : "")))
