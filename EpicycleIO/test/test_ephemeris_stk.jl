@@ -108,6 +108,26 @@ end
     # A repeated time that is not a boundary, with different states, is an error.
     msg = try ES.read_stk(stk_file(stk_text(body = join(filter(!isempty, rows), "\n")))); "" catch e sprint(showerror, e) end
     @test occursin("SegmentBoundaryTimes", msg)
+    # A boundary on a data time that is not repeated still splits there: the point ends one
+    # segment and starts the next, and the correction is recorded.
+    single = stk_text(header = "BEGIN SegmentBoundaryTimes\n    3.000000000000000e+02\nEND SegmentBoundaryTimes\n",
+                      body = join(["$(60.0k) 7000 $k 0 0 7.5 0" for k in 0:9], "\n"))
+    f = ES.read_stk(stk_file(single))
+    @test [length(s.times) for s in f.segments] == [6, 5]
+    @test f.segments[1].states[end] == f.segments[2].states[1]
+    @test any(d -> occursin("one data line", d.message), f.diagnostics)
+    @test_throws ES.EphemerisReadError ES.read_stk(stk_file(single); strict = true)
+end
+
+@testset "STK: skip_bad_lines drops the line and splits the segment there" begin
+    rows = ["$(60.0k) 7000 $k 0 0 7.5 0" for k in 0:15]
+    rows[9] = "480.0 7000 abc 0 0 7.5 0"
+    text = stk_text(body = join(rows, "\n"))                   # NumberOfEphemerisPoints counts the bad line
+    @test_throws ES.EphemerisReadError ES.read_stk(stk_file(text))
+    f = ES.read_stk(stk_file(text); skip_bad_lines = true)
+    @test [length(s.times) for s in f.segments] == [8, 7]       # no interpolation across the gap
+    @test any(d -> occursin("line skipped and the segment split here", d.message), f.diagnostics)
+    @test !any(d -> occursin("truncated", d.message), f.diagnostics)
 end
 
 @testset "STK: what cannot be read is reported, all at once" begin
@@ -171,6 +191,11 @@ end
         @test all(isapprox.(x.states, y.states; rtol = 1e-15))
         @test y.interpolation == Lagrange(7)
     end
+    # Endpoints a fraction of a nanosecond apart, which the writer accepts as shared, still
+    # write as a repeated time and read back as two segments.
+    b.times[1] = Time(last(a.times).jd1, last(a.times).jd2 + 5e-10 / 86400, :utc, :jd)
+    ES.write_stk(path, ES.EphemerisFileData(segments = [a, b]))
+    @test length(ES.read_stk(path; strict = true).segments) == 2
     # Hermite 7 is written as 3 samples less one, and reads back as Hermite 7.
     h = stk_segment(12; interp = Hermite(7))
     ES.write_stk(path, ES.EphemerisFileData(segments = [h]))

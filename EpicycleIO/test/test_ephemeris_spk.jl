@@ -118,6 +118,33 @@ end
     actual = maximum(sqrt(sum(abs2, interpolate(Lagrange(7), ets, r, (ets[j] + ets[j + 1]) / 2) -
                                     spice_state(path, -900002, (ets[j] + ets[j + 1]) / 2)[1:3])) for j in 1:length(ets) - 1)
     @test reported ≈ actual rtol = 0.01
+
+    # Reading leaves the caller's kernels as they were: a file the caller loaded stays loaded.
+    lock(EK._SPICE_LOCK) do
+        SPICE.furnsh(path)
+    end
+    EK.read_spk(path; step = 30.0)
+    loaded = lock(EK._SPICE_LOCK) do
+        try SPICE.spkgeo(-900002, EK._et(s.times[10]), "J2000", 399)[1][1] catch; NaN end
+    end
+    @test loaded ≈ s.states[10][1]
+    lock(EK._SPICE_LOCK) do
+        SPICE.unload(path)
+    end
+
+    # Each segment is sampled from itself, even where a later segment of the file covers the
+    # same times and SPICE's own lookup would take that one.
+    two = tempname() * ".bsp"
+    lock(EK._SPICE_LOCK) do
+        h = SPICE.spkopn(two, "TEST", 0)
+        for (name, shift) in (("FIRST", 0.0), ("SECOND", 100.0))
+            SPICE.spkw08(h, -900002, 399, "J2000", EK._et(s.times[1]), EK._et(s.times[end]), name, 7,
+                         [collect(v) .+ [shift, 0, 0, 0, 0, 0] for v in s.states], EK._et(s.times[1]), 60.0)
+        end
+        SPICE.spkcls(h)
+    end
+    a, b = EK.read_spk(two; step = 60.0).segments
+    @test a.states[5][1] ≈ s.states[5][1] && b.states[5][1] ≈ s.states[5][1] + 100.0
 end
 
 @testset "SPK: the writer refuses, lists every problem, and writes nothing" begin

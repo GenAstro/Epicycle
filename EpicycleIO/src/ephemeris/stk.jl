@@ -163,6 +163,7 @@ function read_stk(path::AbstractString; strict::Bool = false, skip_bad_lines::Bo
     boundaries = Tuple{Float64, Int}[]
     rows = Tuple{Float64, Vector{Float64}, Int}[]       # (seconds, values, line)
     cov_rows = Tuple{Float64, Vector{Float64}, Int}[]
+    skipped = Int[]                                      # lines of data rows skip_bad_lines dropped
     data_kind, cov_kind = "", ""
     state = :version
     pending_cov = Float64[]; pending_cov_line = 0; pending_cov_t = NaN
@@ -261,7 +262,7 @@ function read_stk(path::AbstractString; strict::Bool = false, skip_bad_lines::Bo
                     push!(vals, x)
                 end
             end
-            ok && push!(rows, (vals[1], vals[2:end], i))
+            ok ? push!(rows, (vals[1], vals[2:end], i)) : push!(skipped, i)
         elseif state == :cov
             # A covariance row may wrap over several lines, as STK's own help shows it.
             n = _STK_COV_KEYS[cov_kind]
@@ -287,7 +288,7 @@ function read_stk(path::AbstractString; strict::Bool = false, skip_bad_lines::Bo
 
     seg = _stk_segment_meta!(d, h, ref_frame, center, file)
     if seg !== nothing && !isempty(rows)
-        _stk_build!(d, file, seg, h, data_kind, rows, boundaries, cov_kind, cov_rows)
+        _stk_build!(d, file, seg, h, data_kind, rows, skipped, boundaries, cov_kind, cov_rows)
     end
     hint = any(x -> x.severity == :error && x.field in ("CoordinateSystem", "CentralBody"), d.items) ?
         "Fix the file, or override: read_ephemeris(path; ref_frame = \"…\", center = \"…\")" : ""
@@ -373,25 +374,26 @@ function _stk_segment_meta!(d, h, ref_frame, center, file)
     return ok ? seg : nothing
 end
 
-function _stk_build!(d, file, seg0, h, data_kind, rows, boundaries, cov_kind, cov_rows)
+function _stk_build!(d, file, seg0, h, data_kind, rows, skipped, boundaries, cov_kind, cov_rows)
     scale = haskey(h, "DISTANCEUNIT") ? get(_STK_DISTANCE, uppercase(h["DISTANCEUNIT"][1]), nothing) : 1e-3
     if scale === nothing
         _error!(d, h["DISTANCEUNIT"][2], "DistanceUnit", "$(repr(h["DISTANCEUNIT"][1])) is not Meters or Kilometers")
         return
     end
     haskey(h, "DISTANCEUNIT") || _note!(d, 0, "DistanceUnit", "none given; metres, STK's default, used")
-    # How many points to read.
+    # How many points to read. The file's count includes any line skip_bad_lines dropped.
     if haskey(h, "NUMBEROFEPHEMERISPOINTS")
         v, line = h["NUMBEROFEPHEMERISPOINTS"]
         n = tryparse(Int, v)
+        lines = sort!(vcat([r[3] for r in rows], skipped))      # every data line, read or skipped
         if n === nothing || n < 1
             _fixed!(d, line, "NumberOfEphemerisPoints", "$(repr(v)) is not a positive integer; all points read")
-        elseif n > length(rows)
-            _error!(d, line, "NumberOfEphemerisPoints", "says $n points but the file has $(length(rows)); it may be truncated")
+        elseif n > length(lines)
+            _error!(d, line, "NumberOfEphemerisPoints", "says $n points but the file has $(length(lines)); it may be truncated")
             return
-        elseif n < length(rows)
-            _fixed!(d, line, "NumberOfEphemerisPoints", "says $n points; the $(length(rows) - n) after it are ignored, as STK ignores them")
-            resize!(rows, n)
+        elseif n < length(lines)
+            _fixed!(d, line, "NumberOfEphemerisPoints", "says $n points; the $(length(lines) - n) after it are ignored, as STK ignores them")
+            filter!(r -> r[3] <= lines[n], rows)
         end
     end
     epoch = seg0.start_time
@@ -427,6 +429,14 @@ function _stk_build!(d, file, seg0, h, data_kind, rows, boundaries, cov_kind, co
                             "STK allows a repeated time only at a SegmentBoundaryTimes entry")
                     continue
                 end
+            elseif any(l -> prev[3] < l < r[3], skipped)
+                push!(groups, [])                              # a line skipped between them: interpolation must not cross it
+            elseif prev[1] in bset && length(cur) > 1
+                # A boundary on a data time that is not repeated: that point ends one segment
+                # and starts the next, so neither loses it.
+                _fixed!(d, prev[3], "SegmentBoundaryTimes", "boundary at $(prev[1]) s has one data line, not the " *
+                        "repeated pair STK writes; it ends one segment and starts the next")
+                push!(groups, [prev])
             elseif any(b -> prev[1] < b < r[1], bset)
                 push!(groups, [])                              # a boundary between points, no repeat
             end
@@ -657,6 +667,10 @@ function _stk_lines(data::EphemerisFileData, digits)
         for (j, t) in enumerate(s.times)
             v = positions_only ? s.states[j][1:3] : s.states[j]
             acc && (v = vcat(v, s.accelerations[j]))
+            # A segment's last point is written at the boundary time itself, the next segment's
+            # first epoch, which its own epoch may miss by up to a nanosecond; otherwise the two
+            # rows print different times and a reader sees no repeated point there.
+            j == length(s.times) && k < length(segs) && (t = first(segs[k + 1].times))
             push!(out, _num(secs(t)) * " " * join(_num.(v .* scale), " "))
         end
     end

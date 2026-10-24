@@ -119,7 +119,8 @@ function _spk_summaries(d, path)
         handle = SPICE.dafopr(path)
         SPICE.dafbfs(handle)
         while SPICE.daffna()
-            dc, ic = SPICE.dafus(SPICE.dafgs(), 2, 6)
+            descr = SPICE.dafgs()[1:5]                             # the packed summary: 2 doubles, 6 integers
+            dc, ic = SPICE.dafus(descr, 2, 6)
             name = String(strip(SPICE.dafgn()))
             typ = ic[4]
             data = nothing
@@ -129,7 +130,7 @@ function _spk_summaries(d, path)
                 raw = SPICE.dafgda(handle, ic[5], ic[5] + 7n - 1)
                 data = (param = round(Int, tail[1]), n = n, raw = raw)
             end
-            push!(out, (dc = collect(dc), ic = collect(ic), name = name, data = data))
+            push!(out, (dc = collect(dc), ic = collect(ic), descr = descr, name = name, data = data))
         end
     catch e
         _error!(d, 0, "file", "SPICE could not read it as an SPK file: $(sprint(showerror, e))")
@@ -147,11 +148,11 @@ function _spk_segment!(d, path, k, s, step)
     frame = get(_SPK_FRAMES, frame_code, nothing)
     seg = EphemerisSegmentData(object_name = isempty(s.name) ? "UNKNOWN" : s.name, object_id = string(target),
                                center = center, time_system = "TDB")
+    frame === nothing && return (_error!(d, 0, "frame", "$where_ is in SPICE frame $frame_code; Epicycle reads J2000 and ECLIPJ2000 segments"); nothing)
+    frame == "ICRF" && _note!(d, 0, "frame", "SPICE's J2000 frame read as ICRF, as NAIF defines it")
+    seg.frame = frame
     if s.data !== nothing
-        frame === nothing && return (_error!(d, 0, "frame", "$where_ is in SPICE frame $frame_code; Epicycle reads J2000 and ECLIPJ2000 segments"); nothing)
-        frame == "ICRF" && _note!(d, 0, "frame", "SPICE's J2000 frame read as ICRF, as NAIF defines it")
         n, raw = s.data.n, s.data.raw
-        seg.frame = frame
         seg.states = [SVector{6, Float64}(raw[6j - 5:6j]) for j in 1:n]
         seg.times = [_from_et(raw[6n + j]) for j in 1:n]
         seg.interpolation = typ == 9 ? Lagrange(s.data.param) : Hermite(2 * (s.data.param + 1) - 1)
@@ -170,19 +171,22 @@ function _spk_segment!(d, path, k, s, step)
     return seg
 end
 
-# Evaluate a segment that stores no samples, through SPICE, and measure the sampling error.
+# Evaluate a segment that stores no samples, through SPICE, and measure the sampling error. The
+# segment is evaluated by itself from the open file (spkpvn), in its own frame: the kernel pool is
+# not touched, so kernels the caller has loaded stay loaded, and another segment of the file that
+# overlaps this one cannot supply its samples.
 function _spk_sample!(d, path, s, seg, step, where_)
     a, b = s.dc
     ets = collect(a:step:b)
     # The end, unless the last sample is already there to within rounding of the coverage.
     b - last(ets) > 1e-6 * step ? push!(ets, b) : (ets[end] = b)
     length(ets) >= 8 || (_error!(d, 0, "step", "$where_ spans $(b - a) s; a step of $step s gives $(length(ets)) samples and at least 8 are needed"); return false)
-    target, centre = s.ic[1], s.ic[2]
-    sample(et) = SPICE.spkgeo(target, et, "J2000", centre)[1]
-    states, mids = Vector{Float64}[], Float64[]
+    states, mids = Vector{Float64}[], Vector{Float64}[]
     ok = lock(_SPICE_LOCK) do
+        handle = nothing
         try
-            SPICE.furnsh(path)
+            handle = SPICE.dafopr(path)
+            sample(et) = SPICE.spkpvn(handle, s.descr, et)[2]
             for et in ets
                 push!(states, collect(sample(et)))
             end
@@ -192,18 +196,17 @@ function _spk_sample!(d, path, s, seg, step, where_)
             _error!(d, 0, "file", "SPICE could not evaluate $where_: $(sprint(showerror, e))")
             false
         finally
-            try SPICE.unload(path) catch end
+            handle === nothing || try SPICE.dafcls(handle) catch end
         end
     end
     ok || return false
-    seg.frame = "ICRF"
     seg.states = [SVector{6, Float64}(x) for x in states]
     seg.times = _from_et.(ets)
     seg.interpolation = Lagrange(7)
     r = [x[1:3] for x in seg.states]
     err = maximum(sqrt(sum(abs2, interpolate(Lagrange(7), ets, r, (ets[j] + ets[j + 1]) / 2) - mids[j])) for j in 1:length(mids))
-    _note!(d, 0, "step", "$where_ (SPK type $(s.ic[4])) sampled every $step s through SPICE, in its J2000 frame read " *
-                         "as ICRF; Lagrange 7 between samples is within $(@sprintf("%.3g", err)) km of SPICE")
+    _note!(d, 0, "step", "$where_ (SPK type $(s.ic[4])) sampled every $step s through SPICE; " *
+                         "Lagrange 7 between samples is within $(@sprintf("%.3g", err)) km of the segment")
     return true
 end
 
