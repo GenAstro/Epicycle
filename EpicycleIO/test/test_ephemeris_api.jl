@@ -126,6 +126,42 @@ end
     @test length(only(read_ephemeris(d).segments).metadata["covariances"]) == 1
 end
 
+@testset "ephemeris API: an OEM in each time system" begin
+    # The first epoch, 2026-10-21T00:00:00 UTC, as each system reads it. UTC, TAI, TT and GPS
+    # differ by whole offsets (37 leap seconds in 2026); TCG runs ahead of TT at the rate L_G
+    # from 1977-01-01T00:00:32.184 TT; TDB is within 2 ms of TT; TCB runs ahead of TDB at L_B
+    # from the same origin, less TDB₀.
+    function seconds_of_day(text)
+        hour, minute, second = parse.(Float64, split(split(text, 'T')[2], ':'))
+        return 3600hour + 60minute + second
+    end
+    jd_tt = 2461334.5 + (37 + 32.184) / 86400
+    tcg = 32.184 + 37 + 6.969290134e-10 * (jd_tt - 2443144.5003725) * 86400
+    tcb = 32.184 + 37 + 1.550519768e-8 * (jd_tt - 2443144.5003725) * 86400 - 6.55e-5
+    expected = Dict("UTC" => (0.0, 1e-9), "TAI" => (37.0, 1e-9), "TT" => (69.184, 1e-9), "GPS" => (18.0, 1e-9),
+                    "TCG" => (tcg, 1e-6), "TDB" => (69.184, 2e-3), "TCB" => (tcb, 2e-3))
+    h = history(0.0:60.0:600.0)
+    for (name, scale) in (("UTC", UTC()), ("TAI", TAI()), ("TT", TT()), ("GPS", "GPS"), ("TCG", TCG()), ("TDB", TDB()), ("TCB", TCB()))
+        p = tempname() * ".oem"
+        write_ephemeris(p, h; time_system = scale)
+        lines = readlines(p)
+        @test any(l -> startswith(l, "TIME_SYSTEM") && endswith(l, " $name"), lines)
+        first_epoch = first(filter(l -> occursin(r"^2026-", l), lines))
+        offset, tolerance = expected[name]
+        @test abs(seconds_of_day(split(first_epoch)[1]) - offset) < tolerance
+        # Read back, every epoch is the instant it was written for.
+        back = read_ephemeris(p; strict = true)
+        @test only(back.segments).metadata["source"].format == :oem
+        @test maximum(abs(EA._seconds(a, b)) for (a, b) in zip(epochs(back), epochs(h))) < 1e-9
+    end
+    # ET is TDB by another name; it reads, with a note.
+    p = tempname() * ".oem"
+    write_ephemeris(p, h; time_system = TDB())
+    write(p, replace(read(p, String), "TIME_SYSTEM          = TDB" => "TIME_SYSTEM          = ET"))
+    et = read_ephemeris(p)
+    @test maximum(abs(EA._seconds(a, b)) for (a, b) in zip(epochs(et), epochs(h))) < 1e-9
+end
+
 @testset "ephemeris API: resampling keeps the usable span" begin
     h = history(0.0:60.0:3600.0)
     h.segments[1].metadata["useable_start"] = at(600.0)

@@ -272,6 +272,13 @@ end
     @test length(back.covariances) == length(c.covariances)
     @test all(abs(ES._seconds(x.epoch, y.epoch)) < 1e-9 && x.frame == y.frame for (x, y) in zip(c.covariances, back.covariances))
     @test all(isapprox(x.matrix, y.matrix; rtol = 1e-14) for (x, y) in zip(c.covariances, back.covariances))
+    # A TDB segment is written with TimeScale TDB, its times TDB seconds from the epoch, and reads
+    # back at the same instants.
+    t = stk_segment(12); t.time_system = "TDB"
+    ES.write_stk(path, ES.EphemerisFileData(segments = [t]))
+    @test any(l -> occursin(r"^TimeScale\s+TDB$", l), readlines(path))
+    back_tdb = only(ES.read_stk(path; strict = true).segments)
+    @test back_tdb.time_system == "TDB" && maximum(abs(ES._seconds(a, b)) for (a, b) in zip(t.times, back_tdb.times)) < 1e-9
     # Hermite degree 1 is written as InterpolationSamplesM1 0 and reads back as itself.
     h1 = stk_segment(2; interp = Hermite(1))
     ES.write_stk(path, ES.EphemerisFileData(segments = [h1]))
