@@ -262,6 +262,57 @@ end
     @test occursin("line 19", msg) && occursin("\"abc\"", msg) && occursin("skip_bad_lines", msg)
 end
 
+# Each problem the reader cannot correct, reported on its line, under its keyword, saying what is
+# wrong. In oem_text() the metadata runs from META_START on line 4 to META_STOP on line 14, and
+# the six data lines are 15 to 20.
+@testset "OEM: each error names its line, its keyword and the problem" begin
+    epoch = "EPOCH = 2026-10-21T00:00:00\n"
+    six = "1.0\n0 1\n0 0 1\n0 0 0 1\n0 0 0 0 1\n0 0 0 0 0 1\n"
+    cov(body) = "COVARIANCE_START\n" * body
+    cases = [
+        ("data after the covariance", oem_text() * cov(epoch * six) * "COVARIANCE_STOP\n2026-10-21T00:06:00 7006 0 0 0 7.5 0\n",
+         30, "data", "after COVARIANCE_STOP"),
+        ("META_START inside metadata", replace(oem_text(), "OBJECT_ID = 2026-001A\n" => "OBJECT_ID = 2026-001A\nMETA_START\n"),
+         7, "META_START", "inside a metadata block"),
+        ("META_STOP alone", oem_text() * "META_STOP\n", 21, "META_STOP", "without META_START"),
+        ("COVARIANCE_START in metadata", replace(oem_text(), "META_STOP\n" => "COVARIANCE_START\nMETA_STOP\n"),
+         14, "COVARIANCE_START", "outside a segment's data"),
+        ("COVARIANCE_STOP alone", oem_text() * "COVARIANCE_STOP\n", 21, "COVARIANCE_STOP", "without COVARIANCE_START"),
+        ("covariance open at the next segment", oem_text() * cov(epoch * six) * oem_text()[findfirst("META_START", oem_text())[1]:end],
+         29, "COVARIANCE_STOP", "not closed before META_START"),
+        ("a line that is not KEYWORD = value", oem_text(header = "garbage\n"), 2, "file", "expected KEYWORD = value"),
+        ("a header keyword twice", oem_text(header = "ORIGINATOR = A\n"), 4, "ORIGINATOR", "given twice in the header"),
+        ("a metadata keyword twice", oem_text(meta = "OBJECT_NAME = B\n"), 14, "OBJECT_NAME", "given twice in one metadata block"),
+        ("no CENTER_NAME", replace(oem_text(), "CENTER_NAME = EARTH\n" => ""), 13, "CENTER_NAME", "mandatory CENTER_NAME missing"),
+        ("no REF_FRAME", replace(oem_text(), "REF_FRAME = EME2000\n" => ""), 13, "REF_FRAME", "mandatory REF_FRAME missing"),
+        ("no TIME_SYSTEM", replace(oem_text(), "TIME_SYSTEM = UTC\n" => ""), 13, "TIME_SYSTEM", "mandatory TIME_SYSTEM missing"),
+        ("a bad metadata epoch", replace(oem_text(), "START_TIME = 2026-10-21" => "START_TIME = 2026-13-21"), 10, "START_TIME", "month 13"),
+        ("a bad covariance EPOCH", oem_text() * cov("EPOCH = yesterday\n" * six) * "COVARIANCE_STOP\n", 22, "EPOCH", "not a CCSDS epoch"),
+        ("COV_REF_FRAME before EPOCH", oem_text() * cov("COV_REF_FRAME = RTN\n" * epoch * six) * "COVARIANCE_STOP\n",
+         22, "COV_REF_FRAME", "before EPOCH"),
+        ("an unknown COV_REF_FRAME", oem_text() * cov(epoch * "COV_REF_FRAME = XYZ\n" * six) * "COVARIANCE_STOP\n",
+         23, "COV_REF_FRAME", "XYZ"),
+        ("a keyword in a covariance", oem_text() * cov(epoch * "FOO = 1\n" * six) * "COVARIANCE_STOP\n", 23, "FOO", "not a covariance keyword"),
+        ("covariance values before EPOCH", oem_text() * cov(six) * "COVARIANCE_STOP\n", 22, "EPOCH", "before an EPOCH line"),
+        ("a covariance value that is not a number", oem_text() * cov(epoch * replace(six, "0 1\n" => "0 abc\n"; count = 1)) * "COVARIANCE_STOP\n",
+         24, "covariance", "\"abc\" is not a number"),
+        ("more than 21 covariance values", oem_text() * cov(epoch * six * "1 1\n") * "COVARIANCE_STOP\n", 29, "covariance", "more than 21"),
+        ("a file ending in metadata", oem_text() * "META_START\nOBJECT_NAME = X\n", 22, "META_STOP", "ends inside a metadata block"),
+        ("a file ending in a covariance", oem_text() * cov(epoch * "1.0\n"), 23, "COVARIANCE_STOP", "ends inside a covariance block"),
+        ("a header and no segment", "CCSDS_OEM_VERS = 3.0\nCREATION_DATE = 2026-10-21T00:00:00\nORIGINATOR = T\n",
+         3, "META_START", "header but no segments"),
+        ("a segment with no data", oem_text(body = ""), 4, "data", "has no ephemeris lines"),
+        ("a segment of one line", oem_text(body = "2026-10-21T00:00:00 7000 0 0 0 7.5 0", interp = ""), 4, "data", "one ephemeris line"),
+    ]
+    for (what, text, line, field, phrase) in cases
+        err = try E.read_oem(oem_file(text)); nothing catch e e end
+        found = err isa E.EphemerisReadError &&
+                any(p -> p.line == line && p.field == field && occursin(phrase, p.message), err.problems)
+        found || @info "not as expected: $what" err
+        @test found
+    end
+end
+
 @testset "OEM: skip_bad_lines splits the segment and rechecks it" begin
     rows = ["2026-10-21T00:$(lpad(k, 2, '0')):00 $(7000.0 + k) 0 0 0 7.5 0" for k in 0:11]
     rows[6] = "2026-10-21T00:05:00 7005.0 0 0 0 7.5"                    # line with a value missing

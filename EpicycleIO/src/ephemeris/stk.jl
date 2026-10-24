@@ -282,10 +282,10 @@ function read_stk(path::AbstractString; strict::Bool = false, skip_bad_lines::Bo
         end
     end
     state == :version && _error!(d, 1, "file", "empty file")
-    state in (:header, :data, :cov, :boundaries) && _error!(d, length(lines), "END Ephemeris", "END Ephemeris missing; the file may be truncated")
+    state in (:header, :data, :cov, :boundaries) && _error!(d, _last_line(lines), "END Ephemeris", "END Ephemeris missing; the file may be truncated")
     isnan(pending_cov_t) || _error!(d, pending_cov_line, "covariance", "covariance row cut short")
-    isempty(data_kind) && !_has_errors(d) && _error!(d, length(lines), "data", "no ephemeris data block")
-    !isempty(data_kind) && isempty(rows) && _error!(d, length(lines), "data",
+    isempty(data_kind) && !_has_errors(d) && _error!(d, _last_line(lines), "data", "no ephemeris data block")
+    !isempty(data_kind) && isempty(rows) && _error!(d, _last_line(lines), "data",
         isempty(skipped) ? "the ephemeris data block has no points" : "every point was skipped; nothing is left to read")
 
     seg = _stk_segment_meta!(d, h, ref_frame, center, file)
@@ -394,15 +394,15 @@ function _stk_build!(d, file, seg0, h, data_kind, rows, skipped, boundaries, cov
     if haskey(h, "NUMBEROFEPHEMERISPOINTS")
         v, line = h["NUMBEROFEPHEMERISPOINTS"]
         n = tryparse(Int, v)
-        lines = sort!(vcat([r[3] for r in rows], skipped))      # every data line, read or skipped
+        points = sort!(vcat([r[3] for r in rows], skipped))     # the line of every point, read or skipped
         if n === nothing || n < 1
             _fixed!(d, line, "NumberOfEphemerisPoints", "$(repr(v)) is not a positive integer; all points read")
-        elseif n > length(lines)
-            _error!(d, line, "NumberOfEphemerisPoints", "says $n points but the file has $(length(lines)); it may be truncated")
+        elseif n > length(points)
+            _error!(d, line, "NumberOfEphemerisPoints", "says $n points but the file has $(length(points)); it may be truncated")
             return
-        elseif n < length(lines)
-            _fixed!(d, line, "NumberOfEphemerisPoints", "says $n points; the $(length(lines) - n) after it are ignored, as STK ignores them")
-            filter!(r -> r[3] <= lines[n], rows)
+        elseif n < length(points)
+            _fixed!(d, line, "NumberOfEphemerisPoints", "says $n points; the $(length(points) - n) after it are ignored, as STK ignores them")
+            filter!(r -> r[3] <= points[n], rows)
         end
     end
     epoch = seg0.start_time

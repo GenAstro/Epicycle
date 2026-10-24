@@ -101,6 +101,10 @@ _error!(d::_Diagnostics, line, field, msg) = push!(d.items, Diagnostic(:error, l
 _note!(d::_Diagnostics, line, field, msg) = push!(d.items, Diagnostic(:note, line, String(field), msg))
 _has_errors(d::_Diagnostics) = any(x -> x.severity == :error, d.items)
 
+# The number of a file's last line, for a problem found at its end: splitting a file that ends in
+# a newline leaves an empty piece after it, which is not a line.
+_last_line(lines) = length(lines) > 1 && isempty(last(lines)) ? length(lines) - 1 : length(lines)
+
 # Throws if anything could not be corrected; otherwise warns once, listing the corrections, and
 # returns the corrections and notes. Notes do not warn: they describe a valid file.
 function _finish(d::_Diagnostics; hint::AbstractString = "")

@@ -89,10 +89,11 @@ function read_oem(path::AbstractString; strict::Bool = false, skip_bad_lines::Bo
     end
     p = _OEMParser(d, EphemerisFileData(format = :oem), skip_bad_lines,
                    ref_frame, center, time_system)
-    for (i, raw) in enumerate(split(text, r"\r\n|\n\r|\r|\n"))
+    lines = split(text, r"\r\n|\n\r|\r|\n")
+    for (i, raw) in enumerate(lines)
         _oem_line!(p, i, raw)
     end
-    _oem_end!(p, length(split(text, r"\r\n|\n\r|\r|\n")))
+    _oem_end!(p, _last_line(lines))
     hint = any(x -> x.severity == :error && x.field in ("REF_FRAME", "CENTER_NAME", "TIME_SYSTEM"), d.items) ?
         "Fix the file, or override a field: read_ephemeris(path; ref_frame = \"…\", center = \"…\", time_system = \"…\")" :
         (any(x -> x.severity == :error && x.field == "data", d.items) && !skip_bad_lines ?
