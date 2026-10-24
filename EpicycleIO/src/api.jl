@@ -30,6 +30,10 @@ Build the traces one call describes: expand the arrays into series, then give ea
 share of the attributes.
 """
 function build_traces(trace_type::Symbol, args, kwargs; offset::Int = 0)
+    # A histogram has no x: a second array would be read as an x and dropped without a word.
+    trace_type === :histogram && length(args) != 1 && throw(ArgumentError(
+        "histogram takes one array of values; got $(length(args)). To compare several, call " *
+        "histogram! for each."))
     series = expand_series(args...)
     n = length(series)
 
@@ -47,15 +51,42 @@ function build_traces(trace_type::Symbol, args, kwargs; offset::Int = 0)
         end
 
         nm = series_name(get(kwargs, :name, nothing), s)
-        nm === nothing || (fields[:name] = nm isa AbstractVector ?
-                                           distribute(:name, nm, i, n, effective) : nm)
+        if nm isa AbstractVector
+            # One name per trace, so a single trace takes the single entry: Plotly wants a string.
+            length(nm) == n || throw(ArgumentError(
+                "`name` has $(length(nm)) entries but the call draws $n trace$(n == 1 ? "" : "s")."))
+            fields[:name] = nm[i]
+        elseif nm !== nothing
+            fields[:name] = nm
+        end
 
-        haskey(fields, :line) || haskey(fields, :line_color) ||
-            (fields[:line_color] = palette_color(offset + i))
+        # Bars are filled, so their color is the marker's; a line color would be ignored.
+        if effective in (:bar, :histogram, :barpolar)
+            haskey(fields, :marker) || haskey(fields, :marker_color) ||
+                (fields[:marker_color] = palette_color(offset + i))
+        else
+            haskey(fields, :line) || haskey(fields, :line_color) ||
+                (fields[:line_color] = palette_color(offset + i))
+        end
 
+        _group_error_bars!(fields)
         push!(traces, _trace(effective, s, fields))
     end
     return traces
+end
+
+# PlotlyBase reads every underscore as a level, so `error_y_array` would become error.y.array,
+# which Plotly ignores: the group's own name has an underscore. Its attributes are gathered
+# under `error_y` here instead.
+function _group_error_bars!(fields::Dict{Symbol, Any})
+    for group in (:error_x, :error_y, :error_z)
+        prefix = string(group, "_")
+        keys_in = [k for k in keys(fields) if startswith(string(k), prefix)]
+        isempty(keys_in) && continue
+        fields[group] = PlotlyBase.attr(; (Symbol(chopprefix(string(k), prefix)) => fields[k] for k in keys_in)...)
+        foreach(k -> delete!(fields, k), keys_in)
+    end
+    return fields
 end
 
 # Which keys carry the data differs by trace type: cartesian uses x/y, polar theta/r,
@@ -63,6 +94,9 @@ end
 function _trace(trace_type::Symbol, s::Series, fields::Dict{Symbol, Any})
     fam = trace_family(trace_type)
     x, y = plotdata(s.x), plotdata(s.y)      # NaN and Inf become gaps rather than an error
+    # A histogram is given one array, which expands to its values against their indices; Plotly
+    # bins x, so the values go there alone.
+    trace_type === :histogram && return PlotlyBase.GenericTrace(:histogram; x = y, fields...)
     if fam === :polar
         return PlotlyBase.GenericTrace(trace_type; theta = x, r = y, fields...)
     elseif fam === :geo
@@ -176,7 +210,7 @@ for f in TRACE_WRAPPERS
     build = f === :band            ? :(build_band(rest, kwargs)) :
             f in GRID_WRAPPERS     ? :(build_grid($(QuoteNode(f)), rest, kwargs)) :
             f in SPATIAL_WRAPPERS  ? :(build_spatial($(QuoteNode(f)), rest, kwargs)) :
-                                     :(build_traces($(QuoteNode(f)), rest, kwargs))
+                                     :(build_traces($(QuoteNode(f)), rest, kwargs; offset))
 
     # Every `!` form differs from its partner in exactly one way, so it says that and points at
     # the partner for the rest (§11.1). Writing nine near-identical docstrings by hand would
@@ -190,6 +224,7 @@ for f in TRACE_WRAPPERS
     @eval begin
         function $f(a::WrapperArg, more...; kwargs...)
             title, rest = _split_panel((a, more...))
+            offset = 0
             traces = $build
             set_traces!(title, traces)
             ensure_browser()
@@ -197,7 +232,7 @@ for f in TRACE_WRAPPERS
         end
         function $bang(a::WrapperArg, more...; kwargs...)
             title, rest = _split_panel((a, more...))
-            get_panel(title)
+            offset = length(get_panel(title).traces)          # the colors continue from those there
             traces = $build
             add_traces!(title, traces)
             ensure_browser()
@@ -427,9 +462,11 @@ function build_grid(trace_type::Symbol, args, kwargs)
     # whatever the serializer decides, which is not a thing to leave to chance.
     rows = [plotdata(collect(view(Z, i, :))) for i in 1:size(Z, 1)]
 
-    fields = Dict{Symbol, Any}(:z => rows)
-    x === nothing || (fields[:x] = x)
-    y === nothing || (fields[:y] = y)
+    # PlotlyBase marks a contour or heatmap `transpose`, taking z for a column-major matrix; the
+    # rows above are already in Plotly's order, so that would turn the grid on its side.
+    fields = Dict{Symbol, Any}(:z => rows, :transpose => false)
+    x === nothing || (fields[:x] = plotdata(x))
+    y === nothing || (fields[:y] = plotdata(y))
     for (k, v) in pairs(kwargs)
         warn_unknown_attribute(trace_type, k)
         fields[k] = v
@@ -458,6 +495,7 @@ function build_spatial(trace_type::Symbol, args, kwargs)
         warn_unknown_attribute(trace_type, k)
         fields[k] = v
     end
+    _group_error_bars!(fields)
     return [PlotlyBase.GenericTrace(trace_type; fields...)]
 end
 

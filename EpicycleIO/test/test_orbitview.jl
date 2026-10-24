@@ -130,6 +130,8 @@ end
 @testset "the palette cycles and matches the plots" begin
     @test IO_._pick_color(nothing, 1) == IO_.DEFAULT_PALETTE[1]
     @test IO_._pick_color(nothing, length(IO_.DEFAULT_PALETTE) + 1) == IO_.DEFAULT_PALETTE[1]
+    # The same colors in the same order as the data plots, so an arc and its first line match.
+    @test [string("rgb(", c[1], ",", c[2], ",", c[3], ")") for c in IO_.DEFAULT_PALETTE] == IO_.PALETTE
     @test IO_._pick_color([(1, 2, 3, 4), (5, 6, 7, 8)], 2) == (5, 6, 7, 8)
     @test IO_._pick_color([(1, 2, 3, 4), (5, 6, 7, 8)], 3) == (1, 2, 3, 4)   # cycles
     @test IO_._pick_color((9, 8, 7, 6), 4) == (9, 8, 7, 6)                   # a lone colour

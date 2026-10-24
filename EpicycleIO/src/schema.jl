@@ -44,14 +44,23 @@ function _attr_node(attrs, key::Symbol)
     length(parts) == 1 && return nothing
 
     node = attrs
-    for p in parts
+    i = 1
+    while i <= length(parts)
         node isa AbstractDict || return nothing
         # Nested groups sometimes hold their children under a further :attributes key.
+        p = parts[i]
         if !haskey(node, p) && haskey(node, :attributes) && node[:attributes] isa AbstractDict
             node = node[:attributes]
         end
+        # A group whose own name has an underscore, as `error_y` in `error_y_array`, is the
+        # part joined with the next.
+        if !haskey(node, p) && i < length(parts) && haskey(node, Symbol(p, "_", parts[i + 1]))
+            p = Symbol(p, "_", parts[i + 1])
+            i += 1
+        end
         haskey(node, p) || return nothing
         node = node[p]
+        i += 1
     end
     return node
 end
@@ -70,7 +79,8 @@ function is_array_ok(trace_type::Symbol, key::Symbol)
     attrs === nothing && return false
     node = _attr_node(attrs, key)
     node isa AbstractDict || return false
-    return get(node, :arrayOk, false) === true
+    # A data array, as an error bar's `array`, is one value per point by definition.
+    return get(node, :arrayOk, false) === true || get(node, :valType, "") == "data_array"
 end
 
 """
@@ -90,7 +100,13 @@ function layout_attr_exists(key::Symbol)
     lay = get(schema(), :layout, nothing)
     lay isa AbstractDict || return true
     attrs = get(lay, :layoutAttributes, lay)
-    return _attr_node(attrs, key) !== nothing
+    _attr_node(attrs, key) !== nothing && return true
+    # Some layout attributes belong to a trace type, as `barmode` to bar, and the schema keeps
+    # them with the trace.
+    traces = get(schema(), :traces, nothing)
+    traces isa AbstractDict || return false
+    return any(t -> t isa AbstractDict && _attr_node(get(t, :layoutAttributes, nothing), key) !== nothing,
+               values(traces))
 end
 
 # Checking is on by default. It costs a dictionary lookup per attribute, which is nothing beside
