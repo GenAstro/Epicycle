@@ -8,6 +8,7 @@ using Test
 using EpicycleIO
 using AstroEpochs, AstroFrames, AstroUniverse, AstroModels, AstroStates
 using AstroRoutines: Lagrange, Hermite
+import AstroRoutines
 using StaticArrays
 
 const EA = EpicycleIO
@@ -222,29 +223,56 @@ end
 
 # The GMAT reference files committed with the examples: every format of one trajectory.
 const GMAT_EXAMPLES = joinpath(@__DIR__, "..", "..", "Epicycle", "examples")
-if isdir(joinpath(GMAT_EXAMPLES, "Ephemeris_OEM"))
-    @testset "ephemeris API: GMAT's OEM, .e and SPK of one orbit agree" begin
-        oem = read_ephemeris(joinpath(GMAT_EXAMPLES, "Ephemeris_OEM", "gmat_leo.oem"); strict = true)
-        stk = read_ephemeris(joinpath(GMAT_EXAMPLES, "Ephemeris_STK", "gmat_leo.e"); strict = true)
-        spk = read_ephemeris(joinpath(GMAT_EXAMPLES, "Ephemeris_SPK", "gmat_leo.bsp"))
-        for e in (oem, stk, spk)
-            @test length(epochs(e)) == 121 && length(e.segments) == 1
-        end
-        @test oem.segments[1].metadata["interpolation"] == Lagrange(7)
-        @test stk.segments[1].metadata["interpolation"] == Lagrange(5)       # GMAT writes no InterpolationSamplesM1
-        @test spk.segments[1].metadata["interpolation"] == Hermite(7)
-        @test to_vector(oem.segments[1].states[1]) == [7000.0, 0.0, 1300.0, 0.0, 7.35, 1.0]
-        # The OEM and .e are both EME2000 and agree to millimetres, GMAT's .e epochs carrying
-        # about 1 µs of rounding.
-        @test maximum(position_difference(oem, stk)) < 1e-5                # km
-        # GMAT's SPK and OEM of the same orbit differ, read by Epicycle under each format's own
-        # frame definition (CCSDS EME2000 as FK5 J2000, NAIF J2000 as ICRF), by a fixed rotation of
-        # a few tens of mas and GMAT's SPK epochs 25.6 µs from its OEM's: about 1.3 m here. This
-        # records the measured difference so a change in either is seen; it is an open question
-        # how GMAT's EME2000 relates to ICRF, not a tolerance.
-        d = position_difference(oem, spk)
-        @test 0.5e-3 < maximum(d) < 2.0e-3
-        gap = [EA._seconds(a, b) for (a, b) in zip(epochs(oem), epochs(spk))]
-        @test all(g -> -30e-6 < g < -20e-6, gap)
+
+# GMAT propagated point-mass gravity with Epicycle's μ, so the truth is the two-body orbit through
+# each file's first state. Measured 2026-10-24: the OEM within 1.2 µm of it at its epochs and
+# 46 µm between them (Lagrange 7 at 60 s); the .e and SPK within 6 and 8 mm, the error of GMAT's
+# rounded epochs there. Each tolerance is about twice the measured value.
+const GMAT_MU = 398600.4418
+function two_body(x0, dt)
+    a, e, i, Ω, ω, ν = cart_to_kep(x0, GMAT_MU)
+    M = AstroRoutines.true_to_mean_anomaly(ν, e) + sqrt(GMAT_MU / a^3) * dt
+    return kep_to_cart([a, e, i, Ω, ω, AstroRoutines.mean_to_true_anomaly(mod2pi(M), e)], GMAT_MU)
+end
+@testset "ephemeris API: GMAT's files are the two-body orbit, at their epochs and between" begin
+    for (file, at_epochs, between) in (("Ephemeris_OEM/gmat_leo.oem", 3e-9, 1e-7),     # km
+                                       ("Ephemeris_STK/gmat_leo.e", 1.2e-5, 1.6e-5),
+                                       ("Ephemeris_SPK/gmat_leo.bsp", 1.1e-5, 1.0e-5))
+        eph = read_ephemeris(joinpath(GMAT_EXAMPLES, file))
+        s = only(eph.segments)
+        x0, t0 = to_vector(s.states[1]), s.times[1]
+        truth(t) = two_body(x0, EA._seconds(t0, t))
+        dist(x, y) = sqrt(sum(abs2, x[1:3] - y[1:3]))
+        # The stored states, and state_at returning them exactly.
+        @test maximum(dist(to_vector(x), truth(t)) for (t, x) in zip(s.times, s.states)) < at_epochs
+        @test all(to_vector(CartesianState(state_at(eph, t))) == to_vector(x) for (t, x) in zip(s.times, s.states))
+        # Halfway between each pair, interpolated with the file's own method.
+        mids = [Time(a.jd1, a.jd2 + EA._seconds(a, b) / 2 / 86400, a.scale, :jd) for (a, b) in zip(s.times[1:end-1], s.times[2:end])]
+        @test maximum(dist(to_vector(CartesianState(state_at(eph, t))), truth(t)) for t in mids) < between
     end
+end
+
+@testset "ephemeris API: GMAT's OEM, .e and SPK of one orbit agree" begin
+    oem = read_ephemeris(joinpath(GMAT_EXAMPLES, "Ephemeris_OEM", "gmat_leo.oem"); strict = true)
+    stk = read_ephemeris(joinpath(GMAT_EXAMPLES, "Ephemeris_STK", "gmat_leo.e"); strict = true)
+    spk = read_ephemeris(joinpath(GMAT_EXAMPLES, "Ephemeris_SPK", "gmat_leo.bsp"))
+    for e in (oem, stk, spk)
+        @test length(epochs(e)) == 121 && length(e.segments) == 1
+    end
+    @test oem.segments[1].metadata["interpolation"] == Lagrange(7)
+    @test stk.segments[1].metadata["interpolation"] == Lagrange(5)       # GMAT writes no InterpolationSamplesM1
+    @test spk.segments[1].metadata["interpolation"] == Hermite(7)
+    @test to_vector(oem.segments[1].states[1]) == [7000.0, 0.0, 1300.0, 0.0, 7.35, 1.0]
+    # The OEM and .e are both EME2000 and agree to millimetres, GMAT's .e epochs carrying
+    # about 1 µs of rounding.
+    @test maximum(position_difference(oem, stk)) < 1e-5                # km
+    # GMAT's SPK and OEM of the same orbit differ, read by Epicycle under each format's own
+    # frame definition (CCSDS EME2000 as FK5 J2000, NAIF J2000 as ICRF), by a fixed rotation of
+    # a few tens of mas and GMAT's SPK epochs 25.6 µs from its OEM's: about 1.3 m here. This
+    # records the measured difference so a change in either is seen; it is an open question
+    # how GMAT's EME2000 relates to ICRF, not a tolerance.
+    d = position_difference(oem, spk)
+    @test 0.5e-3 < maximum(d) < 2.0e-3
+    gap = [EA._seconds(a, b) for (a, b) in zip(epochs(oem), epochs(spk))]
+    @test all(g -> -30e-6 < g < -20e-6, gap)
 end
