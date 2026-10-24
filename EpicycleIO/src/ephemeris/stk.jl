@@ -31,6 +31,8 @@ const _STK_DISTANCE = Dict("METERS" => 1e-3, "METER" => 1e-3, "M" => 1e-3,
                            "KILOMETERS" => 1.0, "KILOMETER" => 1.0, "KM" => 1.0)
 const _STK_COV_FRAMES = Dict("RIC" => "RIC", "RSW" => "RSW", "RTN" => "RTN", "UVW" => "RIC",
                              "NTC" => "NTC", "TNW" => "TNW", "VNC" => "VNB")
+# And back: the keyword written for each orbit-relative frame. RTN and RSW are RIC's axes.
+const _STK_COV_KEYWORD = Dict("RIC" => "RIC", "RSW" => "RIC", "RTN" => "RIC", "NTC" => "NTC", "TNW" => "TNW", "VNB" => "VNC")
 
 # STK CoordinateSystem ↔ the frame names segments use (the OEM names, see names.jl).
 function _stk_frame_to_name(cs::AbstractString, center::AbstractString)
@@ -631,7 +633,7 @@ function _stk_lines(data::EphemerisFileData, digits)
                 all(isfinite, cv.matrix) || push!(problems, "segment $k covariance $j is not finite (STK files carry full position-velocity covariance)")
                 maximum(abs, cv.matrix - cv.matrix') <= 1e-12 * max(1.0, maximum(abs, cv.matrix)) ||
                     push!(problems, "segment $k covariance $j is not symmetric")
-                cv.frame in (s.frame, "RIC", "RSW", "RTN", "TNW", "NTC") ||
+                (cv.frame == s.frame || haskey(_STK_COV_KEYWORD, cv.frame)) ||
                     push!(problems, "segment $k covariance $j is in $(cv.frame), which an STK file cannot give with the ephemeris in $(s.frame)")
             end
         end
@@ -689,7 +691,7 @@ function _stk_lines(data::EphemerisFileData, digits)
         if !isempty(rel)
             any(cv -> cv.frame == s1.frame, last.(covs)) && throw(ArgumentError(
                 "write_stk: nothing written; some covariances are in $(rel[1]) and some in $(s1.frame); an STK file gives one"))
-            kv("CovarianceCoordinateSystem", rel[1] == "RTN" || rel[1] == "RSW" ? "RIC" : rel[1])
+            kv("CovarianceCoordinateSystem", _STK_COV_KEYWORD[rel[1]])
         end
     end
     if length(segs) > 1

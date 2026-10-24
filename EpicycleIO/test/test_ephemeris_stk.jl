@@ -278,6 +278,52 @@ end
     @test ES.read_stk(path; strict = true).segments[1].interpolation == Hermite(1)
 end
 
+@testset "STK: covariance formats and coordinate systems" begin
+    # One symmetric 6×6 covariance in m², written out in each of STK's forms.
+    M = [i == j ? 10.0 * i : 0.1 * (i + j) for i in 1:6, j in 1:6]
+    lower(m, n) = join([m[r, c] for r in 1:n for c in 1:r], " ")
+    upper(m, n) = join([m[r, c] for r in 1:n for c in r:n], " ")
+    read_cov(header, kind, values) =
+        ES.read_stk(stk_file(stk_text(header = "NumberOfCovariancePoints 1\n" * header,
+                                      unit = "DistanceUnit Meters\n", extra = "$kind\n60.0 $values\n")))
+    covs(f) = f.segments[1].covariances
+    # Lower and upper triangular give the same matrix, in km².
+    lt = covs(read_cov("CovarianceFormat LowerTriangular\n", "CovarianceTimePosVel", lower(M, 6)))
+    ut = covs(read_cov("CovarianceFormat UpperTriangular\n", "CovarianceTimePosVel", upper(M, 6)))
+    @test only(lt).matrix ≈ M * 1e-6 && only(ut).matrix == only(lt).matrix
+    # Position only: the velocity terms are NaN, and it says so. Its default format is upper triangular.
+    f = read_cov("", "CovarianceTimePos", upper(M, 3))
+    p = only(covs(f)).matrix
+    @test p[1:3, 1:3] ≈ M[1:3, 1:3] * 1e-6 && all(isnan, p[4:6, :]) && all(isnan, p[:, 4:6])
+    @test any(d -> occursin("velocity terms are NaN", d.message), f.diagnostics)
+    # Each orbit-relative coordinate system STK names reads as the frame of the same axes.
+    for (stk_name, frame) in (("RIC", "RIC"), ("UVW", "RIC"), ("VNC", "VNB"), ("NTC", "NTC"), ("TNW", "TNW"))
+        c = covs(read_cov("CovarianceCoordinateSystem $stk_name\n", "CovarianceTimePosVel", lower(M, 6)))
+        @test only(c).frame == frame
+    end
+    # An inertial one names a frame, as CoordinateSystem does.
+    @test only(covs(read_cov("CovarianceCoordinateSystem ICRF\n", "CovarianceTimePosVel", lower(M, 6)))).frame == "ICRF"
+
+    # Written in an orbit-relative frame, read back in it: RTN is written as RIC, the same axes,
+    # and VNB as STK's VNC.
+    path = tempname() * ".e"
+    for (frame, keyword, back) in (("RTN", "RIC", "RIC"), ("VNB", "VNC", "VNB"), ("TNW", "TNW", "TNW"))
+        s = stk_segment(12)
+        s.covariances = [ES.CovarianceRecord(s.times[3], frame, SMatrix{6, 6}(M * 1e-6))]
+        ES.write_stk(path, ES.EphemerisFileData(segments = [s]))
+        @test any(==("CovarianceCoordinateSystem $keyword"), split.(readlines(path)) .|> l -> join(l, " "))
+        c = only(ES.read_stk(path; strict = true).segments[1].covariances)
+        @test c.frame == back && c.matrix ≈ M * 1e-6
+    end
+    # An STK file gives one covariance coordinate system, so mixed frames are refused.
+    s = stk_segment(12)
+    s.covariances = [ES.CovarianceRecord(s.times[3], "RTN", SMatrix{6, 6}(M * 1e-6)),
+                     ES.CovarianceRecord(s.times[5], "TNW", SMatrix{6, 6}(M * 1e-6))]
+    @test_throws "one CovarianceCoordinateSystem" ES.write_stk(path, ES.EphemerisFileData(segments = [s]))
+    s.covariances[2] = ES.CovarianceRecord(s.times[5], "EME2000", SMatrix{6, 6}(M * 1e-6))
+    @test_throws "some covariances are in RTN and some in EME2000" ES.write_stk(path, ES.EphemerisFileData(segments = [s]))
+end
+
 @testset "STK: covariance records are counted and none is lost silently" begin
     record(t) = "$t " * join([i == j ? "1.0" : "0.0" for i in 1:6 for j in 1:i], " ")
     with_cov(n, times) = stk_text(header = "NumberOfCovariancePoints $n\n",

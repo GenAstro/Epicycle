@@ -378,6 +378,14 @@ end
     E.write_oem(path, data)
     @test readline(path) == "CCSDS_OEM_VERS       = 2.0" && !any(startswith("MESSAGE_ID"), readlines(path))
     @test E.read_oem(path; strict = true).version == "2.0"
+    # A covariance in each orbit-relative frame the reader names comes back in that frame.
+    for frame in E._COV_RELATIVE_FRAMES
+        s = make_segment(10; cov = true)
+        s.covariances = [E.CovarianceRecord(s.times[2], frame, s.covariances[1].matrix)]
+        E.write_oem(path, E.EphemerisFileData(originator = "EPICYCLE", segments = [s]))
+        c = only(E.read_oem(path; strict = true).segments[1].covariances)
+        @test c.frame == frame && isapprox(c.matrix, s.covariances[1].matrix; rtol = 1e-15)
+    end
     # A 1.0 file, which is no longer written, writes back as 3.0 without being asked.
     v1 = replace(oem_text(version = "1.0"), "INTERPOLATION = LAGRANGE\nINTERPOLATION_DEGREE = 3\n" => "")
     E.write_oem(path, E.read_oem(oem_file(v1)))
