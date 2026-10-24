@@ -124,6 +124,14 @@ end
     d = tempname() * ".oem"
     write_ephemeris(d, c)
     @test length(only(read_ephemeris(d).segments).metadata["covariances"]) == 1
+    # SPK holds no covariance: refused with what to do, and with discard_unsupported the states
+    # are written, rotated to ICRF, from a source in EME2000.
+    e = history(0.0:60.0:600.0; cs = CoordinateSystem(earth, MJ2000Eq()))
+    e.segments[1].metadata["covariances"] = [EA.CovarianceRecord(at(0.0), "EME2000", SMatrix{6, 6}(zeros(6, 6)))]
+    @test_throws "discard_unsupported = true" write_ephemeris(tempname() * ".bsp", e; naif_id = -900001)
+    s = tempname() * ".bsp"
+    write_ephemeris(s, e; naif_id = -900001, discard_unsupported = true)
+    @test maximum(position_difference(read_ephemeris(s), e)) < 1e-6
 end
 
 @testset "ephemeris API: an OEM in each time system" begin

@@ -215,8 +215,8 @@ epochs(eph::Union{SpacecraftHistory, Spacecraft}) = reduce(vcat, (s.times for s 
 """
     span(eph) -> Tuple{Time, Time}
 
-The first and last epochs of a history. A history may have gaps inside its span; see
-[`coverage`](@ref).
+The start and end of a history's coverage: its first and last epochs, or its usable span where a
+segment declares one. A history may have gaps inside its span; see [`coverage`](@ref).
 
 # Arguments
 - `eph`: A `SpacecraftHistory`, or a `Spacecraft`.
@@ -605,6 +605,10 @@ function write_ephemeris(path::AbstractString, source::Union{SpacecraftHistory, 
     segs = _writable(_segments(source))
     isempty(segs) && throw(ArgumentError("write_ephemeris: nothing to write; the history is empty" *
         (source isa Spacecraft ? " (was the spacecraft propagated?)" : "")))
+    fmt isa SPK && !discard_unsupported &&
+        any(s -> haskey(s.metadata, _META.accelerations) || !isempty(get(s.metadata, _META.covariances, ())), segs) &&
+        throw(ArgumentError("write_ephemeris: SPK holds no accelerations or covariance, which this source " *
+                            "carries; give discard_unsupported = true to write the states without them"))
     default_name = source isa Spacecraft ? source.name : ""
     sys = fmt isa SPK ? "TDB" : fmt isa STKEphemeris ? "UTC" : _time_system_name(time_system)
     out = EphemerisSegmentData[]
@@ -612,7 +616,8 @@ function write_ephemeris(path::AbstractString, source::Union{SpacecraftHistory, 
         target = coordinate_system !== nothing ? coordinate_system :
                  fmt isa SPK && !(s.coordinate_system.axes isa ICRF) ?
                      CoordinateSystem(s.coordinate_system.origin, ICRF()) : s.coordinate_system
-        push!(out, _to_segment(s, target, step, interpolation, sys, object_name, object_id, default_name))
+        push!(out, _to_segment(s, target, step, interpolation, sys, object_name, object_id, default_name;
+                               drop_extras = fmt isa SPK && discard_unsupported))
     end
     data = EphemerisFileData(format = fmt isa OEM ? :oem : fmt isa STKEphemeris ? :stk : :spk,
                              originator = originator, message_id = message_id, classification = marking,
@@ -672,13 +677,16 @@ function _writable(segs)
     return out
 end
 
-function _to_segment(s::HistorySegment, target, step, interpolation, sys, object_name, object_id, default_name)
+function _to_segment(s::HistorySegment, target, step, interpolation, sys, object_name, object_id, default_name;
+                     drop_extras::Bool = false)
     md = s.metadata
     cs = s.coordinate_system
     times = s.times
     states = [SVector{6, Float64}(to_vector(x)) for x in s.states]
-    acc = get(md, _META.accelerations, nothing)
-    covs = get(md, _META.covariances, CovarianceRecord[])
+    # Dropped first when the format cannot hold them, so they block neither resampling nor the
+    # rotation SPK needs.
+    acc = drop_extras ? nothing : get(md, _META.accelerations, nothing)
+    covs = drop_extras ? CovarianceRecord[] : get(md, _META.covariances, CovarianceRecord[])
     m = interpolation !== nothing ? interpolation : get(md, _META.interpolation, nothing)
     if step !== nothing
         step > 0 || throw(ArgumentError("write_ephemeris: step must be positive; got $step"))
