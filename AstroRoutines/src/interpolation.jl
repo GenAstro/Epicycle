@@ -295,7 +295,8 @@ function _hermite(m::Hermite, times, values, derivatives, t)
     end
     p = 2n
     z = [times[first + (i - 1) ÷ 2] for i in 1:p]
-    V = promote_type(eltype(values), eltype(derivatives))
+    # The type of a divided difference, which is a quotient: Float64 for an integer table.
+    V = promote_type(typeof(values[first] / one(eltype(times))), typeof(derivatives[first] / one(eltype(times))))
     c = Vector{V}(undef, p)
     for i in 1:p
         c[i] = values[first + (i - 1) ÷ 2]

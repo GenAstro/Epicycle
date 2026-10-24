@@ -125,6 +125,38 @@ end
     @test length(only(read_ephemeris(d).segments).metadata["covariances"]) == 1
 end
 
+@testset "ephemeris API: resampling keeps the usable span" begin
+    h = history(0.0:60.0:3600.0)
+    h.segments[1].metadata["useable_start"] = at(600.0)
+    h.segments[1].metadata["useable_stop"] = at(3000.0)
+    p = tempname() * ".oem"
+    write_ephemeris(p, h; step = 120.0)
+    s = only(read_ephemeris(p).segments).metadata
+    @test abs(EA._seconds(s["useable_start"], at(600.0))) < 1e-9
+    @test abs(EA._seconds(s["useable_stop"], at(3000.0))) < 1e-9
+end
+
+@testset "ephemeris API: a classification travels with the trajectory" begin
+    seg = EA.EphemerisSegmentData(object_name = "SAT", object_id = "2026-001A", center = "EARTH", frame = "EME2000",
+                                  time_system = "UTC", times = [at(s) for s in 0.0:60.0:600.0],
+                                  states = [SVector{6}(circ(s)) for s in 0.0:60.0:600.0])
+    marked = tempname() * ".oem"
+    EA.write_oem(marked, EA.EphemerisFileData(originator = "TEST", message_id = "ID-123", classification = "SECRET",
+                                              segments = [seg]))
+    eph = read_ephemeris(marked; strict = true)
+    out = tempname() * ".oem"
+    write_ephemeris(out, eph)
+    lines = readlines(out)
+    @test any(l -> startswith(l, "CLASSIFICATION") && endswith(l, "SECRET"), lines)
+    @test !any(startswith("MESSAGE_ID"), lines)                         # a new message, not the source's ID
+    write_ephemeris(out, eph; message_id = "ID-124")
+    @test any(l -> startswith(l, "MESSAGE_ID") && endswith(l, "ID-124"), readlines(out))
+    # STK and SPK cannot carry the marking: refused unless the caller drops it on purpose.
+    msg = try write_ephemeris(tempname() * ".e", eph); "" catch e sprint(showerror, e) end
+    @test occursin("SECRET", msg) && occursin("classification = \"\"", msg)
+    @test isfile(write_ephemeris(tempname() * ".e", eph; classification = ""))
+end
+
 @testset "ephemeris API: one trajectory through every format" begin
     h = history(0.0:60.0:1800.0, 1800.0:60.0:3600.0; interp = Hermite(7))
     h.segments[2].states[1] = CartesianState(circ(1800.0) .+ [0, 0, 0, 0.001, 0, 0])   # a maneuver

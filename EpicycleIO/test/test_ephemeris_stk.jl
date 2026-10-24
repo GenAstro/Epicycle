@@ -213,7 +213,44 @@ end
     back = ES.read_stk(path; strict = true).segments[1]
     @test all(isapprox.(c.states, back.states; rtol = 1e-15))
     @test all(isapprox.(c.accelerations, back.accelerations; rtol = 1e-15))
+    @test length(back.covariances) == length(c.covariances)
+    @test all(abs(ES._seconds(x.epoch, y.epoch)) < 1e-9 && x.frame == y.frame for (x, y) in zip(c.covariances, back.covariances))
     @test all(isapprox(x.matrix, y.matrix; rtol = 1e-14) for (x, y) in zip(c.covariances, back.covariances))
+    # Hermite degree 1 is written as InterpolationSamplesM1 0 and reads back as itself.
+    h1 = stk_segment(2; interp = Hermite(1))
+    ES.write_stk(path, ES.EphemerisFileData(segments = [h1]))
+    @test ES.read_stk(path; strict = true).segments[1].interpolation == Hermite(1)
+end
+
+@testset "STK: covariance records are counted and none is lost silently" begin
+    record(t) = "$t " * join([i == j ? "1.0" : "0.0" for i in 1:6 for j in 1:i], " ")
+    with_cov(n, times) = stk_text(header = "NumberOfCovariancePoints $n\n",
+                                  extra = "\nCovarianceTimePosVel\n" * join(record.(times), "\n") * "\n")
+    # Fewer records than declared is a cut file.
+    msg = try ES.read_stk(stk_file(with_cov(2, [0.0])); strict = true); "" catch e sprint(showerror, e) end
+    @test occursin("NumberOfCovariancePoints", msg) && occursin("truncated", msg)
+    # A record outside the ephemeris is dropped with a correction, which strict refuses.
+    f = ES.read_stk(stk_file(with_cov(2, [-10.0, 60.0])))
+    @test length(f.segments[1].covariances) == 1
+    @test any(d -> occursin("outside the ephemeris", d.message), f.diagnostics)
+    @test_throws ES.EphemerisReadError ES.read_stk(stk_file(with_cov(2, [-10.0, 60.0])); strict = true)
+    # At a segment boundary a record goes with the segment after it, once.
+    rows = ["$(60.0k) 7000 $k 0 0 7.5 0" for k in 0:9]
+    insert!(rows, 7, "300.0 7000 5 0 0 7.6 0")
+    text = stk_text(header = "BEGIN SegmentBoundaryTimes\n    3.000000000000000e+02\nEND SegmentBoundaryTimes\n" *
+                             "NumberOfCovariancePoints 1\n",
+                    body = join(rows, "\n"), extra = "\nCovarianceTimePosVel\n" * record(300.0) * "\n")
+    a, b = ES.read_stk(stk_file(text); strict = true).segments
+    @test isempty(a.covariances) && length(b.covariances) == 1
+end
+
+@testset "STK: an empty data block or a missing method is reported, not thrown" begin
+    empty_block = replace(stk_text(), r"EphemerisTimePosVel\n[\s\S]*END Ephemeris" => "EphemerisTimePosVel\nEND Ephemeris")
+    msg = try ES.read_stk(stk_file(empty_block)); "" catch e sprint(showerror, e) end
+    @test occursin("no points", msg)
+    f = ES.read_stk(stk_file(replace(stk_text(), "InterpolationMethod Lagrange" => "InterpolationMethod")))
+    @test f.segments[1].interpolation == Lagrange(3)
+    @test any(d -> occursin("no method given", d.message), f.diagnostics)
 end
 
 @testset "STK: the writer refuses, lists every problem, and writes nothing" begin

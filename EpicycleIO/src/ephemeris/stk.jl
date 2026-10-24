@@ -285,6 +285,8 @@ function read_stk(path::AbstractString; strict::Bool = false, skip_bad_lines::Bo
     state in (:header, :data, :cov, :boundaries) && _error!(d, length(lines), "END Ephemeris", "END Ephemeris missing; the file may be truncated")
     isnan(pending_cov_t) || _error!(d, pending_cov_line, "covariance", "covariance row cut short")
     isempty(data_kind) && !_has_errors(d) && _error!(d, length(lines), "data", "no ephemeris data block")
+    !isempty(data_kind) && isempty(rows) && _error!(d, length(lines), "data",
+        isempty(skipped) ? "the ephemeris data block has no points" : "every point was skipped; nothing is left to read")
 
     seg = _stk_segment_meta!(d, h, ref_frame, center, file)
     if seg !== nothing && !isempty(rows)
@@ -344,22 +346,29 @@ function _stk_segment_meta!(d, h, ref_frame, center, file)
         isempty(name) ? (_error!(d, cs[2], "CoordinateSystem", problem); ok = false) : (seg.frame = name)
     end
     # Interpolation.
+    method = haskey(h, "INTERPOLATIONMETHOD") ? h["INTERPOLATIONMETHOD"] : ("Lagrange", 0)
+    words = split(method[1])
+    if isempty(words)
+        _fixed!(d, method[2], "InterpolationMethod", "no method given; Lagrange used, as STK's default")
+        words = ["Lagrange"]
+    end
+    mu = uppercase(first(words))
+    # Hermite with no samples beyond the first is degree 1; Lagrange needs at least one more.
+    lowest = mu == "HERMITE" ? 0 : 1
     m1line = 0
     m1 = 5
     for key in ("INTERPOLATIONSAMPLESM1", "INTERPOLATIONORDER")
         haskey(h, key) || continue
         v, m1line = h[key]
         x = tryparse(Int, v)
-        if x === nothing || x < 1
-            _fixed!(d, m1line, key, "$(repr(v)) is not a positive integer; STK's default of 5 used")
+        if x === nothing || x < lowest
+            _fixed!(d, m1line, key, "$(repr(v)) is not an integer of at least $lowest; STK's default of 5 used")
         else
             m1 = x
         end
         key == "INTERPOLATIONORDER" && _note!(d, m1line, key, "InterpolationOrder is the older name of InterpolationSamplesM1")
         break
     end
-    method = haskey(h, "INTERPOLATIONMETHOD") ? h["INTERPOLATIONMETHOD"] : ("Lagrange", 0)
-    mu = uppercase(first(split(method[1])))
     if mu == "HERMITE"
         seg.interpolation = Hermite(2m1 + 1)
     else
@@ -448,6 +457,7 @@ function _stk_build!(d, file, seg0, h, data_kind, rows, skipped, boundaries, cov
     end
     # Covariance, in metres: km² is m² × 1e-6, for every element.
     covs = CovarianceRecord[]
+    cov_lines = Int[]                                    # the line each covariance record came from
     if !isempty(cov_kind)
         fmt = haskey(h, "COVARIANCEFORMAT") ? uppercase(h["COVARIANCEFORMAT"][1]) :
               (cov_kind == "COVARIANCETIMEPOS" ? "UT" : "LT")
@@ -456,7 +466,8 @@ function _stk_build!(d, file, seg0, h, data_kind, rows, skipped, boundaries, cov
         cframe = seg0.frame
         if haskey(h, "COVARIANCECOORDINATESYSTEM")
             v, line = h["COVARIANCECOORDINATESYSTEM"]
-            key = uppercase(first(split(v)))
+            words = split(v)
+            key = isempty(words) ? "" : uppercase(first(words))  # no value: not a known system, reported below
             if haskey(_STK_COV_FRAMES, key)
                 cframe = _STK_COV_FRAMES[key]
             else
@@ -467,6 +478,19 @@ function _stk_build!(d, file, seg0, h, data_kind, rows, skipped, boundaries, cov
         scale == 1.0 && _note!(d, 0, "DistanceUnit", "covariance read in metres, as STK documents it, though distances are in km")
         dim = cov_kind == "COVARIANCETIMEPOS" ? 3 : 6
         dim == 3 && _note!(d, 0, "CovarianceTimePos", "position covariance only; velocity terms are NaN")
+        # The declared count, as for the ephemeris points: fewer records than declared is a cut file.
+        if haskey(h, "NUMBEROFCOVARIANCEPOINTS")
+            v, line = h["NUMBEROFCOVARIANCEPOINTS"]
+            n = tryparse(Int, v)
+            if n === nothing || n < 1
+                _fixed!(d, line, "NumberOfCovariancePoints", "$(repr(v)) is not a positive integer; all records read")
+            elseif n > length(cov_rows)
+                _error!(d, line, "NumberOfCovariancePoints", "says $n records but the file has $(length(cov_rows)); it may be truncated")
+            elseif n < length(cov_rows)
+                _fixed!(d, line, "NumberOfCovariancePoints", "says $n records; the $(length(cov_rows) - n) after them are ignored")
+                cov_rows = cov_rows[1:n]
+            end
+        end
         for (t, vals, line) in cov_rows
             m = fill(NaN, 6, 6)
             k = 0
@@ -476,8 +500,22 @@ function _stk_build!(d, file, seg0, h, data_kind, rows, skipped, boundaries, cov
             end
             any(j -> m[j, j] < 0, 1:dim) && (_error!(d, line, "covariance", "negative variance"); continue)
             push!(covs, CovarianceRecord(at(t), cframe, SMatrix{6, 6}(m)))
+            push!(cov_lines, line)
         end
     end
+    # Each covariance goes with the segment whose span holds its time; at a boundary, with the
+    # segment after it, as the state there is the one after the event. One outside every segment
+    # is dropped and the correction recorded.
+    spans = [(first(g)[1], last(g)[1]) for g in groups if !isempty(g)]
+    owner = map(covs) do cv
+        s = _seconds(at(0.0), cv.epoch)
+        findlast(((a, b),) -> a - _EDGE <= s <= b + _EDGE, spans)
+    end
+    for (cv, o, line) in zip(covs, owner, cov_lines)
+        o === nothing && _fixed!(d, line, "covariance", "covariance at $(_seconds(at(0.0), cv.epoch)) s is outside the " *
+                                 "ephemeris ($(spans[1][1]) to $(spans[end][2]) s); dropped")
+    end
+    k_seg = 0
     for (k, g) in enumerate(groups)
         isempty(g) && continue
         seg = deepcopy(seg0)
@@ -486,8 +524,8 @@ function _stk_build!(d, file, seg0, h, data_kind, rows, skipped, boundaries, cov
                       SVector{6}((r[2][1:6] .* scale)...) for r in g]
         ncols == 9 && (seg.accelerations = [SVector{3}((r[2][7:9] .* scale)...) for r in g])
         seg.start_time, seg.stop_time = first(seg.times), last(seg.times)
-        a, b = first(g)[1], last(g)[1]
-        seg.covariances = filter(cv -> a <= _seconds(at(0.0), cv.epoch) <= b, covs)
+        k_seg += 1
+        seg.covariances = [cv for (cv, o) in zip(covs, owner) if o == k_seg]
         n = length(seg.times)
         if n < required_points(seg.interpolation)
             n == 1 && length(groups) > 1 ? _error!(d, g[1][3], "data", "a segment of one point; nothing can be interpolated") :

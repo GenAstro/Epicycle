@@ -35,6 +35,12 @@ end
     @test occursin("needs 4 points", msg) && occursin("has 3", msg)
 end
 
+@testitem "integer tables" tags=[:Interpolation, :Robustness] begin
+    using AstroRoutines
+    @test interpolate(Hermite(3), [0, 2], [0, 1], [0, 0], 1) == 0.5
+    @test interpolate(Lagrange(1), [0, 2], [0, 1], 1) == 0.5
+end
+
 @testitem "Hermite degree 1 on a single point" tags=[:Interpolation, :Robustness] begin
     using AstroRoutines
     @test interpolate(Hermite(1), [2.0], [5.0], [3.0], 2.0) == 5.0

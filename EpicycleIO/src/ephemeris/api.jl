@@ -152,7 +152,8 @@ _name(x::Symbol) = String(x)
 
 function _to_history(data::EphemerisFileData, path)
     source = (path = String(path), format = data.format, version = data.version, originator = data.originator,
-              creation_date = data.creation_date, message_id = data.message_id, comments = data.comments,
+              creation_date = data.creation_date, message_id = data.message_id, classification = data.classification,
+              comments = data.comments,
               diagnostics = data.diagnostics)
     segs = HistorySegment[]
     for s in data.segments
@@ -518,7 +519,8 @@ end
 
 """
     write_ephemeris(path, source; format, coordinate_system, step, interpolation, time_system,
-                    naif_id, object_name, object_id, originator, version, digits,
+                    naif_id, object_name, object_id, originator, version, message_id,
+                    classification, digits,
                     discard_unsupported) -> String
 
 Write a spacecraft's trajectory, or any `SpacecraftHistory`, to an ephemeris file: CCSDS OEM,
@@ -544,6 +546,11 @@ STK `.e` or JPL SPK.
   `"UNKNOWN"`.
 - `originator`: OEM. Who made the file. Default `"EPICYCLE"`.
 - `version`: OEM. `"3.0"` (default) or `"2.0"`.
+- `message_id`: OEM 3.0. The new message's ID. Default none: a file written is a new message, so
+  the source's ID is not reused.
+- `classification`: OEM 3.0. The file's marking. Default: the source's, for a history read from a
+  marked OEM. STK and SPK cannot carry a marking, so a marked source is refused unless
+  `classification = ""` is given.
 - `digits`: OEM and STK. Decimal places of seconds in written epochs. Default 9.
 - `discard_unsupported`: SPK. Write without accelerations and covariance, which SPK cannot hold,
   rather than refuse. Default `false`.
@@ -582,8 +589,15 @@ function write_ephemeris(path::AbstractString, source::Union{SpacecraftHistory, 
                          format = nothing, coordinate_system = nothing, step = nothing, interpolation = nothing,
                          time_system = UTC(), naif_id = nothing, object_name = nothing, object_id = nothing,
                          originator::AbstractString = "EPICYCLE", version::AbstractString = "3.0",
+                         message_id::AbstractString = "", classification = nothing,
                          digits::Integer = 9, discard_unsupported::Bool = false)
     fmt = _format_of(path, format)
+    # The source's classification travels with it unless the caller says otherwise; only OEM 3.0
+    # can mark a file, so another format refuses a classified source rather than drop the marking.
+    marking = classification !== nothing ? String(classification) : _source_classification(source)
+    fmt isa OEM || isempty(marking) || throw(ArgumentError("write_ephemeris: the source is classified " *
+        "$(repr(marking)), and $(fmt isa SPK ? "SPK" : "an STK file") cannot carry the marking; " *
+        "give classification = \"\" to write it unmarked"))
     segs = _writable(_segments(source))
     isempty(segs) && throw(ArgumentError("write_ephemeris: nothing to write; the history is empty" *
         (source isa Spacecraft ? " (was the spacecraft propagated?)" : "")))
@@ -597,7 +611,8 @@ function write_ephemeris(path::AbstractString, source::Union{SpacecraftHistory, 
         push!(out, _to_segment(s, target, step, interpolation, sys, object_name, object_id, default_name))
     end
     data = EphemerisFileData(format = fmt isa OEM ? :oem : fmt isa STKEphemeris ? :stk : :spk,
-                             originator = originator, segments = out)
+                             originator = originator, message_id = message_id, classification = marking,
+                             segments = out)
     if fmt isa OEM
         write_oem(path, data; digits, version)
     elseif fmt isa STKEphemeris
@@ -608,6 +623,16 @@ function write_ephemeris(path::AbstractString, source::Union{SpacecraftHistory, 
         write_spk(path, data; naif_id, discard_unsupported)
     end
     return path
+end
+
+# The classification of the file a history was read from, or "" for a propagation or an
+# unmarked file.
+function _source_classification(source)
+    for s in _segments(source)
+        src = get(s.metadata, _META.source, nothing)
+        src === nothing || !haskey(src, :classification) || isempty(src.classification) || return src.classification
+    end
+    return ""
 end
 
 # A segment of one state, as a maneuver records, repeats the first state of the propagation after
@@ -670,6 +695,5 @@ function _to_segment(s::HistorySegment, target, step, interpolation, sys, object
     return EphemerisSegmentData(object_name = name, object_id = id, center = center, frame = frame,
         time_system = sys, interpolation = something(m, Lagrange(7)), times = collect(times), states = states,
         accelerations = acc, covariances = covs,
-        useable_start = step === nothing ? get(md, _META.useable_start, nothing) : nothing,
-        useable_stop = step === nothing ? get(md, _META.useable_stop, nothing) : nothing)
+        useable_start = get(md, _META.useable_start, nothing), useable_stop = get(md, _META.useable_stop, nothing))
 end
