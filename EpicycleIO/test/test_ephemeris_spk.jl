@@ -160,6 +160,40 @@ end
     @test occursin("damaged", msg)
 end
 
+@testset "SPK: each error names its field and the problem" begin
+    s = spk_segment(20; step = 60.0)
+    states = [collect(v) for v in s.states]
+    et0, et1 = EK._et(s.times[1]), EK._et(s.times[end])
+    # A file written straight through SPICE: `segments` is a list of (centre, frame, type) to write.
+    function spk_file(segments...)
+        p = tempname() * ".bsp"
+        lock(EK._SPICE_LOCK) do
+            h = SPICE.spkopn(p, "TEST", 0)
+            for (centre, frame, typ) in segments
+                typ == 13 ? SPICE.spkw13(h, -900002, centre, frame, et0, et1, "T", 7, states, EK._et.(s.times)) :
+                            SPICE.spkw08(h, -900002, centre, frame, et0, et1, "T", 7, states, et0, 60.0)
+            end
+            SPICE.spkcls(h)
+        end
+        return p
+    end
+    problem(path; kw...) = try EK.read_spk(path; kw...); nothing catch e only(e.problems) end
+    text = tempname() * ".bsp"; write(text, "not a DAF file\n")
+    cases = [
+        ("not an SPK file", problem(text), "file", "could not read it as an SPK file"),
+        ("a centre Epicycle does not have", problem(spk_file((3, "J2000", 13))), "center", "NAIF body 3"),
+        ("a frame Epicycle does not read", problem(spk_file((399, "GALACTIC", 13))), "frame", "SPICE frame 13"),
+        ("a sampled type without step", problem(spk_file((399, "J2000", 8))), "step", "type 8, which stores no samples"),
+        ("a step that is not positive", problem(spk_file((399, "J2000", 8)); step = 0.0), "step", "must be positive"),
+        ("a step too long for the span", problem(spk_file((399, "J2000", 8)); step = 600.0), "step", "at least 8 are needed"),
+    ]
+    for (what, p, field, phrase) in cases
+        found = p !== nothing && p.field == field && occursin(phrase, p.message)
+        found || @info "not as expected: $what" p
+        @test found
+    end
+end
+
 @testset "SPK: the writer refuses, lists every problem, and writes nothing" begin
     path = tempname() * ".bsp"
     write(path, "existing")

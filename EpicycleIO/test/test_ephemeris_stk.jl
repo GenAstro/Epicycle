@@ -119,6 +119,56 @@ end
     @test_throws ES.EphemerisReadError ES.read_stk(stk_file(single); strict = true)
 end
 
+# Each problem the reader cannot correct, reported on its line, under its keyword, saying what is
+# wrong. In stk_text() the header runs from BEGIN Ephemeris on line 3 to InterpolationSamplesM1 on
+# line 10, `header` lines go in from line 11, the data block keyword follows them, then eight
+# rows, then `extra`, then END Ephemeris.
+@testset "STK: each error names its line, its keyword and the problem" begin
+    rec(first = "1.0") = "0.0 " * first * " " * join([i == j ? "1.0" : "0.0" for i in 2:6 for j in 1:i], " ")
+    covariance = "CovarianceTimePosVel\n" * rec() * "\n"
+    boundaries(times...) = "BEGIN SegmentBoundaryTimes\n" * join(times, "\n") * "\nEND SegmentBoundaryTimes\n"
+    pos = join(["$(60.0k) 7000 $k 0" for k in 0:7], "\n")
+    cases = [
+        ("no BEGIN Ephemeris", replace(stk_text(), "BEGIN Ephemeris\n" => "BEGIN Ephem\n"), 3, "BEGIN Ephemeris", "expected BEGIN Ephemeris"),
+        ("boundaries after the data", stk_text(extra = boundaries(60)), 20, "SegmentBoundaryTimes", "after the data"),
+        ("a boundary that is not a time", stk_text(header = boundaries("abc")), 12, "SegmentBoundaryTimes", "not a time in seconds"),
+        ("boundaries out of order", stk_text(header = boundaries(120, 60)), 13, "SegmentBoundaryTimes", "must ascend"),
+        ("a second data block", stk_text(extra = "EphemerisTimePosVel\n"), 20, "EphemerisTimePosVel", "a second ephemeris block"),
+        ("a second covariance block", stk_text(extra = covariance * covariance), 22, "CovarianceTimePosVel", "a second covariance block"),
+        ("a data block that is not Cartesian", stk_text(kind = "EphemerisLLATimePos", body = "0 10 20 300"),
+         11, "EphemerisLLATimePos", "not a Cartesian format"),
+        ("a keyword twice", stk_text(header = "CentralBody Earth\n"), 11, "CentralBody", "given twice"),
+        ("a covariance value that is not a number", stk_text(extra = "CovarianceTimePosVel\n" * rec("abc") * "\n"),
+         21, "covariance", "\"abc\" is not a number"),
+        ("a covariance row cut short", stk_text(extra = "CovarianceTimePosVel\n0.0 1 2 3\n"), 21, "covariance", "cut short"),
+        ("a negative variance", stk_text(extra = "CovarianceTimePosVel\n" * rec("-1.0") * "\n"), 21, "covariance", "negative variance"),
+        ("an empty file", "", 1, "file", "empty file"),
+        ("no data block", replace(stk_text(), r"EphemerisTimePosVel\n[\s\S]*END Ephemeris" => "END Ephemeris"),
+         11, "data", "no ephemeris data block"),
+        ("a TimeScale other than TDB", stk_text(header = "TimeScale UTC\n"), 11, "TimeScale", "not TDB"),
+        ("a bad ScenarioEpoch", replace(stk_text(), "21 Oct 2026" => "32 Oct 2026"), 5, "ScenarioEpoch", "day 32"),
+        ("an unknown CentralBody", replace(stk_text(), "CentralBody Earth" => "CentralBody Erth"), 6, "CentralBody", "\"ERTH\" is not a centre"),
+        ("an unknown DistanceUnit", stk_text(unit = "DistanceUnit Feet\n"), 8, "DistanceUnit", "not Meters or Kilometers"),
+        ("Hermite with positions only", replace(stk_text(kind = "EphemerisTimePos", body = pos), "Method Lagrange" => "Method Hermite"),
+         9, "InterpolationMethod", "Hermite needs velocities"),
+        ("times out of order", replace(stk_text(), "120.0 7002.0" => "30.0 7002.0"), 14, "data", "before line 13's 60.0 s"),
+        ("an unknown CovarianceFormat", stk_text(header = "CovarianceFormat Diagonal\n", extra = covariance),
+         11, "CovarianceFormat", "not LowerTriangular or UpperTriangular"),
+        ("an unknown CovarianceCoordinateSystem", stk_text(header = "CovarianceCoordinateSystem XYZ\n", extra = covariance),
+         11, "CovarianceCoordinateSystem", "XYZ"),
+    ]
+    for (what, text, line, field, phrase) in cases
+        err = try ES.read_stk(stk_file(text)); nothing catch e e end
+        found = err isa ES.EphemerisReadError &&
+                any(p -> p.line == line && p.field == field && occursin(phrase, p.message), err.problems)
+        found || @info "not as expected: $what" err
+        @test found
+    end
+    # An override that is not a frame is reported on the CoordinateSystem line it replaces.
+    err = try ES.read_stk(stk_file(stk_text()); ref_frame = "EME200"); nothing catch e e end
+    @test any(p -> p.line == 7 && p.field == "CoordinateSystem" && occursin("EME200", p.message), err.problems)
+end
+
 @testset "STK: skip_bad_lines drops the line and splits the segment there" begin
     rows = ["$(60.0k) 7000 $k 0 0 7.5 0" for k in 0:15]
     rows[9] = "480.0 7000 abc 0 0 7.5 0"

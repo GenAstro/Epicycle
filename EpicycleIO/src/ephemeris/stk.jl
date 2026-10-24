@@ -424,7 +424,7 @@ function _stk_build!(d, file, seg0, h, data_kind, rows, skipped, boundaries, cov
         if !isempty(cur)
             prev = cur[end]
             if r[1] < prev[1]
-                _error!(d, r[3], "data", "time $(r[1]) s is before the previous line's ($(prev[3])); times must ascend")
+                _error!(d, r[3], "data", "time $(r[1]) s is before line $(prev[3])'s $(prev[1]) s; times must ascend")
                 continue
             elseif r[1] == prev[1]
                 if r[1] in bset
@@ -512,7 +512,7 @@ function _stk_build!(d, file, seg0, h, data_kind, rows, skipped, boundaries, cov
         findlast(((a, b),) -> a - _EDGE <= s <= b + _EDGE, spans)
     end
     for (cv, o, line) in zip(covs, owner, cov_lines)
-        o === nothing && _fixed!(d, line, "covariance", "covariance at $(_seconds(at(0.0), cv.epoch)) s is outside the " *
+        o === nothing && _fixed!(d, line, "covariance", "covariance at $(round(_seconds(at(0.0), cv.epoch); digits = 6)) s is outside the " *
                                  "ephemeris ($(spans[1][1]) to $(spans[end][2]) s); dropped")
     end
     k_seg = 0
