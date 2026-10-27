@@ -124,9 +124,8 @@ _quiet(f) = with_logger(f, NullLogger())
         # GMAT's elliptic truth state: Newton reaches the root with f = 0 on its fourth step. The
         # solver used to discard it for a bisection midpoint and stop 7e-14 rad away, 0.3 µm here.
         h, k, λ = 0.1879385241571815, 0.0684040286651338, deg2rad(28.36066564454829)
-        e, φ = hypot(h, k), atan(h, k)
-        E = AstroStates._eccentric_anomaly(λ - φ, e)
-        @test abs(E - e * sin(E) - mod(λ - φ, 2π)) < 4eps()
+        F = AstroStates._eccentric_longitude(λ, h, k)
+        @test abs(F + h * cos(F) - k * sin(F) - λ) < 4eps()
         c = equinoctial_to_cart([8000.0, h, k, -0.08626412365266437, 0.07238419434078193, λ], μE)
         gmat = [6759.747343616322723, 1115.043329211011041, 1344.722777534846955,
                 -2.660243619064134, 7.541202154282467, 0.640887592324028]

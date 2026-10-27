@@ -91,11 +91,10 @@ using LinearAlgebra
         
         result = AstroStates.cart_to_inasymptote(cart, μ; tol=tol)
         
-        if all(isfinite.(result))
-            ν = result[6]
-            # Should be in valid range
-            @test 0 ≤ ν ≤ 2π
-        end
+        @test all(isfinite, result)
+        ν = result[6]
+        # Should be in valid range
+        @test 0 ≤ ν ≤ 2π
     end
     
     @testset "Negative angle wraparound (θᵦ < 0 and λₐ < 0)" begin
@@ -113,10 +112,10 @@ using LinearAlgebra
         cart1 = AstroStates.to_vector(CartesianState(inasym1, μ))
         result1 = AstroStates.cart_to_inasymptote(cart1, μ; tol=tol)
         
-        if all(isfinite.(result1))
-            λₐ = result1[3]
-            @test 0 ≤ λₐ ≤ 2π  # Should be wrapped to [0, 2π]
-        end
+        @test all(isfinite, result1)
+        @test result1 ≈ to_vector(inasym1) rtol = 1e-10         # the elements it was built from
+        λₐ = result1[3]
+        @test 0 ≤ λₐ ≤ 2π  # Should be wrapped to [0, 2π]
         
         # Another test with rla in 3rd quadrant
         rla2 = 5π/4
@@ -124,10 +123,10 @@ using LinearAlgebra
         cart2 = AstroStates.to_vector(CartesianState(inasym2, μ))
         result2 = AstroStates.cart_to_inasymptote(cart2, μ; tol=tol)
         
-        if all(isfinite.(result2))
-            λₐ = result2[3]
-            @test 0 ≤ λₐ ≤ 2π
-        end
+        @test all(isfinite, result2)
+        @test result2 ≈ to_vector(inasym2) rtol = 1e-10         # the elements it was built from
+        λₐ = result2[3]
+        @test 0 ≤ λₐ ≤ 2π
         
         # To hit line 95 (θᵦ < 0 → θᵦ + 2π):
         # Try various B-plane angles that might result in negative atan result
@@ -137,10 +136,10 @@ using LinearAlgebra
         cart3 = AstroStates.to_vector(CartesianState(inasym3, μ))
         result3 = AstroStates.cart_to_inasymptote(cart3, μ; tol=tol)
         
-        if all(isfinite.(result3))
-            θᵦ = result3[5]
-            @test 0 ≤ θᵦ ≤ 2π  # Should be wrapped to [0, 2π]
-        end
+        @test all(isfinite, result3)
+        @test result3 ≈ to_vector(inasym3) rtol = 1e-10         # the elements it was built from
+        θᵦ = result3[5]
+        @test 0 ≤ θᵦ ≤ 2π  # Should be wrapped to [0, 2π]
         
         # Another B-plane angle test
         bpa4 = 7π/4
@@ -148,9 +147,9 @@ using LinearAlgebra
         cart4 = AstroStates.to_vector(CartesianState(inasym4, μ))
         result4 = AstroStates.cart_to_inasymptote(cart4, μ; tol=tol)
         
-        if all(isfinite.(result4))
-            θᵦ = result4[5]
-            @test 0 ≤ θᵦ ≤ 2π
-        end
+        @test all(isfinite, result4)
+        @test result4 ≈ to_vector(inasym4) rtol = 1e-10         # the elements it was built from
+        θᵦ = result4[5]
+        @test 0 ≤ θᵦ ≤ 2π
     end
 end

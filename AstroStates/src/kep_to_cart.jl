@@ -38,24 +38,50 @@ cart = kep_to_cart(kep, 398600.4418)
 """
 function kep_to_cart(state::AbstractVector{<:Real}, μ::Real; tol::Real=1e-12)
     if length(state) != 6
-        error("Input vector must have exactly six elements: a, e, i, Ω, ω, ν.")
+        error("Input vector must have exactly six elements: a, e, i, Ω, ω, ν; got $(length(state)) elements.")
     end
     T = float(promote_type(eltype(state), typeof(μ)))
+    _has_nan(state, μ) && return fill(T(NaN), 6)
 
     if μ < tol
-        @warn "Conversion Failed: μ < tolerance."
+        @warn "Conversion failed: μ < tolerance."
         return fill(T(NaN), 6)
     end
 
     # Unpack the elements
     a, e, i, Ω, ω, ν = state
 
+    # A parabola first: cart_to_kep gives one a = Inf and an e a hair either side of 1, which the
+    # sign checks below would misreport
+    if isinf(a) || abs(1 - e) < tol
+        @warn "Conversion failed: Orbit is parabolic or singular."
+        return fill(T(NaN), 6)
+    end
+
+    # Elements that describe no conic
+    if e < 0
+        @warn "Conversion failed: Eccentricity ($e) cannot be negative."
+        return fill(T(NaN), 6)
+    end
+    if a > 0 && e > 1
+        @warn "Conversion failed: Semimajor axis ($a) cannot be positive if eccentricity ($e) > 1."
+        return fill(T(NaN), 6)
+    end
+    if a < 0 && e < 1
+        @warn "Conversion failed: Semimajor axis ($a) cannot be negative if eccentricity ($e) < 1."
+        return fill(T(NaN), 6)
+    end
+    if _inclination_out_of_range(i)
+        @warn "Conversion failed: Inclination ($i) is outside [0, π]."
+        return fill(T(NaN), 6)
+    end
+
     # Semi-latus rectum: p = a * (1 - e²)
     p = a * (1 - e^2)
 
     # Degenerate orbit (parabolic or collapsed)
     if p < tol || abs(1 - e) < tol
-        @warn "Conversion Failed: Orbit is parabolic or singular."
+        @warn "Conversion failed: Orbit is parabolic or singular."
         return fill(T(NaN), 6)
     end
 
@@ -63,7 +89,7 @@ function kep_to_cart(state::AbstractVector{<:Real}, μ::Real; tol::Real=1e-12)
     # asymptote; beyond it r would be negative and the state a mirror image of no real point.
     denom = 1 + e * cos(ν)
     if denom <= tol
-        @warn "Conversion Failed: True anomaly $(ν) is at or beyond the asymptote of a hyperbola " *
+        @warn "Conversion failed: True anomaly $(ν) is at or beyond the asymptote of a hyperbola " *
               "with eccentricity $(e)."
         return fill(T(NaN), 6)
     end

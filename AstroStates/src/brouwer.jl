@@ -18,15 +18,41 @@ const _BROUWER_J4       = -0.1620429990000000e-5
 const _BROUWER_J5       = -0.2270711043920343e-6
 const _BROUWER_MU_EARTH = 398600.4415
 
+# Elements outside the theory's domain. Thrown inside the theory and caught by the four public
+# functions, which warn and return NaNs, as every other unphysical conversion does; the
+# osculating→mean iteration also catches it, to stop when an estimate overshoots the domain.
+struct _BrouwerDomainError <: Exception
+    msg::String
+end
+
+"""
+    _brouwer_or_nan(f, elements, μ)
+
+`f(elements, μ)`, or six NaNs and a warning when the elements are outside the theory's domain.
+A vector without six elements is an `ArgumentError`. Internal.
+"""
+function _brouwer_or_nan(f, elements::AbstractVector, μ::Real)
+    length(elements) == 6 || throw(ArgumentError(
+        "Brouwer elements must be a 6-element vector [a, e, i, Ω, ω, anomaly]; got $(length(elements)) elements."))
+    _has_nan(elements, μ) && return fill(float(promote_type(eltype(elements), typeof(μ)))(NaN), 6)
+    try
+        return f(elements, μ)
+    catch err
+        err isa _BrouwerDomainError || rethrow()
+        @warn "Conversion failed: $(err.msg)"
+        return fill(float(promote_type(eltype(elements), typeof(μ)))(NaN), 6)
+    end
+end
+
 """
     _brouwer_guard_mu(μ, name="Brouwer")
 
-Assert `μ` is Earth's gravitational parameter (within 1 km³/s²); the Brouwer element theory is
-Earth-only in this release. Errors with a diagnostic naming `name` otherwise. Internal.
+Check that `μ` is Earth's gravitational parameter (within 1 km³/s²); the Brouwer element theory
+is Earth-only in this release. Throws `_BrouwerDomainError` naming `name` otherwise. Internal.
 """
 @inline function _brouwer_guard_mu(μ::Real, name::AbstractString="Brouwer")
-    if abs(μ - _BROUWER_MU_EARTH) > 1.0
-        error("$name is applicable only to the Earth (require |μ - $(_BROUWER_MU_EARTH)| ≤ 1; got μ=$μ).")
+    if !(abs(μ - _BROUWER_MU_EARTH) <= 1.0)    # so a NaN μ fails too
+        throw(_BrouwerDomainError("$name is applicable only to the Earth (require |μ - $(_BROUWER_MU_EARTH)| ≤ 1; got μ=$μ)."))
     end
     return nothing
 end
@@ -122,14 +148,14 @@ function _brouwer_short_mean_to_osc(blms::AbstractVector, μ::Real)
     aopp     = float(blms[5])
     meanAnom = float(blms[6])
 
-    (incp < 0.0 || incp > π) && error("BrouwerMeanShort: mean INC must be in [0, 180°] (got $(rad2deg(incp))°).")
-    radper = blms[1]*(1.0 - blms[2])
-    radper < 3000.0 && error("BrouwerMeanShort: mean RadPer must be > 3000 km (got $radper).")
-    radper < 6378.0 && @warn "BrouwerMeanShort: mean RadPer < 6378 km — possible inside-Earth singularity inaccuracy."
-    if eccp < 0.0                                            # COV_EXCL_START
+    _inclination_out_of_range(incp) && throw(_BrouwerDomainError("BrouwerMeanShort: mean INC must be in [0, 180°] (got $(rad2deg(incp))°)."))
+    if eccp < 0.0
         eccp = -eccp; meanAnom -= π; aopp += π
-    end                                                      # COV_EXCL_STOP
-    eccp > 0.99 && error("BrouwerMeanShort: mean ECC must be < 0.99 (got $eccp).")
+    end
+    radper = blms[1]*(1.0 - eccp)
+    radper <= 3000.0 && throw(_BrouwerDomainError("BrouwerMeanShort: mean RadPer must be > 3000 km (got $radper)."))
+    radper < 6378.0 && @warn "BrouwerMeanShort: mean RadPer < 6378 km — possible inside-Earth singularity inaccuracy."
+    eccp >= 0.99 && throw(_BrouwerDomainError("BrouwerMeanShort: mean ECC must be < 0.99 (got $(blms[2]))."))
 
     # GMAT port, unchanged. Above 175° the theory runs on a pseudostate, i → π - i and Ω → -Ω,
     # which assumes the field is symmetric about the equator. The odd zonals J3 and J5 are not,
@@ -229,7 +255,8 @@ end
 Direct Brouwer-Lyddane long-period (J2–J5) transform from mean elements `blml = [a, e, i, Ω, ω, M]`
 to osculating Keplerian elements `[a, e, i, Ω, ω, M]` (osculating **mean anomaly** in slot 6).
 Zeroes the long-period terms near the critical inclination (GMAT `bisubc ≥ 0.001`). Radians, km,
-Earth-only. Faithful port of GMAT `BrouwerMeanLongToOsculatingElements`. Internal.
+Earth-only. Port of GMAT `BrouwerMeanLongToOsculatingElements`; near the critical inclination it
+keeps the base longitude Ω + ω + M when it drops the corrections. Internal.
 """
 function _brouwer_long_mean_to_osc(blml::AbstractVector, μ::Real)
     _brouwer_guard_mu(μ, "BrouwerMeanLong")
@@ -250,11 +277,16 @@ function _brouwer_long_mean_to_osc(blml::AbstractVector, μ::Real)
     if incdp > deg2rad(175.0)
         incdp = π - incdp; raandp = -raandp; pseudostate = 1
     end
-    eccdp > 0.99 && error("BrouwerMeanLong: mean ECC must be < 0.99 (got $eccdp).")
-    radper = blml[1]*(1.0 - blml[2])
-    radper < 3000.0 && error("BrouwerMeanLong: mean RadPer must be > 3000 km (got $radper).")
+    # A negative mean eccentricity is the same ellipse with periapsis turned through π, as in the
+    # short-period theory; it is normalized before the domain checks
+    if eccdp < 0.0
+        eccdp = -eccdp; meanAnom -= π; aopdp += π
+    end
+    eccdp >= 0.99 && throw(_BrouwerDomainError("BrouwerMeanLong: mean ECC must be < 0.99 (got $(blml[2]))."))
+    radper = blml[1]*(1.0 - eccdp)
+    radper <= 3000.0 && throw(_BrouwerDomainError("BrouwerMeanLong: mean RadPer must be > 3000 km (got $radper)."))
     radper < 6378.0 && @warn "BrouwerMeanLong: mean RadPer < 6378 km — possible inside-Earth singularity inaccuracy."
-    blml[3] > π && error("BrouwerMeanLong: INC must be < 180° (got $(rad2deg(blml[3]))°).")
+    _inclination_out_of_range(blml[3]) && throw(_BrouwerDomainError("BrouwerMeanLong: mean INC must be in [0, 180°] (got $(rad2deg(blml[3]))°)."))
     raandp = mod(raandp, 2π); aopdp = mod(aopdp, 2π); meanAnom = mod(meanAnom, 2π)
 
     bk2 = 0.5*(j2)
@@ -352,9 +384,14 @@ function _brouwer_long_mean_to_osc(blml::AbstractVector, μ::Real)
 
     bisubc = ((1.0 - 5.0*theta2)^(-2))*((25.0*theta4*theta)*(gmp2*eccdp2))
     local blghp, eccdpdl, dltI, sinDH, dlt1e
-    if bisubc >= 0.001
+    # bisubc carries the sign of cos⁵ i, and the long-period terms are as singular at 117° as at
+    # 63°, so the test is on its magnitude
+    if abs(bisubc) >= 0.001
         @warn "BrouwerMeanLong: mean INC near critical (63°/117°) — possible inaccuracy."
-        dlt1e = 0.0; blghp = 0.0; eccdpdl = 0.0; dltI = 0.0; sinDH = 0.0
+        # Only the long-period corrections are dropped. The base longitude Ω + ω + M stays, or the
+        # node and anomaly taken out of it below would leave ω shifted by -Ω.
+        dlt1e = 0.0; eccdpdl = 0.0; dltI = 0.0; sinDH = 0.0
+        blghp = mod(raandp + aopdp + meanAnom, 2π)
     else
         blghp = raandp + aopdp + meanAnom + b3*cs3gd + b1*sn2gd + b2*cosGD
         blghp = mod(blghp, 2π)
@@ -386,6 +423,7 @@ function _brouwer_long_mean_to_osc(blml::AbstractVector, μ::Real)
     ecc  = sqrt(eccdpdl^2 + (eccdp + dlte)^2)
     squar = (dltI*cosI2*0.5 + sinI2)^2
     sqrI  = sqrt(sinDH^2 + squar)
+    sqrI > 1 && throw(_BrouwerDomainError("BrouwerMeanLong: the long-period corrections put sin(i/2) at $(sqrI), above 1."))
     inc  = 2.0*asin(sqrI)
     inc  = mod(inc, 2π)
 
@@ -461,14 +499,16 @@ function _brouwer_osc_to_mean(osc::AbstractVector, μ::Real, core; use_proposal:
 
     emag = 0.9; emag_old = 1.0; ii = 0
     diverged = false
-    while emag > tol
+    converged = false
+    while !converged
         blmean2 = _brouwer_eq6_to_kep(aeqmean2)
         # A near-singular mean estimate (e.g. near critical inclination at high
         # eccentricity) can overshoot the core's domain. Match GMAT: interrupt,
         # warn, and return the best estimate so far rather than throwing.
         kep2v = try
             core(collect(blmean2), μ)
-        catch
+        catch err
+            err isa _BrouwerDomainError || rethrow()
             diverged = true
             nothing
         end
@@ -482,15 +522,22 @@ function _brouwer_osc_to_mean(osc::AbstractVector, μ::Real, core; use_proposal:
             aeq2     = _brouwer_kep_to_eq6(kep2)
             aeqmean  = aeqmean2
             aeqmean2 = aeqmean + (aeq - aeq2)
+            converged = emag <= tol
         else
-            break
+            break                       # the residual stopped falling
         end
         ii > maxiter && break
         ii += 1
     end
-    diverged && @warn "Brouwer osculating→mean iteration did not converge (near-singular regime); returning best estimate."
+    # Every exit but convergence returns the best accepted estimate, aeqmean, with a warning; the
+    # proposal after it has not been checked against the Cartesian state
+    if diverged
+        @warn "Brouwer osculating→mean iteration did not converge (near-singular regime); returning best estimate."
+    elseif !converged
+        @warn "Brouwer osculating→mean iteration did not converge (relative position residual $(emag_old) after $(ii + 1) iterations); returning best estimate."
+    end
 
-    final = diverged ? aeqmean : (use_proposal ? aeqmean2 : aeqmean)
+    final = converged && use_proposal ? aeqmean2 : aeqmean
     b = collect(float.(_brouwer_eq6_to_kep(final)))
     return b, pseudostate
 end
@@ -521,13 +568,15 @@ mean = kep_to_brouwer_mean_short([7000.0, 0.01, pi/6, 0.0, 0.0, pi/3], 398600.44
 - Inverse of `brouwer_mean_short_to_kep`. See `kep_to_brouwer_mean_long` for the shared units,
   domain, and differentiability contract.
 """
-function kep_to_brouwer_mean_short(osc::AbstractVector, μ::Real)
+kep_to_brouwer_mean_short(osc::AbstractVector, μ::Real) = _brouwer_or_nan(_kep_to_brouwer_mean_short, osc, μ)
+
+function _kep_to_brouwer_mean_short(osc::AbstractVector, μ::Real)
     _brouwer_guard_mu(μ, "BrouwerMeanShort")
     a, e, i = osc[1], osc[2], osc[3]
-    i > π && error("BrouwerMeanShort: osculating INC must be ≤ 180° (got $(rad2deg(i))°).")
-    (e > 0.99 || e < 0.0) && error("BrouwerMeanShort: applicable only for 0 ≤ ECC < 0.99 (got e=$e).")
+    _inclination_out_of_range(i) && throw(_BrouwerDomainError("BrouwerMeanShort: osculating INC must be in [0, 180°] (got $(rad2deg(i))°)."))
+    (e >= 0.99 || e < 0.0) && throw(_BrouwerDomainError("BrouwerMeanShort: applicable only for 0 ≤ ECC < 0.99 (got e=$e)."))
     radper = a*(1.0 - e)
-    radper < 3000.0 && error("BrouwerMeanShort: osculating RadPer must be > 3000 km (got $radper).")
+    radper <= 3000.0 && throw(_BrouwerDomainError("BrouwerMeanShort: osculating RadPer must be > 3000 km (got $radper)."))
     radper < 6378.0 && @warn "BrouwerMeanShort: RadPer < 6378 km — possible inside-Earth singularity inaccuracy."
     b, pseudostate = _brouwer_osc_to_mean(osc, μ, _brouwer_short_mean_to_osc; use_proposal=true)
     a1, e1, i1, Ω1, ω1, M1 = b
@@ -537,7 +586,7 @@ function kep_to_brouwer_mean_short(osc::AbstractVector, μ::Real)
     if pseudostate != 0
         i1 = π - i1; Ω1 = -Ω1
     end
-    return [a1, e1, i1, mod(Ω1, 2π), mod(ω1, 2π), mod(M1, 2π)]
+    return [a1, e1, i1, _mod_2pi(Ω1), _mod_2pi(ω1), _mod_2pi(M1)]
 end
 
 """
@@ -565,7 +614,8 @@ mean = kep_to_brouwer_mean_long([7000.0, 0.01, pi/6, 0.0, 0.0, pi/3], 398600.441
 
 # Notes
 - Angles in radians; distances in km consistent with the Earth `μ`.
-- Earth-only: errors if `μ` is not Earth's gravitational parameter.
+- Earth-only. Outside the domain below, or for a `μ` that is not Earth's, it warns and
+  returns NaNs; a vector without six elements is an `ArgumentError`.
 - Domain: `0 ≤ e < 0.99` and mean periapsis radius `a(1-e) > 3000 km`. Warns when periapsis is
   below 6378 km (inside-Earth) and near the critical inclination (≈ 63.4°/116.6°), where the
   long-period theory is degraded.
@@ -576,14 +626,16 @@ mean = kep_to_brouwer_mean_long([7000.0, 0.01, pi/6, 0.0, 0.0, pi/3], 398600.441
   best estimate rather than throwing.
 - Brouwer (1959) / Lyddane (1963) theory; transcribed from GMAT `StateConversionUtil.cpp`.
 """
-function kep_to_brouwer_mean_long(osc::AbstractVector, μ::Real)
+kep_to_brouwer_mean_long(osc::AbstractVector, μ::Real) = _brouwer_or_nan(_kep_to_brouwer_mean_long, osc, μ)
+
+function _kep_to_brouwer_mean_long(osc::AbstractVector, μ::Real)
     _brouwer_guard_mu(μ, "BrouwerMeanLong")
     a, e, i = osc[1], osc[2], osc[3]
-    (e > 0.99 || e < 0.0) && error("BrouwerMeanLong: applicable only for 0 ≤ ECC < 0.99 (got e=$e).")
+    (e >= 0.99 || e < 0.0) && throw(_BrouwerDomainError("BrouwerMeanLong: applicable only for 0 ≤ ECC < 0.99 (got e=$e)."))
     radper = a*(1.0 - e)
-    radper < 3000.0 && error("BrouwerMeanLong: osculating RadPer must be > 3000 km (got $radper).")
+    radper <= 3000.0 && throw(_BrouwerDomainError("BrouwerMeanLong: osculating RadPer must be > 3000 km (got $radper)."))
     radper < 6378.0 && @warn "BrouwerMeanLong: RadPer < 6378 km — possible inside-Earth singularity inaccuracy."
-    i > π && error("BrouwerMeanLong: osculating INC must be ≤ 180° (got $(rad2deg(i))°).")
+    _inclination_out_of_range(i) && throw(_BrouwerDomainError("BrouwerMeanLong: osculating INC must be in [0, 180°] (got $(rad2deg(i))°)."))
     idg = rad2deg(i)
     if (58.80 < idg < 65.78) || (114.22 < idg < 121.2)
         @warn "BrouwerMeanLong: INC near critical (63°/117°) — possible inaccuracy."
@@ -593,7 +645,7 @@ function kep_to_brouwer_mean_long(osc::AbstractVector, μ::Real)
     if pseudostate != 0
         i1 = π - i1; Ω1 = -Ω1
     end
-    return [a1, e1, i1, mod(Ω1, 2π), mod(ω1, 2π), mod(M1, 2π)]
+    return [a1, e1, i1, _mod_2pi(Ω1), _mod_2pi(ω1), _mod_2pi(M1)]
 end
 
 """
@@ -617,7 +669,9 @@ osc = brouwer_mean_short_to_kep([7000.0, 0.01, pi/6, 0.0, 0.0, pi/3], 398600.441
 - As `brouwer_mean_long_to_kep`, but applies only the first-order J2 short-period correction.
 - Inverse of `kep_to_brouwer_mean_short`. See `brouwer_mean_long_to_kep` for the shared contract.
 """
-brouwer_mean_short_to_kep(mean::AbstractVector, μ::Real) =
+brouwer_mean_short_to_kep(mean::AbstractVector, μ::Real) = _brouwer_or_nan(_brouwer_mean_short_to_kep, mean, μ)
+
+_brouwer_mean_short_to_kep(mean::AbstractVector, μ::Real) =
     (o = _brouwer_short_mean_to_osc(mean, μ); [o[1], o[2], o[3], o[4], o[5], _mean_to_true_anom(o[6], o[2])])
 """
     brouwer_mean_long_to_kep(mean::AbstractVector, μ::Real)
@@ -644,14 +698,17 @@ osc = brouwer_mean_long_to_kep([7000.0, 0.01, pi/6, 0.0, 0.0, pi/3], 398600.4415
 
 # Notes
 - Angles in radians; distances in km consistent with the Earth `μ`.
-- Earth-only: errors if `μ` is not Earth's gravitational parameter.
+- Earth-only. Outside the domain below, or for a `μ` that is not Earth's, it warns and
+  returns NaNs; a vector without six elements is an `ArgumentError`.
 - Domain: `0 ≤ e < 0.99` and mean periapsis radius `a(1-e) > 3000 km`; warns below 6378 km.
 - Applies the secular + long-period + short-period zonal (J2–J5) corrections. Inverse of
   `kep_to_brouwer_mean_long`.
 - Differentiable (ForwardDiff) with respect to `mean`.
 - Brouwer (1959) / Lyddane (1963) theory; transcribed from GMAT `StateConversionUtil.cpp`.
 """
-brouwer_mean_long_to_kep(mean::AbstractVector, μ::Real) =
+brouwer_mean_long_to_kep(mean::AbstractVector, μ::Real) = _brouwer_or_nan(_brouwer_mean_long_to_kep, mean, μ)
+
+_brouwer_mean_long_to_kep(mean::AbstractVector, μ::Real) =
     (o = _brouwer_long_mean_to_osc(mean, μ); [o[1], o[2], o[3], o[4], o[5], _mean_to_true_anom(o[6], o[2])])
 
 # ============================================================================

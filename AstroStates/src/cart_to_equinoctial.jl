@@ -9,6 +9,10 @@ using LinearAlgebra
 # margin it leaves is i > π - 1.4e-4 rad (0.008°), where the retrograde MEE set applies.
 const _EQUINOCTIAL_RETROGRADE_TOL = 1e-8
 
+# The same margin as a distance of i from π, in radians: 1 + cos i < 1e-8 is π - i < 1.4e-4.
+# The alternate set refuses there too.
+const _ALT_EQUINOCTIAL_RETROGRADE_TOL = sqrt(2 * _EQUINOCTIAL_RETROGRADE_TOL)
+
 """
     cart_to_equinoctial(cart::AbstractVector{<:Real}, μ::Real; tol::Real = 1e-12)
 
@@ -44,9 +48,10 @@ equinoctial = cart_to_equinoctial(cart, 398600.4418)
 """
 function cart_to_equinoctial(cart::AbstractVector{<:Real}, μ::Real; tol::Real = 1e-12)
     if length(cart) != 6
-        error("Input must be a 6-element Cartesian state vector [x, y, z, vx, vy, vz] .")
+        error("Input must be a 6-element Cartesian state vector [x, y, z, vx, vy, vz]; got $(length(cart)) elements.")
     end
     T = float(promote_type(eltype(cart), typeof(μ)))
+    _has_nan(cart, μ) && return fill(T(NaN), 6)
 
     r̄ = SVector{3,T}(cart[1], cart[2], cart[3])
     v̄ = SVector{3,T}(cart[4], cart[5], cart[6])
@@ -54,7 +59,9 @@ function cart_to_equinoctial(cart::AbstractVector{<:Real}, μ::Real; tol::Real =
     r = norm(r̄)
     v = norm(v̄)
 
-    if r < tol
+    # Each check is !(x >= tol) so that a NaN magnitude counts as singular: under ForwardDiff, the
+    # norm of an exactly zero vector is NaN, and x < tol would let it through.
+    if !(r >= tol)
         @warn "Conversion failed: Position magnitude r = $r less than tol."
         return fill(T(NaN), 6)
     end
@@ -66,7 +73,7 @@ function cart_to_equinoctial(cart::AbstractVector{<:Real}, μ::Real; tol::Real =
     # Angular momentum vector and check for radial/degenerate orbit
     ang_mom_vec = cross(r̄, v̄)
     h_mag = norm(ang_mom_vec)
-    if h_mag < tol
+    if !(h_mag >= tol)
         @warn "Conversion failed: Angular momentum near zero (radial or degenerate orbit)."
         return fill(T(NaN), 6)
     end
@@ -110,7 +117,7 @@ function cart_to_equinoctial(cart::AbstractVector{<:Real}, μ::Real; tol::Real =
     sinF = h + ((1 - h^2 * β) * Y1 - h * k * β * X1) / (a * sqrt1)
     F = atan(sinF, cosF)
 
-    λ = mod(F + h * cosF - k * sinF, 2 * T(π))
+    λ = _wrap_2pi(F + h * cosF - k * sinF)
 
     return T[a, h, k, p, q, λ]
 end

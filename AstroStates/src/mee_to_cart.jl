@@ -27,12 +27,13 @@ cart = mee_to_cart(mee, 398600.4418)
 """
 function mee_to_cart(mod_equinoct::AbstractVector{<:Real}, μ::Real; j::Real = 1.0, tol::Real = 1e-12)
     if length(mod_equinoct) != 6
-        error("Input vector must have exactly six elements: [p, f, g, h, k, L].")
+        error("Input vector must have exactly six elements: [p, f, g, h, k, L]; got $(length(mod_equinoct)) elements.")
     end
     if !(j == 1 || j == -1)
-        error("Invalid value for j: must be 1.0 or -1.0")
+        error("Invalid value for j: must be 1.0 or -1.0; got j = $j.")
     end
     T = float(promote_type(eltype(mod_equinoct), typeof(μ)))
+    _has_nan(mod_equinoct, μ) && return fill(T(NaN), 6)
 
     p, f, g, h, k, L = mod_equinoct
 

@@ -7,9 +7,9 @@
 A generic wrapper for orbital state vectors and their associated metadata.
 
 # Arguments
-- `state`: The numerical state vector (e.g., position/velocity, orbital elements). Must be a vector of real numbers.
-- `statetype`: Marker instance indicating the state representation (e.g., `Cartesian()`, `Keplerian()`, etc.).
--              - to see all state types, use `subtypes(AbstractOrbitStateType)`.
+- `state`: The six numbers of the state, such as position and velocity or orbital elements.
+- `statetype`: The tag naming the representation, such as `Cartesian()` or `Keplerian()`.
+  `subtypes(AbstractOrbitStateType)` lists them all.
 # Fields
 - `state::V`: the six numbers of the state, in the order `to_vector` gives for the representation.
 - `statetype::S`: the tag naming the representation, such as `Cartesian()`.
@@ -21,8 +21,11 @@ os = OrbitState(state_vec, Cartesian())
 ```
 
 # Notes
-- Allows easy switching between different state representations without type instability.
-- The struct is internally parameterized for performance, and type safety, and differentiation, but users should construct it using the outer constructor as shown above.
+- The tag is a type parameter, so an `OrbitState` holding Keplerian elements and one holding
+  Cartesian are different types. Code that holds one dispatches on its representation and stays
+  type-stable, under ForwardDiff as well.
+- Construct it with `OrbitState(state, statetype)` as shown above; the type parameters follow
+  from the arguments.
 """
 struct OrbitState{S<:AbstractOrbitStateType, T<:Real, V<:AbstractVector{T}}
     state::V

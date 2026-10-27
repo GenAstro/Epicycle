@@ -31,6 +31,8 @@ export outasymptote_to_kep, cart_to_outasymptote, to_vector, cart_to_inasymptote
 export inasymptote_to_kep, sphazfpa_to_cart, cart_to_sphazfpa, equinoctial_to_alt_equinoctial
 export alt_equinoctial_to_equinoctial, equinoctial_to_cart, cart_to_equinoctial
 export modkep_to_kep, kep_to_modkep
+export kep_to_brouwer_mean_short, brouwer_mean_short_to_kep
+export kep_to_brouwer_mean_long, brouwer_mean_long_to_kep
 export state_tag_to_type, state_type_to_tag
 
 struct Cartesian <: AbstractOrbitStateType end
@@ -184,15 +186,6 @@ function Base.getproperty(s::CartesianState, sym::Symbol)
     end
 end
 
-function show(io::IO, state::CartesianState)
-    println(io, "CartesianState:")
-    println(io, @sprintf("  x   = %14.8f", state.position[1]))
-    println(io, @sprintf("  y   = %14.8f", state.position[2]))
-    println(io, @sprintf("  z   = %14.8f", state.position[3]))
-    println(io, @sprintf("  vx  = %14.8f", state.velocity[1]))
-    println(io, @sprintf("  vy  = %14.8f", state.velocity[2]))
-    println(io, @sprintf("  vz  = %14.8f", state.velocity[3]))
-end
 
 """
     KeplerianState(a, e, i, raan, aop, ta)
@@ -244,15 +237,6 @@ struct KeplerianState{T<:Real} <: AbstractOrbitState
     ta::T
 end
 
-function show(io::IO, state::KeplerianState)
-    println(io, "KeplerianState:")
-    println(io, @sprintf("  sma        = %14.6f", state.sma))
-    println(io, @sprintf("  ecc        = %14.8f", state.ecc))
-    println(io, @sprintf("  inc  (deg) = %14.6f", rad2deg(state.inc)))
-    println(io, @sprintf("  raan (deg) = %14.6f", rad2deg(state.raan)))
-    println(io, @sprintf("  aop  (deg) = %14.6f", rad2deg(state.aop)))
-    println(io, @sprintf("  ta   (deg) = %14.6f", rad2deg(state.ta)))
-end
 
 """
     SphericalRADECState(r, ra, dec, v, rav, decv)
@@ -296,15 +280,6 @@ struct SphericalRADECState{T<:Real} <: AbstractOrbitState
     decv::T
 end
 
-function show(io::IO, state::SphericalRADECState)
-    println(io, "SphericalRADECState:")
-    println(io, @sprintf("  r         = %14.6f", state.r))
-    println(io, @sprintf("  ra  (deg) = %11.6f", rad2deg(state.ra)))
-    println(io, @sprintf("  dec (deg) = %11.6f", rad2deg(state.dec)))
-    println(io, @sprintf("  v         = %11.6f", state.v))
-    println(io, @sprintf("  rav (deg) = %11.6f", rad2deg(state.rav)))
-    println(io, @sprintf("  decv(deg) = %11.6f", rad2deg(state.decv)))
-end
 
 """
     SphericalAZIFPAState(r, ra, dec, v, vazi, fpa)
@@ -350,15 +325,6 @@ struct SphericalAZIFPAState{T<:Real} <: AbstractOrbitState
     fpa::T
 end
 
-function show(io::IO, state::SphericalAZIFPAState)
-    println(io, "SphericalAZIFPAState:")
-    println(io, @sprintf("  r          = %14.8f", state.r))
-    println(io, @sprintf("  ra   (deg) = %14.8f", rad2deg(state.ra)))
-    println(io, @sprintf("  dec  (deg) = %14.8f", rad2deg(state.dec)))
-    println(io, @sprintf("  v          = %14.8f", state.v))
-    println(io, @sprintf("  vazi (deg) = %14.8f", rad2deg(state.vazi)))
-    println(io, @sprintf("  fpa  (deg) = %14.8f", rad2deg(state.fpa)))
-end
 
 """
     ModifiedEquinoctialState(p, f, g, h, k, L)
@@ -401,15 +367,6 @@ struct ModifiedEquinoctialState{T<:Real} <: AbstractOrbitState
     L::T
 end
 
-function show(io::IO, state::ModifiedEquinoctialState)
-    println(io, "ModifiedEquinoctialState:")
-    println(io, @sprintf("  p       = %14.8f", state.p))
-    println(io, @sprintf("  f       = %14.8f", state.f))
-    println(io, @sprintf("  g       = %14.8f", state.g))
-    println(io, @sprintf("  h       = %14.8f", state.h))
-    println(io, @sprintf("  k       = %14.8f", state.k))
-    println(io, @sprintf("  L (deg) = %14.8f", rad2deg(state.L)))
-end
 
 """
     OutGoingAsymptoteState(rp, c3, rla, dla, bpa, ta)
@@ -455,15 +412,6 @@ struct OutGoingAsymptoteState{T<:Real} <: AbstractOrbitState
     ta::T
 end
 
-function show(io::IO, state::OutGoingAsymptoteState)
-    println(io, "OutGoingAsymptoteState:")
-    println(io, @sprintf("  rp        = %14.8f", state.rp))
-    println(io, @sprintf("  c3        = %14.8f", state.c3))
-    println(io, @sprintf("  rla (deg) = %14.8f", rad2deg(state.rla)))
-    println(io, @sprintf("  dla (deg) = %14.8f", rad2deg(state.dla)))
-    println(io, @sprintf("  bpa (deg) = %14.8f", rad2deg(state.bpa)))
-    println(io, @sprintf("  ta  (deg) = %14.8f", rad2deg(state.ta)))
-end
 
 """
     IncomingAsymptoteState(rp, c3, rla, dla, bpa, ta)
@@ -509,15 +457,6 @@ struct IncomingAsymptoteState{T<:Real} <: AbstractOrbitState
     ta::T
 end
 
-function show(io::IO, state::IncomingAsymptoteState)
-    println(io, "IncomingAsymptoteState:")
-    println(io, @sprintf("  rp        = %14.8f", state.rp))
-    println(io, @sprintf("  c3        = %14.8f", state.c3))
-    println(io, @sprintf("  rla (deg) = %14.8f", rad2deg(state.rla)))
-    println(io, @sprintf("  dla (deg) = %14.8f", rad2deg(state.dla)))
-    println(io, @sprintf("  bpa (deg) = %14.8f", rad2deg(state.bpa)))
-    println(io, @sprintf("  ta  (deg) = %14.8f", rad2deg(state.ta)))
-end
 
 """
     ModifiedKeplerianState(rp, ra, inc, raan, aop, ta)
@@ -532,7 +471,7 @@ Modified Keplerian orbital elements using periapsis and apoapsis radii instead o
 - `rp`: Radius of periapsis. Closest approach distance to central body.
   * Range: rp > 0. Typically rp > central body radius for physical orbits.
 - `ra`: Radius of apoapsis. Farthest distance from central body (elliptic orbits only).
-  * Range: ra ≥ rp for elliptic orbits. For hyperbolic orbits: ra = ∞ (not used).
+  * Range: ra ≥ rp for elliptic orbits. For a hyperbolic orbit, ra = a(1 + e), which is negative and larger in magnitude than rp.
 - `inc`: Inclination (rad). Angle between orbit plane and reference xy-plane.
   * Range: [0, π]. If inc < π/2: prograde orbit. If inc > π/2: retrograde orbit.
   * inc = 0: equatorial orbit in xy-plane. inc = π/2: polar orbit.
@@ -569,15 +508,6 @@ struct ModifiedKeplerianState{T<:Real} <: AbstractOrbitState
     ta::T
 end
 
-function show(io::IO, state::ModifiedKeplerianState)
-    println(io, "ModifiedKeplerianState:")
-    println(io, @sprintf("  rp         = %14.8f", state.rp))
-    println(io, @sprintf("  ra         = %14.8f", state.ra))
-    println(io, @sprintf("  inc  (deg) = %14.8f", rad2deg(state.inc)))
-    println(io, @sprintf("  raan (deg) = %14.8f", rad2deg(state.raan)))
-    println(io, @sprintf("  aop  (deg) = %14.8f", rad2deg(state.aop)))
-    println(io, @sprintf("  ta   (deg) = %14.8f", rad2deg(state.ta)))
-end
 
 """
     EquinoctialState(a, h, k, p, q, λ)
@@ -620,15 +550,6 @@ struct EquinoctialState{T<:Real} <: AbstractOrbitState
     mlong::T
 end
 
-function show(io::IO, s::EquinoctialState)
-    println(io, "EquinoctialState:")
-    println(io, @sprintf("  a      = %14.8f", s.a))
-    println(io, @sprintf("  h      = %11.8f", s.h))
-    println(io, @sprintf("  k      = %11.8f", s.k))
-    println(io, @sprintf("  p      = %11.8f", s.p))
-    println(io, @sprintf("  q      = %11.8f", s.q))
-    println(io, @sprintf("  mlong (deg.) = %11.8f", rad2deg(s.mlong)))
-end
 
 """
     AlternateEquinoctialState(a, h, k, altp, altq, λ)
@@ -672,15 +593,6 @@ struct AlternateEquinoctialState{T<:Real} <: AbstractOrbitState
     mlong::T
 end
 
-function show(io::IO, s::AlternateEquinoctialState)
-    println(io, "AlternateEquinoctialState:")
-    println(io, @sprintf("  a      = %14.8f", s.a))
-    println(io, @sprintf("  h      = %11.8f", s.h))
-    println(io, @sprintf("  k      = %11.8f", s.k))
-    println(io, @sprintf("  altp   = %11.8f", s.altp))
-    println(io, @sprintf("  altq   = %11.8f", s.altq))
-    println(io, @sprintf("  mlong (deg.)  = %11.8f", rad2deg(s.mlong)))
-end
 
 """
     BrouwerMeanLongState(sma, ecc, inc, raan, aop, ma)
@@ -708,7 +620,8 @@ Brouwer-Lyddane mean orbital elements with secular, long-period, and short-perio
 # Notes
 - Parametric so automatic differentiation and high-precision types are supported.
 - Mean elements average out the short- and long-period oscillations, leaving the slowly-varying secular orbit; convert to/from osculating `KeplerianState` with `kep_to_brouwer_mean_long` / `brouwer_mean_long_to_kep`.
-- Earth-only in this release; conversions error for a non-Earth `μ`.
+- Earth-only in this release; a conversion with a non-Earth `μ`, or outside the theory's domain,
+  warns and returns NaNs.
 - Brouwer (1959) satellite theory with Lyddane (1963) small-eccentricity/inclination handling.
 
 # Examples
@@ -725,15 +638,6 @@ struct BrouwerMeanLongState{T<:Real} <: AbstractOrbitState
     ma::T
 end
 
-function show(io::IO, state::BrouwerMeanLongState)
-    println(io, "BrouwerMeanLongState:")
-    println(io, @sprintf("  sma        = %14.6f", state.sma))
-    println(io, @sprintf("  ecc        = %14.8f", state.ecc))
-    println(io, @sprintf("  inc  (deg) = %14.6f", rad2deg(state.inc)))
-    println(io, @sprintf("  raan (deg) = %14.6f", rad2deg(state.raan)))
-    println(io, @sprintf("  aop  (deg) = %14.6f", rad2deg(state.aop)))
-    println(io, @sprintf("  ma   (deg) = %14.6f", rad2deg(state.ma)))
-end
 
 """
     BrouwerMeanShortState(sma, ecc, inc, raan, aop, ma)
@@ -761,7 +665,8 @@ Brouwer mean orbital elements with only the first-order J2 short-period oscillat
 # Notes
 - Parametric so automatic differentiation and high-precision types are supported.
 - Removes only the once-per-orbit J2 short-period variation; use when long-period terms are to be retained. Convert to/from osculating `KeplerianState` with `kep_to_brouwer_mean_short` / `brouwer_mean_short_to_kep`.
-- Earth-only in this release; conversions error for a non-Earth `μ`.
+- Earth-only in this release; a conversion with a non-Earth `μ`, or outside the theory's domain,
+  warns and returns NaNs.
 - Brouwer (1959) satellite theory (short-period J2 terms), following GMAT's BrouwerMeanShort.
 
 # Examples
@@ -778,14 +683,26 @@ struct BrouwerMeanShortState{T<:Real} <: AbstractOrbitState
     ma::T
 end
 
-function show(io::IO, state::BrouwerMeanShortState)
-    println(io, "BrouwerMeanShortState:")
-    println(io, @sprintf("  sma        = %14.6f", state.sma))
-    println(io, @sprintf("  ecc        = %14.8f", state.ecc))
-    println(io, @sprintf("  inc  (deg) = %14.6f", rad2deg(state.inc)))
-    println(io, @sprintf("  raan (deg) = %14.6f", rad2deg(state.raan)))
-    println(io, @sprintf("  aop  (deg) = %14.6f", rad2deg(state.aop)))
-    println(io, @sprintf("  ma   (deg) = %14.6f", rad2deg(state.ma)))
+# Every state prints the same way: its name, then one element per line, labels padded so the
+# values line up, and angles in degrees with the unit in the label.
+_element_labels(state::AbstractOrbitState) = string.(fieldnames(typeof(state)))
+_element_labels(::CartesianState) = ("x", "y", "z", "vx", "vy", "vz")
+
+_angle_elements(::AbstractOrbitState) = ()
+_angle_elements(::Union{KeplerianState, ModifiedKeplerianState, IncomingAsymptoteState,
+                        OutGoingAsymptoteState, BrouwerMeanLongState, BrouwerMeanShortState}) = (3, 4, 5, 6)
+_angle_elements(::Union{SphericalRADECState, SphericalAZIFPAState}) = (2, 3, 5, 6)
+_angle_elements(::Union{EquinoctialState, AlternateEquinoctialState, ModifiedEquinoctialState}) = (6,)
+
+function show(io::IO, state::AbstractOrbitState)
+    angles = _angle_elements(state)
+    labels = [i in angles ? "$label (deg)" : label for (i, label) in enumerate(_element_labels(state))]
+    width = maximum(length, labels)
+    println(io, nameof(typeof(state)), ":")
+    for (i, x) in enumerate(to_vector(state))
+        value = i in angles ? rad2deg(x) : x
+        println(io, "  ", rpad(labels[i], width), " = ", @sprintf("%18.10f", value))
+    end
 end
 
 @inline state_tag_to_type(::Cartesian)            = CartesianState            # COV_EXCL_LINE
@@ -916,8 +833,8 @@ state_type_to_tag
 """
     to_vector(state) -> Vector
 
-The six numbers of a state, in its representation's order. Distances are in km, speeds in km/s
-and angles in radians.
+The six numbers of a state, in its representation's order. Distances and speeds are in the units
+of μ, and angles in radians.
 
 | Representation | Order |
 |---|---|
@@ -1004,8 +921,10 @@ end
 # =============================================================================
 
 # Identity constructors
-CartesianState(state::CartesianState, μ::Real) = state
-CartesianState(state::CartesianState) = state
+# CartesianState is mutable, so its identity conversion is a copy: changing the result must not
+# change the state it came from.
+CartesianState(state::CartesianState, μ::Real) = CartesianState(state.position, state.velocity)
+CartesianState(state::CartesianState) = CartesianState(state.position, state.velocity)
 KeplerianState(state::KeplerianState, μ::Real) = state
 SphericalRADECState(state::SphericalRADECState, μ::Real) = state
 SphericalRADECState(state::SphericalRADECState) = state
@@ -1021,7 +940,7 @@ AlternateEquinoctialState(state::AlternateEquinoctialState, μ::Real) = state
 AlternateEquinoctialState(state::AlternateEquinoctialState) = state
 
 # Conversions to CartesianState
-CartesianState(s::Vector{<:Real}, μ::Real) = CartesianState(s)
+CartesianState(s::AbstractVector{<:Real}, μ::Real) = CartesianState(s)
 CartesianState(keplerian::KeplerianState, μ::Real) = CartesianState(kep_to_cart(to_vector(keplerian), μ))
 CartesianState(equinoct::EquinoctialState, μ::Real) = CartesianState(equinoctial_to_cart(to_vector(equinoct),μ))
 CartesianState(equinoct::AlternateEquinoctialState, μ::Real) = CartesianState(
@@ -1320,9 +1239,28 @@ function CartesianState(pos::AbstractVector{<:Real}, vel::AbstractVector{<:Real}
 end
 
 KeplerianState(state::KeplerianState) = state
+ModifiedKeplerianState(state::ModifiedKeplerianState) = state
+ModifiedEquinoctialState(state::ModifiedEquinoctialState) = state
+OutGoingAsymptoteState(state::OutGoingAsymptoteState) = state
+IncomingAsymptoteState(state::IncomingAsymptoteState) = state
+BrouwerMeanLongState(state::BrouwerMeanLongState) = state
+BrouwerMeanShortState(state::BrouwerMeanShortState) = state
+
+# Any state type converts from an OrbitState as from the state it holds; the kinematic ones also
+# without μ.
+for S in (:CartesianState, :KeplerianState, :ModifiedKeplerianState, :EquinoctialState,
+          :AlternateEquinoctialState, :ModifiedEquinoctialState, :SphericalRADECState,
+          :SphericalAZIFPAState, :IncomingAsymptoteState, :OutGoingAsymptoteState,
+          :BrouwerMeanLongState, :BrouwerMeanShortState)
+    @eval $S(os::OrbitState, μ::Real) = $S(to_state(os), μ)
+end
+for S in (:CartesianState, :SphericalRADECState, :SphericalAZIFPAState)
+    @eval $S(os::OrbitState) = $S(to_state(os))
+end
 
 # `CartesianState` is mutable, so without these two equal states compare by identity.
 Base.:(==)(a::CartesianState, b::CartesianState) = a.position == b.position && a.velocity == b.velocity
+Base.isequal(a::CartesianState, b::CartesianState) = isequal(a.position, b.position) && isequal(a.velocity, b.velocity)
 Base.hash(s::CartesianState, h::UInt) = hash(s.velocity, hash(s.position, hash(:CartesianState, h)))
 
 """

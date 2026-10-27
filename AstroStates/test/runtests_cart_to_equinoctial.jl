@@ -61,13 +61,9 @@ using LinearAlgebra
         @test all(isnan.(result))
     end
     
-    @testset "Near-zero periapsis (singular conic)" begin
-        # Lines 70-71: Radius of periapsis less than tolerance
-        # Need high eccentricity but still e < 1 - tol to avoid the earlier check
-        # Using a state with very small periapsis but definitely elliptic
-        # Construct using known elliptic elements with tiny rp
-        
-        # Small periapsis, large apoapsis (highly eccentric ellipse)
+    @testset "Position below tolerance" begin
+        # A periapsis of 1e-14 km puts the position itself below tol, so this exercises the
+        # position check; cart_to_equinoctial has no periapsis check.
         rp_target = 1e-14  # Very small but > 0
         ra = 20000.0
         a = (rp_target + ra) / 2

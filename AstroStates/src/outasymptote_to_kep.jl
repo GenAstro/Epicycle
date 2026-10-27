@@ -40,9 +40,15 @@ outasymptote_to_kep(outasym::AbstractVector{<:Real}, μ::Real; tol::Real=1e-12) 
 # asymptote the eccentricity vector lies.
 function _asymptote_to_kep(asym::AbstractVector{<:Real}, μ::Real, dir::Int, tol::Real)
     if length(asym) != 6
-        error("Input must be a 6-element vector: [rₚ, C₃, λₐ, δₐ, θᵦ, ν]")
+        error("Input must be a 6-element vector: [rₚ, C₃, λₐ, δₐ, θᵦ, ν]; got $(length(asym)) elements.")
     end
     T = float(promote_type(eltype(asym), typeof(μ)))
+    _has_nan(asym, μ) && return fill(T(NaN), 6)
+
+    if μ < tol
+        @warn "Conversion failed: μ < tolerance."
+        return fill(T(NaN), 6)
+    end
 
     rₚ, c₃, λₐ, δₐ, θᵦ, ν = asym
 
@@ -66,6 +72,13 @@ function _asymptote_to_kep(asym::AbstractVector{<:Real}, μ::Real, dir::Int, tol
     end
     if e < tol
         @warn "Conversion failed: Orbit is nearly circular."
+        return fill(T(NaN), 6)
+    end
+    # On a hyperbola the true anomaly stops short of the asymptote, where 1 + e cos ν = 0, as in
+    # kep_to_cart
+    if e > 1 && 1 + e * cos(ν) <= tol
+        @warn "Conversion failed: True anomaly $(ν) is at or beyond the asymptote of a hyperbola " *
+              "with eccentricity $(e)."
         return fill(T(NaN), 6)
     end
 
@@ -100,5 +113,5 @@ function _asymptote_to_kep(asym::AbstractVector{<:Real}, μ::Real, dir::Int, tol
     end
 
     i, Ω, ω, _, _ = _orbit_orientation(ĥ, e * ê, e, tol)
-    return T[a, e, i, Ω, ω, mod(ν, 2 * T(π))]
+    return T[a, e, i, Ω, ω, _mod_2pi(ν)]
 end

@@ -32,11 +32,16 @@ cart = sphazfpa_to_cart(sphazfpa)
 """
 function sphazfpa_to_cart(spherical::AbstractVector{<:Real})
     if length(spherical) != 6
-        error("Input vector must have six elements: [r, λ, δ, v, αₚ, ψ]")
+        error("Input vector must have six elements: [r, λ, δ, v, αₚ, ψ]; got $(length(spherical)) elements.")
     end
     T = float(eltype(spherical))
+    _has_nan(spherical) && return fill(T(NaN), 6)
 
     r, λ, δ, v, αₚ, ψ = spherical
+    if r < 0 || v < 0
+        @warn "Conversion failed: Radius ($r) and speed ($v) cannot be negative."
+        return fill(T(NaN), 6)
+    end
 
     # Precompute trigonometric terms
     sinδ, cosδ = sincos(δ)

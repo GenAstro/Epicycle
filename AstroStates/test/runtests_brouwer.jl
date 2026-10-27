@@ -58,15 +58,71 @@ end
     @test all(isfinite, ml) && length(ml) == 6
 end
 
-# At the prograde critical inclination (~63.4°) GMAT's bisubc≥0.001 trigger (bisubc ∝ signed
-# θ⁵) zeroes the long-period terms → the LONG theory is degraded there (GMAT warns). SHORT has
-# no such branch and stays accurate. i≈117° does NOT trigger (θ⁵<0), so it converges. We
-# faithfully reproduce this GMAT behavior.
+# Near the critical inclinations (~63.4° and ~116.6°) |bisubc| ≥ 0.001 zeroes the long-period
+# terms, so the LONG theory is degraded there and warns. SHORT has no such branch and stays
+# accurate. bisubc carries the sign of θ⁵, so a test on its signed value would miss 116.6°.
 @testset "BROU critical-inclination degradation (i≈63.4°)" begin
     osc = [9000.0, 0.05, deg2rad(63.4), deg2rad(15.0), deg2rad(70.0), deg2rad(100.0)]
     @test _rt_err(brouwer_mean_short_to_kep(kep_to_brouwer_mean_short(osc, _BROU_MU), _BROU_MU), osc) < 1e-5
     ml = kep_to_brouwer_mean_long(osc, _BROU_MU)
     @test all(isfinite, ml) && length(ml) == 6
+end
+
+# Where the long-period corrections are dropped, the orbit must still keep its orientation. With
+# them dropped there is nothing in the theory that depends on Ω, so turning the node turns the
+# orbit about z: the returned node moves with it and every other element stays put.
+@testset "BROU critical inclination keeps the orientation [AS-10]" begin
+    mean(Ω) = [9000.0, 0.05, deg2rad(63.4), Ω, 0.4, 1.0]
+    o1 = @test_logs (:warn, r"near critical") brouwer_mean_long_to_kep(mean(0.3), _BROU_MU)
+    o2 = @test_logs (:warn, r"near critical") brouwer_mean_long_to_kep(mean(0.8), _BROU_MU)
+    @test _angd(o2[4] - o1[4], 0.5) < 1e-12
+    @test isapprox(o1[[1, 2, 3, 5, 6]], o2[[1, 2, 3, 5, 6]]; rtol = 1e-12)
+    @test _angd(o1[5], 0.4) < 1e-3                   # ω stays near its mean value, not near -Ω
+end
+
+@testset "BROU osculating→mean iteration warns on every exit but convergence [AS-7, AS-10]" begin
+    # The residual stops falling: near-circular at the critical inclination
+    stall = [7000.0, 0.0, deg2rad(63.4), 0.17, 0.0, 0.0]
+    m = @test_logs (:warn, r"did not converge \(relative position residual") match_mode=:any kep_to_brouwer_mean_long(stall, _BROU_MU)
+    @test all(isfinite, m)
+    # An estimate leaves the theory's domain
+    leave = [10000.0, 0.7, deg2rad(62.5), 0.17, 0.0, 0.0]
+    m = @test_logs (:warn, r"did not converge \(near-singular") match_mode=:any kep_to_brouwer_mean_long(leave, _BROU_MU)
+    @test all(isfinite, m)
+    # A converged case is silent
+    @test_logs kep_to_brouwer_mean_long([8000.0, 0.01, deg2rad(30.0), 0.17, 0.4, 1.0], _BROU_MU)
+end
+
+@testset "BROU retrograde critical inclination warns and converts [AS-7, AS-10]" begin
+    # Unsuppressed, the long-period terms here put sin(i/2) above 1 and asin threw a DomainError
+    for i in (116.4, 116.5, 116.6, 116.7), e in (0.1, 0.3)
+        mean = [7000.0, e, deg2rad(i), 0.17, 0.0, 0.0]
+        osc = @test_logs (:warn, r"near critical") match_mode=:any brouwer_mean_long_to_kep(mean, _BROU_MU)
+        @test all(isfinite, osc)
+        @test abs(osc[3] - mean[3]) < 1e-3
+    end
+end
+
+@testset "BROU domain boundaries are excluded [AS-7, AS-10]" begin
+    # e = 0.99 and a periapsis radius of exactly 3000 km are outside, in both directions
+    for f in (brouwer_mean_long_to_kep, brouwer_mean_short_to_kep, kep_to_brouwer_mean_long, kep_to_brouwer_mean_short)
+        out = @test_logs (:warn, r"ECC") match_mode=:any f([400000.0, 0.99, 0.3, 0.1, 0.2, 0.3], _BROU_MU)
+        @test all(isnan, out)
+        out = @test_logs (:warn, r"RadPer must be > 3000") match_mode=:any f([6000.0, 0.5, 0.3, 0.1, 0.2, 0.3], _BROU_MU)
+        @test all(isnan, out)
+    end
+end
+
+@testset "BROU negative mean eccentricity is checked after it is normalized [AS-7]" begin
+    # e = -0.8 is e = 0.8 with periapsis turned round, a periapsis radius of 1400 km
+    out = @test_logs (:warn, r"RadPer must be > 3000") brouwer_mean_short_to_kep([7000.0, -0.8, 0.3, 0.1, 0.2, 0.3], _BROU_MU)
+    @test all(isnan, out)
+    # the long-period theory takes a negative e the same way, and |e| > 1 is refused, not thrown
+    out = @test_logs (:warn, r"ECC must be < 0.99 \(got -2.0\)") brouwer_mean_long_to_kep([7000.0, -2.0, 0.3, 0.1, 0.2, 0.3], _BROU_MU)
+    @test all(isnan, out)
+    mean    = [9000.0, -0.01, deg2rad(30.0), 0.2, 0.4, 1.0]
+    flipped = [9000.0,  0.01, deg2rad(30.0), 0.2, 0.4 + π, 1.0 - π]
+    @test _rt_err(brouwer_mean_long_to_kep(mean, _BROU_MU), brouwer_mean_long_to_kep(flipped, _BROU_MU)) < 1e-12
 end
 
 @testset "BROU struct + OrbitState wiring [FR-BROU-1..4]" begin
@@ -106,36 +162,58 @@ end
     for BT in (BrouwerMeanLongState, BrouwerMeanShortState)
         b = BT(kep, _BROU_MU)
         for T in targets                       # FROM Brouwer TO every representation
-            @test T(b, _BROU_MU) isa T
+            out = T(b, _BROU_MU)
+            @test out isa T
+            @test all(isfinite, to_vector(out))
         end
         for s in ell_sources                   # TO Brouwer FROM every elliptic representation
-            @test BT(s, _BROU_MU) isa BT
+            out = BT(s, _BROU_MU)
+            @test out isa BT
+            @test isapprox(to_vector(out), to_vector(b); rtol = 1e-8)
         end
     end
     # the originally-missing case, explicitly
     @test ModifiedEquinoctialState(BrouwerMeanLongState(kep, _BROU_MU), _BROU_MU) isa ModifiedEquinoctialState
 end
 
-@testset "BROU loud failure / domain [FR-BROU-5]" begin
-    # public osc->mean entry checks
-    @test_throws ErrorException kep_to_brouwer_mean_long([7000.0, 0.995, 0.3, 0.0, 0.0, 0.0], _BROU_MU)
-    @test_throws ErrorException kep_to_brouwer_mean_short([7000.0, 0.995, 0.3, 0.0, 0.0, 0.0], _BROU_MU)
-    @test_throws ErrorException kep_to_brouwer_mean_long([7000.0, -0.01, 0.3, 0.0, 0.0, 0.0], _BROU_MU)
-    @test_throws ErrorException kep_to_brouwer_mean_short([3200.0, 0.5, 0.3, 0.0, 0.0, 0.0], _BROU_MU)  # radper 1600
-    @test_throws ErrorException kep_to_brouwer_mean_long([3200.0, 0.5, 0.3, 0.0, 0.0, 0.0], _BROU_MU)
-    @test_throws ErrorException kep_to_brouwer_mean_short([7000.0, 0.01, deg2rad(200.0), 0.0, 0.0, 0.0], _BROU_MU)
-    @test_throws ErrorException kep_to_brouwer_mean_long([7000.0, 0.01, deg2rad(200.0), 0.0, 0.0, 0.0], _BROU_MU)
-    @test_throws ErrorException kep_to_brouwer_mean_long([7000.0, 0.01, 0.3, 0.0, 0.0, 0.0], 42000.0)   # non-Earth μ
-    @test_throws ErrorException kep_to_brouwer_mean_short([7000.0, 0.01, 0.3, 0.0, 0.0, 0.0], 42000.0)
-    # direct mean->osc core checks
-    @test_throws ErrorException brouwer_mean_long_to_kep([7000.0, 0.995, 0.3, 0.0, 0.0, 0.0], _BROU_MU)
-    @test_throws ErrorException brouwer_mean_short_to_kep([7000.0, 0.995, 0.3, 0.0, 0.0, 0.0], _BROU_MU)
-    @test_throws ErrorException brouwer_mean_short_to_kep([3200.0, 0.5, 0.3, 0.0, 0.0, 0.0], _BROU_MU)
-    @test_throws ErrorException brouwer_mean_long_to_kep([3200.0, 0.5, 0.3, 0.0, 0.0, 0.0], _BROU_MU)
-    @test_throws ErrorException brouwer_mean_short_to_kep([7000.0, 0.01, deg2rad(200.0), 0.0, 0.0, 0.0], _BROU_MU)
-    @test_throws ErrorException brouwer_mean_long_to_kep([7000.0, 0.01, deg2rad(200.0), 0.0, 0.0, 0.0], _BROU_MU)
-    @test_throws ErrorException brouwer_mean_long_to_kep([7000.0, 0.01, 0.3, 0.0, 0.0, 0.0], 42000.0)
-    @test_throws ErrorException brouwer_mean_short_to_kep([7000.0, 0.01, 0.3, 0.0, 0.0, 0.0], 42000.0)
+@testset "BROU outside the domain warns and returns NaNs [AS-7, AS-10]" begin
+    bad_mean_and_osc = [
+        ([7000.0, 0.995, 0.3, 0.0, 0.0, 0.0], _BROU_MU, "(ECC|RadPer)"),         # e ≥ 0.99; the short core checks periapsis first
+        ([3200.0, 0.5, 0.3, 0.0, 0.0, 0.0], _BROU_MU, "RadPer"),                 # periapsis 1600 km
+        ([7000.0, 0.01, deg2rad(200.0), 0.0, 0.0, 0.0], _BROU_MU, "INC"),        # i > 180°
+        ([7000.0, 0.01, 0.3, 0.0, 0.0, 0.0], 42000.0, "only to the Earth"),      # non-Earth μ
+    ]
+    for (elements, μ, reason) in bad_mean_and_osc
+        for f in (kep_to_brouwer_mean_long, kep_to_brouwer_mean_short,
+                  brouwer_mean_long_to_kep, brouwer_mean_short_to_kep)
+            out = @test_logs (:warn, Regex("Conversion failed.*$reason")) f(elements, μ)
+            @test length(out) == 6 && all(isnan, out)
+        end
+    end
+    # a negative osculating eccentricity is checked on the osculating side only
+    for f in (kep_to_brouwer_mean_long, kep_to_brouwer_mean_short)
+        out = @test_logs (:warn, r"Conversion failed.*ECC") f([7000.0, -0.01, 0.3, 0.0, 0.0, 0.0], _BROU_MU)
+        @test all(isnan, out)
+    end
+    # the state types carry the NaNs through
+    kep = KeplerianState(7000.0, 0.995, 0.3, 0.0, 0.0, 0.0)
+    for BT in (BrouwerMeanLongState, BrouwerMeanShortState)
+        b = @test_logs (:warn, r"Conversion failed") BT(kep, _BROU_MU)
+        @test all(isnan, to_vector(b))
+    end
+    # AD: the NaNs keep the input's element type, so a dual number stays one
+    duals = ForwardDiff.Dual.([7000.0, 0.995, 0.3, 0.0, 0.0, 0.0], 1.0)
+    out = @test_logs (:warn,) kep_to_brouwer_mean_long(duals, _BROU_MU)
+    @test eltype(out) <: ForwardDiff.Dual && all(isnan ∘ ForwardDiff.value, out)
+end
+
+@testset "BROU malformed input throws [AS-8]" begin
+    for f in (kep_to_brouwer_mean_long, kep_to_brouwer_mean_short,
+              brouwer_mean_long_to_kep, brouwer_mean_short_to_kep)
+        err = try f([7000.0, 0.01, 0.3, 0.0, 0.0], _BROU_MU); nothing catch e; e end
+        @test err isa ArgumentError
+        @test occursin("got 5 elements", err.msg)
+    end
 end
 
 @testset "BROU warnings (inside-Earth radper, critical inc)" begin
@@ -205,4 +283,26 @@ push!(_gmat_truth, (name="prograde",
         @test rl[1] < 1e-3 && rl[2] < 1e-8 && maximum(rl[3:6]) < 1e-5
         @test rs[1] < 1e-3 && rs[2] < 1e-8 && maximum(rs[3:6]) < 1e-5
     end
+end
+
+@testset "BROU state types against GMAT truth [AS-1.11, AS-1.12, AS-10]" begin
+    d2r(v) = [v[1], v[2], deg2rad(v[3]), deg2rad(v[4]), deg2rad(v[5]), deg2rad(v[6])]
+    for row in _gmat_truth
+        kep = KeplerianState(d2r(row.osc))
+        for (BT, ref) in ((BrouwerMeanLongState, row.long), (BrouwerMeanShortState, row.short))
+            b = to_vector(BT(kep, _BROU_MU))
+            ref = d2r(ref)
+            @test abs(b[1] - ref[1]) < 1e-3 && abs(b[2] - ref[2]) < 1e-8
+            @test maximum(_angd.(b[3:6], ref[3:6])) < deg2rad(1e-5)
+        end
+    end
+end
+
+# GMAT's short-period theory takes a negative mean eccentricity as the same orbit with
+# periapsis turned half way round: e → -e, ω → ω + π, M → M - π.
+@testset "BROU negative mean eccentricity" begin
+    mean    = [7000.0, -0.01, deg2rad(30.0), 0.2, 0.4, 1.0]
+    flipped = [7000.0,  0.01, deg2rad(30.0), 0.2, 0.4 + π, 1.0 - π]
+    @test _rt_err(brouwer_mean_short_to_kep(mean, _BROU_MU),
+                  brouwer_mean_short_to_kep(flipped, _BROU_MU)) < 1e-12
 end

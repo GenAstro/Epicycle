@@ -22,11 +22,11 @@ end
 @testset "cart_to_kep / kep_to_cart input validation" begin
     # cart_to_kep: wrong length
     test_throws_msg(cart_to_kep, bad7, mu;
-        substr = "Input vector must have exactly six elements: [x, y, z, vx, vy, vz].")
+        substr = "Input vector must have exactly six elements: [x, y, z, vx, vy, vz]")
 
     # kep_to_cart: wrong length
     test_throws_msg(kep_to_cart, bad7, mu;
-        substr = "Input vector must have exactly six elements: a, e, i, Ω, ω, ν.")
+        substr = "Input vector must have exactly six elements: a, e, i, Ω, ω, ν")
 
     # Positive controls (shape only; numeric content not asserted deeply here)
     good_cart = [7000.0, 0.0, 0.0, 0.0, 7.5, 1.0]

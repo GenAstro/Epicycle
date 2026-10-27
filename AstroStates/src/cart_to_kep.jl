@@ -44,12 +44,13 @@ kep = cart_to_kep(cart, 398600.4418)
 """
 function cart_to_kep(cart::AbstractVector{<:Real}, μ::Real; tol::Real=1e-12)
     if length(cart) != 6
-        error("Input vector must have exactly six elements: [x, y, z, vx, vy, vz].")
+        error("Input vector must have exactly six elements: [x, y, z, vx, vy, vz]; got $(length(cart)) elements.")
     end
     T = float(promote_type(eltype(cart), typeof(μ)))
+    _has_nan(cart, μ) && return fill(T(NaN), 6)
 
     if μ < tol
-        @warn "Conversion Failed: μ < tolerance."
+        @warn "Conversion failed: μ < tolerance."
         return fill(T(NaN), 6)
     end
 
@@ -59,7 +60,9 @@ function cart_to_kep(cart::AbstractVector{<:Real}, μ::Real; tol::Real=1e-12)
     # Position and velocity magnitudes, and the singular states
     r = norm(r̄)
     v = norm(v̄)
-    if r < tol || v < tol
+    # Each check is !(x >= tol) so that a NaN magnitude counts as singular: under ForwardDiff, the
+    # norm of an exactly zero vector is NaN, and x < tol would let it through.
+    if !(r >= tol && v >= tol)
         @warn "Conversion failed: Orbit is singular due to degenerate position or velocity vector."
         return fill(T(NaN), 6)
     end
@@ -68,8 +71,8 @@ function cart_to_kep(cart::AbstractVector{<:Real}, μ::Real; tol::Real=1e-12)
     energy = v^2 / 2 - μ / r
     h̄ = cross(r̄, v̄)
     h = norm(h̄)
-    if h < tol
-        @warn "Conversion Failed: Orbit is singular due to degenerate angular momentum."
+    if !(h >= tol)
+        @warn "Conversion failed: Orbit is singular due to degenerate angular momentum."
         return fill(T(NaN), 6)
     end
 
