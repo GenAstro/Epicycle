@@ -24,10 +24,9 @@
 #
 # **Radial-primary frames need only a state.** `r̂` turns at `ω = h/r²`, which
 # is a function of position and velocity alone. Velocity-primary frames do not:
-# `v̂` turns at a rate set by the force environment, so `VNB` needs
-# acceleration and says so. This is the whole practical difference between
-# them, and it is why `reference_accel` is required for one and optional for
-# the others.
+# `v̂` turns at a rate set by the force environment. With no acceleration,
+# VNB describes an unaccelerated reference and has zero rate. RIC and LVLH
+# still turn with the radius, while omitting orbit-plane acceleration.
 # =============================================================================
 
 function _orbit_relative_missing(frame, field, why)
@@ -106,8 +105,12 @@ Whether these axes are defined by a reference orbit rather than by a body.
 
 # Returns
 `true` for [`RIC`](@ref), [`LVLH`](@ref) and [`VNB`](@ref), which need a
-reference state before they mean anything, and `false` for axes fixed to a body
-or to the sky.
+reference state to define their orientation, and `false` for axes fixed to a
+body or to the sky.
+
+# Notes
+The default is `false`. A user-defined orbit-relative frame overrides this
+method to receive automatic reference-orbit handling in coordinate conversions.
 
 # Example
 
@@ -117,10 +120,6 @@ needs_reference_orbit(RIC()), needs_reference_orbit(ICRF())
 # output
 (true, false)
 ```
-
-`false` by default. A user frame built from a reference orbit says so by
-adding a method, and then gets the same automatic handling the shipped
-orbit-relative frames do.
 """
 needs_reference_orbit(::AbstractAxes) = false
 needs_reference_orbit(::RIC)  = true
@@ -128,34 +127,56 @@ needs_reference_orbit(::LVLH) = true
 needs_reference_orbit(::VNB)  = true
 
 """
-    _reference(p::NamedTuple, frame, needs_accel::Bool) -> (r, v, a)
+    _reference(p::NamedTuple, frame) -> (r, v, a)
 
 Pull the reference orbit out of `params`, failing by name if it is absent.
 
 `a` defaults to zero when acceleration is not supplied. For a radial-primary
 frame that is exact under two-body motion and neglects only the rotation of
-the orbit plane under out-of-plane forces. Velocity-primary frames require
-acceleration to determine their rate.
+the orbit plane under out-of-plane forces. Without supplied acceleration, VNB describes an unaccelerated reference with zero rate.
 """
 @inline function _reference(p::NamedTuple, frame)
     _check_reference_keys(p, frame)
     haskey(p, :reference_state) || throw(_orbit_relative_missing(
         frame, :reference_state, "the frame is defined by a reference orbit"))
     s = p.reference_state
+    s isa Union{AbstractVector, Tuple} || throw(ArgumentError(
+        "$(frame) axes: `reference_state` must contain six real numbers; got $(repr(s))."))
     length(s) == 6 || throw(ArgumentError(
         "$(frame) axes: `reference_state` is a position and velocity, six numbers in km and " *
         "km/s; got $(length(s))."))
+    all(x -> x isa Real, s) || throw(ArgumentError(
+        "$(frame) axes: `reference_state` must contain six real numbers; got $(s)."))
     r = SVector{3}(s[1], s[2], s[3])
     v = SVector{3}(s[4], s[5], s[6])
-    iszero(cross(r, v)) && _warn_degenerate_reference(frame)
     if haskey(p, :reference_accel)
         acc = p.reference_accel
+        acc isa Union{AbstractVector, Tuple} || throw(ArgumentError(
+            "$(frame) axes: `reference_accel` must contain three real numbers; got $(repr(acc))."))
         length(acc) == 3 || throw(ArgumentError(
             "$(frame) axes: `reference_accel` is an acceleration, three numbers in km/s²; got " *
             "$(length(acc))."))
+        all(x -> x isa Real, acc) || throw(ArgumentError(
+            "$(frame) axes: `reference_accel` must contain three real numbers; got $(acc)."))
         a = SVector{3}(acc[1], acc[2], acc[3])
     else
         a = zero(SVector{3,Float64})
+    end
+    # Squaring before the zero check also works for dual inputs: at zero angular momentum the
+    # squared magnitude and its first derivatives are zero, even when the vector's are not.
+    h2 = sum(abs2, cross(r, v))
+    if any(isnan, s) || any(isnan, a)
+        bad = (r + v + a) .* NaN
+        return bad, bad, bad
+    elseif !all(isfinite, s) || !all(isfinite, a) || !isfinite(h2) ||
+           !all(isfinite, cross(r, a))
+        @warn "AstroFrames: the reference data for $(frame) axes are non-finite or overflow; the axes are undefined and return NaNs." maxlog = 1
+        bad = (r + v + a) .* NaN
+        return bad, bad, bad
+    elseif !(h2 > 0)
+        _warn_degenerate_reference(frame)
+        bad = (r + v + a) .* NaN
+        return bad, bad, bad
     end
     return r, v, a
 end
@@ -168,16 +189,14 @@ end
 Radial / in-track / cross-track axes of a reference orbit, in that order.
 
 `R̂` follows the radius, `Ĉ` follows the orbit normal `r × v`, and `Î = Ĉ × R̂`
-completes the set. The `Î` axis is exactly along-track only for a circular orbit. The
-rows come back as `(R̂, Î, Ĉ)`, so the second component of a transformed vector
-is in-track and the third is cross-track, which is what the name says and what
-every other tool means by it.
+completes the set. The `Î` axis is transverse to the radius in the orbit plane;
+it need not align with velocity on an eccentric orbit. The rows are `(R̂, Î, Ĉ)`:
+radial, in-track, and cross-track components.
 
 `params` must carry `reference_state`; `reference_accel` is optional and, when
 given, includes the rotation of the orbit plane under out-of-plane forces.
 
-Identical to the frames named RSW and QSW elsewhere; those are not separate
-frames and are not provided under separate names.
+Also called RSW or QSW; AstroFrames provides this convention as `RIC`.
 """
 function axes_rotation(::ICRF, ::RIC, e::EpochScales, p::NamedTuple)
     r, v, a = _reference(p, "RIC")
@@ -199,11 +218,10 @@ end
 
 Local-vertical / local-horizontal axes of a reference orbit.
 
-**Convention, stated because it varies by source:** `ẑ` is nadir, `−r̂`; `ŷ` is
-the negative orbit normal, `−ĥ`; `x̂ = ŷ × ẑ` completes the set and lies nearly
-along-track. This is the nadir-pointing convention used for spacecraft
-attitude. Sources differ on the signs, so anything comparing against another
-tool should check theirs rather than assume.
+Uses the nadir-pointing convention: `ẑ = −r̂`, `ŷ = −ĥ` is opposite the orbit
+normal, and `x̂ = ŷ × ẑ` completes the set and lies nearly along-track.
+LVLH definitions vary in axis order and signs; check the convention when
+exchanging data with another system.
 
 `params` must carry `reference_state`; `reference_accel` is optional.
 """
@@ -229,23 +247,12 @@ Velocity / normal / binormal axes of a reference orbit.
 
 `V̂` along velocity, `N̂` along the orbit normal, `B̂ = V̂ × N̂`.
 
-`params` must carry `reference_state`. `reference_accel` is optional, and what
-it changes is worth understanding, because VNB turns for a different reason
-than [`RIC`](@ref) and [`LVLH`](@ref) do.
-
-Those frames are built from the radius. The radius direction turns with the
-orbit under any force model, and its rate follows from the supplied velocity.
-
-VNB is built from the velocity. A velocity direction turns only when the
-velocity changes, and velocity changes only under acceleration. So VNB's rate
-is not a property of the geometry the way RIC's is; it is a property of the
-force environment.
-
-Acceleration is therefore a separate input. Without `reference_accel`, the
-velocity direction and orbit normal remain fixed and the frame rate is zero.
-This describes an unaccelerated reference and supports instantaneous resolution
-into along-track, normal, and binormal components. Supplying acceleration
-includes the frame rate of an accelerating reference.
+`params` must carry `reference_state` in ICRF, in km and km/s. The optional
+`reference_accel`, in km/s², determines the rate of the velocity direction and
+orbit normal. Without it, the frame rate is zero, representing an
+unaccelerated reference. This is suitable for resolving instantaneous vector
+components. Supply acceleration to include the velocity contribution from
+the frame's motion.
 """
 function axes_rotation(::ICRF, ::VNB, e::EpochScales, p::NamedTuple)
     r, v, a = _reference(p, "VNB")

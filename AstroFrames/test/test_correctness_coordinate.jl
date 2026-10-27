@@ -144,3 +144,32 @@ end
         @test occursin("Coordinate", e.msg)
     end
 end
+
+# Coordinate equality compares the representation as well as its stored elements.
+@testset "Coordinate equality keeps the state representation" begin
+    x = [7000., 0, 0, 0, 7.5, 0]
+    cart = Coordinate(CartesianState(x), _EQ, _EP_C)
+    kep = Coordinate(KeplerianState(x), _EQ, _EP_C)
+    same = Coordinate(OrbitState(x, Cartesian()), _EQ, _EP_C)
+    @test cart != kep
+    @test cart == same
+    @test hash(cart) == hash(same)
+    @test length(Set([cart, kep, same])) == 2
+end
+
+using EpicycleBase: AbstractPoint
+struct _UnnamedFrameOrigin <: AbstractPoint end
+
+# Truth: the stored frame, epoch and state, rendered through both display forms.
+@testset "Coordinate and unnamed-origin displays" begin
+    cs = CoordinateSystem(_UnnamedFrameOrigin(), ICRF())
+    @test occursin("_UnnamedFrameOrigin", sprint(show, MIME"text/plain"(), cs))
+    for state in (CartesianState(_VEC_C), OrbitState(_VEC_C, Cartesian()))
+        c = Coordinate(state, EarthICRF, 2458849.5)
+        plain = sprint(show, MIME"text/plain"(), c)
+        @test sprint(show, c) == plain
+        epoch_text = match(r"epoch\s*=\s*(\S+)\s+JD TDB", plain)
+        @test epoch_text !== nothing && parse(Float64, epoch_text[1]) == 2458849.5
+        @test occursin(string(_VEC_C[1]), plain)
+    end
+end

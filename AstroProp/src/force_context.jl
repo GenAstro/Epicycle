@@ -27,12 +27,16 @@ mutable struct ForceContext
     positions::Vector{SVector{3,Float64}}
     state_keys::Vector{Tuple{Int, Int}}
     states::Vector{SVector{6,Float64}}
+    # An epoch inside the stretch between force breakpoints the integrator is in, or `nothing`
+    # when the solve has no breakpoints. It outlives `_reset!`: the integration moves it on as it
+    # passes each breakpoint (discontinuities.jl).
+    piece::Union{Nothing, Time{Float64}}
 end
 
 ForceContext() = ForceContext(nothing, nothing,
                               Tuple{UInt, Int}[], SMatrix{6,6,Float64,36}[],
                               Tuple{Int, Int}[], SVector{3,Float64}[],
-                              Tuple{Int, Int}[], SVector{6,Float64}[])
+                              Tuple{Int, Int}[], SVector{6,Float64}[], nothing)
 
 # Start an evaluation at `t`. A time that is not Float64, as when the epoch itself is
 # differentiated, leaves the context unused.
@@ -52,10 +56,6 @@ _context(params::NamedTuple, t::Time) =
         params.context : nothing
 _context(params, t) = nothing
 
-# AstroFrames' own conversion, which carries UTC in two parts, so a rotation from the context is the
-# one `body_fixed_rotation(model, naifid, t)` gives, to the bit.
-_epoch_scales(t::Time) = AstroFrames._scales(t)
-
 """
     force_epoch(params, t::Time) -> EpochScales
 
@@ -63,12 +63,14 @@ The epoch `t` as TDB, TT and UTC Julian dates (`.tdb`, `.tt`, `.utc`), converted
 evaluation of the equations of motion. A force reads its time scales here rather than from
 `t.tdb` and `t.utc`, which convert again on every call.
 """
+# AstroFrames' own conversion, which carries UTC in two parts, so a rotation from the context is the
+# one `body_fixed_rotation(model, naifid, t)` gives, to the bit.
 function force_epoch(params, t::Time)
     ctx = _context(params, t)
-    ctx === nothing && return _epoch_scales(t)
+    ctx === nothing && return EpochScales(t)
     e = ctx.epoch
     if e === nothing
-        e = _epoch_scales(t)
+        e = EpochScales(t)
         ctx.epoch = e
     end
     return e
@@ -134,7 +136,13 @@ end
 # two instead, so a force of this package can take the context and share the epoch, rotations and
 # ephemeris already computed at t; any other force falls through to its registered method.
 _state_jac_ctx!(out, force, t, y, sc, params) = state_jac!(out, force, t, y, sc)
-_param_jac_ctx!(out, force, tag, t, y, sc, params) = param_jac!(out, force, tag, t, y, sc)
+_param_jac_ctx!(out::AbstractMatrix, force, tag, t, y, sc, params) = param_jac!(out, force, tag, t, y, sc)
+# A scalar parameter takes a vector of partials; a vector quantity that happens to have one
+# component still reaches the force's matrix method, as one column.
+function _param_jac_ctx!(out::AbstractVector, force, tag, t, y, sc, params)
+    applicable(param_jac!, out, force, tag, t, y, sc) && return param_jac!(out, force, tag, t, y, sc)
+    return param_jac!(reshape(out, :, 1), force, tag, t, y, sc)
+end
 
 """
     accel_and_jac!(acc, jac, force, t, y, sc, params)

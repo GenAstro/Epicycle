@@ -21,21 +21,12 @@ using AstroUniverse: translate_state
 """
     origin_translation(source_origin, target_origin, axes, epoch[, params]) -> SVector{6}
 
-Offset to add after rotating, when the origin changes.
+Return the state of `source_origin` relative to `target_origin`, expressed in
+`axes`: position in km followed by velocity in km/s.
 
-Returns the **state of `source_origin` relative to `target_origin`, expressed
-in `axes`** — position in km, velocity in km/s. Both halves of that sentence
-are load-bearing:
-
-  * **Direction.** It is the source origin seen from the target, not the
-    reverse. Check it against the degenerate case: a point sitting at the
-    source origin has zero coordinates there, so its coordinates about the
-    target origin must be exactly this offset.
-  * **Axes.** An offset is a vector, and a vector expressed in the wrong axes
-    is wrong by a rotation while looking entirely plausible. Nothing about the
-    numbers reveals the mistake, so the axes are named rather than assumed.
-
-Composed with a rotation, the full frame change is
+Add this offset after rotating a state into the target axes. A point at the
+source origin has zero coordinates there, so its target coordinates equal
+this offset. For a frame change without additional reference parameters:
 
     state_target = axes_rotation(source_axes, target_axes, epoch) * state_source
                  + origin_translation(source_origin, target_origin, target_axes, epoch)
@@ -51,12 +42,16 @@ Composed with a rotation, the full frame change is
   [`axes_rotation`](@ref) takes, needed when `axes` are defined by a reference
   orbit.
 
+# Returns
+An `SVector{6}` containing the source origin's position and velocity relative
+to the target, in the requested axes.
+
 # Notes
-- The ephemeris is delivered in ICRF and is rotated into `axes` here, so a
-  caller working in an FK5 frame gets the frame bias applied automatically
-  rather than having to remember it. Forgetting it is ≈16 km at 1 AU.
-- **Not differentiable**: the ephemeris comes from SPICE. An origin shift is
-  therefore outside any AD path.
+Ephemeris states arrive in ICRF and are rotated into `axes`, including the
+frame bias when required. The bias corresponds to about 16 km at 1 AU.
+
+SPICE ephemeris calls do not support epoch differentiation. The returned
+offset can still be added to a differentiable state at a fixed ordinary epoch.
 
 # Example
 
@@ -93,7 +88,8 @@ function _resolve_origin(origin, e::EpochScales)
         "$(nameof(typeof(origin))) is the origin and carries its own state")
 
     cs  = frame_of(origin)
-    own = axes_rotation(cs.axes, ICRF(), e) * SVector{6}(_cartesian_vector(origin))
+    params = _reference_orbit_from_origin(cs, e, NamedTuple())
+    own = axes_rotation(cs.axes, ICRF(), e, params) * SVector{6}(_cartesian_vector(origin))
     body, rest = _resolve_origin(cs.origin, e)
     return (body, own + rest)
 end
@@ -144,10 +140,15 @@ end
 
 # --- Public entry points -----------------------------------------------------
 
-origin_translation(from::AbstractPoint, to::AbstractPoint, axes::AbstractAxes, t::Time,
-                   params::NamedTuple = NamedTuple()) =
-    origin_translation(from, to, axes, _scales(t), params)
+function origin_translation(from::AbstractPoint, to::AbstractPoint, axes::AbstractAxes,
+                            epoch::Union{Time, Real}, params::NamedTuple = NamedTuple())
+    _valid_epoch(epoch) || return SVector{6}(_nan_epoch_values(epoch, Val(6)))
+    return origin_translation(from, to, axes, _scales(epoch), params)
+end
+origin_translation(from::AbstractPoint, to::AbstractPoint, axes::AbstractAxes, epoch) =
+    throw(ArgumentError("origin_translation: epoch must be an AstroEpochs.Time or a TDB Julian date; got $(repr(epoch)) ($(typeof(epoch)))."))
 
-origin_translation(from::AbstractPoint, to::AbstractPoint, axes::AbstractAxes, jd_tdb::Real,
-                   params::NamedTuple = NamedTuple()) =
-    origin_translation(from, to, axes, _scales(jd_tdb), params)
+origin_translation(from::AbstractPoint, to::AbstractPoint, axes::AbstractAxes, epoch, params) =
+    throw(ArgumentError("origin_translation: params must be a NamedTuple of evaluated reference data; got $(repr(params)) ($(typeof(params)))."))
+origin_translation(from::AbstractPoint, to::AbstractPoint, axes::AbstractAxes, epoch, params::NamedTuple) =
+    origin_translation(from, to, axes, epoch)

@@ -9,7 +9,7 @@
 #   1. Body-fixed rotating axes            — restricted to specific origins
 #      ITRF, TIRS, PEF                     (Earth only)
 #      MoonPA, MoonME                      (Moon only; SPICE-backed)
-#      CelestialBodyFixed{OT}                    (Sun, planets — origin encoded in type)
+#      CelestialBodyFixed{NAIFID}                    (Sun, planets — origin encoded in type)
 #
 #   2. Origin-tied inertial axes           — restricted to Earth origin
 #      GCRF, CIRS, MODEq, TODEq            (Earth-related model corrections)
@@ -22,7 +22,7 @@
 #      VNB                                 (existing)
 #
 # Origin-coupling rules are declared alongside each type as a
-# `_valid_origin(::Type{A}, ::Type{O}) = true|false` method. Defaults to
+# `valid_origin(axes, origin) = true|false` method. Defaults to
 # `true` (any origin allowed); overridden per-type as needed.
 # =============================================================================
 
@@ -61,14 +61,12 @@ struct ICRF <: AbstractAxes end
 
 Geocentric Celestial Reference System axes.
 
-Origin-tied inertial, and the geocentric frame the Earth chain is built on.
-Requires an Earth origin.
+Requires an Earth origin and is the starting frame of the IAU 2006
+precession-nutation chain.
 
-Its orientation is identical to `ICRF`; the GCRS is kinematically
-non-rotating with respect to the ICRS, so the rotation between them is the
-identity. The two types are distinct because the *origin* differs and because
-`GCRF` is where the Earth precession-nutation chain begins, not because the
-axes are oriented differently.
+Its orientation is identical to `ICRF`: the GCRS is kinematically non-rotating
+with respect to the ICRS. The axes rotation between them is the identity.
+Unlike `GCRF`, the `ICRF` axes type permits any origin.
 
 See also: [`ICRF`](@ref).
 
@@ -136,7 +134,7 @@ struct TIRS <: AbstractAxes end
 International Terrestrial Reference System axes.
 
 Earth-fixed frame with polar-motion corrections from IERS Earth Orientation
-Parameters. Production-grade Earth-fixed frame. **Requires an Earth origin.**
+Parameters. Requires an Earth origin.
 
 # Example
 
@@ -300,12 +298,10 @@ struct PEF <: AbstractAxes end
 
 True Equator, Mean Equinox (FK5) axes.
 
-The frame SGP4 propagates in, and therefore the frame a two-line element set
-resolves to. It shares its equator with `TODEq` and differs from it by the
-equation of the equinoxes: true equator with the mean equinox.
-
-TEME supports TLE interoperability. Results should be converted to another
-frame after propagation. Requires an Earth origin.
+SGP4 returns states in this frame when propagating a two-line element set.
+TEME shares its equator with `TODEq` and differs from it by the equation of
+the equinoxes. Convert the propagated state to the frame required by the
+subsequent analysis. Requires an Earth origin.
 
 # Example
 
@@ -392,7 +388,7 @@ craters, LOLA elevation grids, LRO imagery, and surface latitude and longitude,
 use this frame.
 
 For evaluating a lunar gravity field, use [`MoonPA`](@ref) instead. The two
-differ by about 875 m on the surface, so the choice is not cosmetic.
+differ by about 875 m on the surface.
 
 The frame is separated from [`MoonPA`](@ref) by a fixed rotation of about 104
 arcseconds and carries the same libration. It is not a smoothed version of the
@@ -427,9 +423,8 @@ Pluto). Type parameter `NAIFID::Int` records the intended origin body; the
 origin-coupling rule requires the coordinate system's origin to have a matching
 NAIF ID.
 
-It works for the Earth and the Moon too, through their models, but those have
-named axes that say more: `ITRF` for the Earth, `MoonPA` or `MoonME` for the
-Moon.
+Earth and Moon use their selected orientation models as well. To select the
+axes explicitly, use `ITRF` for Earth, or `MoonPA` or `MoonME` for the Moon.
 
 # Constructors
 - `CelestialBodyFixed(body)` — explicit form; encodes the body's NAIF ID in the type.
@@ -496,20 +491,20 @@ Base.show(io::IO, ::MIME"text/plain", a::CelestialBodyFixed) = show(io, a)
 Radial / in-track / cross-track axes of a reference orbit.
 
 `R` follows the radius, `C` follows the orbit normal `r × v`, and `I` completes
-the right-handed set. The `I` axis is exactly along-track only for a circular
-orbit.
+the right-handed set. The `I` axis is transverse to the radius in the orbit
+plane and need not align with velocity on an eccentric orbit.
 
-The standard frame for expressing relative position and orbit uncertainty.
-Called RSW and QSW elsewhere; those are this frame, not different ones.
+Commonly used for relative position and orbit uncertainty. Also called RSW
+or QSW.
 
 # Fields
 None. The reference orbit passed to the transformation defines the frame.
 
 # Notes
-Needs a reference orbit, which AstroFrames cannot obtain on its own: pass it as
-`reference_state`, a six-element inertial state in km and km/s. Acceleration is
-optional here and, when given, includes the orbit plane turning under
-out-of-plane force.
+For `axes_rotation`, supply `reference_state` as a six-element ICRF state in
+km and km/s. Optional `reference_accel`, in km/s², includes the orbit plane's
+rotation under out-of-plane acceleration. A coordinate conversion obtains the
+reference orbit automatically when the frame's origin carries its own state.
 
 # Example
 ```julia
@@ -566,21 +561,16 @@ velocity.
 None. See [`RIC`](@ref).
 
 # Notes
-This frame turns for a different reason than [`RIC`](@ref) and [`LVLH`](@ref)
-do. Those are built from the radius, whose direction swings around as the
-spacecraft travels, so they turn with the orbit whatever forces are acting.
-`V` follows the velocity, and its direction turns only under acceleration.
-
-Acceleration is therefore a separate, optional input. Without
-`reference_accel`, VNB describes an unaccelerated reference and has zero frame
-rate. This form is appropriate for resolving a vector into instantaneous
-along-track, normal, and binormal components. Supplying `reference_accel` in
-km/s² includes the frame rate of an accelerating reference.
+The velocity direction changes under acceleration, so the frame rate depends
+on `reference_accel`. Without this optional input, VNB describes an
+unaccelerated reference and has zero frame rate. This form resolves a vector
+into instantaneous velocity, normal, and binormal components. Supply
+`reference_accel` in km/s² to include the rate of an accelerating frame.
 
 When a spacecraft is the coordinate system's origin, as in
 `CoordinateSystem(chief, VNB())`, its state is the reference orbit and its
-acceleration is taken as two-body gravity about the body its state is measured
-from, so the frame turns with the spacecraft as RIC and LVLH do.
+acceleration is taken as two-body gravity when the central body's gravitational
+parameter is available. Explicit reference data take precedence.
 
 Called TNW and NTW elsewhere.
 
@@ -611,8 +601,8 @@ play rather than to a named frame: an impulsive manoeuvre with
 `axes=Inertial()` applies its ΔV components directly, with no rotation.
 Contrast `VNB`, which rotates into an orbit-relative triad.
 
-This is not a synonym for `ICRF` or `MJ2000Eq`. Naming a specific frame here
-would be wrong whenever the state is expressed in a different inertial frame.
+This marker does not select `ICRF`, `MJ2000Eq`, or any other specific inertial
+orientation.
 
 # Example
 
@@ -624,17 +614,3 @@ false
 ```
 """
 struct Inertial <: AbstractAxes end
-
-
-# =============================================================================
-# Deprecated bindings
-#
-# The frames rename replaced these. `ICRFAxes` and `MJ2000Axes` were exported by
-# the registered AstroFrames, so scripts written against them exist; they keep
-# working for one release and warn on use rather than breaking on upgrade.
-#
-# Remove in the release after next.
-# =============================================================================
-
-Base.@deprecate_binding ICRFAxes   ICRF
-Base.@deprecate_binding MJ2000Axes MJ2000Eq

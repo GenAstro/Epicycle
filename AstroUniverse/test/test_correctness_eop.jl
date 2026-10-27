@@ -119,6 +119,34 @@ end
     end
 end
 
+@testset "EOP — bulletin = :B reads the final values, and Bulletin A where B has none" begin
+    _with_eop_restored() do
+        p2000a, p1980 = _eop_file(_EOP_2000A_ROWS), _eop_file(_EOP_1980_ROWS)
+
+        t = eop_load(p2000a; theory = IAU2006(), bulletin = :B)
+        @test eop(IAU2006()) === t
+        @test t.x(_JD_1973_01_03)        ≈ 0.141     atol = 1e-12   # bulB/x_pole
+        @test t.y(_JD_1973_01_03)        ≈ 0.134     atol = 1e-12
+        @test t.Δut1_utc(_JD_1973_01_03) ≈ 0.8044    atol = 1e-12
+        @test t.δx(_JD_1973_01_03)       ≈ -18.636   atol = 1e-12
+        @test t.δy(_JD_1973_01_03)       ≈ -3.571    atol = 1e-12
+        @test t.lod(_JD_1973_01_03)      ≈ 3.5563    atol = 1e-12   # Bulletin B has none
+
+        f = eop_load(p1980; theory = FK5(), bulletin = :B)
+        @test f.δΔψ(_JD_1973_01_03) ≈ 0.0 atol = 1e-12
+
+        # A line with no Bulletin B keeps its Bulletin A values.
+        rows = replace(_EOP_2000A_ROWS, "final;.141000;.134000;final;.8044000;final;;;-18.636;-3.571" => "final;;;final;;final;;;;")
+        p = _eop_file(rows)
+        a = eop_load(p; theory = IAU2006(), bulletin = :B)
+        @test a.x(_JD_1973_01_03)  ≈ 0.118980 atol = 1e-12
+        @test a.δx(_JD_1973_01_03) ≈ -0.751   atol = 1e-12
+
+        @test_throws ArgumentError eop_load(p2000a; theory = IAU2006(), bulletin = :C)
+        rm(p2000a; force = true); rm(p1980; force = true); rm(p; force = true)
+    end
+end
+
 @testset "EOP — set_eop! installs a table by its type" begin
     _with_eop_restored() do
         t1980  = eop_load(_eop_file(_EOP_1980_ROWS);  theory = FK5())
@@ -178,7 +206,120 @@ const _EOP_FIELDS = (:x, :y, :Δut1_utc, :lod)
             for jd in (2441684.5, _JD_1973_01_03, 2441686.5), f in (_EOP_FIELDS..., nut...)
                 @test getproperty(from_fw, f)(jd) == getproperty(from_csv, f)(jd)
             end
+            # Bulletin B, which the fixed-width file carries in its own columns, reads the same too.
+            b_csv = eop_load(_eop_file(csv_rows); theory = theory, bulletin = :B)
+            b_fw  = eop_load(_finals_file(fw_rows); theory = theory, bulletin = :B)
+            for jd in (2441684.5, _JD_1973_01_03, 2441686.5), f in (_EOP_FIELDS..., nut...)
+                @test getproperty(b_fw, f)(jd) == getproperty(b_csv, f)(jd)
+            end
         end
+    end
+end
+
+# Earth orientation at an epoch: the table read at the epoch, plus the installed corrections.
+# Truth for the table read is the 1973 rows above at a row's date. Truth for the corrections is
+# arithmetic: a model that adds a known amount must show up as that amount, in every theory.
+
+using AstroEpochs
+using ForwardDiff
+
+const _T_1973_01_03 = Time("1973-01-03T00:00:00", UTC(), ISOT())
+const _JD_TT_1973_01_03 = _JD_1973_01_03 + 44.184 / 86_400          # TAI − UTC was 12 s in January 1973
+
+struct _PoleShift <: AbstractEopCorrection
+    x::Float64                                                     # arcsec
+end
+AstroUniverse.eop_correction(m::_PoleShift, jd_utc, jd_tt) = (x = m.x, y = 0.0, ut1_utc = 0.0, lod = 0.0)
+
+# UT1 shifted by TT − UTC in seconds and LOD by half a millisecond, so the test sees both dates arrive.
+struct _BothDates <: AbstractEopCorrection end
+AstroUniverse.eop_correction(::_BothDates, jd_utc, jd_tt) =
+    (x = 0.0, y = 0.0, ut1_utc = (jd_tt - jd_utc) * 86_400, lod = 0.5)
+
+"""Run `f` with the tables, theory and corrections put back afterwards."""
+function _with_corrections_restored(f)
+    before = eop_corrections()
+    try
+        _with_eop_restored(f)
+    finally
+        set_eop_corrections!(before)
+    end
+end
+
+@testset "EOP — eop(theory, epoch) reads the table at an epoch" begin
+    _with_eop_restored() do
+        eop_load(_eop_file(_EOP_2000A_ROWS); theory = IAU2006())
+        eop_load(_eop_file(_EOP_1980_ROWS);  theory = FK5())
+
+        v = eop(IAU2006(), _T_1973_01_03)
+        @test v isa EopValues
+        @test v.theory === IAU2006()
+        @test v.x                 ≈ 0.118980  atol = 1e-9      # arcsec
+        @test v.y                 ≈ 0.135656  atol = 1e-9
+        @test v.ut1_utc           ≈ 0.8056163 atol = 1e-9      # s
+        @test v.lod               ≈ 3.5563    atol = 1e-9      # ms
+        @test v.celestial_pole[1] ≈ -0.751    atol = 1e-9      # δx, mas
+        @test v.celestial_pole[2] ≈ -0.701    atol = 1e-9      # δy
+
+        f = eop(FK5(), _T_1973_01_03)
+        @test f.theory === FK5()
+        @test f.x == v.x && f.y == v.y && f.ut1_utc == v.ut1_utc && f.lod == v.lod
+        @test f.celestial_pole[1] ≈ 45.005 atol = 1e-9         # δΔψ, mas
+        @test f.celestial_pole[2] ≈ 2.762  atol = 1e-9         # δΔϵ
+
+        # The active theory, and the two-date form the frame chain calls with.
+        set_frame_theory!(FK5())
+        @test eop(_T_1973_01_03) == f
+        w = eop(IAU2006(), _JD_1973_01_03, _JD_TT_1973_01_03)
+        @test w.x ≈ v.x atol = 1e-12
+        @test w.ut1_utc ≈ v.ut1_utc atol = 1e-12
+
+        @test occursin("δx, δy = -0.751, -0.701 mas", sprint(show, MIME"text/plain"(), v))
+        @test occursin("δΔψ, δΔϵ = 45.005, 2.762 mas", sprint(show, MIME"text/plain"(), f))
+        @test occursin("x       = 0.11898 arcsec", sprint(show, v))
+    end
+end
+
+@testset "EOP — corrections add to the table and reach both theories" begin
+    _with_corrections_restored() do
+        eop_load(_eop_file(_EOP_2000A_ROWS); theory = IAU2006())
+        eop_load(_eop_file(_EOP_1980_ROWS);  theory = FK5())
+        set_eop_corrections!([])
+        plain = eop(IAU2006(), _T_1973_01_03)
+
+        installed = set_eop_corrections!([_PoleShift(0.001), _PoleShift(0.002), _BothDates()])
+        @test installed isa Vector{AbstractEopCorrection}
+        @test length(installed) == 3
+        @test eop_corrections() === installed
+
+        v = eop(IAU2006(), _T_1973_01_03)
+        @test v.x       ≈ plain.x + 0.003        atol = 1e-12
+        @test v.y       == plain.y
+        # A single Float64 Julian date resolves 40 µs, which is what the dates handed to a model carry.
+        @test v.ut1_utc ≈ plain.ut1_utc + 44.184 atol = 1e-4
+        @test v.lod     ≈ plain.lod + 0.5        atol = 1e-12
+        @test v.celestial_pole == plain.celestial_pole
+        @test eop(FK5(), _T_1973_01_03).x ≈ plain.x + 0.003 atol = 1e-12
+
+        set_eop_corrections!([])
+        @test isempty(eop_corrections())
+        @test eop(IAU2006(), _T_1973_01_03) == plain
+    end
+end
+
+@testset "EOP — a dual date differentiates through the table and the corrections" begin
+    _with_corrections_restored() do
+        eop_load(_eop_file(_EOP_2000A_ROWS); theory = IAU2006())
+        set_eop_corrections!([_BothDates()])
+        jd, jd_tt = _JD_1973_01_03 + 0.25, _JD_TT_1973_01_03 + 0.25
+        ut1(jd_utc) = eop(IAU2006(), jd_utc, jd_tt).ut1_utc
+        d = eop(IAU2006(), ForwardDiff.Dual(jd, 1.0), jd_tt)
+        @test d isa EopValues{IAU2006, <:ForwardDiff.Dual}
+        @test ForwardDiff.value(d.ut1_utc) ≈ ut1(jd) atol = 1e-12
+        # The table is linear between its daily knots, so a wide step loses nothing and keeps the
+        # 40 µs resolution of a single Float64 date out of the difference.
+        h = 1e-2
+        @test ForwardDiff.partials(d.ut1_utc, 1) ≈ (ut1(jd + h) - ut1(jd - h)) / 2h rtol = 1e-6
     end
 end
 

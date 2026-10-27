@@ -80,8 +80,8 @@ The coordinate system the subject's state is expressed in.
 The subject's current `CoordinateSystem` — origin and axes.
 
 # Notes
-This is what makes a conversion need only a target: the source comes from the
-subject rather than from the caller, so the two cannot disagree.
+Conversions read the source frame from the subject, so the caller supplies
+only the target frame.
 
 # Example
 
@@ -110,8 +110,8 @@ The epoch the subject's state is valid at.
 An `AstroEpochs.Time`, carrying its own scale.
 
 # Notes
-Every frame transform needs an epoch, and taking it from the subject is what
-stops a state being converted at the wrong instant.
+Conversions use this epoch to evaluate time-dependent rotations and origin
+translations.
 
 # Example
 
@@ -189,22 +189,21 @@ only the target coordinate system.
 - `state` — an `AstroStates` orbit state. Any representation; Cartesian is the
   usual one. Position in km, velocity in km/s.
 - `coord_sys` — the `CoordinateSystem` the state is expressed in.
-- `time` — an `AstroEpochs.Time`, carrying its own scale.
+- `time` — an `AstroEpochs.Time`, carrying its own scale, or a scalar TDB Julian date.
 
 # Notes
-It composes rather than duplicating: it holds an `AstroStates` state, not raw
-vectors, so Keplerian, equinoctial and every other representation come along
-for free and there is no second state type in the codebase.
+The stored state may use any AstroStates representation, including Cartesian,
+Keplerian, and equinoctial. Frame conversions first convert it to Cartesian
+form, using the source origin's gravitational parameter when required.
 
-The frame is a field, not a type parameter. Putting it on the state types would
-make one struct do two jobs, and small single-focus structs composed together
-are the rule throughout Epicycle.
-
-`Coordinate` carries no acceleration. Frames that require acceleration receive
-it through `params`.
+`Coordinate` carries no acceleration. Explicit reference acceleration is supplied through
+`params`; a state-carrying frame origin supplies two-body acceleration when available.
+Malformed states and epochs raise an `ArgumentError` naming the input.
 
 # Example
 ```julia
+using AstroFrames, AstroUniverse, AstroEpochs, AstroStates
+
 epoch = Time(2458849.5, 0.0, TDB(), JD())
 c = Coordinate([7000.0, 0.0, 0.0, 0.0, 7.546, 0.0],
                CoordinateSystem(earth, MJ2000Eq()), epoch)
@@ -217,6 +216,14 @@ struct Coordinate{S, CS<:AbstractCoordinateSystem, TT}
     state::S
     coord_sys::CS
     time::TT
+
+    function Coordinate(state::S, coord_sys::CS, time::TT) where {S, CS<:AbstractCoordinateSystem, TT}
+        state isa Union{AbstractOrbitState, OrbitState} || throw(ArgumentError(
+            "Coordinate: state must be an AstroStates orbit state or a Cartesian six-vector; got $(repr(state)) ($(S))."))
+        time isa Union{Time, Real} || throw(ArgumentError(
+            "Coordinate: epoch must be an AstroEpochs.Time or a TDB Julian date; got $(repr(time)) ($(TT))."))
+        return new{S,CS,TT}(state, coord_sys, time)
+    end
 end
 
 """
@@ -226,8 +233,11 @@ Constructs a `Coordinate` from a six-element Cartesian state vector with
 position in km followed by velocity in km/s. The constructor stores the vector
 as a `CartesianState`.
 """
-Coordinate(v::AbstractVector, cs::AbstractCoordinateSystem, epoch) =
-    Coordinate(CartesianState(v), cs, epoch)
+function Coordinate(v::AbstractVector, cs::AbstractCoordinateSystem, epoch)
+    all(x -> x isa Real, v) || throw(ArgumentError(
+        "Coordinate: state must contain six real Cartesian components; got $(repr(v))."))
+    return Coordinate(CartesianState(v), cs, epoch)
+end
 
 state_of(c::Coordinate) = c.state
 frame_of(c::Coordinate) = c.coord_sys
@@ -293,23 +303,28 @@ _as_cartesian(s::OrbitState, origin) =
 
 The subject's state as a Cartesian six-vector in `target`.
 
-Rotates the state into the target axes, then adds the origin offset expressed in
-those axes. AstroFrames skips the translation when the origins match, which
-keeps a pure rotation differentiable.
+For different origins, rotates through ICRF with the origin shift between the two
+rotations. Each end resolves its own reference orbit. A common origin skips the
+translation, keeping a pure rotation differentiable.
 """
 function _reexpress(subject, target::AbstractCoordinateSystem, params::NamedTuple)
     source = frame_of(subject)
     epoch  = epoch_of(subject)
     v      = _cartesian_vector(subject)
 
-    params = _reference_orbit_from_origin(target, epoch, params)
+    source_params = _reference_orbit_from_origin(source, epoch, params)
+    target_params = _reference_orbit_from_origin(target, epoch, params)
 
-    out = axes_rotation(source.axes, target.axes, epoch, params) * SVector{6}(v)
-
-    if !_same_origin(source.origin, target.origin)
-        out = out + origin_translation(source.origin, target.origin, target.axes, epoch, params)
+    if _same_origin(source.origin, target.origin)
+        return axes_rotation(source.axes, target.axes, epoch,
+                             merge(source_params, target_params)) * SVector{6}(v)
     end
-    return out
+
+    # The two origins may define different reference orbits. Resolve each rotation with its
+    # own reference, and change origin between them in ICRF.
+    inertial = axes_rotation(source.axes, ICRF(), epoch, source_params) * SVector{6}(v)
+    inertial += origin_translation(source.origin, target.origin, ICRF(), epoch)
+    return axes_rotation(ICRF(), target.axes, epoch, target_params) * inertial
 end
 
 _reexpress(subject, target::AbstractCoordinateSystem) =
@@ -343,7 +358,9 @@ function _reference_orbit_from_origin(target::AbstractCoordinateSystem,
     _require_epoch_match(origin, _scales(epoch).tdb,
         "$(nameof(typeof(target.axes))) axes take their reference orbit from the origin")
 
-    reference = axes_rotation(frame_of(origin).axes, ICRF(), epoch) *
+    origin_frame = frame_of(origin)
+    origin_params = _reference_orbit_from_origin(origin_frame, epoch, NamedTuple())
+    reference = axes_rotation(origin_frame.axes, ICRF(), epoch, origin_params) *
                 SVector{6}(_cartesian_vector(origin))
     params = merge(params, (; reference_state = reference))
 
@@ -383,12 +400,13 @@ source frame.
 A `Coordinate` holding a `CartesianState` in `target`, at the subject's epoch.
 
 # Notes
-The conversion applies both the axes rotation and, when the origin differs, the
-translation. Omitting the translation produces an error equal to the origin
-separation, about 384,000 km from Earth to the Moon.
+The conversion rotates the axes and translates the origin when needed. If
+the source or target origin carries its own state, that state must be valid
+at the conversion epoch.
 
-An origin change reads an ephemeris and is therefore not differentiable. A pure
-rotation is.
+Analytic rotations support automatic differentiation. Ephemeris and lunar
+orientation calls do not accept dual epochs. State derivatives at a fixed
+ordinary epoch remain supported, including conversions with an origin offset.
 
 # Example
 ```julia
@@ -427,9 +445,9 @@ CartesianState(c::Coordinate) = CartesianState(_cartesian_vector(c))
 
 The coordinate's state expressed in `target`, as a `CartesianState`.
 
-The same call `AstroModels` provides for a `Spacecraft`, so a script that has a
-state rather than a vehicle reads identically. See [`Coordinate`](@ref) for
-what a conversion does.
+This uses the same conversion as [`Coordinate`](@ref), including any origin
+translation, and returns only the state. AstroModels provides the same call
+for a `Spacecraft`.
 
 # Example
 ```julia
@@ -452,5 +470,11 @@ Base.:(==)(a::Coordinate, b::Coordinate) =
     a.coord_sys == b.coord_sys && a.time == b.time && _state_values(a.state) == _state_values(b.state)
 Base.hash(c::Coordinate, h::UInt) = hash(_state_values(c.state), hash(c.coord_sys, hash(c.time, h)))
 
-_state_values(s::AbstractOrbitState) = to_vector(s)
+_state_values(s::AbstractOrbitState) = (state_type_to_tag(s), to_vector(s))
+_state_values(s::OrbitState) = (s.statetype, s.state)
 _state_values(s) = s
+
+# A raw vector has no epoch, so its third argument cannot be conversion parameters.
+# This also resolves the overlap with Coordinate(subject, target, params).
+Coordinate(v::AbstractVector, cs::AbstractCoordinateSystem, params::NamedTuple) =
+    throw(ArgumentError("Coordinate: a raw state needs an epoch as its third argument; got a NamedTuple. Construct Coordinate(state, coord_sys, epoch) before supplying conversion parameters."))

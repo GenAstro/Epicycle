@@ -4,11 +4,13 @@ CurrentModule = AstroFrames
 
 # AstroFrames
 
-AstroFrames defines coordinate systems and transforms states between them. A coordinate system pairs an origin with an axes orientation. The package includes IAU 2006 and FK5 Earth frames, lunar frames, body-fixed frames for bodies with IAU orientation data, and orbit-relative frames. Transformations accept either a `Coordinate`, which holds a state, coordinate system, and epoch, or any object that provides the same information, including a `Spacecraft`.
+AstroFrames transforms position and velocity between coordinate systems. Each coordinate system pairs an origin with an axes orientation. The package provides IAU 2006 and FK5 Earth frames, planetary body-fixed frames, lunar frames, and orbit-relative frames.
 
-AstroFrames is tested against [pyerfa](https://github.com/liberfa/pyerfa) for the Earth systems, and against SPICE for planetary body-fixed axes and lunar systems. pyerfa is the Python interface to ERFA, the open-licence release of the IAU's SOFA library.
+For a state conversion, use a `Coordinate` to carry the state, coordinate system, and epoch together. The same conversion interface accepts a `Spacecraft` or another object that supplies this information. For calculations on arrays, use the rotation and translation operators directly.
 
-AstroFrames leverages extensive work on Earth-based systems available in [SatelliteToolboxTransformations.jl](https://juliaspace.github.io/SatelliteToolboxTransformations.jl/stable/). We thank the authors of that package for their high-quality work.
+AstroFrames is tested against [pyerfa](https://github.com/liberfa/pyerfa) for Earth-frame transformations, and against SPICE for planetary body-fixed and lunar transformations. pyerfa is the Python interface to ERFA, the open-licence release of the IAU's SOFA library.
+
+AstroFrames uses the Earth-frame models in [SatelliteToolboxTransformations.jl](https://juliaspace.github.io/SatelliteToolboxTransformations.jl/stable/). We thank the authors of that package for their high-quality work.
 
 The implementation follows these references:
 
@@ -19,110 +21,111 @@ The implementation follows these references:
 
 ## Quick Start
 
-The examples below illustrate how to create coordinate systems, convert a state, and evaluate an orbit property in another frame.
+Create a coordinate and convert it to Earth-fixed axes. Cartesian states contain position followed by velocity, `[x, y, z, vx, vy, vz]`, in km and km/s.
 
-```julia
-using AstroFrames, AstroUniverse, AstroEpochs, AstroModels, AstroStates, AstroCallbacks
+```@example frames1
+using AstroFrames, AstroUniverse, AstroEpochs
 
-# Create some coordinate systems providing the origin and axes
+# Define the source and target coordinate systems
 cs_j2000 = CoordinateSystem(earth, MJ2000Eq())
 cs_fixed = CoordinateSystem(earth, ITRF())
 
-# Define a coordinate: state + coordinate system + time
+# Associate the state with its frame and epoch
 epoch = Time(2458849.5, 0.0, TDB(), JD())
 c     = Coordinate([7000.0, 0.0, 0.0, 0.0, 7.546, 0.0], cs_j2000, epoch)
 
-# Convert the coordinate to the cs_fixed system
+# Convert to Earth-fixed axes at the same epoch
 c_fixed = Coordinate(c, cs_fixed)
-
-# Create a spacecraft and convert its state to the cs_fixed system
-sc = Spacecraft()
-Coordinate(sc, cs_fixed)
-
-# Calculate an orbit property in ecliptic coordinates
-cs_j2000Ec = CoordinateSystem(earth, MJ2000Ec())
-raan(sc, cs_j2000Ec)
 ```
 
-In the REPL, `subtypes(AbstractAxes)` lists every supported axes type, and `?MoonME`, for example, shows the help for one.
+In the REPL, `using InteractiveUtils; subtypes(AbstractAxes)` lists the axes types. Help mode entries such as `?MoonME` and `?axes_rotation` describe individual calls.
 
 ## Coordinate Systems
 
-A `CoordinateSystem` pairs an origin with an axes. Some axes require a specific origin: Earth axes require Earth, lunar axes require the Moon, and body-fixed axes require the body encoded by the axes. The constructor raises an `ArgumentError` for an invalid pairing.
+A `CoordinateSystem` pairs an origin with an axes orientation. Some axes require a specific origin: Earth axes require Earth, lunar axes require the Moon, and body-fixed axes require the body encoded by the axes. The constructor raises an `ArgumentError` for an invalid pairing.
 
-```julia
+```@example frames2
 using AstroFrames, AstroUniverse, AstroModels
 
 # Any body from AstroUniverse can be an origin.
 cs_earth_fixed   = CoordinateSystem(earth, ITRF())
 cs_moon_ecliptic = CoordinateSystem(moon, MJ2000Ec())
 
-# A planet fixed system
+# Define Mars body-fixed coordinates
 cs_mars_fixed = CoordinateSystem(mars, CelestialBodyFixed())
 
-# Moon fixed systems: mean Earth axes for surface coordinates, principal axes for gravity
+# Choose mean-Earth axes for lunar mapping or principal axes for gravity
 cs_moon_me = CoordinateSystem(moon, MoonME())
 cs_moon_pa = CoordinateSystem(moon, MoonPA())
 
-# Spacecraft-based systems: a spacecraft is an origin, and orbit-relative axes take their
-# reference orbit from it
+# Use a spacecraft as both origin and reference orbit
 chief   = Spacecraft(name = "chief")
 cs_ric  = CoordinateSystem(chief, RIC())
 cs_vnb  = CoordinateSystem(chief, VNB())
 cs_lvlh = CoordinateSystem(chief, LVLH())
 
-# The common pairings already have names.
+# Use named systems for common origin-and-axes pairings
 EarthMJ2000Eq
 MoonFixed
 
-# An illegal pairing raises here, naming what the axes are for.
+# Reject an origin incompatible with the axes
 # CoordinateSystem(mars, GCRF())   # GCRF axes require an Earth origin
 ```
 
-`CelestialBodyFixed` for Earth and the Moon uses their orientation models too: for Earth it is `ITRF`, by the active frame theory, and for the Moon it is `MoonPA`, the principal axes, unless `set_orientation!(moon, LunarME())` makes it the mean-Earth axes. Naming `ITRF`, `MoonPA` or `MoonME` directly says which is meant regardless of those settings.
+`CelestialBodyFixed` uses the body's selected orientation model. For Earth, it gives `ITRF` under the active frame theory. For the Moon, the default is `MoonPA`; calling `set_orientation!(moon, LunarME())` selects mean-Earth axes instead. Use `ITRF`, `MoonPA`, or `MoonME` explicitly when the frame must be independent of the body's model setting.
 
 ## Coordinates and Conversions
 
-A `Coordinate` holds a state, its coordinate system, and its epoch, so a conversion only needs the target coordinate system. The same conversion works with a `Spacecraft` or another type that contains state, coordinate system, and time.  
+`Coordinate(c, target)` returns a new coordinate in the target frame at the original epoch. The conversion rotates the axes and translates the origin when needed. To obtain only the Cartesian state, use `CartesianState(c, target)`.
 
-The examples below show how to convert a `Coordinate` to a new frame, convert a `Spacecraft' state to a new frame, and how to request the rotation matrix between systems. 
+The same calls accept a `Spacecraft`. Other types can participate by implementing [`state_of`](@ref), [`frame_of`](@ref), and [`epoch_of`](@ref).
 
-```julia
+```@example frames3
 using AstroFrames, AstroUniverse, AstroEpochs, AstroModels, AstroStates, AstroCallbacks
 
-# Define a coordinate providing time, state, and system
+# Define the state in Earth-centered J2000 equatorial coordinates
 epoch = Time(2458849.5, 0.0, TDB(), JD())
 system = CoordinateSystem(earth, MJ2000Eq())
 state = [7000.0, 0.0, 0.0, 0.0, 7.546, 0.0]
-c = Coordinate(state,system, epoch)
+c = Coordinate(state, system, epoch)
 
-# Convert the coordinate to Earth MJ2000Ec, this returns a new Coordinate
+# Convert to Earth-centered J2000 ecliptic coordinates
 c_ecliptic = Coordinate(c, CoordinateSystem(earth, MJ2000Ec()))
 
-# Convert the Coordinate to Moon centere MoonME axes
+# Convert the Coordinate to Moon-centered MoonME axes
 c_moon = Coordinate(c, CoordinateSystem(moon, MoonME()))
 
-# Define a spacecraft centered Coordinate
+# Convert a spacecraft state to Earth-fixed coordinates
 sc = Spacecraft()
 Coordinate(sc, CoordinateSystem(earth, ITRF()))
 
-# Compute some quantities in different coordinates
+# Obtain a position vector or Cartesian state in the requested frame
 position_vector(sc, CoordinateSystem(earth, ITRF()))
 CartesianState(sc, CoordinateSystem(moon, MoonME()))
 
-# Compute the rotation matrix from ICRF to ITRF 
+# Evaluate right ascension of the ascending node in J2000 ecliptic coordinates
+raan(sc, CoordinateSystem(earth, MJ2000Ec()))
+
+# Compute the rotation matrix from ICRF to ITRF
 M = axes_rotation(ICRF(), ITRF(), epoch)
 ```
 
-`axes_rotation` returns a 6×6 transform in SPICE `sxform` block form. The upper-left and lower-right blocks contain the rotation, and the lower-left block contains its time derivative. For Earth frames, the rate includes sidereal rotation but treats precession, nutation, polar motion, and obliquity of date as constant during the transformation. 
+`axes_rotation` returns a 6×6 state transform with block form `[R 0; Ṙ R]`, also used by SPICE `sxform`. Multiplying it by a Cartesian state rotates position and velocity and includes the velocity contribution from moving axes. For Earth frames, `Ṙ` includes sidereal rotation but treats precession, nutation, polar motion, and obliquity of date as constant during the transformation.
 
 ## Earth Frame Theories
 
-AstroFrames supports two Earth frame theories, IAU 2006/2000A and FK5 (IAU 1976 precession and IAU 1980 nutation), selected with `set_frame_theory!`. IAU 2006 uses `GCRF → CIRS → TIRS → ITRF` and is the default, recommended for most work. FK5 uses `ICRF → MODEq → TODEq → PEF → ITRF` and is supported for consistency with legacy systems. Both apply the IERS celestial pole offsets, so both carry the ICRF to the same ITRF, to within about 0.3 mas: the theory changes the model, not where the Earth is.
+AstroFrames supports two Earth frame theories, selected with `set_frame_theory!`:
 
-The IAU 2006 chain's precession-nutation step needs the celestial intermediate pole (CIP) coordinates X, Y and the CIO locator s, from a series of over a thousand terms. By default they are interpolated from the series evaluated on a cached 30-minute grid, within 6e-5 µas of it, which is fast for epochs close together such as a propagation's steps. For scattered epochs, such as hourly output, evaluating the series at each epoch is about twice as fast:
+- IAU 2006 precession with IAU 2000A nutation uses `GCRF → CIRS → TIRS → ITRF`. It is the default and is recommended for most work.
+- FK5 uses IAU 1976 precession and IAU 1980 nutation along `ICRF → MODEq → TODEq → PEF → ITRF`. Use it for consistency with legacy data and models.
 
-```julia
+Both apply IERS celestial pole offsets. Their ICRF-to-ITRF results agree within about 0.3 mas at the test epochs.
+
+The IAU 2006 precession-nutation step evaluates the celestial intermediate pole (CIP) coordinates X, Y and the CIO locator s from a series of over a thousand terms. By default, AstroFrames interpolates these values from a cached 30-minute grid. The measured interpolation difference is under 6.3e-5 µas.
+
+Interpolation is faster for closely spaced epochs, such as propagation steps. For scattered epochs, such as hourly output, direct series evaluation was about twice as fast in the performance checks. Select it with:
+
+```@example frames4
 using AstroFrames
 
 set_cip_interpolation!(false)     # evaluate the series at every epoch
@@ -152,9 +155,19 @@ set_cip_interpolation!(true)      # the default
 
 ## Orbit-Relative Axes
 
-There are several orbit relative frames supported such as RIC, LVLH, and VNB. If the origin carries a state, as a spacecraft does, AstroFrames uses that state as the reference. Otherwise, you must provide a state in the conversion interface as shown in the examples below. 
+Orbit-relative axes include RIC, LVLH and VNB. When the origin carries a state, AstroFrames uses it as the reference orbit for conversions into and out of that frame. Otherwise the reference state is supplied explicitly, in ICRF, in km and km/s.
 
-```julia
+At the operator level, `reference_accel` is optional. Omitting it leaves the orbit plane fixed
+for RIC and LVLH and gives VNB zero frame rate. Supplying acceleration in km/s² includes its
+contribution to the axes rates. When a state-carrying origin supplies the reference orbit,
+AstroFrames also supplies two-body acceleration when its central body's gravitational parameter
+is available. Explicit reference data take precedence.
+
+A zero position, zero velocity or radial reference orbit leaves these axes undefined. The call
+warns and returns NaNs so an optimizer can continue exploring other states. Malformed reference
+data throw an `ArgumentError` naming the field.
+
+```@example frames5
 using AstroFrames, AstroUniverse, AstroEpochs, AstroModels, AstroStates
 
 epoch = Time(2458849.5, 0.0, TDB(), JD())
@@ -166,8 +179,7 @@ deputy = Spacecraft(state = CartesianState([7000.1, 0.0, 0.0, 0.0, 7.546, 0.0]),
                     time = epoch, name = "deputy")
 Coordinate(deputy, CoordinateSystem(chief, RIC()))
 
-# Compute the rotation matrix between orbit relative systems by providing the 
-# state explicity.
+# Rotate from ICRF to RIC with an explicit reference state
 p = (; reference_state = [7000.0, 0.0, 0.0, 0.0, 7.546, 0.0])
 M = axes_rotation(ICRF(), RIC(), epoch, p)
 ```
@@ -176,21 +188,21 @@ M = axes_rotation(ICRF(), RIC(), epoch, p)
 
 AstroFrames provides two lunar body-fixed frames. `MoonME` is the mean Earth/mean rotation axis frame used for published lunar coordinates, including surface latitude and longitude. `MoonPA` is aligned with the Moon's principal axes of inertia and is the frame used for lunar gravity coefficients. Both include the full physical, forced, and free libration. They differ by a fixed rotation of about 104 arcseconds, or about 875 metres at the surface.
 
-```julia
+```@example frames6
 using AstroFrames, AstroUniverse, AstroEpochs
 
 epoch = Time(2458849.5, 0.0, TDB(), JD())
 
-# Mapping: landing sites, surface features, latitude and longitude.
+# Express a surface site in lunar mapping axes
 site = Coordinate([1737.4, 0.0, 0.0, 0.0, 0.0, 0.0],
                   CoordinateSystem(moon, MoonME()), epoch)
 
-# Dynamics: gravity field evaluation, propagation about the Moon.
+# Express an orbital state in lunar principal axes for dynamics
 orb = Coordinate([1837.4, 0.0, 0.0, 0.0, 1.63, 0.0],
                  CoordinateSystem(moon, MoonPA()), epoch)
 ```
 
-AstroFrames loads the lunar orientation kernels, leap seconds, and solar system ephemeris at startup. Using either lunar frame does not require a kernel path.
+AstroUniverse loads the default lunar orientation kernels and solar system ephemeris at startup. Using either lunar frame does not require a kernel path.
 
 ## Axes Reference
 
@@ -207,7 +219,7 @@ AstroFrames loads the lunar orientation kernels, leap seconds, and solar system 
 
 ## EOP Data
 
-See the documentation for AstroUniverse for EOP data management.
+AstroUniverse manages Earth orientation parameters (EOP), including data loading and corrections. Earth-frame transformations use those data at the requested epoch. Outside the loaded range, AstroUniverse warns and holds the endpoint values; those values are not predictions.
 
 ## Origins Reference
 
@@ -222,12 +234,8 @@ AstroFrames is tested against external references where they are available.
 | What | Checked against | Agreement |
 |---|---|---|
 | Earth chains, both theories | pyerfa (ERFA, the IAU's SOFA) | under 2.5 µas |
-| Body-fixed axes, Sun and 9 planets | SPICE `sxform` with `pck00011` | under 10 µas |
+| Body-fixed axes for the Sun, seven planets (excluding Earth), and Pluto | SPICE `sxform` with `pck00011` | under 10 µas |
 | IAU orientation polynomials | NAIF's own constants | under 2 nas |
 | Lunar frames | SPICE `sxform` with the DE440 lunar kernels, plus synchronous rotation | under 0.03 µas; Earth within 15° of +X |
 | Ephemeris positions | Earth-Moon barycentre closure | 4.8e-10 relative |
 | Ephemeris velocities | Central difference of position over ±10 s | 1.4e-6 relative |
-
-## Deprecated Names
-
-`ICRFAxes` and `MJ2000Axes` remain as deprecated aliases for [`ICRF`](@ref) and [`MJ2000Eq`](@ref). They warn on use.

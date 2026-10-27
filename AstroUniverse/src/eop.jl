@@ -36,6 +36,7 @@
 # with no copy at all is it an error.
 # =============================================================================
 
+using AstroEpochs: AstroEpochs, Time
 using SatelliteToolboxTransformations: EopIau1980, EopIau2000A, read_iers_eop
 
 # --- Frame theory -----------------------------------------------------------
@@ -123,6 +124,7 @@ _eop_slot(::IAU2006) = _eop_2000a
 
 export AbstractFrameTheory, FK5, IAU2006
 export eop, frame_theory, set_frame_theory!, eop_load, eop_refresh!, set_eop!
+export EopValues, AbstractEopCorrection, eop_correction, eop_corrections, set_eop_corrections!
 
 """
     frame_theory() -> AbstractFrameTheory
@@ -244,10 +246,17 @@ function set_eop!(table::EopIau2000A)
 end
 
 """
-    eop_load(path::AbstractString; theory = frame_theory()) -> table
+    eop_load(path::AbstractString; theory = frame_theory(), bulletin = :A) -> table
 
 Parse an IERS EOP file from `path` for `theory` and install it in that
 theory's slot. Does not touch the network.
+
+A finals file carries two sets of values on each line: the rapid values of IERS
+Bulletin A, and for past dates the final values of Bulletin B. `bulletin = :A`
+reads the rapid values throughout. `bulletin = :B` reads the final polar motion,
+UT1−UTC and celestial pole offsets wherever Bulletin B has them and the rapid
+values after, which is what a reconstruction of past data should use. Bulletin B
+has no length of day, so LOD and the uncertainties are Bulletin A's either way.
 
 # Arguments
 - `path`: an IERS finals file, either the CSV the IERS data centre publishes
@@ -257,27 +266,71 @@ theory's slot. Does not touch the network.
 - `theory`: the theory the file is for. A `finals2000A` file carries the IAU
   2000A offsets [`IAU2006`](@ref) needs, a `finals` file the IAU 1980
   corrections [`FK5`](@ref) needs.
+- `bulletin`: `:A` for the rapid values, `:B` for the final values where published.
 
 # Returns
 The parsed and installed EOP table.
 
 # Example
 ```julia
-table = eop_load("finals2000A.all"; theory = IAU2006())
+table = eop_load("finals2000A.all.csv"; theory = IAU2006(), bulletin = :B)
 ```
 """
 function eop_load(path::AbstractString;
-                  theory::AbstractFrameTheory = frame_theory())
+                  theory::AbstractFrameTheory = frame_theory(),
+                  bulletin::Symbol = :A)
     isfile(path) || throw(ArgumentError(
         "EOP file not found: $(path)"))
-    _is_iers_csv(path) && return set_eop!(read_iers_eop(path, _stb_theory_symbol(theory)))
-    csv = tempname() * ".csv"
+    bulletin in (:A, :B) || throw(ArgumentError(
+        "eop_load: bulletin must be :A or :B; got :$(bulletin)."))
+    # A fixed-width file is rewritten as the CSV first, Bulletin B columns included, so both
+    # layouts take the same path to the reader.
+    temporary = String[]
     try
-        _finals_to_csv(path, csv, theory)
+        csv = path
+        if !_is_iers_csv(path)
+            csv = tempname() * ".csv"
+            push!(temporary, csv)
+            _finals_to_csv(path, csv, theory)
+        end
+        if bulletin === :B
+            csv = _finals_with_bulletin_b(csv)
+            push!(temporary, csv)
+        end
         return set_eop!(read_iers_eop(csv, _stb_theory_symbol(theory)))
     finally
-        rm(csv; force = true)
+        foreach(file -> rm(file; force = true), temporary)
     end
+end
+
+# A copy of the finals CSV at `path`, written to a temporary file, with the Bulletin B values
+# moved into the Bulletin A columns on every line that has them, so the IERS reader takes the final
+# values where it would take the rapid ones. The columns, 1-based: polar motion x, y in 6, 8 (B in
+# 29, 30), UT1−UTC in 15 (B in 32), dPsi, dEpsilon in 20, 22 (B in 34, 35), dX, dY in 24, 26 (B in
+# 36, 37), each pair in the same units.
+const _FINALS_COLUMNS = 37
+const _BULLETIN_B_COLUMNS = (6 => 29, 8 => 30, 15 => 32, 20 => 34, 22 => 35, 24 => 36, 26 => 37)
+
+function _finals_with_bulletin_b(path)
+    lines = filter(!isempty, readlines(path))
+    header = split(first(lines), ';')
+    length(header) == _FINALS_COLUMNS && header[29] == "bulB/x_pole" || throw(ArgumentError(
+        "eop_load: bulletin = :B reads an IERS finals CSV file, with Bulletin B in columns 29 " *
+        "to 37; $(path) has another layout."))
+    file = tempname() * ".csv"
+    open(file, "w") do io
+        println(io, first(lines))
+        for line in lines[2:end]
+            cells = split(line, ';')
+            if length(cells) == _FINALS_COLUMNS
+                for (a, b) in _BULLETIN_B_COLUMNS
+                    isempty(strip(cells[b])) || (cells[a] = cells[b])
+                end
+            end
+            println(io, join(cells, ';'))
+        end
+    end
+    return file
 end
 
 """
@@ -305,6 +358,266 @@ function eop_refresh!(; theory::AbstractFrameTheory = frame_theory())
         set_eop!(read_iers_eop(_eop_file(theory; refresh = true), _stb_theory_symbol(theory)))
     end
 end
+
+# --- Earth orientation at an epoch -----------------------------------------
+#
+# The tables above are daily values. Everything that turns the Earth, the frame
+# chain, the stations on it and the gravity field fixed to it, reads its Earth
+# orientation at an epoch through `eop(theory, epoch)` below, so a correction
+# the daily table leaves out, added here, reaches all of them at once.
+
+"""
+    AbstractEopCorrection
+
+Supertype for a correction added to the daily EOP table at an epoch: the
+diurnal and semidiurnal ocean-tide terms, libration, the zonal-tide
+interpolation, or offsets estimated in a fit.
+
+A subtype implements
+
+    eop_correction(model, jd_utc, jd_tt) -> (x, y, ut1_utc, lod)
+
+returning a `NamedTuple` with those four names: what to add to polar motion `x`
+and `y` in arcseconds, to UT1−UTC in seconds and to the length of day in
+milliseconds. `jd_utc` is the UTC Julian date as an ordinary date with every day
+86400 s long, the date the IERS tables are indexed by; `jd_tt` is the TT Julian
+date, the argument of the tidal and libration series. Both may be dual numbers.
+
+The models installed with [`set_eop_corrections!`](@ref) are evaluated at every
+epoch [`eop`](@ref) is asked for. A model whose terms are costly caches its own
+last value. The precision models are in the `EpicycleEnterprise` package.
+
+# Example
+A constant pole offset, as a test of the interface:
+```jldoctest
+using AstroUniverse
+
+struct PoleShift <: AbstractEopCorrection
+    dx::Float64      # arcsec
+end
+AstroUniverse.eop_correction(m::PoleShift, jd_utc, jd_tt) = (x = m.dx, y = 0.0, ut1_utc = 0.0, lod = 0.0)
+
+eop_correction(PoleShift(0.001), 2460000.5, 2460000.5008)
+
+# output
+(x = 0.001, y = 0.0, ut1_utc = 0.0, lod = 0.0)
+```
+"""
+abstract type AbstractEopCorrection end
+
+"""
+    eop_correction(model::AbstractEopCorrection, jd_utc, jd_tt) -> NamedTuple
+
+What `model` adds to the daily EOP table at an epoch; see
+[`AbstractEopCorrection`](@ref) for the contract a model implements.
+"""
+function eop_correction end
+
+const _eop_corrections = Ref{Vector{AbstractEopCorrection}}(AbstractEopCorrection[])
+
+"""
+    eop_corrections() -> Vector{AbstractEopCorrection}
+
+The corrections added to the daily EOP table in this session, in the order they
+are applied. Empty by default, so Earth orientation is the table alone.
+
+# Example
+```jldoctest
+using AstroUniverse
+
+eop_corrections()
+
+# output
+AbstractEopCorrection[]
+```
+"""
+eop_corrections() = _eop_corrections[]
+
+"""
+    set_eop_corrections!(models) -> Vector{AbstractEopCorrection}
+
+Install the corrections added to the daily EOP table for this session, replacing
+any installed before. An empty vector removes them all.
+
+The corrections change every Earth-fixed result: frame transformations, ground
+station states and the orientation of Earth gravity. A result that has to be
+reproducible is recorded with the corrections that produced it.
+
+# Returns
+The installed vector.
+
+# Example
+```julia
+set_eop_corrections!([OceanTideEop(), LibrationEop()])
+set_eop_corrections!([])                                 # the table alone
+```
+"""
+function set_eop_corrections!(models::AbstractVector)
+    installed = AbstractEopCorrection[m for m in models]
+    lock(_eop_lock) do
+        _eop_corrections[] = installed
+    end
+    return installed
+end
+
+"""
+    EopValues
+
+Earth orientation at one epoch, as [`eop`](@ref)`(theory, epoch)` returns it: the
+daily table interpolated to the epoch plus every installed correction.
+
+# Fields
+- `theory`: the frame theory the values belong to, `FK5()` or `IAU2006()`.
+- `x`, `y`: polar motion, in arcseconds.
+- `ut1_utc`: UT1−UTC, in seconds.
+- `lod`: excess length of day, in milliseconds.
+- `celestial_pole`: the IERS celestial pole offsets, in milliarcseconds: `(δx, δy)`
+  for `IAU2006()`, `(δΔψ, δΔϵ)` for `FK5()`. No correction applies to them.
+
+# Example
+```julia
+using AstroUniverse, AstroEpochs
+eop(IAU2006(), Time("2024-01-01T00:00:00", UTC(), ISOT()))
+```
+"""
+struct EopValues{Th<:AbstractFrameTheory, T<:Real}
+    theory::Th
+    x::T
+    y::T
+    ut1_utc::T
+    lod::T
+    celestial_pole::NTuple{2, T}
+end
+
+_celestial_pole_names(::FK5)     = ("δΔψ", "δΔϵ")
+_celestial_pole_names(::IAU2006) = ("δx", "δy")
+
+function show(io::IO, ::MIME"text/plain", v::EopValues)
+    n1, n2 = _celestial_pole_names(v.theory)
+    println(io, "EopValues for ", v.theory, ":")
+    println(io, "  x       = ", v.x, " arcsec")
+    println(io, "  y       = ", v.y, " arcsec")
+    println(io, "  ut1_utc = ", v.ut1_utc, " s")
+    println(io, "  lod     = ", v.lod, " ms")
+    print(io,   "  ", n1, ", ", n2, " = ", v.celestial_pole[1], ", ", v.celestial_pole[2], " mas")
+end
+show(io::IO, v::EopValues) = show(io, MIME"text/plain"(), v)
+
+"""
+    eop(theory::AbstractFrameTheory, epoch::Time) -> EopValues
+    eop(epoch::Time) -> EopValues
+    eop(theory::AbstractFrameTheory, jd_utc::Real, jd_tt::Real) -> EopValues
+
+Earth orientation at `epoch` under `theory`, or under the active theory: the
+daily table read at the epoch, with every correction installed by
+[`set_eop_corrections!`](@ref) added to polar motion, UT1−UTC and the length of
+day.
+
+This is the one place Earth orientation at an epoch comes from. The Earth frame
+chain, ground stations and Earth gravity all read it, so a correction installed
+here reaches all of them.
+
+# Arguments
+- `theory`: `FK5()` or `IAU2006()`, which selects the table.
+- `epoch`: an `AstroEpochs.Time`.
+- `jd_utc`, `jd_tt`: the epoch as a UTC Julian date with every day 86400 s long,
+  the date the tables are indexed by, and as a TT Julian date. This is the form
+  the frame chain calls with, having derived the scales once; a `Time` is the
+  form to use otherwise.
+
+# Returns
+An [`EopValues`](@ref). The numeric type follows the epoch, so a dual-number date
+gives dual-number values.
+
+# Example
+```julia
+using AstroUniverse, AstroEpochs
+v = eop(IAU2006(), Time("2024-01-01T00:00:00", UTC(), ISOT()))
+v.x, v.y          # arcsec
+v.ut1_utc         # s
+```
+"""
+function eop(theory::AbstractFrameTheory, jd_utc::Real, jd_tt::Real)
+    values = _eop_values(theory, eop(theory), jd_utc)
+    return _corrected(values, _eop_corrections[], jd_utc, jd_tt)
+end
+
+eop(theory::AbstractFrameTheory, t::Time) = eop(theory, _ordinary_utc_jd(t), t.tt.jd)
+eop(t::Time) = eop(frame_theory(), t)
+
+# TT − TAI, in seconds.
+const _TT_MINUS_TAI = 32.184
+
+# The UTC Julian date as an ordinary date, every day 86400 s long. AstroEpochs' own UTC
+# stretches a leap-second day over 86401 s, which the IERS tables do not; its date still
+# indexes the leap-second table correctly, so TAI − UTC is read from it and the date formed
+# from TT, which has no leap seconds.
+function _ordinary_utc_jd(t::Time)
+    dat = AstroEpochs.tai_minus_utc(t.utc.jd - 2451545.0)
+    return t.tt.jd1 + (t.tt.jd2 - (_TT_MINUS_TAI + dat) / 86_400)
+end
+
+# The tables come out of abstractly typed slots, so these read them behind a barrier where the
+# table is concrete; every interpolant then resolves statically.
+function _eop_values(theory::IAU2006, table::EopIau2000A, jd_utc::T) where {T<:Real}
+    _check_eop_span(table, jd_utc)
+    F = promote_type(Float64, T)
+    return EopValues{IAU2006, F}(theory, table.x(jd_utc), table.y(jd_utc), table.Δut1_utc(jd_utc),
+                                 table.lod(jd_utc), (table.δx(jd_utc), table.δy(jd_utc)))
+end
+
+function _eop_values(theory::FK5, table::EopIau1980, jd_utc::T) where {T<:Real}
+    _check_eop_span(table, jd_utc)
+    F = promote_type(Float64, T)
+    return EopValues{FK5, F}(theory, table.x(jd_utc), table.y(jd_utc), table.Δut1_utc(jd_utc),
+                             table.lod(jd_utc), (table.δΔψ(jd_utc), table.δΔϵ(jd_utc)))
+end
+
+
+function _corrected(v::EopValues{Th, T}, models::Vector{AbstractEopCorrection}, jd_utc,
+                    jd_tt) where {Th, T}
+    isempty(models) && return v
+    x, y, ut1_utc, lod = v.x, v.y, v.ut1_utc, v.lod
+    for m in models
+        c = eop_correction(m, jd_utc, jd_tt)
+        x += T(c.x); y += T(c.y); ut1_utc += T(c.ut1_utc); lod += T(c.lod)
+    end
+    return EopValues{Th, T}(v.theory, x, y, ut1_utc, lod, v.celestial_pole)
+end
+
+# Outside the table SatelliteToolboxTransformations holds the end values, and the rotation stays
+# orthonormal and round-trips while drifting at roughly 250 m a year at LEO. A date past the
+# end is a legitimate mission-design question, so this warns once rather than throwing. The
+# span is the knots of the table's interpolant, read through the `EopInterpolation` wrapper of
+# SatelliteToolboxTransformations 1.3; the compat bound holds that layout, and
+# test_robustness_eop_range.jl fails if a later release changes it.
+@inline function _check_eop_span(table, jd_utc)
+    span = _eop_span(table)
+    span === nothing && return nothing
+    (span[1] <= jd_utc <= span[2]) || _warn_eop_span(span, jd_utc)
+    return nothing
+end
+
+function _eop_span(table)
+    itp = getfield(getfield(table, :x), :interpolation)
+    hasproperty(itp, :t) || return nothing
+    t = itp.t
+    return (Float64(first(t)), Float64(last(t)))
+end
+
+@noinline function _warn_eop_span(span, jd_utc)
+    @warn "AstroUniverse: Earth orientation at UTC Julian date " *
+          "$(_jd_text(jd_utc)) is outside the loaded EOP table, which runs " *
+          "from $(_jd_text(span[1])) to $(_jd_text(span[2])). The table's " *
+          "end values are held, so UT1 and polar motion are stale and Earth-fixed positions " *
+          "drift, at roughly 250 m a year at LEO past the end. Shown once per session." maxlog = 1
+    return nothing
+end
+
+# A Julian date for a message: the number inside a dual, to the day.
+_jd_text(x) = string(round(Int, _value(x)))
+_value(x::Real) = x
+_value(x) = hasproperty(x, :value) ? _value(x.value) : x
 
 # --- Internals --------------------------------------------------------------
 

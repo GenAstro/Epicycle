@@ -169,3 +169,40 @@ end
     Δ_rev = origin_translation(_CHIEF, earth, ICRF(), _SUBJ_EPOCH)
     @test Δ_rev ≈ -Δ atol = 1e-9
 end
+
+# AF-4, AF-10, AF-11. Truth: the original Cartesian state and direct reference
+# geometry. These exercise both rotation halves with independently defined origins.
+@testset "Coordinate conversions from orbit-relative axes" begin
+    t = _SUBJ_EPOCH
+    x = [7010., 20., -5., 0.01, 7.5, 0.02]
+    original = Coordinate(x, EarthICRF, t)
+    other = _subject([0., 7100., 30., -7.4, 0., 0.1])
+    for axes in (RIC(), LVLH(), VNB())
+        relative = Coordinate(original, CoordinateSystem(_CHIEF, axes))
+        back = Coordinate(relative, EarthICRF)
+        @test to_vector(back.state) ≈ x atol = 2e-11 rtol = 0
+        for target_axes in (RIC(), LVLH(), VNB())
+            target = CoordinateSystem(other, target_axes)
+            via_relative = Coordinate(relative, target)
+            direct = Coordinate(original, target)
+            @test to_vector(via_relative.state) ≈ to_vector(direct.state) atol = 2e-11 rtol = 0
+        end
+    end
+    # A one-second mismatch must fail too, not just the one-day case above.
+    @test_throws ArgumentError origin_translation(earth, _CHIEF, ICRF(), t + 1/86400)
+end
+
+# AF-11.2. Truth: the chief state plus a 10 km radial offset, including the
+# omega × r velocity term of its RIC axes.
+@testset "An origin expressed relative to another origin" begin
+    inner = _Chief(CartesianState([10., 0, 0, 0, 0, 0]),
+                   CoordinateSystem(_CHIEF, RIC()), _SUBJ_EPOCH)
+    expected = [7010., 0, 0, 0, 7.546 + 7.546 / 7000 * 10, 0]
+    @test origin_translation(inner, earth, ICRF(), _SUBJ_EPOCH) ≈ expected atol = 2e-11 rtol = 0
+    @test origin_translation(earth, inner, ICRF(), _SUBJ_EPOCH) ≈ -expected atol = 2e-11 rtol = 0
+    deputy = Coordinate([7020., 0, 0, 0, 7.546, 0], EarthICRF, _SUBJ_EPOCH)
+    frame = CoordinateSystem(inner, RIC())
+    relative = Coordinate(deputy, frame)
+    @test all(isfinite, to_vector(relative.state))
+    @test to_vector(Coordinate(relative, EarthICRF).state) ≈ to_vector(deputy.state) atol = 2e-11 rtol = 0
+end

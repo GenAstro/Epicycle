@@ -22,10 +22,8 @@ using SPICE: pxform as _spice_pxform, sxform as _spice_sxform, namfrm as _spice_
 using SatelliteToolboxTransformations: DCM, r_mj2000_to_gcrf_iau2006, r_gcrf_to_mod_fk5, r_mod_to_tod_fk5, r_tod_to_pef_fk5, r_pef_to_itrf_fk5,
     r_gcrf_to_cirs_iau2006, r_tirs_to_itrf_iau2006, cio_iau2006,
     nutation_fk5, r_tod_to_teme,
-    _nutation_and_equation_of_equinoxes_fk5,     # internal to STB; its own r_tod_to_pef_fk5 uses it
     EARTH_ANGULAR_SPEED
-using AstroEpochs: Time, TDB, JD
-import AstroEpochs     # tai_minus_utc, for an ordinary UTC date
+using AstroEpochs: Time, TDB, UTC, JD
 using AstroUniverse: AbstractFrameTheory, FK5, IAU2006, eop, frame_theory
 
 const _J2000_TDB_JD = 2451545.0
@@ -52,10 +50,11 @@ _et_from_jd_tdb(jd_tdb::Real) = (jd_tdb - _J2000_TDB_JD) * 86400.0
 # stretched one, the Earth-fixed frames were up to 490 m off at LEO on every
 # leap-second day. The ordinary UTC is TT less 32.184 s less the TAI − UTC in
 # effect, which is exact everywhere but inside the leap second itself, where
-# ordinary UTC has no value and this reads the first second of the next day.
+# ordinary UTC extends into the next day while EOP indexing stays on the UTC side of midnight.
 
 """
-    EpochScales
+    EpochScales(t::Time)
+    EpochScales(tdb, tt, utc)
 
 `EpochScales` holds an epoch in the time scales used by frame transformations.
 
@@ -69,21 +68,27 @@ and [`epoch_utc`](@ref) rather than accessing the fields directly.
 
 - `tdb` — barycentric dynamical time, Julian date.
 - `tt` — terrestrial time, Julian date.
-- `utc` — coordinated universal time, as an ordinary Julian date (every day
-  86400 s long), the date the IERS tables are indexed by.
-- `utc_hi`, `utc_lo` — the same UTC as a two-part date, `utc_hi + utc_lo`, kept
-  split so the Earth rotation angle does not lose the precision of `Time`.
+- `utc` — the ordinary UTC Julian date used to index EOP. It never reaches the
+  next day's midnight: during a positive leap second it is held at the last
+  representable instant of the day, so the new day's UT1−UTC offset is not applied
+  early, and at any other time the bound moves it by at most one floating-point
+  step, about 40 µs at present Julian dates.
+- `utc_hi`, `utc_lo` — ordinary UTC in two parts, kept split for Earth rotation.
+  During a leap second their sum advances through the extra second, while `utc`
+  is held.
 
 # Notes
-Built once per transform, at the boundary where a `Time` arrives, and passed
-down as plain numbers. Deriving a scale costs more than most of the rotations
-do, so an edge must not convert one itself.
+AstroFrames converts a supplied `Time` once per transformation. Code that
+evaluates many transformations at one epoch, such as a force model, can build
+`EpochScales(t)` once and pass it to [`axes_rotation`](@ref) in place of the
+`Time`. Extension methods use the accessors to read the scale their model
+requires, without repeating that conversion.
 
 `EpochScales(tdb, tt, utc)` builds one from three single Julian dates, with the
 UTC unsplit.
 
 # Example
-A frame of your own reads the scale its model is written in:
+A user-defined frame reads the time scale its model requires:
 ```julia
 using AstroFrames, AstroEpochs
 
@@ -118,13 +123,23 @@ EpochScales(tdb::Real, tt::Real, utc::Real) =
 # TT − TAI, in seconds.
 const _TT_MINUS_TAI = 32.184
 
-@inline function _scales(t::Time)
+@inline function EpochScales(t::Time)
     tt  = t.tt
     # TAI − UTC in effect: AstroEpochs' own UTC date indexes the leap-second table correctly,
     # only its fraction of a leap-second day is stretched.
-    dat = AstroEpochs.tai_minus_utc(t.utc.jd - _J2000_TDB_JD)
+    utc = t.utc
+    # At UTC midnight the quasi-Julian date and ordinary date coincide. Their difference
+    # from TAI gives the day's integral leap-second offset through the public time API.
+    day = utc.jd1 + floor(utc.jd2 + 0.5) - 0.5
+    tai = Time(day, zero(day), UTC(), JD()).tai
+    dat = round(((tai.jd1 - day) + tai.jd2) * 86_400)
     lo  = tt.jd2 - (_TT_MINUS_TAI + dat) / 86_400
-    return EpochScales(promote(t.tdb.jd, tt.jd, tt.jd1 + lo, tt.jd1, lo)...)
+    # During 23:59:60, the ordinary date has already reached tomorrow but the leap-second
+    # offset is still today's. Index EOP on the UTC side of the boundary until midnight;
+    # otherwise UT1-UTC jumps a second early and Earth rotation pauses for the next second.
+    ordinary = tt.jd1 + lo
+    index = min(ordinary, prevfloat(day + 1))
+    return EpochScales(promote(t.tdb.jd, tt.jd, index, tt.jd1, lo)...)
 end
 
 """
@@ -136,8 +151,7 @@ Barycentric dynamical time, as a Julian date.
 - `e::EpochScales` — the epoch bundle handed to a frame's `axes_rotation`.
 
 # Returns
-The TDB Julian date. This is the scale planetary orientation and ephemerides
-are computed in, and the one a body-fixed frame wants.
+The TDB Julian date, used by planetary orientation models and ephemerides.
 
 # Notes
 Frame models must use their specified time scale. TDB and TT differ by less
@@ -167,9 +181,9 @@ Terrestrial time, as a Julian date.
 The TT Julian date. This is the scale precession and nutation are computed in.
 
 # Notes
-TT runs 32.184 s ahead of atomic time and does not have leap seconds, which is
-why the Earth-orientation series are written against it. See
-[`epoch_tdb`](@ref) for the shape of a frame that uses one of these.
+TT runs 32.184 s ahead of TAI and has no leap seconds. Use this accessor for
+models defined in TT, including Earth precession and nutation. See
+[`EpochScales`](@ref) for a complete frame-extension example.
 
 # Example
 
@@ -192,16 +206,16 @@ Coordinated universal time, as a Julian date.
 - `e::EpochScales` — the epoch bundle handed to a frame's `axes_rotation`.
 
 # Returns
-The UTC Julian date, as an ordinary date with every day 86400 s long. This is
-the scale Earth orientation parameters are tabulated against, so any frame
-reading polar motion or UT1−UTC wants it. It is not AstroEpochs' UTC, which on
-a leap-second day spreads the day over 86401 s.
+The ordinary UTC Julian date used to index EOP, held at the last representable
+instant of the day during a positive leap second. Use it to read polar
+motion and UT1−UTC from EOP tables. It differs from AstroEpochs' quasi-Julian
+UTC, which spreads a leap-second day over 86401 s.
 
 # Notes
 UTC has leap seconds, so an interval computed by subtracting two of these is
 not a physical duration. Use it to index the IERS tables, not to propagate.
 
-See [`epoch_tdb`](@ref) for the shape of a frame that reads one of these.
+See [`EpochScales`](@ref) for a complete frame-extension example.
 
 The value is carried in `EpochScales` so each EOP-consuming edge uses the same
 conversion.
@@ -218,56 +232,16 @@ eop(IAU2006()).x(epoch_utc(e))       # polar motion x [arcsec], read at the UTC 
 """
 @inline epoch_utc(e::EpochScales) = e.utc
 
-# EOP values at a UTC date, read through a function barrier. `eop(theory)` comes out of an
-# abstractly typed slot in AstroUniverse, so reading its interpolants where it is fetched
-# dispatched dynamically on every field, about ten allocations an edge. Passing the table on
-# makes it concrete inside, and every field of an EOP table has the same type, so the values
-# come back as a tuple of numbers. The call across the barrier is still dynamic, so its result is
-# asserted: a tuple of the date's number type, promoted with the tables' Float64 (a dual date
-# gives dual values). Without it every calculation downstream dispatched dynamically as well.
-@inline _eop_read(theory, fields::NTuple{N, Symbol}, jd_utc::T) where {N, T<:Real} =
-    _eop_values(eop(theory), Val(fields), jd_utc)::NTuple{N, promote_type(Float64, T)}
-# The field names travel as a type parameter, so each `getfield` inside is a constant and the
-# interpolants are concretely typed. As a runtime tuple they were not, and the read allocated
-# 4.4 KB.
-function _eop_values(table, ::Val{fields}, jd_utc) where {fields}
-    _check_eop_span(table, jd_utc)
-    return ntuple(i -> getfield(table, fields[i])(jd_utc), Val(length(fields)))
+# Earth orientation at the epoch, from AstroUniverse's `eop(theory, jd_utc, jd_tt)`: the daily
+# table plus every installed correction, so the chain, the stations and the gravity field turn
+# the same Earth. The table comes out of an abstractly typed slot there, so the call is dynamic
+# and its result is asserted: values of the date's number type promoted with the tables'
+# Float64 (a dual date gives dual values). Without it every calculation downstream dispatched
+# dynamically as well.
+@inline function _eop_at(theory::Th, e::EpochScales{T}) where {Th<:AbstractFrameTheory, T<:Real}
+    return eop(theory, e.utc, e.tt)::EopValues{Th, promote_type(Float64, T)}
 end
 
-# Outside the table SatelliteToolboxTransformations holds the end values, and the rotation stays
-# orthonormal and round-trips while drifting at roughly 250 m a year at LEO. A date past the
-# end is a legitimate mission-design question, so this warns once rather than throwing. The
-# span is the knots of the table's interpolant, read through the `EopInterpolation` wrapper of
-# SatelliteToolboxTransformations 1.3; the compat bound holds that layout, and
-# test_robustness_eop_range.jl fails if a later release changes it.
-@inline function _check_eop_span(table, jd_utc)
-    span = _eop_span(table)
-    span === nothing && return nothing
-    (span[1] <= jd_utc <= span[2]) || _warn_eop_span(span, jd_utc)
-    return nothing
-end
-
-function _eop_span(table)
-    itp = getfield(getfield(table, :x), :interpolation)
-    hasproperty(itp, :t) || return nothing
-    t = itp.t
-    return (Float64(first(t)), Float64(last(t)))
-end
-
-@noinline function _warn_eop_span(span, jd_utc)
-    @warn "AstroFrames: an Earth-fixed transformation at UTC Julian date " *
-          "$(_jd_text(jd_utc)) is outside the loaded EOP table, which runs " *
-          "from $(_jd_text(span[1])) to $(_jd_text(span[2])). The table's " *
-          "end values are held, so UT1 and polar motion are stale and Earth-fixed positions " *
-          "drift, at roughly 250 m a year at LEO past the end. Shown once per session." maxlog = 1
-    return nothing
-end
-
-# A Julian date for a message: the number inside a dual, to the day.
-_jd_text(x) = string(round(Int, _value(x)))
-_value(x::Real) = x
-_value(x) = hasproperty(x, :value) ? _value(x.value) : x
 # `float` rather than the value as given: an integer Julian date is a perfectly
 # reasonable thing to write, and `Time` cannot represent one — it splits the
 # date into two parts and the split is fractional. Without this,
@@ -278,6 +252,7 @@ _value(x) = hasproperty(x, :value) ? _value(x.value) : x
 # first, and `float` of a dual number is still a dual number, not an
 # `AbstractFloat`, so a date carrying a derivative recursed until the stack
 # overflowed.
+@inline _scales(t::Time) = EpochScales(t)
 @inline _scales(jd_tdb::Integer) = _scales(float(jd_tdb))
 # `Time` holds Float64 or wider; a Float32 date would otherwise fail deep in the conversion.
 @inline _scales(jd_tdb::Union{Float16, Float32}) = _scales(Float64(jd_tdb))
@@ -321,8 +296,9 @@ field when `params` does not carry `reference_state`. A pair with no route betwe
 them raises an `ArgumentError` listing the supported edges.
 
 # Returns
-The 6×6 transform as an `SMatrix{6,6}`, `Float64` for `Float64` inputs; a dual or wider epoch
-or state gives that element type.
+The 6×6 transform as an `SMatrix{6,6}`, with `Float64` elements for `Float64`
+inputs. Analytic calculations preserve dual and wider numerical types from
+the epoch or reference data they use.
 
 # Example
 ```jldoctest
@@ -398,20 +374,23 @@ The rotation from ICRF to the fixed axes of body `naifid` that orientation
 - `epoch`: an `AstroEpochs.Time`, or a TDB Julian date.
 
 # Notes
-Pass a `Time` for the Earth. A single `Float64` Julian date resolves time only to
-about 40 µs, which the Earth turns through in 0.6 mas, about 2 cm on its surface;
-a `Time` holds the date in two parts, and both chains keep them to the Earth's
-rotation: the Earth rotation angle for `IAU2006()`, sidereal time for `FK5()`.
-Other bodies turn slowly enough that the difference does not show.
+Use a `Time` when precision matters for Earth rotation. A single `Float64`
+Julian date has a resolution of about 40 µs at current epochs, corresponding
+to 0.6 mas of Earth rotation or about 2 cm at the surface. A `Time` retains
+the date in two parts through the Earth rotation angle calculation for
+`IAU2006()` and the sidereal time calculation for `FK5()`. The effect is
+smaller for more slowly rotating bodies.
 
-[`axes_rotation`](@ref)`(ICRF(), CelestialBodyFixed{N}(), epoch)` uses the
-model registered for the body; this takes the model as an argument, for a
-caller whose data are defined in axes other than the body's default, such as a
-gravity field. For a model other than a frame theory it is
-`body_axes_rotation(model, naifid, jd_tdb)`; for a frame theory it is that
-theory's ICRF-to-ITRF chain, which needs UT1 and TT as well.
+Use this function to select an orientation model explicitly, for example to
+match the axes of a gravity field. In contrast,
+`axes_rotation(ICRF(), CelestialBodyFixed{N}(), epoch)` uses the body's
+registered model. Non-Earth models are evaluated through
+`body_axes_rotation(model, naifid, jd_tdb)`; Earth frame theories use their
+ICRF-to-ITRF chains, including the required UT1 and TT conversions.
 
-The matrix has the block form `[R 0; Ṙ R]`, with `Ṙ` per second.
+# Returns
+The ICRF-to-body-fixed 6×6 state transform, with block form `[R 0; Ṙ R]` and
+`Ṙ` per second. It acts on position in km followed by velocity in km/s.
 
 # Example
 ```julia
@@ -421,9 +400,11 @@ body_fixed_rotation(IAU1991(), 499, t)     # Mars, in the axes of the IAU 1991 r
 body_fixed_rotation(FK5(), 399, t)         # ITRF by the FK5 chain, whatever theory is active
 ```
 """
-body_fixed_rotation(model::AbstractOrientationModel, naifid::Integer,
-                    epoch::Union{Time, EpochScales, Real}) =
-    _body_fixed_rotation(model, naifid, _scales(epoch))
+function body_fixed_rotation(model::AbstractOrientationModel, naifid::Integer,
+                             epoch::Union{Time, EpochScales, Real})
+    _valid_epoch(epoch) || return SMatrix{6,6}(_nan_epoch_values(epoch, Val(36)))
+    return _body_fixed_rotation(model, naifid, _scales(epoch))
+end
 
 body_fixed_rotation(model::AbstractOrientationModel, naifid::Integer, epoch) =
     throw(ArgumentError("body_fixed_rotation: the epoch is an `AstroEpochs.Time` or a TDB " *
@@ -449,7 +430,7 @@ end
 """
     _lunar_frame_error(frame, et, cause) -> ArgumentError
 
-Why a lunar frame lookup failed, in terms of what to do about it.
+Returns an error explaining a failed lunar frame lookup and how to supply the required data.
 
 `namfrm` returns 0 for a frame no loaded kernel defines, which separates the
 two causes: no frame kernel at all, or a frame kernel with no orientation data
@@ -609,9 +590,8 @@ no Earth orientation data.
 
 # Returns
 The theory this edge is defined under — `FK5()` or `IAU2006()` — or `nothing`
-where the edge reads no Earth orientation data at all. The theory selects the
-EOP table, which is what makes passing the wrong one unreachable rather than
-merely discouraged.
+where the edge reads no Earth orientation data. The theory selects the EOP
+table used by the edge.
 
 # Example
 
@@ -680,7 +660,8 @@ rotation applied and polar motion not.
 """
 function axes_rotation(::PEF, ::ITRF, e::EpochScales)
     # IERS distributes pole coordinates in arcseconds.
-    x_p, y_p = _eop_read(FK5(), (:x, :y), epoch_utc(e)) .* _ARCSEC_TO_RAD
+    v = _eop_at(FK5(), e)
+    x_p, y_p = (v.x, v.y) .* _ARCSEC_TO_RAD
     return _rotation_no_rate(r_pef_to_itrf_fk5(DCM, x_p, y_p))
 end
 
@@ -712,7 +693,7 @@ Applies the same IERS celestial-pole corrections as the nutation edge, so the
 `TODEq` end matches the one that edge produces.
 """
 function axes_rotation(::TODEq, ::TEME, e::EpochScales)
-    δΔϵ, δΔψ = _eop_read(FK5(), (:δΔϵ, :δΔψ), epoch_utc(e)) .* _MILLIARCSEC_TO_RAD
+    δΔψ, δΔϵ = _eop_at(FK5(), e).celestial_pole .* _MILLIARCSEC_TO_RAD
     return _rotation_no_rate(r_tod_to_teme(DCM, e.tt, δΔϵ, δΔψ))
 end
 
@@ -763,7 +744,7 @@ end
 
 @inline function _true_obliquity(e::EpochScales)
     _, Δε, _ = nutation_fk5(epoch_tt(e))
-    δΔϵ = first(_eop_read(FK5(), (:δΔϵ,), epoch_utc(e))) * _MILLIARCSEC_TO_RAD
+    δΔϵ = _eop_at(FK5(), e).celestial_pole[2] * _MILLIARCSEC_TO_RAD
     return _mean_obliquity(e) + Δε + δΔϵ
 end
 
@@ -862,7 +843,8 @@ This transformation does not apply polar motion; the `PEF ↔ ITRF` edge does.
 `epoch` may be a `Time` or a TDB Julian date.
 """
 function axes_rotation(::TODEq, ::PEF, e::EpochScales)
-    Δut1, δΔψ, lod = _eop_read(FK5(), (:Δut1_utc, :δΔψ, :lod), epoch_utc(e))
+    v = _eop_at(FK5(), e)
+    Δut1, δΔψ, lod = v.ut1_utc, v.celestial_pole[1], v.lod
     δΔψ *= _MILLIARCSEC_TO_RAD
 
     # LOD is distributed in milliseconds; a longer day is a slower Earth.
@@ -872,7 +854,10 @@ function axes_rotation(::TODEq, ::PEF, e::EpochScales)
     # rotation angle; SatelliteToolboxTransformations' own `r_tod_to_pef_fk5` takes one date,
     # which rounds UT1 to 40 µs. The equation of the equinoxes is its own, the same routine that
     # function calls, and depends on TT only.
-    eqeq = _nutation_and_equation_of_equinoxes_fk5(e.tt, 0, δΔψ)[4]
+    # The public TOD-to-TEME rotation carries the equation of the equinoxes. Reading its
+    # angle keeps this edge independent of SatelliteToolbox's private nutation helpers.
+    teme = r_tod_to_teme(e.tt, 0, δΔψ)
+    eqeq = atan(teme[1, 2], teme[1, 1])
     θ = _gmst82(e.utc_hi, e.utc_lo + Δut1 / 86_400) + eqeq
     return _rotation_with_spin(_Rz(θ), ω)
 end
@@ -944,11 +929,12 @@ const _CIP_INTERPOLATE = Ref(true)
 """
     cip_interpolation() -> Bool
 
-Whether the IAU 2006 chain interpolates the CIP coordinates and CIO locator from a cached
-30-minute grid (`true`, the default) or evaluates the IAU 2006/2000A series at every epoch.
+Return the CIP interpolation setting for the IAU 2006 chain.
 
 # Returns
-The current setting. See [`set_cip_interpolation!`](@ref) to change it.
+`true` (the default) to interpolate the CIP coordinates and CIO locator from
+a cached 30-minute grid; `false` to evaluate the IAU 2006/2000A series at
+each epoch. See [`set_cip_interpolation!`](@ref) to change the setting.
 
 # Example
 ```jldoctest
@@ -966,11 +952,17 @@ cip_interpolation() = _CIP_INTERPOLATE[]
 Choose how the IAU 2006 chain (`GCRF → CIRS`) obtains the CIP coordinates X, Y and the CIO
 locator s, for the rest of the session.
 
-- `true`, the default: interpolated from the series evaluated on a 30-minute grid in TT, which
-  is cached. Within 6.3e-5 µas of the series. Fast for epochs close together, such as a
-  propagation's steps; an isolated epoch evaluates the series four times, 100-160 µs.
-- `false`: the IAU 2006/2000A series at every epoch, about 43 µs each, and the exact series
-  value. Suits sparse epochs, such as hourly output or a scattered set of observation times.
+- `true` (the default): interpolate from a cached 30-minute grid in TT.
+  The measured difference from the series is under 6.3e-5 µas. This is faster
+  for closely spaced epochs, such as propagation steps. An isolated epoch
+  requires four series evaluations to populate the cache.
+- `false`: evaluate the IAU 2006/2000A series at each epoch. This avoids
+  interpolation and is faster for sparse epochs, such as hourly output or
+  scattered observation times.
+
+Performance checks measured 100–160 µs for an isolated interpolated epoch
+and about 43 µs for direct series evaluation. Timings depend on the machine
+and workload.
 
 Both are deterministic: the result depends only on the epoch and the setting.
 
@@ -1045,7 +1037,7 @@ Reference System, using the CIO-based formulation.
 Applies the IERS CIP offsets from the IAU-2006 EOP series.
 """
 function axes_rotation(::GCRF, ::CIRS, e::EpochScales)
-    δx, δy = _eop_read(IAU2006(), (:δx, :δy), epoch_utc(e)) .* _MILLIARCSEC_TO_RAD
+    δx, δy = _eop_at(IAU2006(), e).celestial_pole .* _MILLIARCSEC_TO_RAD
     x, y, s = _cip_iau2006(e.tt)
     return _rotation_no_rate(_gcrf_to_cirs(x + δx, y + δy, s))
 end
@@ -1071,7 +1063,8 @@ Carries the Earth rotation rate, like its FK5 counterpart `TODEq ↔ PEF`. This
 transformation does not apply polar motion; the `TIRS ↔ ITRF` edge does.
 """
 function axes_rotation(::CIRS, ::TIRS, e::EpochScales)
-    Δut1, lod = _eop_read(IAU2006(), (:Δut1_utc, :lod), epoch_utc(e))
+    v = _eop_at(IAU2006(), e)
+    Δut1, lod = v.ut1_utc, v.lod
     ω = EARTH_ANGULAR_SPEED * (1 - lod / 86_400_000)
     # UT1 as a two-part date, so the angle keeps the precision of the epoch
     θ = _earth_rotation_angle(e.utc_hi, e.utc_lo + Δut1 / 86_400)
@@ -1097,7 +1090,8 @@ This is the edge that distinguishes `TIRS` from `ITRF`: `TIRS` has Earth
 rotation applied and polar motion not.
 """
 function axes_rotation(::TIRS, ::ITRF, e::EpochScales)
-    x_p, y_p = _eop_read(IAU2006(), (:x, :y), epoch_utc(e)) .* _ARCSEC_TO_RAD
+    v = _eop_at(IAU2006(), e)
+    x_p, y_p = (v.x, v.y) .* _ARCSEC_TO_RAD
     return _rotation_no_rate(r_tirs_to_itrf_iau2006(DCM, e.tt, x_p, y_p))
 end
 
@@ -1129,7 +1123,7 @@ result is the corrected IAU-80 nutation rather than the original model.
 `epoch` may be a `Time` or a TDB Julian date.
 """
 function axes_rotation(::MODEq, ::TODEq, e::EpochScales)
-    δΔϵ, δΔψ = _eop_read(FK5(), (:δΔϵ, :δΔψ), epoch_utc(e)) .* _MILLIARCSEC_TO_RAD
+    δΔψ, δΔϵ = _eop_at(FK5(), e).celestial_pole .* _MILLIARCSEC_TO_RAD
     return _rotation_no_rate(r_mod_to_tod_fk5(DCM, e.tt, δΔϵ, δΔψ))
 end
 
@@ -1399,7 +1393,7 @@ AstroFrames.axes_rotation(a::Tilted, ::ICRF, e::EpochScales) =
     inv(axes_rotation(ICRF(), a, e))
 
 epoch = Time("2024-03-01T12:00:00", UTC(), ISOT())
-axes_rotation(ITRF(), Tilted(), epoch)    # routes through the Earth chain, unassisted
+axes_rotation(ITRF(), Tilted(), epoch)    # route through the Earth chain and ICRF
 ```
 """
 hub_axes(::Type{<:AbstractAxes}) = nothing
@@ -1431,8 +1425,22 @@ As `_reaches`, ignoring the active theory. The companion of `_route_any`.
 _reaches_any(::AbstractAxes, ::AbstractAxes) = false
 
 # Adjacent-or-routed reachability for a pair the search enumerated.
-@inline _connected(a, b, theory) = a === b || _reaches(a, b, theory)
-@inline _connected_any(a, b) = a === b || _reaches_any(a, b)
+@inline _connected(a, b, theory) =
+    _connected_hubs(a, b, (x, y) -> _reaches(x, y, theory), ())
+@inline _connected_any(a, b) = _connected_hubs(a, b, _reaches_any, ())
+
+# An extension may attach to another extension. Follow both hub chains until they reach
+# the built-in graph; a repeated pair means a cycle, not a path to the other endpoint.
+@inline function _connected_hubs(a, b, reaches::F, seen::Tuple) where {F}
+    (a === b || reaches(a, b)) && return true
+    pair = (typeof(a), typeof(b))
+    pair in seen && return false
+    visited = (seen..., pair)
+    ha, hb = hub_axes(a), hub_axes(b)
+    ha !== nothing && _connected_hubs(ha, b, reaches, visited) && return true
+    hb !== nothing && _connected_hubs(a, hb, reaches, visited) && return true
+    return false
+end
 
 """
     _hub_route(source, target, theory) -> Tuple | Nothing
@@ -1467,6 +1475,10 @@ and AstroFrames emits the `FR-FRAME-4` warning.
                             connected::F, route::G) where {F,G}
     hs = hub_axes(source)
     ht = hub_axes(target)
+
+    # A declared hub edge is adjacent even when that hub is itself an extension.
+    # The parameter-carrying fallback must reach the direct three-argument method.
+    (source === ht || hs === target) && return nothing
 
     if hs === nothing && ht === nothing
         return nothing                       # both interior; the search had its chance
@@ -1648,14 +1660,41 @@ const _NO_EPOCH = EpochScales(NaN, NaN, NaN, NaN, NaN)
 @inline _scales_for(from, to, epoch) =
     _epoch_free(from) && _epoch_free(to) ? _NO_EPOCH : _scales(epoch)
 
-axes_rotation(from::AbstractAxes, to::AbstractAxes, t::Time) =
-    axes_rotation(from, to, _scales_for(from, to, t))
+_epoch_value(t::Time) = t.jd1 + t.jd2
+_epoch_value(t::Real) = t
+_epoch_value(t::EpochScales) = t.tdb
+_valid_epoch(t) = isfinite(_epoch_value(t))
 
-axes_rotation(from::AbstractAxes, to::AbstractAxes, jd_tdb::Real) =
-    axes_rotation(from, to, _scales_for(from, to, jd_tdb))
+# The length is a `Val` so the tuple, and the matrix built from it, has a type the compiler
+# knows. With a plain `Int` every epoch-dependent entry point inferred `Any`, which put dynamic
+# dispatch and allocations into each force evaluation.
+function _nan_epoch_values(epoch, ::Val{n}) where {n}
+    value = _epoch_value(epoch)
+    if !isnan(value)
+        @warn "AstroFrames: epoch must be finite; got $(value). The transformation is undefined and returns NaNs." maxlog = 1
+    end
+    return ntuple(_ -> oftype(float(value), NaN), Val(n))
+end
 
-axes_rotation(from::AbstractAxes, to::AbstractAxes, t::Time, p::NamedTuple) =
-    axes_rotation(from, to, _scales_for(from, to, t), p)
+function axes_rotation(from::AbstractAxes, to::AbstractAxes, t::Union{Time, Real})
+    if !(_epoch_free(from) && _epoch_free(to)) && !_valid_epoch(t)
+        return SMatrix{6,6}(_nan_epoch_values(t, Val(36)))
+    end
+    return axes_rotation(from, to, _scales_for(from, to, t))
+end
 
-axes_rotation(from::AbstractAxes, to::AbstractAxes, jd_tdb::Real, p::NamedTuple) =
-    axes_rotation(from, to, _scales_for(from, to, jd_tdb), p)
+function axes_rotation(from::AbstractAxes, to::AbstractAxes, t::Union{Time, Real}, p::NamedTuple)
+    if !(_epoch_free(from) && _epoch_free(to)) && !_valid_epoch(t)
+        return SMatrix{6,6}(_nan_epoch_values(t, Val(36)))
+    end
+    return axes_rotation(from, to, _scales_for(from, to, t), p)
+end
+# Guard malformed calls before they reach numerical code. Valid epoch types have
+# more specific methods above, including the EpochScales extension interface.
+axes_rotation(from::AbstractAxes, to::AbstractAxes, epoch) = throw(ArgumentError(
+    "axes_rotation: epoch must be an AstroEpochs.Time or a TDB Julian date; got $(repr(epoch)) ($(typeof(epoch)))."))
+
+axes_rotation(from::AbstractAxes, to::AbstractAxes, epoch, params) = throw(ArgumentError(
+    "axes_rotation: params must be a NamedTuple of evaluated reference data; got $(repr(params)) ($(typeof(params)))."))
+axes_rotation(from::AbstractAxes, to::AbstractAxes, epoch, params::NamedTuple) =
+    axes_rotation(from, to, epoch)

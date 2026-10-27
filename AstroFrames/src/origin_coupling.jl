@@ -41,8 +41,7 @@ adding a `valid_origin` method.
 The default is `true`, so origin-independent frames require no additional
 method.
 
-Checked when the coordinate system is built, not when a transform runs, so the
-mistake surfaces at the line that made it.
+The pairing is checked when the coordinate system is constructed.
 
 When a method returns `false`, `CoordinateSystem` raises an `ArgumentError` that
 names the axes, the supplied origin, and the required origin.
