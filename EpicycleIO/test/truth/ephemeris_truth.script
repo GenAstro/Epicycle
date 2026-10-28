@@ -1,0 +1,84 @@
+%  Copyright (C) 2026 Gen Astro LLC
+%  SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+%
+%  Reference ephemerides for ticket #9: one low Earth orbit, two hours of point-mass Earth
+%  gravity, written by GMAT as CCSDS OEM, STK .e and SPK. The integrator takes fixed 60 s steps,
+%  so the three files hold the same epochs (GMAT writes SPK at integrator steps only).
+%
+%  Earth's mu is set to Epicycle's (398600.4418 km^3/s^2) so a propagation in Epicycle from the
+%  same state follows the same orbit to numerical precision.
+%
+%  Run with GMAT R2026a:   GmatConsole.exe --run ephemeris_truth.script
+%  The files appear in GMAT's output folder; copy them to Epicycle/examples/Ephemeris_OEM,
+%  Ephemeris_STK and Ephemeris_SPK as gmat_leo.oem, gmat_leo.e and gmat_leo.bsp.
+
+Earth.Mu = 398600.4418;
+
+Create Spacecraft LEO;
+LEO.DateFormat = UTCGregorian;
+LEO.Epoch = '21 Oct 2026 00:00:00.000';
+LEO.CoordinateSystem = EarthMJ2000Eq;
+LEO.DisplayStateType = Cartesian;
+LEO.X = 7000;
+LEO.Y = 0;
+LEO.Z = 1300;
+LEO.VX = 0;
+LEO.VY = 7.35;
+LEO.VZ = 1.0;
+LEO.NAIFId = -900001;
+LEO.NAIFIdReferenceFrame = -9000001;
+
+Create ForceModel PointMassEarth;
+PointMassEarth.CentralBody = Earth;
+PointMassEarth.PrimaryBodies = {};
+PointMassEarth.PointMasses = {Earth};
+PointMassEarth.Drag = None;
+PointMassEarth.SRP = Off;
+PointMassEarth.ErrorControl = None;
+
+Create Propagator FixedStep;
+FixedStep.FM = PointMassEarth;
+FixedStep.Type = RungeKutta89;
+FixedStep.InitialStepSize = 60;
+FixedStep.Accuracy = 1e-13;
+FixedStep.MinStep = 60;
+FixedStep.MaxStep = 60;
+
+Create EphemerisFile OEMFile;
+OEMFile.Spacecraft = LEO;
+OEMFile.Filename = 'gmat_leo.oem';
+OEMFile.FileFormat = CCSDS-OEM;
+OEMFile.EpochFormat = UTCGregorian;
+OEMFile.InitialEpoch = InitialSpacecraftEpoch;
+OEMFile.FinalEpoch = FinalSpacecraftEpoch;
+OEMFile.StepSize = IntegratorSteps;
+OEMFile.Interpolator = Lagrange;
+OEMFile.InterpolationOrder = 7;
+OEMFile.CoordinateSystem = EarthMJ2000Eq;
+
+Create EphemerisFile STKFile;
+STKFile.Spacecraft = LEO;
+STKFile.Filename = 'gmat_leo.e';
+STKFile.FileFormat = STK-TimePosVel;
+STKFile.EpochFormat = UTCGregorian;
+STKFile.InitialEpoch = InitialSpacecraftEpoch;
+STKFile.FinalEpoch = FinalSpacecraftEpoch;
+STKFile.StepSize = IntegratorSteps;
+STKFile.Interpolator = Lagrange;
+STKFile.InterpolationOrder = 7;
+STKFile.CoordinateSystem = EarthMJ2000Eq;
+
+Create EphemerisFile SPKFile;
+SPKFile.Spacecraft = LEO;
+SPKFile.Filename = 'gmat_leo.bsp';
+SPKFile.FileFormat = SPK;
+SPKFile.EpochFormat = UTCGregorian;
+SPKFile.InitialEpoch = InitialSpacecraftEpoch;
+SPKFile.FinalEpoch = FinalSpacecraftEpoch;
+SPKFile.StepSize = IntegratorSteps;
+SPKFile.Interpolator = Hermite;
+SPKFile.InterpolationOrder = 7;
+SPKFile.CoordinateSystem = EarthMJ2000Eq;
+
+BeginMissionSequence;
+Propagate FixedStep(LEO) {LEO.ElapsedSecs = 7200};

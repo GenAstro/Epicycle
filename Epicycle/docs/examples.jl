@@ -56,8 +56,9 @@ end
 Generate a page for each script named in `groups` and return the `pages` entry for `makedocs`.
 
 `groups` is a vector of `"Group title" => ["Page title" => "script_name", …]`, where the script is
-`examples_dir/<script_name>.jl`. Pages are written to `out_dir`, which is emptied first so a
-renamed script leaves nothing behind.
+`examples_dir/<script_name>.jl`; a script in a folder of its own is named with the folder, as
+`"Ephemeris_OEM/Ex_EphemerisOEM"`, and its page by the script alone. Pages are written to
+`out_dir`, which is emptied first so a renamed script leaves nothing behind.
 """
 function example_pages(groups, examples_dir, out_dir)
     isdir(out_dir) && rm(out_dir; recursive = true)
@@ -69,16 +70,16 @@ function example_pages(groups, examples_dir, out_dir)
         for (title, script) in entries
             path = joinpath(examples_dir, script * ".jl")
             isfile(path) || error("example_pages: no script at $path")
-            execute = runs_example(script)
+            execute = runs_example(basename(script))
             @info "example page: $script" execute
             Literate.markdown(path, out_dir;
-                              name      = script,
+                              name      = basename(script),
                               execute   = execute,
                               flavor    = Literate.DocumenterFlavor(),
                               codefence = "```julia" => "```",   # rendered, never re-run
                               preprocess = literate_source,
                               credit    = false)
-            push!(pages, title => joinpath(basename(out_dir), script * ".md"))
+            push!(pages, title => joinpath(basename(out_dir), basename(script) * ".md"))
         end
         push!(nav, group => pages)
     end

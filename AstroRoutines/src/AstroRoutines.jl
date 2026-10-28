@@ -16,6 +16,10 @@ export mean_to_true_anomaly, true_to_mean_anomaly
 # units. See cr3bp.jl.
 export cr3bp_mass_ratio, cr3bp_accel, cr3bp_eom!, cr3bp_jacobian
 export jacobi_constant, libration_point
+
+# Lagrange and Hermite interpolation of tabulated values. See interpolation.jl.
+export AbstractInterpolationMethod, Lagrange, Hermite, required_points
+export interpolate, interpolate_with_derivative
 export cr3bp_stm_eom!, cr3bp_stm_initial
 
 # Internal: validate eccentricity is in the elliptic domain [0, 1). Fails loudly on bad input
@@ -34,5 +38,6 @@ include("true_to_eccentric_anomaly.jl")
 include("mean_to_true_anomaly.jl")
 include("true_to_mean_anomaly.jl")
 include("cr3bp.jl")
+include("interpolation.jl")
 
 end # module AstroRoutines

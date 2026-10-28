@@ -20,6 +20,12 @@ Order   = [:function]
 Filter  = t -> nameof(t) in names(EpicycleIO)
 ```
 
+```@autodocs
+Modules = [EpicycleIO]
+Order   = [:type]
+Filter  = t -> nameof(t) in names(EpicycleIO)
+```
+
 ```@index
 Pages = ["api.md"]
 ```
