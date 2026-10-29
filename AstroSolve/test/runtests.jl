@@ -95,6 +95,8 @@ include("test_correctness_moon_landing.jl")
 
 include("test_correctness_obstacle_avoidance.jl")
 
+include("test_correctness_kepler_time_domain.jl")
+
 include("test_correctness_sims_flanagan.jl")
 
 include("test_correctness_shooting_sequence.jl")
