@@ -1,7 +1,7 @@
 # Copyright (C) 2026 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 
-# Robustness / input-validation dimension (TestingStandards.md §2; CodingStandards.md §9) for
+# Robustness / input-validation dimension for
 # Lagrange and Hermite interpolation (ticket #9): bad input fails loudly, naming what is wrong.
 
 @testitem "invalid methods are rejected" tags=[:Interpolation, :Robustness] begin

@@ -1,7 +1,7 @@
 # Copyright (C) 2026 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 
-# Correctness dimension (TestingStandards.md §2) for Lagrange and Hermite interpolation
+# Correctness dimension for Lagrange and Hermite interpolation
 # (ticket #9). Truth: polynomials, which an interpolant of sufficient degree reproduces exactly,
 # and DataInterpolations as an independent implementation where the two define the same window.
 

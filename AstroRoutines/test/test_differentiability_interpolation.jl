@@ -1,7 +1,7 @@
 # Copyright (C) 2026 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 
-# Differentiability dimension (TestingStandards.md §2) for Lagrange and Hermite interpolation
+# Differentiability dimension for Lagrange and Hermite interpolation
 # (ticket #9): ForwardDiff through the time and through the tabulated values, checked against
 # the analytic derivative of the polynomial and against finite differences.
 
