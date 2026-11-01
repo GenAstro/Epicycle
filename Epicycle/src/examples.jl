@@ -44,8 +44,25 @@ A vector of names without the `.jl` extension.
 Epicycle.example_names()
 ```
 """
-example_names() = sort([first(f, length(f) - 3) for f in readdir(examples_dir())
-                        if endswith(f, ".jl")])
+example_names() = sort(collect(keys(_example_files())))
+
+# Every example, name => path: the scripts in examples/, and the Ex_ scripts one folder down. An
+# example with files of its own (an ephemeris and the script that reads it) lives in a folder.
+function _example_files()
+    dir = examples_dir()
+    found = Dict{String, String}()
+    for f in readdir(dir)
+        p = joinpath(dir, f)
+        if isfile(p) && endswith(f, ".jl")
+            found[first(f, length(f) - 3)] = p
+        elseif isdir(p)
+            for g in readdir(p)
+                startswith(g, "Ex_") && endswith(g, ".jl") && (found[first(g, length(g) - 3)] = joinpath(p, g))
+            end
+        end
+    end
+    return found
+end
 
 """
     list_examples()
@@ -97,7 +114,7 @@ Epicycle.example_path("Ex_GettingStarted")
 function example_path(name::AbstractString)
     file = endswith(name, ".jl") ? name : name * ".jl"
     isfile(file) && return abspath(file)
-    path = joinpath(examples_dir(), file)
+    path = get(_example_files(), first(basename(file), length(basename(file)) - 3), "")
     isfile(path) || throw(ArgumentError(
         "no example called $(repr(name)). `Epicycle.example_names()` lists the " *
         "$(length(example_names())) that ship with Epicycle."))

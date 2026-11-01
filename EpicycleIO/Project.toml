@@ -5,26 +5,36 @@ version = "0.1.0"
 
 [deps]
 AstroEpochs = "241dcde3-d7a4-450d-948f-15f2ea2ba1fa"
+AstroFrames = "7b16edaa-6936-47b4-b191-819abb0f77bd"
 AstroModels = "ac4cc047-8a77-4e9e-bb46-f1584e9a10ee"
+AstroRoutines = "4f255373-1537-45e9-840a-8c00864979f6"
+AstroStates = "e8875680-ece1-4c6e-865d-f99ee1f9f9b4"
+AstroUniverse = "4bd44dca-1e45-43d2-b940-3f88da59ea6f"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 PlotlyBase = "a03496cd-edff-5a9b-9e67-9cda94a718b5"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+SPICE = "5bab7191-041a-5c2e-a744-024b9c3a5062"
 Scratch = "6c6a2e73-6563-6170-7368-637461726353"
 Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 AstroEpochs = "0.6"
+AstroFrames = "0.4"
 AstroModels = "0.3.0"
+AstroRoutines = "0.1"
+AstroStates = "0.11"
+AstroUniverse = "0.4"
 JSON = "0.21, 1"
 PlotlyBase = "0.8.22"
+SPICE = "0.2"
 Scratch = "1.3"
+StaticArrays = "1"
 julia = "1.10"
 
 [extras]
-AstroFrames = "7b16edaa-6936-47b4-b191-819abb0f77bd"
-AstroStates = "e8875680-ece1-4c6e-865d-f99ee1f9f9b4"
-AstroUniverse = "4bd44dca-1e45-43d2-b940-3f88da59ea6f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "AstroFrames", "AstroStates", "AstroUniverse"]
+test = ["Test"]

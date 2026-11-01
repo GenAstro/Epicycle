@@ -3,42 +3,37 @@ CurrentModule = EpicycleIO
 ```
 
 ```@setup io
-# The doc build is headless. This stops each block opening a browser tab. A script or a test
-# does the same.
 using EpicycleIO
 EpicycleIO.auto_open!(false)
 ```
 
 # EpicycleIO
 
-The EpicycleIO module provides plotting, reporting, and three-dimensional trajectory
-visualization for Epicycle results. Plots are drawn by Plotly.js and trajectories by Cesium, both
-in a browser page served from the local machine. The page updates while a script is still
-running, so a propagation or a solver iteration can be watched as it proceeds.
+EpicycleIO provides tools for visualizing and exporting Epicycle results. Use it
+to plot data, animate a spacecraft trajectory, write tabular reports, and exchange
+ephemeris files with other software.
 
-The plotting and reporting functions take arrays, and have no knowledge of spacecraft, states
-or coordinate systems. `history` in AstroCallbacks produces the arrays. Data from two spacecraft
-needs no special handling: the two recordings are two pairs of arrays with their own lengths.
+Plots and animated trajectories appear together in a browser dashboard served from
+your machine. The dashboard updates as your Julia session produces results, so you
+can inspect a propagation or follow a solver while it runs.
 
-The three-dimensional view is the exception. `orbitview` takes a Spacecraft and reads the
-reference frame and the epoch from it. Earth is the only central body supported for these views,
-and the body comes from the frame the history was recorded in.
+| Task | Function | Input |
+|:--|:--|:--|
+| Plot data | `xyplot` and other plotting functions | Arrays of values |
+| Animate a trajectory | `orbitview` | A spacecraft with a recorded propagation history |
+| Write a tabular report | `report` | Named columns of values |
+| Read an ephemeris | `read_ephemeris` | A CCSDS OEM, STK `.e`, or JPL SPK file |
+| Export a trajectory | `write_ephemeris` | A spacecraft or spacecraft history |
 
-Attribute names are Plotly's own, such as `name`, `mode`, `line_color` and `marker_size`, and
-values pass through unchanged. Plotly's reference documentation applies directly to this
-interface.
-
-References:
-
-- Plotly JavaScript reference, <https://plotly.com/javascript/reference/>
-- CesiumJS, <https://cesium.com/platform/cesiumjs/>
-- CZML specification, <https://github.com/AnalyticalGraphicsInc/czml-writer/wiki>
+Plotting and reporting work with arrays, including data from sources other than
+Epicycle. For spacecraft results, use `history` and `Calc` to extract the quantities
+you need. Trajectory views and ephemeris functions work directly with spacecraft
+or history objects so they can use the associated epochs and coordinate systems.
 
 ## Installation
 
-EpicycleIO is registered in the Gen Astro registry rather than Julia's General registry, because it
-is released under the Gen Astro Source Available License. Add the registry once, then install
-as usual:
+EpicycleIO is distributed through the Gen Astro registry under the Gen Astro
+Source Available License. Add the registry, then install the package:
 
 ```julia
 using Pkg
@@ -46,185 +41,161 @@ pkg"registry add General https://github.com/GenAstro/GenAstroRegistry.git"
 pkg"add EpicycleIO"
 ```
 
-General is named in that command for two reasons: the dependencies live there, and Julia
-installs it by itself only while no registry is present at all, so adding the Gen Astro
-registry alone would leave it out.
+The registry command includes General because EpicycleIO's dependencies are
+registered there. You only need to add the registries once for a Julia installation.
 
-## Quick Start
+Load `EpicycleIO` to plot arrays or write reports. The spacecraft examples on this
+page also use the `Epicycle` umbrella package, which must be installed in your
+active Julia environment. Epicycle re-exports EpicycleIO's public functions.
 
-The Epicycle umbrella does not re-export `xyplot`; the name collides with Plots.jl and Makie. Load
-EpicycleIO explicitly. The example below propagates a spacecraft, draws the trajectory, plots two
-quantities describing it, and writes the same data to a file. It runs as written.
+## Quick start: plot data
+
+Create a named panel with `xyplot`, then set its axis labels with `panel!`:
+
+```@example io
+using EpicycleIO
+
+hours = collect(0.0:0.25:12.0)
+altitude_km = 400.0 .+ 25.0 .* sin.(hours)
+
+xyplot("Altitude", hours, altitude_km; name = "Spacecraft A")
+panel!("Altitude"; xaxis_title = "Hours from epoch", yaxis_title = "Altitude (km)")
+```
+
+The first plot opens the dashboard in your browser.
+Subsequent plots update the same dashboard. A leading string selects the panel;
+plotting again with the same name replaces that panel's plotted data. Use the `!`
+form to add a series:
+
+```@example io
+xyplot!("Altitude", hours, altitude_km .+ 30; name = "Spacecraft B")
+```
+
+Trace options such as `name`, `mode`, and `line_color` follow Plotly conventions.
+Use `panel!` for layout options such as titles, axis labels, and ranges. Nested
+options use underscores: `yaxis_title` sets Plotly's `yaxis.title` property.
+
+A matrix draws one series per column, and a vector of vectors draws one series per
+component. See [Data plotting](data_plotting.md) for array shapes, trace types,
+styling, and subplot layouts.
+
+## Work with a propagated trajectory
+
+The following example propagates an Earth-orbiting spacecraft for one hour. It
+then displays the trajectory and plots the recorded distance from Earth's center.
+Initial position and velocity components are in km and km/s.
 
 ```@example io
 using Epicycle
-using EpicycleIO
 
-sat = Spacecraft(state = CartesianState([7000.0, 0.0, 1300.0, 0.0, 7.35, 1.0]),
-                 time  = Time("2020-01-01T00:00:00.000", UTC(), ISOT()),
-                 name  = "Explorer")
+sat = Spacecraft(
+    state = CartesianState([7000.0, 0.0, 1300.0, 0.0, 7.35, 1.0]),
+    time = Time("2026-10-21T00:00:00", UTC(), ISOT()),
+    name = "Explorer",
+)
 
-prop = OrbitPropagator(ForceModel(PointMassGravity(earth, ())),
-                       IntegratorConfig(DP8(); abstol = 1e-12, reltol = 1e-12, dt = 60.0))
+prop = OrbitPropagator(
+    ForceModel(PointMassGravity(earth, ())),
+    IntegratorConfig(DP8(); abstol = 1e-12, reltol = 1e-12),
+)
+propagate!(prop, sat, StopAt(sat, PropDurationSeconds(), 3600.0))
 
-propagate!(prop, sat, StopAt(sat, PropDurationDays(), 0.25))
-
-# The trajectory. orbitview takes the spacecraft; the frame and epoch come from it
 orbitview("Trajectory", sat)
 
-# Columns out of the recorded history, one walk for all of them
-t, r, rmag = history(Calc(epoch,              sat),
-                     Calc(position_vector,    sat, EarthMJ2000Eq),
-                     Calc(position_magnitude, sat))
+times, radius_km = history(Calc(epoch, sat), Calc(position_magnitude, sat))
+hours_from_epoch = [(t - first(times)) * 24 for t in times]
 
-# Time is not a number. Subtract the epoch before plotting against it
-hours = [(x - first(t)) * 24 for x in t]
-
-# The leading string names a panel; a browser tab opens on the first plot
-xyplot("Radius", hours, rmag; name = "|r|", line_color = "cyan")
-
-# Nested Plotly settings are spelled with underscores, so yaxis_title becomes yaxis.title
-panel!("Radius"; xaxis_title = "hours from epoch", yaxis_title = "km")
-
-# A position column is a vector of 3-element vectors and draws as three series
-xyplot("Position", hours, r; name = ["x", "y", "z"])
-
-# The same arrays as a file. The keywords become the column headings
-report("flight.txt"; time = [x.jd for x in t], position = r, radius = rmag)
+xyplot("Radius", hours_from_epoch, radius_km; name = "Explorer")
+panel!("Radius"; xaxis_title = "Hours from epoch", yaxis_title = "Radius (km)")
 ```
 
-The API is documented with docstrings; Plotly's own documentation is not duplicated here. In the
-REPL, type `?` to enter help mode, then enter a name. `?xyplot` gives the shape rules and how
-attributes are distributed across several series, and `?orbitview` gives what is read from a
-spacecraft. `names(EpicycleIO)` lists every exported name.
+Subtracting two `Time` values gives an interval in days; multiplying by 24 produces
+the elapsed hours used on the horizontal axis.
 
-## Data Plotting
+`orbitview` reads the trajectory, epochs, and reference frame from the spacecraft's
+history. Its playback controls let you animate the orbit, and impulsive maneuvers
+are marked with their velocity changes. Earth is currently the only supported
+central body, and each trajectory panel holds one spacecraft. See
+[3D plotting](plotting_3d.md) for playback and display options.
 
-`xyplot` draws lines and markers and replaces whatever the panel held, and `xyplot!` adds to a
-panel. Other functions draw other Plotly traces and take the name of the trace they draw. Every
-one has a `!` form.
+## Export results
 
-Array shapes follow the conventions used by MATLAB and matplotlib. A single array plots against
-its index, and a matrix draws one series per column. Several x/y pairs may be given in one
-call, and lengths are checked pairwise.
+Choose a tabular report when you want columns of calculated quantities. Choose an
+ephemeris when you want a trajectory with its epochs, coordinate system, and
+interpolation information.
+
+### Tabular reports
+
+`report` writes one column for each keyword. All columns must have the same number
+of rows. Include units in the column names, and convert epochs to the representation
+you want readers to use.
 
 ```@example io
-using EpicycleIO
-
-t   = collect(0.0:0.25:12.0)
-alt = 400.0 .+ 25.0 .* sin.(t)
-r   = [[7000.0 + 10i, 100.0i, 1300.0] for i in t]
-
-# Several forms of the same call
-xyplot("A", alt)                            # index on the horizontal axis
-xyplot("B", t, alt)                         # one series
-xyplot("C", t, hcat(alt, alt .+ 10))        # one series per column of a matrix
-xyplot("D", t, alt, t[1:20], alt[1:20])     # two series, independent lengths
-
-# A scalar attribute applies to every series; a vector gives one value per series
-xyplot("E", t, r; name       = ["radial", "along-track", "cross-track"],
-                line_color = ["red", "green", "blue"],
-                line_width = [1, 2, 3])
-
-# Other trace types take their data positionally and pass attributes through
-histogram("Residuals", randn(200); nbinsx = 40)
-
-# Any Plotly trace can be built directly and handed over, whether or not a wrapper exists
-xyplot("Distribution", PlotlyBase.violin(y = randn(200), box_visible = true, name = "range"))
+output_dir = mktempdir()
+report_path = joinpath(output_dir, "radius.txt")
+report(report_path; hours_from_epoch = hours_from_epoch, radius_km = radius_km)
 ```
 
-A `NaN` or an `Inf` draws as a break in the line. Gaps are ordinary in this domain: a quantity
-between ground station passes, argument of periapsis on a circular orbit, a solver step that did
-not converge.
+An existing file is overwritten. Vector-valued columns expand into component
+columns, such as `position_1`, `position_2`, and `position_3`. For absolute epochs,
+convert `Time` values explicitly, for example with `t.isot` or `t.jd`, and identify
+the time system in the column heading. See [Reporting](reporting.md) for formatting
+and column requirements.
 
-## Three-Dimensional Views
+### Ephemeris files
 
-`orbitview` draws a propagated trajectory about the central body, with a clock that can be
-played, paused and run at a chosen rate. The view is a panel on the same page as the plots, so
-a trajectory and the quantities describing it are seen together.
+Write the spacecraft's recorded history, then read it back as a `SpacecraftHistory`:
 
-Everything the view needs comes from the spacecraft: the trajectory from its recorded history,
-the epoch from the earliest sample, one coloured arc per propagation segment, and the label from
-its name. Each impulsive maneuver is marked with a point labelled with its magnitude, computed
-from the velocity change across the maneuver.
+```@example io
+ephemeris_path = joinpath(output_dir, "explorer.oem")
+write_ephemeris(ephemeris_path, sat; step = 60.0)
 
-```@raw html
-<!-- doc-fragment -->
+eph = read_ephemeris(ephemeris_path)
+coverage(eph)
 ```
+
+The extension selects CCSDS OEM (`.oem`), STK ephemeris (`.e`), or JPL SPK (`.bsp`);
+SPK also needs the object's `naif_id`.
+The writer's `step` specifies the output sampling interval in seconds. Without it,
+the writer keeps the source epochs. An existing output file is replaced.
+
+Use `state_at` to evaluate a loaded history within its coverage. You can also pass
+the history to `write_ephemeris` to convert it to another supported format. See
+[Ephemeris files](ephemeris.md) for examples, format requirements, metadata,
+interpolation, and diagnostics.
+
+## Manage the dashboard
+
+Named panels let you keep related plots and trajectory views together. Use
+`open_dashboard` to show selected panels, and clear panels when you no longer
+need their contents:
+
 ```julia
-# Takes the spacecraft, not arrays. See the Quick Start above for the setup
-orbitview("Trajectory", sat)
-
-# Playback defaults to fitting the trajectory into about two minutes of real time
-orbitview("Trajectory", sat; speed = 3600)     # one hour of flight per second
+open_dashboard("Altitude", "Radius")
+clear!("Altitude")  # Remove the contents of one panel.
+clear_all!()        # Remove all panels.
 ```
 
-The camera is fixed in the inertial frame, so the orbit holds still against the stars and the
-central body rotates beneath it. A view holds one spacecraft, and a second spacecraft takes its
-own panel.
+For scripts or automated runs, disable automatic browser opening before plotting:
 
-## Reporting
-
-`report` writes named columns to a delimited text file. The keywords become the column
-headings, and a vector-valued column expands into one column per component. Columns must be the
-same length, so columns from two different recordings cannot share a report.
-
-```@example io
-using EpicycleIO
-
-t = collect(0.0:0.25:6.0)
-r = [[7000.0 + 10i, 100.0i, 1300.0] for i in t]
-v = [[0.0, 7.35 - 0.001i, 1.0] for i in t]
-
-report("flight.txt"; time = t, position = r, velocity = v)
+```julia
+EpicycleIO.auto_open!(false)
 ```
 
-`report` does not interpret epochs, since a bare Julian date does not record whether it is TT
-or UTC. A `Time` passed directly raises an error, naming `t.jd`, `t.mjd` and `t.isot` as the
-conversions available.
+Plots use Plotly.js, and trajectory views use CesiumJS. The browser loads these
+libraries from external servers, so an internet connection is needed if they are
+not already cached. The dashboard itself runs locally and does not require an
+account or API key. See [The dashboard](dashboard.md) for panel layout, live
+updates, and session controls.
 
-## The Dashboard
+## Guides and reference
 
-A leading string names a panel, and plotting into a name that already exists replaces that
-panel, so a script run twice leaves one figure rather than two. A control at the top right of the
-page switches between showing every panel at once and showing one panel at a time.
+- [Data plotting](data_plotting.md): array shapes, plot types, styling, and subplots.
+- [3D plotting](plotting_3d.md): trajectory animation and display options.
+- [The dashboard](dashboard.md): panels, browser views, and live updates.
+- [Reporting](reporting.md): column names, units, epoch formatting, and text output.
+- [Ephemeris files](ephemeris.md): reading, evaluating, comparing, and exporting trajectories.
+- [API reference](api.md): function signatures, keywords, and detailed behavior.
 
-```@example io
-using EpicycleIO
-
-t = collect(0.0:0.25:12.0)
-xyplot("Altitude", t, 400.0 .+ 25.0 .* sin.(t))
-xyplot("Radius",   t, 7000.0 .+ 10.0 .* t)
-
-open_dashboard("Altitude")    # a tab showing named panels only
-clear!("Altitude")            # empty one panel, leaving its layout
-clear_all!()                  # remove every panel
-EpicycleIO.close_dashboard()             # stop the server; the page stops updating
-
-EpicycleIO.auto_open!(false)  # stop plots opening tabs, for a script or a test
-```
-
-Plotly and Cesium are downloaded the first time they are needed and then cached by the
-browser, so the first plot on a machine with no network connection will not draw. Nothing else
-leaves the local machine, and no account or key is required.
-
-## Reference
-
-The names a reader works through most. Every exported name is on the [API](api.md) page.
-
-```@docs
-xyplot
-xyplot!
-panel!
-orbitview
-report
-open_dashboard
-```
-
-## Where to go next
-
-- [Data plotting](data_plotting.md), what can be drawn, styling, and grids
-- [3D plotting](plotting_3d.md), trajectories about a central body, with a clock
-- [The dashboard](dashboard.md), panels, live update, and keeping plots where they are wanted
-- [Reporting](reporting.md), columns, headings, and what a value may be
-- [API](api.md), every exported name
+In the Julia REPL, enter help mode with `?`, then type a function name such as
+`xyplot`, `orbitview`, or `write_ephemeris` to read its documentation.

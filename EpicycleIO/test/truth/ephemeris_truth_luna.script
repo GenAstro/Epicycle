@@ -1,0 +1,88 @@
+%  Copyright (C) 2026 Gen Astro LLC
+%  SPDX-License-Identifier: LicenseRef-GenAstro-SourceAvailable-1.0
+%
+%  Moon-centred reference ephemerides for ticket #9: one low lunar orbit, two hours of point-mass
+%  Moon gravity, written by GMAT as CCSDS OEM, STK .e and SPK. The integrator takes fixed 60 s
+%  steps, so the three files hold the same epochs (GMAT writes SPK at integrator steps only).
+%
+%  The Moon's mu is set to Epicycle's (4902.8 km^3/s^2) so the files can be checked against the
+%  exact two-body orbit.
+%
+%  Run with GMAT R2026a:   GmatConsole.exe --run ephemeris_truth_luna.script
+%  The files appear in GMAT's output folder; copy gmat_luna.oem, gmat_luna.e and gmat_luna.bsp to
+%  EpicycleIO/test/data/gmat.
+
+Luna.Mu = 4902.8;
+
+Create CoordinateSystem LunaMJ2000Eq;
+LunaMJ2000Eq.Origin = Luna;
+LunaMJ2000Eq.Axes = MJ2000Eq;
+
+Create Spacecraft LLO;
+LLO.DateFormat = UTCGregorian;
+LLO.Epoch = '21 Oct 2026 00:00:00.000';
+LLO.CoordinateSystem = LunaMJ2000Eq;
+LLO.DisplayStateType = Cartesian;
+LLO.X = 1838;
+LLO.Y = 0;
+LLO.Z = 0;
+LLO.VX = 0;
+LLO.VY = 1.4;
+LLO.VZ = 0.85;
+LLO.NAIFId = -900002;
+LLO.NAIFIdReferenceFrame = -9000002;
+
+Create ForceModel PointMassLuna;
+PointMassLuna.CentralBody = Luna;
+PointMassLuna.PrimaryBodies = {};
+PointMassLuna.PointMasses = {Luna};
+PointMassLuna.Drag = None;
+PointMassLuna.SRP = Off;
+PointMassLuna.ErrorControl = None;
+
+Create Propagator FixedStep;
+FixedStep.FM = PointMassLuna;
+FixedStep.Type = RungeKutta89;
+FixedStep.InitialStepSize = 60;
+FixedStep.Accuracy = 1e-13;
+FixedStep.MinStep = 60;
+FixedStep.MaxStep = 60;
+
+Create EphemerisFile OEMFile;
+OEMFile.Spacecraft = LLO;
+OEMFile.Filename = 'gmat_luna.oem';
+OEMFile.FileFormat = CCSDS-OEM;
+OEMFile.EpochFormat = UTCGregorian;
+OEMFile.InitialEpoch = InitialSpacecraftEpoch;
+OEMFile.FinalEpoch = FinalSpacecraftEpoch;
+OEMFile.StepSize = IntegratorSteps;
+OEMFile.Interpolator = Lagrange;
+OEMFile.InterpolationOrder = 7;
+OEMFile.CoordinateSystem = LunaMJ2000Eq;
+
+Create EphemerisFile STKFile;
+STKFile.Spacecraft = LLO;
+STKFile.Filename = 'gmat_luna.e';
+STKFile.FileFormat = STK-TimePosVel;
+STKFile.EpochFormat = UTCGregorian;
+STKFile.InitialEpoch = InitialSpacecraftEpoch;
+STKFile.FinalEpoch = FinalSpacecraftEpoch;
+STKFile.StepSize = IntegratorSteps;
+STKFile.Interpolator = Lagrange;
+STKFile.InterpolationOrder = 7;
+STKFile.CoordinateSystem = LunaMJ2000Eq;
+
+Create EphemerisFile SPKFile;
+SPKFile.Spacecraft = LLO;
+SPKFile.Filename = 'gmat_luna.bsp';
+SPKFile.FileFormat = SPK;
+SPKFile.EpochFormat = UTCGregorian;
+SPKFile.InitialEpoch = InitialSpacecraftEpoch;
+SPKFile.FinalEpoch = FinalSpacecraftEpoch;
+SPKFile.StepSize = IntegratorSteps;
+SPKFile.Interpolator = Hermite;
+SPKFile.InterpolationOrder = 7;
+SPKFile.CoordinateSystem = LunaMJ2000Eq;
+
+BeginMissionSequence;
+Propagate FixedStep(LLO) {LLO.ElapsedSecs = 7200};

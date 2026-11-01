@@ -5,7 +5,7 @@
 #
 # A presenter talking over a live run, or a tutorial that explains each step as it draws, needs the
 # explanation where the audience is already looking. The strip holds one moment at a time: a
-# heading, the text, a few labelled values, and the code that produced what is on screen. It goes
+# heading, the text, a few labeled values, and the code that produced what is on screen. It goes
 # through `_publish` like a panel, so it is atomic and throttled the same way.
 #
 # A caption can belong to a set of panels. It is then also written under a name derived from
@@ -36,7 +36,7 @@ strip appears when there is something to show and disappears after [`clear_narra
 - `subtitle`: A line under the heading.
 - `code`: Julia source to show beside the text, highlighted. Show the code that actually ran, so
   what a reader copies is what produced the plots.
-- `facts`: Labelled values to set out as a small table, as `"label" => "value"` pairs. Values are
+- `facts`: Labeled values to set out as a small table, as `"label" => "value"` pairs. Values are
   shown as given, so format numbers and units before passing them.
 - `status`: A short note on what is happening now, such as "solving…" or "done in 1.2 s".
 - `panels`: The panel titles this caption describes. A tab opened with

@@ -6,7 +6,8 @@ CurrentModule = AstroRoutines
 
 The AstroRoutines module provides low-level routines for classical astrodynamics. It currently 
 covers conversions between the mean, eccentric, and true anomalies of an elliptic orbit, and the
-circular restricted three-body problem in the rotating frame. For the three-body problem it 
+circular restricted three-body problem in the rotating frame, and Lagrange and Hermite
+interpolation of tabulated values. For the three-body problem it 
 provides the equations of motion, their Jacobian, the Jacobi constant, the five libration points,
 and the variational equations for the state transition matrix. The routines are primarily
 function-based rather than struct-based. The anomaly conversions follow Vallado (2013), and the 
@@ -168,6 +169,40 @@ cr3bp_stm_eom!(dz, z0, mu)
 length(z0)
 ```
 
+## Interpolation
+
+AstroRoutines interpolates tabulated values, such as the positions and velocities of an
+ephemeris, with Lagrange or Hermite polynomials of any degree. `Lagrange(d)` fits the `d + 1`
+points nearest the time asked for. `Hermite(d)` fits values and first derivatives at
+`(d + 1) ÷ 2` points, so degree 7 needs four, and its derivative is consistent with its value.
+The window is centred on the time where the table allows and shifts inward at its ends; a time
+outside the table throws `ArgumentError`, since there is no extrapolation. For data in segments,
+such as before and after a maneuver, interpolate one segment at a time.
+
+```@example interp
+using AstroRoutines
+
+t = collect(0.0:60.0:600.0)                        # s
+n = 2π / 5400                                      # rad/s
+r = 7000 .* cos.(n .* t)                           # km
+v = -7000n .* sin.(n .* t)                         # km/s
+
+interpolate(Lagrange(7), t, r, 125.0)              # km
+```
+
+`interpolate_with_derivative` returns the derivative of the same polynomial as well, which for
+Hermite through positions and velocities gives a matching position and velocity.
+
+```@example interp
+interpolate_with_derivative(Hermite(7), t, r, v, 125.0)   # (km, km/s)
+```
+
+Values may be numbers or vectors, such as three-element positions. Interpolation is
+differentiable with ForwardDiff with respect to the time and the tabulated values, and nothing is
+cached between calls, so one table can be evaluated from many threads at once. It is tested
+against polynomials it must reproduce exactly, against analytic and finite-difference
+derivatives, and against DataInterpolations.
+
 ## Reference
 
 The entry points of each area. The full list follows below.
@@ -178,6 +213,7 @@ cr3bp_mass_ratio
 libration_point
 cr3bp_eom!
 jacobi_constant
+interpolate
 ```
 
 ## API
@@ -191,5 +227,5 @@ Public  = true
 Private = false
 Order   = [:function, :type, :constant]
 Filter  = t -> !(t in (mean_to_eccentric_anomaly, cr3bp_mass_ratio, libration_point,
-                       cr3bp_eom!, jacobi_constant))
+                       cr3bp_eom!, jacobi_constant, interpolate))
 ```

@@ -130,9 +130,11 @@ end
 @testset "the palette cycles and matches the plots" begin
     @test IO_._pick_color(nothing, 1) == IO_.DEFAULT_PALETTE[1]
     @test IO_._pick_color(nothing, length(IO_.DEFAULT_PALETTE) + 1) == IO_.DEFAULT_PALETTE[1]
+    # The same colors in the same order as the data plots, so an arc and its first line match.
+    @test [string("rgb(", c[1], ",", c[2], ",", c[3], ")") for c in IO_.DEFAULT_PALETTE] == IO_.PALETTE
     @test IO_._pick_color([(1, 2, 3, 4), (5, 6, 7, 8)], 2) == (5, 6, 7, 8)
     @test IO_._pick_color([(1, 2, 3, 4), (5, 6, 7, 8)], 3) == (1, 2, 3, 4)   # cycles
-    @test IO_._pick_color((9, 8, 7, 6), 4) == (9, 8, 7, 6)                   # a lone colour
+    @test IO_._pick_color((9, 8, 7, 6), 4) == (9, 8, 7, 6)                   # a lone color
 end
 
 @testset "an entity id survives a URL and a JSON key" begin
@@ -160,7 +162,7 @@ end
     @test clock["range"] == "LOOP_STOP"
 end
 
-@testset "one packet per arc, in metres" begin
+@testset "one packet per arc, in meters" begin
     seg = _seg([0.0, 10.0, 20.0], "coast")
     packets = IO_._build_czml([seg], IO_._Maneuver[], "2020-01-01T00:00:00Z";
                               id = "sat", name = "Sat",
@@ -171,8 +173,8 @@ end
     @test arc["id"] == "sat-seg-1"
     @test arc["name"] == "coast"
 
-    # cartesian is flat: time, x, y, z, time, x, y, z, … and CZML wants metres
-    # while the history is in kilometres. Getting this wrong puts the orbit
+    # cartesian is flat: time, x, y, z, time, x, y, z, … and CZML wants meters
+    # while the history is in kilometers. Getting this wrong puts the orbit
     # inside the planet, which is why it is asserted rather than eyeballed.
     cart = arc["position"]["cartesian"]
     @test length(cart) == 4 * 3
@@ -307,11 +309,11 @@ end
     @test segments[1].times_s[2] ≈ 0.01 * 86400 atol = 1e-3
     @test segments[2].times_s[1] > segments[1].times_s[end]
 
-    # Positions are kilometres, as 3-tuples.
+    # Positions are kilometers, as 3-tuples.
     @test segments[1].positions_km[1] == (7000.0, 0.0, 1300.0)
     @test length(segments[1].positions_km) == 4
 
-    # Each arc gets the next colour, so two arcs are visibly different.
+    # Each arc gets the next color, so two arcs are visibly different.
     @test segments[1].color != segments[2].color
     @test segments[1].color == IO_.DEFAULT_PALETTE[1]
     @test segments[2].color == IO_.DEFAULT_PALETTE[2]
@@ -438,7 +440,7 @@ end
     # An explicit rate is passed through untouched.
     @test IO_.build_orbitview(sat; speed = 3600)[1]["clock"]["multiplier"] == 3600.0
 
-    # Colour and width are the caller's if they want them.
+    # Color and width are the caller's if they want them.
     custom = IO_.build_orbitview(sat; colors = [(1, 2, 3, 4)], linewidth = 4)
     @test custom[2]["path"]["width"] == 4.0
     @test custom[2]["path"]["material"]["solidColor"]["color"]["rgba"] == [1, 2, 3, 4]

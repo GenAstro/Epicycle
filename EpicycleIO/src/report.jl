@@ -32,14 +32,19 @@ report("flight.txt"; time = [x.jd for x in t], position = r, velocity = v)
 Columns carry no units of their own — they are written as given, so name the keyword for what
 the number is (`altitude_km`) if the reader will need to know.
 
-Values must render on one line. An epoch does not, so convert it first — `t.jd`, `t.mjd` or
-`t.isot` — and the file then records which scale and format you meant.
+Numbers are written exactly: integers as integers, and floats in the shortest form that reads
+back to the same value, so a Julian date keeps its full precision.
+
+Values must render on one line. An epoch does not, so convert it first — `t.isot`, `t.mjd` or
+`t.jd` — and the file then records which scale and format you meant. A text value may not
+contain the delimiter, or any whitespace with the default delimiter, since that would split its
+column.
 
 # Returns
 The path written, so it can be passed straight on to something that reads it.
 
 Throws an `ArgumentError` if no columns are given, if the columns differ in length, or if a
-value's printed form spans lines and would break a row.
+value's printed form spans lines or contains the delimiter and would break a row.
 """
 function report(path::AbstractString; delim = "  ", columns...)
     names, cols = expand_columns(columns)
@@ -48,7 +53,7 @@ function report(path::AbstractString; delim = "  ", columns...)
     open(path, "w") do io
         println(io, join((rpad(nm, 24) for nm in names), delim))
         for i in 1:n
-            println(io, join((rpad(_fmt(c[i]), 24) for c in cols), delim))
+            println(io, join((rpad(_fmt(c[i], delim), 24) for c in cols), delim))
         end
     end
     return path
@@ -90,19 +95,28 @@ function expand_columns(columns)
     return names, cols
 end
 
-_fmt(x::Real) = string(round(float(x), sigdigits = 12))
+# Every value is written so that reading it back gives the same number: integers as integers,
+# floats in Julia's shortest exact form. Rounding to a fixed count of digits cost a Julian date
+# about a second.
+_fmt(x::Integer, delim) = string(x)
+_fmt(x::Real, delim) = string(float(x))
 
 # Guard the class rather than the case: any value whose printed form spans lines would turn one
-# row into several, silently. An epoch is the one that turns up in practice, so the message
-# names the way out.
-function _fmt(x)
+# row into several, and one that holds the delimiter would split its column, silently. An epoch
+# is the multiline value that turns up in practice, so the message names the way out.
+function _fmt(x, delim)
     s = string(x)
     if occursin('\n', s)
         throw(ArgumentError(
             "a $(typeof(x)) column cannot be written to a report: its printed form spans " *
             "several lines, which would break the row. If this is an epoch, render it first " *
-            "— `t.jd`, `t.mjd` or `t.isot` — so the file records which scale and format you " *
+            "— `t.isot`, `t.mjd` or `t.jd` — so the file records which scale and format you " *
             "meant. Otherwise convert it to a number or a string."))
     end
+    whitespace = isempty(strip(delim))
+    (whitespace ? any(isspace, s) : occursin(delim, s)) && throw(ArgumentError(
+        "the value $(repr(s)) contains " * (whitespace ? "whitespace" : "the delimiter $(repr(delim))") *
+        ", which would split its column. Give the report a delimiter the values do not contain, " *
+        "such as delim = \",\", or remove it from the value."))
     return s
 end

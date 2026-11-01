@@ -92,6 +92,12 @@ function ensure_server()
     task = @async _serve(socket, dir)
     h = ServerHandle(port, socket, task)
     _SERVER[] = h
+    # A restart after close_dashboard: the panels this session holds were swept with the files
+    # above, so every one is published again, not only the one whose plot started the server.
+    for p in panels()
+        _publish(panel_file(p), payload(p))
+    end
+    isempty(panels()) || (_LAST_MANIFEST[] = ""; publish_manifest())
     return h
 end
 

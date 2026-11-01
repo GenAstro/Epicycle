@@ -23,6 +23,7 @@ makedocs(;
         "3D plotting"   => "plotting_3d.md",
         "Dashboard"     => "dashboard.md",
         "Reporting"     => "reporting.md",
+        "Ephemeris files" => "ephemeris.md",
         "API"           => "api.md",
     ],
     warnonly=[:missing_docs, :cross_references],   # doctests and examples are fatal

@@ -34,7 +34,7 @@ The likely source is NASA Visible Earth, "Earth at Night (Black Marble) 2016", w
 at exactly 3600 x 1800 in this projection:
 <https://visibleearth.nasa.gov/images/144898/earth-at-night-black-marble-2016-color-maps>
 
-The dimensions match and the file size is consistent with the colour map at that resolution, but
+The dimensions match and the file size is consistent with the color map at that resolution, but
 matching dimensions is not provenance. Confirming it means downloading the candidate and
 comparing against the SHA-256 above.
 

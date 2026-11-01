@@ -20,6 +20,26 @@ Order   = [:function]
 Filter  = t -> nameof(t) in names(EpicycleIO)
 ```
 
+```@autodocs
+Modules = [EpicycleIO]
+Order   = [:type]
+Filter  = t -> nameof(t) in names(EpicycleIO)
+```
+
+## Qualified names
+
+These are not exported; call them with the package name, as in
+`EpicycleIO.close_dashboard()`.
+
+```@docs
+EpicycleIO.close_dashboard
+EpicycleIO.dashboard_url
+EpicycleIO.auto_open!
+EpicycleIO.narrate
+EpicycleIO.clear_narration
+EpicycleIO.Diagnostic
+```
+
 ```@index
 Pages = ["api.md"]
 ```

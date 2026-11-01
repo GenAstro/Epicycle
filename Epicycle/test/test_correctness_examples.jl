@@ -78,8 +78,11 @@ end
         @test !isempty(names)
         @test names == sort(names)
         @test all(!endswith(n, ".jl") for n in names)
-        # Every name listed resolves to a file, which is what the other three rely on.
-        @test all(isfile(joinpath(dir, n * ".jl")) for n in names)
+        # Every name listed resolves to a file, which is what the other three rely on, whether the
+        # script is in examples/ or in a folder of its own there.
+        @test all(isfile(EX.example_path(n)) for n in names)
+        @test all(dirname(EX.example_path(n)) in (abspath(dir), abspath(joinpath(dir, basename(dirname(EX.example_path(n))))))
+                  for n in names)
     end
 
     @testset "list_examples prints every name and returns nothing" begin

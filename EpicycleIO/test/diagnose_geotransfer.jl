@@ -75,7 +75,7 @@ function main(sat)
     println("maneuvers drawn:", length(maneuvers))
     for s in segments
         println("  arc  \"", rpad(s.name, 22), "\"  ", lpad(length(s.times_s), 5),
-                " samples  colour=", s.color)
+                " samples  color=", s.color)
     end
 
     # The ΔV is read from the velocity jump across each marker, never handed in.

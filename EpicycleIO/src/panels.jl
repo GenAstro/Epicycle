@@ -18,7 +18,7 @@ mutable struct Panel
     title::String
     traces::Vector{PlotlyBase.GenericTrace}
     layout::Dict{Symbol, Any}
-    family::Symbol          # :cartesian, :polar, :geo, :scene — Plotly cannot mix these
+    family::Symbol          # :cartesian, :polar, :geo, :plot3d (Plotly cannot mix these), or :scene for a Cesium view
     order::Int
     revision::Int           # bumped when the contents are replaced; see `figure`
     czml::Union{Nothing, Vector}   # a scene panel carries CZML instead of traces
@@ -36,7 +36,7 @@ panel_id(title::AbstractString) = replace(String(title), r"[^A-Za-z0-9_\-]" => "
 function trace_family(t::Symbol)
     t in (:scatterpolar, :scatterpolargl, :barpolar) && return :polar
     t in (:scattergeo, :choropleth)                  && return :geo
-    t in (:scatter3d, :surface, :mesh3d, :cone)      && return :scene
+    t in (:scatter3d, :surface, :mesh3d, :cone)      && return :plot3d     # Plotly 3D; :scene is the Cesium view
     return :cartesian
 end
 

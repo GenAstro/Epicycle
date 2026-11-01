@@ -41,7 +41,7 @@ include(".../examples/Ex_01_Basics.jl")
 ```
 
 1. **Something is drawn.** A line, cyan, in a dark panel.
-2. **The axes are labelled.** Not bare numbers — `Ex_03` sets titles and they must appear.
+2. **The axes are labeled.** Not bare numbers — `Ex_03` sets titles and they must appear.
 3. **The legend names the series.** "Sat A" and "Sat B", not "trace 0".
 4. **Re-running leaves one panel, not two.** Run the same include twice.
 
@@ -76,9 +76,9 @@ include(".../examples/Ex_04_PolarPass.jl")
 
 Look at **Sky view**.
 
-- **Right:** each pass rises from the rim, arcs toward the centre, and returns to the rim. The
+- **Right:** each pass rises from the rim, arcs toward the center, and returns to the rim. The
   10 degree mask is a ring near the outer edge. 0° is at the top and 90° is to the **right**.
-- **Wrong:** the passes hug the outer edge as thin arcs and never approach the centre. Or 90° is
+- **Wrong:** the passes hug the outer edge as thin arcs and never approach the center. Or 90° is
   on the **left**, which means the azimuth is mirrored.
 
 *What happened:* `thetaunit` converts the angle; Plotly has no equivalent for the radial axis.
@@ -93,9 +93,9 @@ plausible-looking picture of a pass that went the other way.
 include(".../examples/Ex_10_EscapeHatch.jl")
 ```
 
-- **Monte Carlo dispersion:** one box, centred near 501 km, whiskers spanning roughly 480–525.
+- **Monte Carlo dispersion:** one box, centered near 501 km, whiskers spanning roughly 480–525.
   It is a spread of outcomes over 500 runs.
-- **Residual distribution:** two violins. "range" is a narrow shape centred on zero; "range-rate"
+- **Residual distribution:** two violins. "range" is a narrow shape centered on zero; "range-rate"
   is visibly **fatter and offset upward**. That difference is the point — it is what a wrong
   noise model looks like.
 - **Wrong:** two violins the same shape, or a box spanning 440–560 with a flat top and bottom
@@ -135,7 +135,7 @@ document exists for.
 | Altitude, Position | lines |
 | Sky view | polar, passes arcing inward |
 | Range residuals | grey band with points scattered inside it |
-| Porkchop | contours with labelled levels and a colour bar |
+| Porkchop | contours with labeled levels and a color bar |
 | Ground track | coastlines with a cyan track and three orange stations |
 | Convergence | markers descending toward a floor |
 
@@ -147,11 +147,11 @@ include(".../examples/Demo_PropagateAndView.jl")
 
 Coast, burn, coast, so there are two propagation segments and one burn of 0.20 km/s.
 
-- **Right:** a globe with the trajectory drawn around it in **two colours**, one per segment,
-  and **one point where the colours meet, labelled `maneuver ΔV=0.2 km/s`**. Day and night
+- **Right:** a globe with the trajectory drawn around it in **two colors**, one per segment,
+  and **one point where the colors meet, labeled `maneuver ΔV=0.2 km/s`**. Day and night
   sides of the body are distinguishable. Play runs the spacecraft along the path; the clock
   time under the view advances.
-- **Wrong:** one colour where there should be two, which means segment extraction lost the
+- **Wrong:** one color where there should be two, which means segment extraction lost the
   burn. Or the globe untextured, which means the imagery layers failed to load.
 
 The ΔV on that label is worth reading rather than glancing at. It is not the number that was
@@ -177,7 +177,7 @@ change the rate and the readout agrees, stars toggles the sky.
 ### M5 — a view and plots on one page
 
 Same script. The semi-major axis plot should show a step at the same moment the trajectory
-changes colour. That pairing is the reason the globe and the plots share a page, and it is the
+changes color. That pairing is the reason the globe and the plots share a page, and it is the
 one thing neither could show alone.
 
 Cesium should not load at all on a dashboard with no 3D panel — run `Ex_01_Basics.jl` in a fresh
@@ -188,7 +188,7 @@ session and check the network tab stays free of `cesium.js`.
 With all panels in the grid at once:
 
 - axis numbers readable without leaning in
-- series distinguishable by colour
+- series distinguishable by color
 - titles not overlapping the plot area — the polar 0° label is the one that collides
 - legends not covering data
 
