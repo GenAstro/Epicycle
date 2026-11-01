@@ -96,3 +96,9 @@ end
     # An integer Julian date is still fine.
     @test body_fixed_rotation(IAU2015(), 499, 2451545) == body_fixed_rotation(IAU2015(), 499, 2451545.0)
 end
+
+@testset "An explicit epoch bundle gives the same body rotation" begin
+    t = Time(2458849.5, 0., TDB(), JD())
+    e = EpochScales(t.tdb.jd, t.tt.jd, t.utc.jd)
+    @test body_fixed_rotation(IAU2015(), 499, e) == body_fixed_rotation(IAU2015(), 499, t)
+end

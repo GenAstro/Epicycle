@@ -187,11 +187,11 @@ end
 end
 
 @testset "outside the table, AstroFrames warns" begin
-    span = AstroFrames._eop_span(eop(IAU2006()))
+    span = AstroUniverse._eop_span(eop(IAU2006()))
     @test span !== nothing
     @test span[1] < 2451545.0 < span[2]
     # The logger in @test_logs keeps its own once-per-session count, so this sees the message
     # even though the tests above have already triggered it.
-    @test_logs (:warn, r"outside the loaded EOP table") AstroFrames._check_eop_span(eop(IAU2006()), span[2] + 100)
-    @test_logs AstroFrames._check_eop_span(eop(IAU2006()), 2451545.0)
+    @test_logs (:warn, r"outside the loaded EOP table") AstroUniverse._check_eop_span(eop(IAU2006()), span[2] + 100)
+    @test_logs AstroUniverse._check_eop_span(eop(IAU2006()), 2451545.0)
 end

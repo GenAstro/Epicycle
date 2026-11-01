@@ -108,7 +108,9 @@ age; with no copy at all, the error names both sources and how to load a file by
 data.
 `eop_load` reads either format from a local file. A run that must not reach the network, or must
 give the same numbers every time, loads a file with `eop_load` or installs a table with
-`set_eop!` before its first transformation.
+`set_eop!` before its first transformation. A finals file carries the rapid values of IERS
+Bulletin A and, for past dates, the final values of Bulletin B; `eop_load` reads Bulletin A unless
+given `bulletin = :B`.
 
 ```@raw html
 <!-- doc-fragment -->
@@ -119,6 +121,7 @@ eop_refresh!()                                     # download the latest series 
 eop_refresh!(; theory = FK5())                     # the same for the FK5 table
 
 eop_load("finals2000A.all"; theory = IAU2006())    # a local file, CSV or fixed width, no network
+eop_load("finals2000A.all"; bulletin = :B)         # Bulletin B's final values where published
 set_eop!(table)                                    # a table already in hand
 ```
 

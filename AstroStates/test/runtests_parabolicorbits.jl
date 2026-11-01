@@ -23,13 +23,9 @@
     # Specific orbital energy ~ 0 ⇒ a -> ∞ (may be Inf or very large magnitude)
     @test (isinf(a))
 
-    # Also exercise state constructor if available
-    try
-        cstate = CartesianState(cart, mu)
-        kstate = KeplerianState(cstate, mu)
-        @test kstate.ecc ≈ 1.0 atol=1e-10
-    catch e
-        @info "State type constructors not applicable for parabolic case: $(e)"
-    end
+    # The state types carry the same elements
+    kstate = KeplerianState(CartesianState(cart), mu)
+    @test kstate.ecc ≈ 1.0 atol=1e-15
+    @test isinf(kstate.sma)
 end
 nothing

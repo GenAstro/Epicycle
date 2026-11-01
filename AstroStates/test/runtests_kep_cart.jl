@@ -1,18 +1,6 @@
 # Copyright (C) 2025 Gen Astro LLC
 # SPDX-License-Identifier: MIT
 
-
-function cart_kep_run_roundtrip_test(kep::Vector{Float64}, μ::Float64; label="")
-    cart = kep_to_cart(kep, μ)
-    kep2 = cart_to_kep(cart, μ)
-    cart2 = kep_to_cart(kep2, μ)
-    @testset "Round-trip test: $label" begin
-        @test isapprox_orbit(cart, cart2)
-    end
-end
-
-
-
 @testset "cart_to_kep Input Validation" begin
     # Invalid length
     err = try
@@ -54,7 +42,7 @@ end
             @test all(isnan.(result))
         end
         log_output = String(take!(io))
-        @test occursin("Conversion Failed: Orbit is singular due to degenerate angular momentum", log_output)
+        @test occursin("Conversion failed: Orbit is singular due to degenerate angular momentum", log_output)
     end
 
     # Invalid μ
@@ -65,7 +53,7 @@ end
             @test all(isnan.(result))
         end
         log_output = String(take!(io))
-        @test occursin("Conversion Failed: μ < tolerance", log_output)
+        @test occursin("Conversion failed: μ < tolerance", log_output)
     end
 end
 
@@ -78,7 +66,7 @@ end
         e
     end
     @test isa(err, ErrorException)
-    @test occursin("Input vector must have exactly six elements: a, e, i, Ω, ω, ν.", err.msg)
+    @test occursin("Input vector must have exactly six elements: a, e, i, Ω, ω, ν", err.msg)
 
     # Parabolic orbit
     io = IOBuffer()
@@ -87,7 +75,7 @@ end
         @test all(isnan.(state))
     end
     output = String(take!(io))
-    @test occursin("Conversion Failed: Orbit is parabolic or singular.", output)
+    @test occursin("Conversion failed: Orbit is parabolic or singular.", output)
 
     # μ = 0 case
     io = IOBuffer()
@@ -96,10 +84,10 @@ end
         @test all(isnan.(state))
     end
     output = String(take!(io))
-    @test occursin("Conversion Failed: μ < tolerance.", output)
+    @test occursin("Conversion failed: μ < tolerance.", output)
 end
 
-@testset "cart_to_kep Quadrant Tests" begin
+@testset "cart_to_kep Quadrant Tests [AS-4, AS-6]" begin
     sma = 42000.0
     ecc = 0.05
     i_tests = [pi/4, pi/2, 3pi/4, pi]
@@ -109,150 +97,44 @@ end
         kep = [sma, ecc, i, 0.1, 1.1, 0.5]
         cart = kep_to_cart(kep, μ)
         kep2 = cart_to_kep(cart, μ)
-        cart2 = kep_to_cart(kep2, μ)
         # At i = π the node is undefined: Ω is pinned to 0, and ω becomes the longitude of
         # periapsis measured in the direction of motion, ω - Ω.
         expected = isapprox(i, pi) ? [sma, ecc, i, 0.0, 1.1 - 0.1, 0.5] : kep
-        if !isapproxvec_percent(expected, kep2; tol = 1e-13)
-            println("❌ Conversion failed: cart to kep round trip inclination quadrant test)")
-            @test false
-        else
-            @test true
-        end
-        if !isapproxvec_percent(cart,cart2; tol = 1e-13)
-            println("❌ Conversion failed: cart to kep round trip inclination quadrant test)")
-            @test false
-        else
-            @test true
-        end
+        @test isapproxvec_percent(expected, kep2; tol = 1e-13)
+        @test isapproxvec_percent(cart, kep_to_cart(kep2, μ); tol = 1e-13)
     end
 
     for Ω in angle_tests, ω in angle_tests, ν in angle_tests
         kep = [sma, ecc, pi/3, Ω, ω, ν]
         cart = kep_to_cart(kep, μ)
         kep2 = cart_to_kep(cart, μ)
-        cart2 = kep_to_cart(kep2, μ)
-        if !isapproxvec_percent(kep,kep2; tol = 1e-13)
-            println(kep)
-            println(kep2)
-            println("❌ Conversion failed: cart to kep round trip inclination quadrant test)")
-            @test false
-        else
-            @test true
-        end
-        if !isapproxvec_percent(cart,cart2; tol = 1e-13)
-            println(cart)
-            println(cart2)
-            println("❌ Conversion failed: cart to kep round trip inclination quadrant test)")
-            @test false
-        else
-            @test true
-        end
+        @test isapproxvec_percent(kep, kep2; tol = 1e-13)
+        @test isapproxvec_percent(cart, kep_to_cart(kep2, μ); tol = 1e-13)
     end
 end
 
-@testset "cart to kep Special Case Orbits Tests" begin
-    tests = Dict(
-        :elliptical_equatorial => [7000.0, 0.08, 0.0, 0.5, 3*pi/2, pi/7],
-        :circular_equatorial   => [10000.0, 0.0, 0.0, 2.0, 4.0, pi/7],
-        :circular_inclined     => [10000.0, 0.0, 1.0, 0.1, 0.2, 2pi/7],
-        :elliptic_inclined     => [10000.0, 0.1, 1.0, 2.0, 3.0, 2pi/7],
-        :hyperbolic            => [-6000.0, 2.16, pi/10, pi/20, 3pi/2, 3.5pi/2],
-    )
-
-    for (label, kep) in tests
+# Where an angle is undefined, the conventions are those of `_orbit_orientation`: equatorial,
+# Ω = 0 and ω becomes the longitude of periapsis; circular, ω = 0 and ν becomes the argument of
+# latitude; circular equatorial, Ω = ω = 0 and ν becomes the true longitude.
+@testset "cart to kep Special Case Orbits Tests [AS-5, AS-6]" begin
+    wrap(x) = mod(x, 2pi)
+    hyperbolic = [-6000.0, 2.16, pi/10, pi/20, 3pi/2, 3.5pi/2]
+    elliptic   = [10000.0, 0.1, 1.0, 2.0, 3.0, 2pi/7]
+    cases = [
+        # label, elements in, elements expected back
+        (:elliptic_inclined,   elliptic, elliptic),
+        (:hyperbolic,          hyperbolic, hyperbolic),
+        (:elliptic_equatorial, [7000.0, 0.08, 0.0, 0.5, 3pi/2, pi/7],
+                               [7000.0, 0.08, 0.0, 0.0, wrap(0.5 + 3pi/2), pi/7]),
+        (:circular_inclined,   [10000.0, 0.0, 1.0, 0.1, 0.2, 2pi/7],
+                               [10000.0, 0.0, 1.0, 0.1, 0.0, 0.2 + 2pi/7]),
+        (:circular_equatorial, [10000.0, 0.0, 0.0, 2.0, 4.0, pi/7],
+                               [10000.0, 0.0, 0.0, 0.0, 0.0, wrap(2.0 + 4.0 + pi/7)]),
+    ]
+    @testset "$label" for (label, kep, expected) in cases
         cart = kep_to_cart(kep, μ)
         kep2 = cart_to_kep(cart, μ)
-        cart2 = kep_to_cart(kep2, μ)
-
-        if label == :elliptic_inclined || label == :hyperbolic
-            if !isapproxvec_percent(kep,kep2; tol = 1e-12)
-                println(kep)
-                println(kep2)
-                println("❌ Conversion failed: cart to kep special case round trip test)")
-                @test false
-            else
-                @test true
-            end
-            if !isapproxvec_percent(cart,cart2; tol = 1e-12)
-                println(cart)
-                println(cart2)
-                println("❌ Conversion failed: cart to kep special case round trip test)")
-                @test false
-            else
-                @test true
-            end
-        end
-
-        if label == :circular_inclined
-            keptest = kep
-            # lump aop into ta
-            keptest[6] = kep[5] + kep[6]
-            keptest[5] = 0.0;
-            if !isapproxvec_percent(keptest,kep2; tol = 1e-12)
-                println(keptest)
-                println(kep2)
-                println("❌ Conversion failed: cart to kep special case round trip test)")
-                @test false
-            else
-                @test true
-            end
-            if !isapproxvec_percent(cart,cart2; tol = 1e-12)
-                println(cart)
-                println(cart2)
-                println("❌ Conversion failed: cart to kep special case round trip test)")
-                @test false
-            else
-                @test true
-            end
-        end
-
-        if label == :circular_equatorial
-            keptest = kep
-            # lump aop and raan into ta
-            keptest[6] = mod(kep[4] + kep[5] + kep[6],2*pi)
-            keptest[4] = 0.0
-            keptest[5] = 0.0;
-            if !isapproxvec_percent(keptest,kep2; tol = 1e-12)
-                println(keptest)
-                println(kep2)
-                println("❌ Conversion failed: cart to kep special case round trip test)")
-                @test false
-            else
-                @test true
-            end
-            if !isapproxvec_percent(cart,cart2; tol = 1e-12)
-                println(cart)
-                println(cart2)
-                println("❌ Conversion failed: cart to kep special case round trip test)")
-                @test false
-            else
-                @test true
-            end
-        end
-
-        if label == :elliptic_equatorial
-            keptest = kep
-            # lump raan into ta
-            keptest[6] = mod(kep[4] + kep[6],2*pi)
-            keptest[4] = 0.0
-            if !isapproxvec_percent(keptest,kep2; tol = 1e-12)
-                println(keptest)
-                println(kep2)
-                println("❌ Conversion failed: cart to kep special case round trip test)")
-                @test false
-            else
-                @test true
-            end
-            if !isapproxvec_percent(cart,cart2; tol = 1e-12)
-                println(cart)
-                println(cart2)
-                println("❌ Conversion failed: cart to kep special case round trip test)")
-                @test false
-            else
-                @test true
-            end
-        end
+        @test isapproxvec_percent(expected, kep2; tol = 1e-12)
+        @test isapproxvec_percent(cart, kep_to_cart(kep2, μ); tol = 1e-12)
     end
 end
-

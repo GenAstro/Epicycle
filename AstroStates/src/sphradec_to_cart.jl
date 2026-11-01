@@ -34,10 +34,15 @@ cart = sphradec_to_cart(sphradec)
 """
 function sphradec_to_cart(state::AbstractVector{<:Real})
     if length(state) != 6
-        error("Input vector must have exactly six elements: [r, λᵣ, δᵣ, v, λᵥ, δᵥ].")
+        error("Input vector must have exactly six elements: [r, λᵣ, δᵣ, v, λᵥ, δᵥ]; got $(length(state)) elements.")
     end
+    _has_nan(state) && return fill(float(eltype(state))(NaN), 6)
 
     r, λᵣ, δᵣ, v, λᵥ, δᵥ = state
+    if r < 0 || v < 0
+        @warn "Conversion failed: Radius ($r) and speed ($v) cannot be negative."
+        return fill(float(eltype(state))(NaN), 6)
+    end
 
     # Position conversion: spherical to Cartesian
     x = r * cos(δᵣ) * cos(λᵣ)

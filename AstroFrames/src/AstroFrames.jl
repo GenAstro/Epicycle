@@ -4,12 +4,12 @@
 """
     AstroFrames
 
-Coordinate systems and reference frames for astrodynamics applications.
+Coordinate systems and transformations of position and velocity for astrodynamics.
 
-Provides types for defining coordinate systems with customizable origins and
-axes orientations. Axes types follow community naming (`ICRF`, `GCRF`, `ITRF`,
-etc.); some are restricted to specific origins per the origin-coupling rules
-declared in `origin_coupling.jl`.
+A coordinate system pairs an origin with an axes orientation. AstroFrames
+provides Earth, planetary, lunar, and orbit-relative axes, along with rotation
+and translation operators and a state conversion interface. Some axes require
+a specific origin; `CoordinateSystem` checks the pairing at construction.
 
 See also:
 - [`CoordinateSystem`](@ref) — pairs an origin and axes.
@@ -21,12 +21,11 @@ using EpicycleBase
 using AstroUniverse
 using StaticArrays
 using LinearAlgebra: I, norm, cross, dot
-using AstroStates: to_vector, AbstractOrbitState, OrbitState, state_tag_to_type
+using AstroStates: to_vector, AbstractOrbitState, OrbitState, state_tag_to_type, state_type_to_tag
 import AstroStates: CartesianState   # methods added in coordinate.jl
 
 export AbstractAxes
 export ICRF, GCRF, CIRS, TIRS, ITRF
-export ICRFAxes, MJ2000Axes   # deprecated; see axes_types.jl
 export MJ2000Eq, MODEq, TODEq, MODEc, TODEc, PEF, TEME
 export MJ2000Ec
 export MoonPA, MoonME
@@ -112,14 +111,16 @@ Some axes types are only physically meaningful at specific origins:
 - Earth-restricted (`GCRF`, `CIRS`, `TIRS`, `ITRF`, `MODEq`, `TODEq`, `MODEc`, `TODEc`, `PEF`,
   `TEME`) — require an Earth origin.
 - Moon-restricted (`MoonPA`, `MoonME`) — require a Moon origin.
-- `CelestialBodyFixed{OT}` — requires an origin of type `OT` (the body encoded in
-  the axes type parameter).
+- `CelestialBodyFixed{NAIFID}` — requires an origin with the NAIF ID encoded in
+  the axes type parameter.
 
-Invalid combinations throw an `ArgumentError` at construction with a
-domain-language message.
+Invalid combinations throw an `ArgumentError` at construction, naming the
+axes, the supplied origin, and the required origin.
 
 # Examples
 ```julia
+using AstroFrames, AstroUniverse
+
 # Earth-centered ICRF coordinate system.
 cs = CoordinateSystem(earth, ICRF())
 

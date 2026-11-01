@@ -47,8 +47,8 @@ end
     result = kep_to_modkep(bad_ae_kep2)
     @test all(isnan.(result))
 
-    # Test singular conic (rp ≈ 0)
-    singular_kep = [1e-15, 1.0 - 1e-15, π/4, 0.0, 0.0, π/3]  # rp = a*(1-e) ≈ 0
+    # e within tol of 1 is parabolic, which has no apoapsis radius
+    singular_kep = [1e-15, 1.0 - 1e-15, π/4, 0.0, 0.0, π/3]
     result = kep_to_modkep(singular_kep)
     @test all(isnan.(result))
 

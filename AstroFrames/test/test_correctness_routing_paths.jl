@@ -122,3 +122,28 @@ end
 end
 
 nothing
+
+# AF-14. Truth: explicit multiplication of known direct edges. The attachment
+# contract also applies when the declared hub is another user-defined frame.
+struct _OffsetChild <: AbstractAxes end
+AstroFrames.hub_axes(::Type{_OffsetChild}) = _OffsetFixed()
+AstroFrames.axes_rotation(::_OffsetFixed, ::_OffsetChild, ::EpochScales) = _rot_z6(0.2)
+AstroFrames.axes_rotation(::_OffsetChild, ::_OffsetFixed, ::EpochScales) = _rot_z6(-0.2)
+
+@testset "An extension attached to an extension [AF-14]" begin
+    for p in (nothing, NamedTuple())
+        call(a,b) = p === nothing ? axes_rotation(a,b,_RP_JD) : axes_rotation(a,b,_RP_JD,p)
+        expected = call(_OffsetFixed(), _OffsetChild()) * call(ICRF(), _OffsetFixed())
+        @test call(ICRF(), _OffsetChild()) ≈ expected atol = _RP_TOL rtol = 0
+        @test call(_OffsetChild(), ICRF()) * expected ≈ Matrix{Float64}(I,6,6) atol = _RP_TOL rtol = 0
+        @test call(MoonME(), _OffsetChild()) ≈ expected * call(MoonME(), ICRF()) atol = _RP_TOL rtol = 0
+    end
+end
+
+struct _CycleA <: AbstractAxes end
+struct _CycleB <: AbstractAxes end
+AstroFrames.hub_axes(::Type{_CycleA}) = _CycleB()
+AstroFrames.hub_axes(::Type{_CycleB}) = _CycleA()
+@testset "A hub cycle does not invent a connection [AF-16.3]" begin
+    @test_throws ArgumentError axes_rotation(ICRF(), _CycleA(), _RP_JD)
+end

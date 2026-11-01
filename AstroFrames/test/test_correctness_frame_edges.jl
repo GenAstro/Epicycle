@@ -82,7 +82,7 @@ AstroFrames.epoch_of(c::_VnbChief) = c.t
     end
 
     @testset "an EOP read allocates little" begin
-        e = AstroFrames._scales(Time("2024-03-01T07:13:00", UTC(), ISOT()))
+        e = EpochScales(Time("2024-03-01T07:13:00", UTC(), ISOT()))
         axes_rotation(ICRF(), ITRF(), e)
         # 13.6 KB before the field names were made compile-time
         @test (@allocated axes_rotation(ICRF(), ITRF(), e)) < 2000
@@ -96,6 +96,20 @@ AstroFrames.epoch_of(c::_VnbChief) = c.t
         # An orbit-relative frame with a dummy epoch no longer warns about pre-1972 leap seconds
         x = [7000.0, 0, 0, 0, 7.5, 0]
         @test_logs axes_rotation(ICRF(), RIC(), 0.0, (; reference_state = x))
+    end
+
+    @testset "public entry points infer a concrete result" begin
+        # The undefined-epoch guard once built its NaN result from a tuple of run-time length,
+        # so every epoch-dependent entry inferred `Any`. The values were right, but the force
+        # models calling these compiled differently and an orbit fit moved by a micrometre.
+        t = Time("2024-03-01T07:13:00", UTC(), ISOT())
+        @test @inferred(axes_rotation(ICRF(), ITRF(), t)) isa AbstractMatrix{Float64}
+        @test @inferred(axes_rotation(ICRF(), ITRF(), t.tdb.jd)) isa AbstractMatrix{Float64}
+        @test @inferred(axes_rotation(ITRF(), ICRF(), t, (;))) isa AbstractMatrix{Float64}
+        @test @inferred(body_fixed_rotation(orientation_model(earth), 399, t)) isa AbstractMatrix{Float64}
+        @test @inferred(body_fixed_rotation(orientation_model(earth), 399, EpochScales(t))) isa
+              AbstractMatrix{Float64}
+        @test @inferred(origin_translation(earth, moon, ICRF(), t)) isa AbstractVector{Float64}
     end
 
     @testset "coordinate systems are values" begin

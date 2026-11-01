@@ -152,3 +152,13 @@ include("test_correctness_moon_truth.jl")
 include("test_correctness_routing_paths.jl")
 include("test_correctness_body_fixed_rotation.jl")
 include("test_correctness_frame_edges.jl")
+include("test_correctness_eop_corrections.jl")
+include("test_robustness_orbit_relative.jl")
+# The full suite is the default, including the finite-difference Jacobian sweep.
+# Set ASTROFRAMES_TEST_TIER=fast for the shorter development run.
+if get(ENV, "ASTROFRAMES_TEST_TIER", "full") != "fast"
+    include("test_differentiability_axes.jl")
+end
+include("test_integration_epochs.jl")
+include("test_robustness_calls.jl")
+include("test_integration_docstrings.jl")

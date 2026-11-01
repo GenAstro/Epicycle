@@ -5,7 +5,7 @@ using Test
 using AstroStates
 
 mu = 398600.4415
-ad7 = collect(1.0:7.0)  # wrong length
+bad7 = collect(1.0:7.0)  # wrong length
 
 # Helper to assert an error message contains substring
 function test_throws_msg(f, args...; substr)

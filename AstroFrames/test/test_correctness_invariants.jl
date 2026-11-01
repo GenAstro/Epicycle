@@ -506,7 +506,7 @@ end
         # linear terms differ by another 0.12 mas/century. It showed up only in
         # the ecliptic edges, where ε appears as a single rotation with nothing
         # to cancel against.
-        e0 = AstroFrames._scales(Time(2451545.0, 0.0, :tt, :jd))
+        e0 = EpochScales(Time(2451545.0, 0.0, :tt, :jd))
         @test rad2deg(AstroFrames._mean_obliquity(e0)) * 3600 ≈ 84_381.448 atol = 1e-6
 
         # The rotation actually applied by the edge carries the same value.
@@ -514,7 +514,7 @@ end
         @test rad2deg(atan(R[2, 3], R[2, 2])) * 3600 ≈ 84_381.448 atol = 1e-6
 
         # And the drift matches the published rate over a century.
-        e1 = AstroFrames._scales(Time(2451545.0 + 36_525.0, 0.0, :tt, :jd))
+        e1 = EpochScales(Time(2451545.0 + 36_525.0, 0.0, :tt, :jd))
         drift = (AstroFrames._mean_obliquity(e1) - AstroFrames._mean_obliquity(e0))
         @test rad2deg(drift) * 3600 ≈ -46.8150 - 0.00059 + 0.001813 atol = 1e-6
     end

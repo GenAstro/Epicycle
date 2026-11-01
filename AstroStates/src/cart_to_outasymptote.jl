@@ -43,9 +43,15 @@ cart_to_outasymptote(cart::AbstractVector{<:Real}, μ::Real; tol::Real = 1e-12) 
 # in-plane component of the asymptote direction.
 function _cart_to_asymptote(cart::AbstractVector{<:Real}, μ::Real, dir::Int, tol::Real)
     if length(cart) != 6
-        error("Input must be a 6-element Cartesian vector: [x, y, z, vx, vy, vz]")
+        error("Input must be a 6-element Cartesian vector: [x, y, z, vx, vy, vz]; got $(length(cart)) elements.")
     end
     T = float(promote_type(eltype(cart), typeof(μ)))
+    _has_nan(cart, μ) && return fill(T(NaN), 6)
+
+    if μ < tol
+        @warn "Conversion failed: μ < tolerance."
+        return fill(T(NaN), 6)
+    end
 
     r̄ = SVector{3,T}(cart[1], cart[2], cart[3])
     v̄ = SVector{3,T}(cart[4], cart[5], cart[6])
@@ -57,11 +63,13 @@ function _cart_to_asymptote(cart::AbstractVector{<:Real}, μ::Real, dir::Int, to
     h = norm(h̄)
 
     # Degenerate cases
-    if r < tol || v < tol
+    # Each check is !(x >= tol) so that a NaN magnitude counts as singular: under ForwardDiff, the
+    # norm of an exactly zero vector is NaN, and x < tol would let it through.
+    if !(r >= tol && v >= tol)
         @warn "Conversion failed: Orbit is singular due to degenerate position or velocity vector."
         return fill(T(NaN), 6)
     end
-    if h < tol
+    if !(h >= tol)
         @warn "Conversion failed: Orbit is singular with zero angular momentum."
         return fill(T(NaN), 6)
     end

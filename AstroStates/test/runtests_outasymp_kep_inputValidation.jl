@@ -31,11 +31,11 @@ end
     @test length(back_kep) == 6
 end
 
-# Nearly parabolic c3 ~ 0: force branch with very large tol
+# Nearly parabolic: C₃ = 0
 @testset "outasymptote_to_kep: near-parabolic warns and returns NaNs" begin
     good_out = [6400.0, 0.0, deg2rad(10.0), deg2rad(10.0), deg2rad(20.0), deg2rad(30.0)]
     @test_logs (:warn, r"nearly parabolic") begin
-        v = outasymptote_to_kep(good_out, mu; tol=Inf)
+        v = outasymptote_to_kep(good_out, mu)
         @test length(v) == 6
         @test all(isnan, v)
     end
@@ -66,34 +66,6 @@ end
     @test Ω_out == 0.0
     @test 0.0 ≤ ω_out ≤ 2π
 end
-
-# Nearly circular: pass in a circular orbit (e ≈ 0) → warn and return NaNs
-#=
-@testset "outasymptote_to_kep: nearly circular warns and returns NaNs" begin
-    r = 7000.0
-    v_circ = sqrt(mu / r)
-    cart_circ = [r, 0.0, 0.0, 0.0, 0.0, v_circ]  # circular, equatorial, prograde
-    out_circ = cart_to_outasymptote(cart_circ, mu)
-    @test_logs (:warn, r"Conversion failed: Orbit is nearly circular\.") begin
-        v = outasymptote_to_kep(out_circ, mu)  # default tol; e ≈ 0 should trigger
-        @test length(v) == 6
-        @test all(isnan, v)
-    end
-end
-
-
-# Line-of-nodes undefined: straight-line trajectory (r ∥ v) → h = 0 ⇒ n = 0
-@testset "outasymptote_to_kep: line-of-nodes undefined warns and returns NaNs" begin
-    cart_line = [7000.0, 0.0, 0.0, 1.0, 0.0, 0.0]  # r × v = 0 ⇒ undefined plane
-    out_line = cart_to_outasymptote(cart_line, mu)
-    @test_logs (:warn, r"Conversion failed: Line-of-nodes is undefined\.") begin
-        v = outasymptote_to_kep(out_line, mu)
-        @test length(v) == 6
-        @test all(isnan, v)
-    end
-end
-
-=#
 
 # Equatorial retrograde branch (i ≈ π): expect Ω set to 0.0, and ω within [0, 2π)
 @testset "outasymptote_to_kep: equatorial retrograde (i≈π) sets Ω=0" begin

@@ -110,41 +110,12 @@ k  = cart_to_kep([7000.0, 0.0, 100.0, 0.0, 7.5, 2.5], mu)
 # Convert an equinoctial state to alternate equinoctial state
 ae = equinoctial_to_alt_equinoctial([7758.763,-0.0047,0.09769,-0.00695,0.16227, 6.2762])
 ```
-The conversions are written to resemble astrodynamics textbooks with the intention that the code can serve as its own math spec. Here is an example from `kep_to_cart.jl`:
+The conversions are written to resemble astrodynamics textbooks with the intention that the code can serve as its own math spec. Here is the core of `kep_to_cart.jl`, after its checks on the input:
 
 ``` julia
-function kep_to_cart(state::AbstractVector{<:Real}, μ::Real; tol::Real=1e-12)
-    if length(state) != 6
-        error("Input vector must have exactly six elements: a, e, i, Ω, ω, ν.")
-    end
-    T = float(promote_type(eltype(state), typeof(μ)))
-
-    if μ < tol
-        @warn "Conversion Failed: μ < tolerance."
-        return fill(T(NaN), 6)
-    end
-
-    # Unpack the elements
-    a, e, i, Ω, ω, ν = state
-
-    # Semi-latus rectum: p = a * (1 - e²)
+    # Semi-latus rectum and radial distance
     p = a * (1 - e^2)
-
-    # Degenerate orbit (parabolic or collapsed)
-    if p < tol || abs(1 - e) < tol
-        @warn "Conversion Failed: Orbit is parabolic or singular."
-        return fill(T(NaN), 6)
-    end
-
-    # Radial distance: r = p / (1 + e cos ν). On a hyperbola the denominator reaches zero at the
-    # asymptote; beyond it r would be negative and the state a mirror image of no real point.
-    denom = 1 + e * cos(ν)
-    if denom <= tol
-        @warn "Conversion Failed: True anomaly $(ν) is at or beyond the asymptote of a hyperbola " *
-              "with eccentricity $(e)."
-        return fill(T(NaN), 6)
-    end
-    r = p / denom
+    r = p / (1 + e * cos(ν))
 
     # Position and velocity in the perifocal frame
     factor = sqrt(μ / p)
@@ -162,14 +133,12 @@ function kep_to_cart(state::AbstractVector{<:Real}, μ::Real; tol::Real=1e-12)
 
     pos = R * r̄ₚ
     vel = R * v̄ₚ
-    return T[pos[1], pos[2], pos[3], vel[1], vel[2], vel[3]]
-end
 ```
 ---
 
 ## Automatic Differentiation 
 
-The conversions are differentiable with ForwardDiff, including at periapsis, apoapsis and a zero node or argument of periapsis. The test suite checks this for every representation: the Jacobian of the conversion from Cartesian times the Jacobian of the conversion back is the identity. Derivatives do not exist at the states where an element is undefined, an exactly circular or exactly equatorial orbit, and there the returned derivative is not meaningful.
+The conversions are differentiable with ForwardDiff, including at periapsis, apoapsis and a zero node or argument of periapsis. The test suite checks this for every representation: the Jacobian of the conversion from Cartesian times the Jacobian of the conversion back is the identity, and each conversion to Cartesian matches finite differences. Where a Keplerian element is undefined, at the node of an exactly equatorial orbit or the periapsis of an exactly circular one, it has no derivative, and the one returned is not meaningful. The equinoctial, alternate equinoctial and modified equinoctial elements are defined there, and so are their derivatives.
 
 ```julia
 using ForwardDiff

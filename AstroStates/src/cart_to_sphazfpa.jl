@@ -35,21 +35,24 @@ sphazfpa = cart_to_sphazfpa(cart)
 """
 function cart_to_sphazfpa(cart::AbstractVector{<:Real}; tol::Real = 1e-12)
     if length(cart) != 6
-        error("Input vector must have six elements: [x, y, z, vx, vy, vz]")
+        error("Input vector must have six elements: [x, y, z, vx, vy, vz]; got $(length(cart)) elements.")
     end
     T = float(eltype(cart))
+    _has_nan(cart) && return fill(T(NaN), 6)
 
     r̄ = SVector{3,T}(cart[1], cart[2], cart[3])
     v̄ = SVector{3,T}(cart[4], cart[5], cart[6])
 
     r = norm(r̄)
-    if r < tol
+    # Each check is !(x >= tol) so that a NaN magnitude counts as singular: under ForwardDiff, the
+    # norm of an exactly zero vector is NaN, and x < tol would let it through.
+    if !(r >= tol)
         @warn "Conversion failed: Position magnitude r = $r is below tolerance."
         return fill(T(NaN), 6)
     end
 
     v = norm(v̄)
-    if v < tol
+    if !(v >= tol)
         @warn "Conversion failed: Velocity magnitude v = $v is below tolerance."
         return fill(T(NaN), 6)
     end

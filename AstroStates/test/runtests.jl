@@ -9,6 +9,7 @@ using Logging
 tol = 1e-12
 
 function isapproxvec_percent(x, y; tol=1e-12)
+    length(x) == length(y) || return false          # zip would compare only the shorter prefix
     all(percent_error(xi, yi) ≤ tol for (xi, yi) in zip(x, y));
 end
 
@@ -54,14 +55,10 @@ types = collect(keys(states))
                 result_vec = to_vector(result)
                 expect_vec = to_vector(expected)
 
-                if !isapproxvec_percent(result_vec, expect_vec; tol=tol)
-                    println("❌ Conversion failed: $from_type → $to_type")
-                    @show result_vec
-                    @show expect_vec
-                    maxdiff = maximum(abs.(result_vec .- expect_vec))
-                    println("Maximum absolute difference: ", maxdiff)
-                    @test false
-                end
+                ok = isapproxvec_percent(result_vec, expect_vec; tol=tol)
+                ok || println("❌ Conversion failed: $from_type → $to_type, largest difference ",
+                              maximum(abs.(result_vec .- expect_vec)))
+                @test ok
 
             catch e
                 println("⚠️ Exception during conversion: $from_type → $to_type")
@@ -118,14 +115,10 @@ types = collect(keys(states))
                 result_vec = to_vector(result)
                 expect_vec = to_vector(expected)
 
-                if !isapproxvec_percent(result_vec, expect_vec; tol=tol)
-                    println("❌ Conversion failed: $from_type → $to_type")
-                    @show result_vec
-                    @show expect_vec
-                    maxdiff = maximum(abs.(result_vec .- expect_vec))
-                    println("Maximum absolute difference: ", maxdiff)
-                    @test false
-                end
+                ok = isapproxvec_percent(result_vec, expect_vec; tol=tol)
+                ok || println("❌ Conversion failed: $from_type → $to_type, largest difference ",
+                              maximum(abs.(result_vec .- expect_vec)))
+                @test ok
 
             catch e
                 println("⚠️ Exception during conversion: $from_type → $to_type")
@@ -276,3 +269,6 @@ println(" Starting state differentiation tests")
 println(" ")
 include("state_differentiation.jl")
 include("test_correctness_conversion_edges.jl")
+include("test_robustness_vector_functions.jl")
+include("test_correctness_state_types.jl")
+include("test_correctness_orbit_types.jl")

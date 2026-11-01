@@ -13,9 +13,23 @@
 added, so that case returns 0; `-0.0` returns `0.0`.
 """
 function _wrap_2pi(x)
+    x = float(x)
     twopi = 2 * oftype(x, π)
     y = x < 0 ? x + twopi : x + zero(x)
     return y >= twopi ? y - twopi : y
+end
+
+"""
+    _mod_2pi(x)
+
+Any angle `x` reduced to [0, 2π). `mod(x, 2π)` alone returns 2π itself for a tiny negative `x`,
+which rounds to 2π when 2π is added; that case returns 0.
+"""
+function _mod_2pi(x)
+    x = float(x)    # an integer anomaly cannot hold π
+    twopi = 2 * oftype(x, π)
+    y = mod(x, twopi)
+    return y >= twopi ? zero(y) : y
 end
 
 """
@@ -76,36 +90,55 @@ function _orbit_orientation(h̄v::AbstractVector, ēv::AbstractVector, e, tol)
 end
 
 """
-    _eccentric_anomaly(M, e; tol=1e-14, maxiter=60)
+    _eccentric_longitude(λ, h, k; tol=1e-14, maxiter=60)
 
-Solve Kepler's equation `E - e sin E = M` for an ellipse, `0 ≤ e < 1`, with `M` reduced to
-[0, 2π). Newton from Danby's starter, kept inside the bracket [M - e, M + e], where the root lies
-because `E - e sin E - M` is `≤ 0` at its lower end and `≥ 0` at its upper; a step that leaves it
-is replaced by bisection. The plain Newton this replaces, started at `E = M`, failed to converge
-for some mean anomalies above e = 0.99.
+Solve the equinoctial Kepler equation `λ = F + h cos F - k sin F` for the eccentric longitude `F`,
+for an ellipse, `h² + k² < 1`. Newton from `F = λ`, kept inside the bracket
+[λ - (|h| + |k|), λ + (|h| + |k|)], where the root lies because `|h cos F - k sin F| ≤ |h| + |k|`;
+a step that leaves it is replaced by bisection. Working in `F` directly, rather than through the
+eccentricity and the longitude of periapsis, keeps the derivative defined at a circular orbit.
 """
-function _eccentric_anomaly(M, e; tol=1e-14, maxiter=60)
-    Mr = mod(M, 2 * oftype(M, π))
-    lo, hi = Mr - e, Mr + e
-    E = Mr + (sin(Mr) < 0 ? -1 : 1) * oftype(e, 0.85) * e
+function _eccentric_longitude(λ, h, k; tol=1e-14, maxiter=60)
+    bound = abs(h) + abs(k)
+    lo, hi = λ - bound, λ + bound
+    F = λ + zero(h) + zero(k)
     for _ in 1:maxiter
-        f = E - e * sin(E) - Mr
-        # An exact root (f = 0) bounds neither side. Taking it as `hi` left the zero Newton step
-        # on the bracket's edge, where the strict test below replaced the root with a bisection
-        # midpoint, and the iteration stopped up to 1e-13 away.
+        sinF, cosF = sincos(F)
+        f = F + h * cosF - k * sinF - λ
         if f < 0
-            lo = E
+            lo = F
         elseif f > 0
-            hi = E
+            hi = F
         end
-        step = f / (1 - e * cos(E))
-        Enew = E - step
-        if !(lo < Enew < hi)
-            Enew = (lo + hi) / 2
+        Fnew = F - f / (1 - h * sinF - k * cosF)
+        if !(lo < Fnew < hi)
+            Fnew = (lo + hi) / 2
         end
-        converged = abs(Enew - E) < tol * (1 + abs(E))
-        E = Enew
+        converged = abs(Fnew - F) < tol * (1 + abs(F))
+        F = Fnew
         converged && break
     end
-    return E
+    return F
+end
+
+"""
+    _has_nan(state, μ...)
+
+Whether the state or μ holds a NaN. A NaN input comes from a conversion that has already failed
+and warned, so the vector functions return NaNs for it without a second warning.
+"""
+_has_nan(state, μ...) = any(isnan, state) || any(isnan, μ)
+
+"""
+    _inclination_out_of_range(i)
+
+Whether an inclination lies outside [0, π] by more than rounding. The bounds sit a few ulps
+outside the range: `Float32(π)` is above π, and `cart_to_kep` returns it for a retrograde
+equatorial orbit; and a ForwardDiff dual compared with an equal value breaks the tie on its
+partials, so a dual of exactly π would read as above `Float64(π)`. A NaN is in range, so it passes
+on without a second warning.
+"""
+function _inclination_out_of_range(i)
+    slack = 4 * eps(float(typeof(i)))
+    return i < -slack || i > π + slack
 end

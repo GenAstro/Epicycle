@@ -42,19 +42,10 @@ bad_len = collect(1.0:7.0)
 @testset "cart_to_mee branch coverage" begin
     @test_throws ErrorException cart_to_mee(bad_len, mu_pos)
 
-    invalid_j_supported = true
-    invalid_j_err = try
-        cart_to_mee(good_cart, mu_pos; j=0.0)
-        invalid_j_supported = false
-        nothing
-    catch e
-        e
-    end
-    if invalid_j_err !== nothing
-        @test occursin("Invalid value for j", sprint(showerror, invalid_j_err))
-    elseif !invalid_j_supported
-        @info "cart_to_mee keyword j unsupported or unvalidated"
-    end
+    invalid_j_err = try cart_to_mee(good_cart, mu_pos; j=0.0); nothing catch e; e end
+    @test invalid_j_err isa ErrorException
+    @test occursin("Invalid value for j", sprint(showerror, invalid_j_err))
+    @test occursin("got j = 0.0", sprint(showerror, invalid_j_err))
 
     # Degenerate states and a non-positive μ warn and return NaN, as the other converters do
     @test_logs (:warn, r"degenerate angular momentum") begin
@@ -68,7 +59,7 @@ bad_len = collect(1.0:7.0)
     end
 
     retrograde_cart = [7000.0, 0.0, 0.0, 0.0, -7.5, 0.0]
-    @test_logs (:warn, r"Singularity computing h and k") begin
+    @test_logs (:warn, r"Conversion failed: modified equinoctial elements are singular") begin
         sing = cart_to_mee(retrograde_cart, mu_pos)
         @test length(sing) == 6
         @test all(isnan, sing)

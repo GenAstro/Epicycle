@@ -29,17 +29,14 @@ include("state_truthdata_elliptic_orbits.jl")
         src = kinematic_truth[from_sym]
 
         @testset "$(nameof(FromT)) -> $(nameof(ToT)) (no μ)" begin
-            if hasmethod(ToT, Tuple{FromT})
-                tgt = ToT(src)
-                @test tgt isa ToT                      # was: typeof(tgt) === ToT
-                if hasmethod(FromT, Tuple{ToT})
-                    back = FromT(tgt)
-                    @test back isa FromT               # was: typeof(back) === FromT
-                    @test approx(back, src)
-                end
-            else
-                @info "Skipping $(nameof(FromT)) -> $(nameof(ToT)) (no μ constructor not defined)"
-            end
+            # the kinematic representations convert among themselves without μ
+            @test hasmethod(ToT, Tuple{FromT})
+            @test hasmethod(FromT, Tuple{ToT})
+            tgt = ToT(src)
+            @test tgt isa ToT
+            back = FromT(tgt)
+            @test back isa FromT
+            @test approx(back, src)
         end
     end
 end

@@ -37,12 +37,12 @@ cart = equinoctial_to_cart(eq, 398600.4418)
 """
 function equinoctial_to_cart(eq::AbstractVector{<:Real}, μ::Real; tol::Real = 1e-12)
     if length(eq) != 6
-        error("Input vector must contain six equinoctial elements: [a, h, k, p, q, λ]")
+        error("Input vector must contain six equinoctial elements: [a, h, k, p, q, λ]; got $(length(eq)) elements.")
     end
     T = float(promote_type(eltype(eq), typeof(μ)))
+    _has_nan(eq, μ) && return fill(T(NaN), 6)
 
     a, h, k, p, q, λ = eq
-    e = sqrt(h^2 + k^2)
 
     if μ < tol
         @warn "Conversion failed: Gravitational parameter μ = $μ less than tol."
@@ -53,15 +53,16 @@ function equinoctial_to_cart(eq::AbstractVector{<:Real}, μ::Real; tol::Real = 1
               "elliptic orbits only."
         return fill(T(NaN), 6)
     end
-    if e > 1 - tol
-        @warn "Conversion failed: Eccentricity (e = $e) exceeds bound for equinoctial formulation."
+    # Compared squared: sqrt(h² + k²) has no derivative at a circular orbit, where the elements do
+    if h^2 + k^2 > (1 - tol)^2
+        @warn "Conversion failed: Eccentricity (e = $(sqrt(h^2 + k^2))) exceeds bound for equinoctial formulation."
         return fill(T(NaN), 6)
     end
 
-    # Eccentric longitude F from the mean longitude. With F = φ + E, φ = atan(h, k) the longitude
-    # of periapsis, λ = F + h cos F - k sin F is Kepler's equation λ - φ = E - e sin E.
-    φ = atan(h, k)
-    F = φ + _eccentric_anomaly(λ - φ, e)
+    # Eccentric longitude F from the mean longitude, λ = F + h cos F - k sin F, solved in F
+    # directly. Going through the eccentricity and the longitude of periapsis would put
+    # sqrt(h² + k²) and atan(h, k) in the derivative, and neither has one at a circular orbit.
+    F = _eccentric_longitude(λ, h, k)
 
     # Radius
     sqrt1 = sqrt(1 - h^2 - k^2)

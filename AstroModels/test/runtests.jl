@@ -77,12 +77,12 @@ Spacecraft: SC-001
   OrbitState:
     statetype: Cartesian
   CartesianState:
-    x   =  7000.00000000
-    y   =   300.00000000
-    z   =     0.00000000
-    vx  =     0.00000000
-    vy  =     7.50000000
-    vz  =     0.03000000
+    x  =    7000.0000000000
+    y  =     300.0000000000
+    z  =       0.0000000000
+    vx =       0.0000000000
+    vy =       7.5000000000
+    vz =       0.0300000000
   CoordinateSystem:
     origin = Earth
     axes   = ICRF

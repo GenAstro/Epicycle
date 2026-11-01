@@ -34,16 +34,19 @@ sphradec = cart_to_sphradec(cart)
 """
 function cart_to_sphradec(state::AbstractVector{<:Real}; tol::Real=1e-12)
     if length(state) != 6
-        error("Input vector must have six elements: [x, y, z, vx, vy, vz].")
+        error("Input vector must have six elements: [x, y, z, vx, vy, vz]; got $(length(state)) elements.")
     end
     T = float(eltype(state))
+    _has_nan(state) && return fill(T(NaN), 6)
 
     # Unpack Cartesian position and velocity
     x, y, z, vx, vy, vz = state
 
     # Magnitude of position
     r = sqrt(x^2 + y^2 + z^2)
-    if r < tol
+    # Each check is !(x >= tol) so that a NaN magnitude counts as singular: under ForwardDiff, the
+    # norm of an exactly zero vector is NaN, and x < tol would let it through.
+    if !(r >= tol)
         @warn "Conversion failed: Radius is zero."
         return fill(T(NaN), 6)
     end
@@ -54,7 +57,7 @@ function cart_to_sphradec(state::AbstractVector{<:Real}; tol::Real=1e-12)
 
     # Magnitude of velocity
     v = sqrt(vx^2 + vy^2 + vz^2)
-    if v < tol
+    if !(v >= tol)
         @warn "Conversion failed: Velocity is zero."
         return fill(T(NaN), 6)
     end
