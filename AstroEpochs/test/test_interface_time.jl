@@ -78,6 +78,25 @@ end
     @test ForwardDiff.value(d.jd2) == t.jd2
 end
 
+@testset "interface — an unsigned interval is subtracted, not wrapped" begin
+    t = Time(60000.0, TT(), MJD())
+    @test (t - 0x01).mjd == 59999.0
+    @test (t + 0x01).mjd == 60001.0
+    @test (t - UInt(2)).mjd == 59998.0
+    @test (t - 1).mjd == 59999.0
+end
+
+@testset "interface — an observer's TDB − TT has a derivative at UTC midnight" begin
+    midnight = Time("2024-06-01T00:00:00", UTC(), ISOT())
+    position = [-2353.6, -4641.3, 3677.1]
+    offset(s) = tdb_minus_tt(midnight + s / 86400, position)
+    at_midnight = ForwardDiff.derivative(offset, 0.0)
+    @test isfinite(at_midnight)
+    @test at_midnight ≈ (offset(1.0) - offset(-1.0)) / 2 atol = 1e-11
+    @test isfinite(ForwardDiff.derivative(s -> tdb_minus_tt(Time("2024-06-01T00:00:00", TT(), ISOT()) + s / 86400,
+                                                            position), 0.0))
+end
+
 @testset "interface — isot refuses a number of decimals it cannot write" begin
     t = Time(2451545.0, 0.123456789, TT(), JD())
     @test_throws ArgumentError isot(t; digits = -1)

@@ -91,6 +91,35 @@ end
 
 end
 
+@testset "leap seconds — a negative leap second is accepted and takes effect" begin
+    # None has occurred, and one could be announced. Refusing the list would leave every later date
+    # a second out, so it is read like any other. TAI − UTC drops from 37 s to 36 s at 2030-01-01,
+    # and 2029-12-31 runs 86399 s.
+    table = parse_leap_seconds(_valid_leap_list(4133980800; extra = [(4102444800, 36)]))
+    @test table.delta[end] == 36.0
+
+    saved = _LEAP[]
+    try
+        _LEAP[] = table
+        new_year_2030 = 2462502.5 - _J2000
+        @test _tai_minus_utc_days(new_year_2030 - 1 / 86_400) == 37.0
+        @test _tai_minus_utc_days(new_year_2030) == 36.0
+
+        # The last second that exists, and the one that does not
+        last_second = Time("2029-12-31T23:59:58.500", UTC(), ISOT())
+        @test last_second.tai.isot == "2030-01-01T00:00:35.500"
+        @test last_second.tai.utc.isot == "2029-12-31T23:59:58.500"
+        @test_throws ArgumentError Time("2029-12-31T23:59:59.000", UTC(), ISOT())
+
+        # Elapsed time across it, and the first moment after it
+        after = Time("2030-01-01T00:00:00", UTC(), ISOT())
+        @test (after.tai - last_second.tai) * 86400 ≈ 0.5 atol = 1e-6
+        @test after.tai.isot == "2030-01-01T00:00:36.000"
+    finally
+        _LEAP[] = saved
+    end
+end
+
 @testset "leap seconds — the hash is computed as the published file computes it" begin
     # The head and tail of leap-seconds.list as IANA published it, whose hash the IERS computed.
     published = """

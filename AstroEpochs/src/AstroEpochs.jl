@@ -42,8 +42,6 @@ module AstroEpochs
 
 using Printf
 
-using EpicycleBase
-
 export Time
 export TAI, TT, TDB, UTC, TCB, TCG
 export JD, MJD, ISOT
@@ -596,7 +594,8 @@ function tdb_minus_tt(t::Time, position::AbstractVector)
     length(position) == 3 || throw(ArgumentError(
         "tdb_minus_tt: position is three numbers in km, in Earth-fixed axes; got $(length(position))."))
     tt, ut = t.tt, t.utc
-    fraction_of_day = mod((ut.jd1 - 0.5) + ut.jd2, 1.0)
+    day = (ut.jd1 - 0.5) + ut.jd2
+    fraction_of_day = day - floor(day)      # `mod` of a dual number has no derivative at a whole day
     return dtdb(tt.jd1, tt.jd2, fraction_of_day, atan(position[2], position[1]),
                 hypot(position[1], position[2]), position[3])
 end
@@ -857,6 +856,7 @@ end
 `t`, `dt` days earlier, in the same scale and format. See [`+`](@ref +(::Time, ::Real)).
 """
 Base.:-(t::Time, dt::Real) = t + (-dt)
+Base.:-(t::Time, dt::Unsigned) = t + (-float(dt))     # negating an unsigned number wraps
 
 """
     +(t::Time, dt::Real) -> Time

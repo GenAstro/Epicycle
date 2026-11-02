@@ -41,7 +41,9 @@ function dtdb(date1, date2, ut, elong, u, v)
     t = ((date1 - 2451545.0) + date2) / 365250.0
 
     # ── topocentric terms ──
-    tsol  = rem(ut, 1.0) * 6.283185307179586476925287 + elong
+    # ERFA's `rem(ut, 1.0)`, to the bit, with a derivative at a whole day, where `rem` of a dual
+    # number gives NaN. UTC midnight is a common time tag.
+    tsol  = (ut - trunc(ut)) * 6.283185307179586476925287 + elong
     w     = t / 3600.0
     elsun = rem(280.46645683 + 1296027711.03429 * w, 360.0) * 1.745329251994329576923691e-2
     emsun = rem(357.52910918 + 1295965810.481 * w, 360.0) * 1.745329251994329576923691e-2

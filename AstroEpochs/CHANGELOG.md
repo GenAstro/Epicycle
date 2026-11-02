@@ -31,4 +31,7 @@
 - A depot that could not be written stopped the first UTC conversion.
 - Processes starting together broke each other's download of the leap-second list.
 - Precompiling a package that converts a UTC time could reach for the network.
+- Subtracting an unsigned interval wrapped: `t - 0x01` moved the time 255 days forward.
+- The derivative of `tdb_minus_tt(t, position)` was NaN at exactly UTC midnight.
+- `tai_minus_utc(t)` returned the next value in the last tens of microseconds of a leap second.
 - A time with no finite date threw from UTC conversion and from printing. It now passes through, prints, and has no calendar date to write.

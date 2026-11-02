@@ -3,10 +3,9 @@
 
 using Test
 
-# TODO. When refactoring is done, modify the symbol tests below as needed.
 @testset "Basic Time Construction" begin
 
-    # Symbol-based construction
+    # Construction from parts
     t1 = Time(2451545.0, 0.2, TT(), JD())
     @test t1.jd == 2451545.2
     @test t1.scale == TT()
@@ -22,7 +21,7 @@ using Test
     @test t1.jd1 == 2451545.0
     @test t1.jd2 == 0.2
 
-    # Symbol-based construction
+    # Construction from parts
     t2 = Time(58000.0, TAI(), MJD())
     @test isapprox(t2.mjd, 58000.0; atol=1e-6)
     @test t2.scale == TAI()

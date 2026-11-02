@@ -43,8 +43,6 @@ end
     @test isapproxrel(t_tcg.jd2, 0.01649397689602741)
 end
 
-# TODO: Round trip tests probably 
-
 # Identity test for conversion paths 
 @test begin
     p = AstroEpochs.get_conversion_path(:tt, :tt)

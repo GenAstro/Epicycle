@@ -106,6 +106,19 @@ end
         @test isapprox(d_zyg, d_fwd; rtol=1e-9)
     end
 
+    # Every scale pair: seconds on one scale against seconds on another, against a central
+    # difference on the two-part date. The rates differ by parts in 1e8, so this tells them apart.
+    base = Time("2024-06-01T06:00:00", TT(), ISOT())
+    scales = (:tt, :tai, :tdb, :utc, :tcg, :tcb)
+    for a in scales, b in scales
+        a === b && continue
+        elapsed(s) = begin
+            from = getproperty(base, a)
+            (getproperty(from + s / 86400, b) - getproperty(from, b)) * 86400
+        end
+        @test ForwardDiff.derivative(elapsed, 0.0) ≈ (elapsed(1.0) - elapsed(-1.0)) / 2 atol = 1e-10
+    end
+
     # 3) Round-trip sanity: adding 0 seconds leaves epoch unchanged (value identity)
     t_same = Time(t0.tdb + (0.0 / 86400.0), t0.scale)
     @test t_same.scale == t0.scale
