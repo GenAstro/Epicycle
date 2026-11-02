@@ -89,6 +89,10 @@ The figure shows every scale against TAI. TT sits a constant 32.184 s away. TDB 
 
 *The numbers are from AstroEpochs. The form of the figure follows Figure 1 of Seidelmann and Fukushima, "Why new time scales?", Astronomy and Astrophysics 265, 833 (1992).*
 
+The scales connect as a graph, and a conversion walks it. Going from TCB to UTC passes through TDB, TT and TAI in turn, so you ask for the scale you want and the route is taken care of.
+
+![The conversion graph. UTC joins TAI by leap seconds, TAI joins TT by a constant 32.184 s, TT joins TDB by a yearly cycle of about 1.7 ms, TDB joins TCB by a steady rate of 0.49 s a year, and TT joins TCG by a steady rate of 0.022 s a year.](assets/scale_graph.svg)
+
 Use UTC for the times you read in and write out. It is a civil scale built for clocks, not one to do dynamics in, so Epicycle's models work in TT and TDB. UTC is defined from 1972 here: before that date AstroEpochs uses TAI − UTC = 0 and warns, where the historical offset was up to about 10 s.
 
 ## Time Formats

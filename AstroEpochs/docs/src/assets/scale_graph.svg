@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 310" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="The conversion graph. UTC joins TAI by leap seconds. TAI joins TT by a constant 32.184 seconds. TT joins TDB by a yearly cycle of about 1.7 milliseconds. TDB joins TCB by a steady rate. TT also joins TCG by a steady rate.">
+<defs><marker id="end" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52514e"/></marker></defs>
+<rect width="860" height="310" fill="#fcfcfb"/>
+<line x1="119.0" x2="199.0" y1="90" y2="90" stroke="#52514e" stroke-width="1.5" marker-start="url(#end)" marker-end="url(#end)"/>
+<text x="159.0" y="66" font-size="12" text-anchor="middle" fill="#0b0b0b">leap seconds</text>
+<text x="159.0" y="81" font-size="12" text-anchor="middle" fill="#52514e">10 s to 37 s</text>
+<line x1="297.0" x2="377.0" y1="90" y2="90" stroke="#52514e" stroke-width="1.5" marker-start="url(#end)" marker-end="url(#end)"/>
+<text x="337.0" y="66" font-size="12" text-anchor="middle" fill="#0b0b0b">constant</text>
+<text x="337.0" y="81" font-size="12" text-anchor="middle" fill="#52514e">32.184 s</text>
+<line x1="475.0" x2="555.0" y1="90" y2="90" stroke="#52514e" stroke-width="1.5" marker-start="url(#end)" marker-end="url(#end)"/>
+<text x="515.0" y="66" font-size="12" text-anchor="middle" fill="#0b0b0b">yearly cycle</text>
+<text x="515.0" y="81" font-size="12" text-anchor="middle" fill="#52514e">about 1.7 ms</text>
+<line x1="653.0" x2="733.0" y1="90" y2="90" stroke="#52514e" stroke-width="1.5" marker-start="url(#end)" marker-end="url(#end)"/>
+<text x="693.0" y="66" font-size="12" text-anchor="middle" fill="#0b0b0b">steady rate</text>
+<text x="693.0" y="81" font-size="12" text-anchor="middle" fill="#52514e">0.49 s a year</text>
+<line x1="426" x2="426" y1="122.0" y2="224.0" stroke="#52514e" stroke-width="1.5" marker-start="url(#end)" marker-end="url(#end)"/>
+<text x="438" y="170.0" font-size="12" fill="#0b0b0b">steady rate</text>
+<text x="438" y="185.0" font-size="12" fill="#52514e">0.022 s a year</text>
+<rect x="202.0" y="61.0" width="92" height="58" rx="4" fill="#ffffff" stroke="#2a78d6" stroke-width="2.5"/>
+<text x="248" y="87" font-size="16" font-weight="600" text-anchor="middle" fill="#0b0b0b">TAI</text>
+<text x="248" y="105" font-size="12" text-anchor="middle" fill="#52514e">atomic</text>
+<rect x="24.0" y="61.0" width="92" height="58" rx="4" fill="#ffffff" stroke="#008300" stroke-width="2.5"/>
+<text x="70" y="87" font-size="16" font-weight="600" text-anchor="middle" fill="#0b0b0b">UTC</text>
+<text x="70" y="105" font-size="12" text-anchor="middle" fill="#52514e">civil</text>
+<rect x="380.0" y="61.0" width="92" height="58" rx="4" fill="#ffffff" stroke="#eb6834" stroke-width="2.5"/>
+<text x="426" y="87" font-size="16" font-weight="600" text-anchor="middle" fill="#0b0b0b">TT</text>
+<text x="426" y="105" font-size="12" text-anchor="middle" fill="#52514e">Earth dynamics</text>
+<rect x="558.0" y="61.0" width="92" height="58" rx="4" fill="#ffffff" stroke="#1baf7a" stroke-width="2.5"/>
+<text x="604" y="87" font-size="16" font-weight="600" text-anchor="middle" fill="#0b0b0b">TDB</text>
+<text x="604" y="105" font-size="12" text-anchor="middle" fill="#52514e">solar system</text>
+<rect x="736.0" y="61.0" width="92" height="58" rx="4" fill="#ffffff" stroke="#e87ba4" stroke-width="2.5"/>
+<text x="782" y="87" font-size="16" font-weight="600" text-anchor="middle" fill="#0b0b0b">TCB</text>
+<text x="782" y="105" font-size="12" text-anchor="middle" fill="#52514e">barycentric</text>
+<rect x="380.0" y="227.0" width="92" height="58" rx="4" fill="#ffffff" stroke="#eda100" stroke-width="2.5"/>
+<text x="426" y="253" font-size="16" font-weight="600" text-anchor="middle" fill="#0b0b0b">TCG</text>
+<text x="426" y="271" font-size="12" text-anchor="middle" fill="#52514e">geocentric</text>
+</svg>
