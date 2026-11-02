@@ -445,12 +445,18 @@ The control is handed to the forces through the `params` slot the
 `accel_eval!` interface already carries — it is the one thing a force needs
 that lives nowhere else.
 """
+# The epoch `seconds` after `epoch0`. Elapsed seconds never count in UTC, whose days are not all the
+# same length, so a UTC epoch goes through TAI.
+_epoch_after(epoch0, seconds) =
+    epoch0.scale === AstroEpochs.UTC() ? AstroEpochs.Time(epoch0.tai + seconds / 86400.0, AstroEpochs.UTC()) :
+                                         epoch0 + seconds / 86400.0
+
 function forcemodel_rhs(forces, epoch0, nstates::Int, sc)
     return function _fm_rhs!(dy, y, u, p, t, model)
         x = _flat(y, nstates)
         T = eltype(x)
         acc = zeros(T, nstates)
-        epoch = epoch0 + t / 86400.0
+        epoch = _epoch_after(epoch0, t)
         # Each force gets a fresh buffer and everything past the kinematic rows is summed. Built-in
         # forces overwrite what they write, so one shared buffer kept only the last force; a user
         # force that adds, like a thruster's mass flow, is summed correctly either way.
@@ -525,7 +531,7 @@ subject_at(phase, get_final_state(phase), get_final_time(phase))
 subject_at(phase, y, t) =
     Coordinate(CartesianState(collect(_first6(y))),
                phase.model.coord_sys,
-               phase.model.time + t / 86400.0)
+               _epoch_after(phase.model.time, t))
 
 """
     subject_at(phase::CollocationPhase, Final()) -> Coordinate

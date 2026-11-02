@@ -75,6 +75,7 @@ include("test_correctness_ekf.jl")
 include("test_correctness_rts.jl")
 
 include("test_correctness_od_batch.jl")
+include("test_correctness_od_time_scales.jl")
 include("test_correctness_simulate.jl")
 
 include("test_correctness_od_iterated.jl")

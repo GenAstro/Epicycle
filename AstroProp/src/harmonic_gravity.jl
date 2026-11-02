@@ -46,7 +46,8 @@ function geopotential_data end
 
 Total gravitational acceleration from the central body in the field's body-fixed axes [m/s²] — the
 central term plus the harmonics up to `degree` and `order`. `r_fixed` is the position in those
-axes [m]. Each gravity field provides this method, and `HarmonicGravity` calls it.
+axes [m], and `tsec` the seconds from J2000 on TT, for a field whose coefficients vary in time. Each
+gravity field provides this method, and `HarmonicGravity` calls it.
 """
 function geopotential_accel end
 
@@ -273,7 +274,7 @@ function accel_eval!(force::HarmonicGravity, t::Time, x̄::AbstractVector, x̄̇
     # ICRF to the field's body-fixed axes; for the Earth, the frame theory's ITRF chain.
     R, _ = _rotation_blocks(force_rotation(params, force.orientation, force.central_body.naifid, t))
     r_fixed = R * SVector{3}(x̄[1], x̄[2], x̄[3]) .* 1.0e3          # km → m
-    tsec    = (force_epoch(params, t).utc - _JD_J2000) * 86400.0
+    tsec    = (force_epoch(params, t).tt - _JD_J2000) * 86400.0
     a_fixed = geopotential_accel(force.model, force.data, r_fixed, tsec,
                                  force.degree, force.order) ./ 1.0e3   # m/s² → km/s²
     a_icrf  = R' * a_fixed

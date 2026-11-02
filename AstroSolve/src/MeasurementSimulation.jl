@@ -82,7 +82,7 @@ function simulate(measurements::AbstractVector, sc::Spacecraft, prop::OrbitPropa
         "simulate: at least one observation epoch is required; got none."))
 
     truth   = deepcopy(sc)
-    offsets = _simulate_offsets(times, truth.time)
+    offsets = _simulate_offsets(times, AstroProp._start_epoch(prop.forces, truth))
     rng     = seed === nothing ? Random.default_rng() : Random.Xoshiro(seed)
 
     records = ObservationRecord[]
@@ -106,11 +106,12 @@ end
 simulate(problem::ODProblem, times::AbstractVector; kwargs...) =
     simulate(problem.measurements, problem.spacecraft, problem.propagator, times; kwargs...)
 
-# Seconds past the epoch, whichever way the caller asked. A `Time` difference is in days.
+# Seconds past the epoch on the propagator's clock, whichever way the caller asked, and whatever
+# scale the times are in. A `Time` difference is in days.
 _simulate_offsets(times::AbstractVector{<:Real}, ::AstroEpochs.Time) =
     _ascending(collect(float.(times)))
 _simulate_offsets(times::AbstractVector{<:AstroEpochs.Time}, epoch::AstroEpochs.Time) =
-    _ascending([Float64(t - epoch) * 86400.0 for t in times])
+    _ascending([Float64(AstroEpochs.Time(t, epoch.scale) - epoch) * 86400.0 for t in times])
 
 function _ascending(offsets::Vector{Float64})
     issorted(offsets) || throw(ArgumentError(

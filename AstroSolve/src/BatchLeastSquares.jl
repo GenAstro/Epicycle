@@ -622,7 +622,12 @@ function build_od_closures(records::AbstractVector{<:ObservationRecord},
         "build_od_closures: at least one observation record is required; got none"))
 
     sc     = model.spacecraft
-    epoch0 = sc.time
+
+    # Seconds count from the epoch on the propagator's clock, the same rule `propagate!` uses, so
+    # the spacecraft's epoch and the records can each be in any scale. Measuring here, rather than
+    # in the epoch's own scale, also keeps a UTC epoch from counting elapsed time in UTC.
+    epoch0 = AstroProp._start_epoch(model.propagator.forces, sc)
+    seconds_from_epoch(t) = Float64(Time(t, epoch0.scale) - epoch0) * 86400.0
 
     # TDM segments arrive grouped by participant_1 (e.g. all Goldstone, then
     # all Madrid, then all Canberra), so `t_receive` is non-monotone across
@@ -631,7 +636,7 @@ function build_od_closures(records::AbstractVector{<:ObservationRecord},
     # interleave correctly and the downstream ε-disambiguation only collapses
     # genuine ties (e.g. range + Doppler at the same epoch).
     if records isa AbstractVector
-        sort!(records; by = r -> Float64(r.t_receive - epoch0))
+        sort!(records; by = r -> seconds_from_epoch(r.t_receive))
     end
 
     # Resolve, per (kind, participant_1) appearing in the stream, the
@@ -664,7 +669,7 @@ function build_od_closures(records::AbstractVector{<:ObservationRecord},
         variance_for[key] = variance(spec.noise)
     end
 
-    obs_times = Float64[(r.t_receive - epoch0) * 86400.0 for r in records]
+    obs_times = Float64[seconds_from_epoch(r.t_receive) for r in records]
     obs_data  = [Float64[r.observed]                     for r in records]
 
     # Per-observation 1×1 covariance.
@@ -729,8 +734,8 @@ and predictors off `model.measurements` — the use case writes no
 physics or geometry.
 
 `records` is a vector of `ObservationRecord` (e.g. straight from
-`read_records`).  Time-since-epoch is computed from
-`r.t_receive - model.spacecraft.time`.  Each record contributes one
+`read_records`).  Time-since-epoch is measured from `model.spacecraft.time`
+on the propagator's clock, whatever scale either time is in.  Each record contributes one
 scalar observation; `R = σ²` is taken from the matching spec's
 `meas.noise` field.
 """
