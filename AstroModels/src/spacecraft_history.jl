@@ -204,17 +204,9 @@ function Base.show(io::IO, segment::HistorySegment)
         start_time = segment.times[1]
         end_time = segment.times[end]
         
-        # Use sprint to get compact representation
-        start_io = IOBuffer()
-        print(start_io, start_time)
-        start_lines = split(String(take!(start_io)), '\n')
-        start_value = strip(split(start_lines[2], '=')[2])  
-        
-        end_io = IOBuffer()
-        print(end_io, end_time)
-        end_lines = split(String(take!(end_io)), '\n')
-        end_value = strip(split(end_lines[2], '=')[2])
-        
+        start_value = _time_in_its_format(start_time)
+        end_value = _time_in_its_format(end_time)
+
         # The scale by name, such as TDB
         scale_str = string(nameof(typeof(start_time.scale)))
         
@@ -234,6 +226,13 @@ function Base.show(io::IO, segment::HistorySegment)
     # Metadata count
     n_metadata = length(segment.metadata)
     print(io, "  Metadata: ", n_metadata, n_metadata == 1 ? " entry" : " entries")
+end
+
+# The time's value as its format writes it, for a summary line.
+function _time_in_its_format(t::Time)
+    t.format === MJD() && return t.mjd
+    t.format === ISOT() && isfinite(t.jd) && return t.isot
+    return t.jd
 end
 
 #==============================================================================

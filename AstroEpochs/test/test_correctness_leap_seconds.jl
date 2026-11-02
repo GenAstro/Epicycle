@@ -19,7 +19,7 @@
 
 using Test
 using AstroEpochs
-using AstroEpochs: leap_second_table, tai_minus_utc, parse_leap_seconds,
+using AstroEpochs: leap_second_table, _tai_minus_utc_days, parse_leap_seconds,
                    utctai, taiutc, LeapSecondTable, _LEAP, _builtin_leap_table,
                    _BUILTIN_LEAP_SECONDS, cal2jd
 
@@ -52,7 +52,7 @@ end
         idx < 1 && continue                     # before 1972 there is no value, and it warns
         expected = builtin.delta[idx]
         utc = (_J2000 + d + days, 0.0)            # the date in the large part, as ERFA expects
-        @test tai_minus_utc(d + days) == expected
+        @test _tai_minus_utc_days(d + days) == expected
         tai = utctai(utc...)
         @test ((tai[1] - utc[1]) + (tai[2] - utc[2])) * 86_400 ≈ expected atol = 1e-9
         back = taiutc(tai...)
@@ -62,8 +62,8 @@ end
 
 @testset "leap seconds — TAI − UTC steps at 0h UTC on the date" begin
     new_year_2017 = 2457754.5 - _J2000
-    @test tai_minus_utc(new_year_2017 - 1 / 86_400) == 36.0      # 2016-12-31T23:59:59 UTC
-    @test tai_minus_utc(new_year_2017) == 37.0                   # 2017-01-01T00:00:00 UTC
+    @test _tai_minus_utc_days(new_year_2017 - 1 / 86_400) == 36.0      # 2016-12-31T23:59:59 UTC
+    @test _tai_minus_utc_days(new_year_2017) == 37.0                   # 2017-01-01T00:00:00 UTC
 
     # Through Time: UTC to TAI adds 37 s today, and the round trip is exact
     utc = Time("2024-06-01T12:00:00", UTC(), ISOT())
@@ -81,8 +81,8 @@ end
     try
         _LEAP[] = table
         new_year_2030 = 2462502.5 - _J2000                          # 2030-01-01T00:00:00 UTC
-        @test tai_minus_utc(new_year_2030 - 1 / 86_400) == 37.0
-        @test tai_minus_utc(new_year_2030) == 38.0
+        @test _tai_minus_utc_days(new_year_2030 - 1 / 86_400) == 37.0
+        @test _tai_minus_utc_days(new_year_2030) == 38.0
         utc = Time("2030-06-01T00:00:00", UTC(), ISOT())
         @test (utc.tai - AstroEpochs._time_jd(utc.jd1, utc.jd2, :tai, :jd)) * 86_400 ≈ 38.0 atol = 1e-6
     finally

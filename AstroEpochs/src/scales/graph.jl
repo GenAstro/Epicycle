@@ -9,8 +9,9 @@
 # leap_seconds.jl (UTC).
 #
 # Adding a scale means: its transforms to and from one existing scale, their two entries in
-# SCALE_TRANSFORMS, its symbol in TIME_SCALES, and a MULTI_HOPS route to each scale it is not joined
-# to directly. Its tag type goes in AstroEpochs.jl with the others.
+# SCALE_TRANSFORMS, their two branches in `_hop`, which is what a conversion runs, its symbol in
+# TIME_SCALES, and a MULTI_HOPS route to each scale it is not joined to directly. Its tag type and
+# its two symbol mappings go in AstroEpochs.jl with the others.
 
 const TIME_SCALES = Set([:tt, :tai, :tdb, :utc, :tcg, :tcb])
 

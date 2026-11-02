@@ -35,15 +35,27 @@ hour and date, and in UTC a time inside a leap second reads 23:59:60.
 - `digits`: Decimal places of seconds. With 0 the string ends at the whole second.
 
 # Returns
-The string `YYYY-MM-DDThh:mm:ss.fff`.
+The string `YYYY-MM-DDThh:mm:ss`, with `digits` decimal places after a point when `digits` is above 0.
+It names no scale.
+
+# Notes
+- `digits` runs from 0 to 12, and anything else throws. A `Time` resolves about 10 ps, so more than 11
+  places carry nothing.
+- A date that is not finite, or too far off for the calendar, has no string and throws.
 
 # Examples
-```julia
+```jldoctest
 t = Time(2451545.0, 0.25, TT(), JD())
-isot(t; digits = 6)      # "2000-01-01T18:00:00.000000"
+
+println(isot(t; digits = 6))
+
+# output
+
+2000-01-01T18:00:00.000000
 ```
 """
 function isot(t::Time; digits::Integer = 3)
+    0 <= digits <= 12 || throw(ArgumentError("isot: digits runs from 0 to 12; got $digits."))
     isfinite(t.jd1 + t.jd2) || throw(ArgumentError(
         "Time: a time whose Julian date is $(t.jd1 + t.jd2) has no calendar date to write."))
     y, m, d, h, mi, s, f = d2dtf(_scale_of(t), digits, t.jd1, t.jd2)
@@ -78,6 +90,16 @@ function _from_format(value::Real, scale::Symbol, format::Symbol)
     end
 end
 
+# The checks a string and calendar fields share. `date` is how the input reads in the message.
+function _check_calendar_fields(date, year, month, day, hour, minute)
+    1 <= month <= 12 || throw(ArgumentError("Time: the month must be between 1 and 12; got $month."))
+    1 <= day <= _days_in_month(year, month) || throw(ArgumentError(
+        "Time: $date is not a date; $(_MONTH_NAMES[month]) $year has $(_days_in_month(year, month)) days."))
+    0 <= hour < 24 || throw(ArgumentError("Time: the hour must be between 0 and 23; got $hour."))
+    0 <= minute < 60 || throw(ArgumentError("Time: the minute must be between 0 and 59; got $minute."))
+    return nothing
+end
+
 """
     _isot_to_date(isostr::AbstractString) → Tuple{Int, Int, Int, Int, Int, Real}
 
@@ -85,10 +107,12 @@ Validate and parse an ISO 8601 string of the form `"YYYY-MM-DDTHH:MM:SS.sss"`.
 Returning calendar fields: `(year, month, day, hour, minute, second)`.
 """
 function _isot_to_date(isostr::AbstractString)
-    # Match ISO 8601 format with optional fractional seconds
-    m = match(r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)$", isostr)
+    # The form this package reads, with optional fractional seconds
+    m = match(r"\A([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2}(?:\.[0-9]+)?)\z", isostr)
     if m === nothing
-        throw(ArgumentError("Time: Invalid ISO 8601 format: $isostr"))
+        throw(ArgumentError("Time: \"$isostr\" is not in the form YYYY-MM-DDTHH:MM:SS with optional " *
+                            "decimal seconds. The time of day is required, and the scale comes from " *
+                            "the tag, so there is no time zone suffix."))
     end
 
     y  = parse(Int, m.captures[1])
@@ -98,21 +122,8 @@ function _isot_to_date(isostr::AbstractString)
     mi = parse(Int, m.captures[5])
     s  = parse(Float64, m.captures[6])
 
-    # Semantic range checks
-    if !(1 <= mth <= 12)
-        throw(ArgumentError("Month must be between 1 and 12. Got: $mth"))
-    end
-    if !(1 <= d <= _days_in_month(y, mth))
-        throw(ArgumentError("Time: $isostr is not a date; " *
-                            "$(_MONTH_NAMES[mth]) $y has $(_days_in_month(y, mth)) days."))
-    end
-    if !(0 <= h < 24)
-        throw(ArgumentError("Hour must be between 0 and 23. Got: $h"))
-    end
-    if !(0 <= mi < 60)
-        throw(ArgumentError("Minute must be between 0 and 59. Got: $mi"))
-    end
-    
-    return (y, mth, d, h, mi, s) 
+    _check_calendar_fields(isostr, y, mth, d, h, mi)
+
+    return (y, mth, d, h, mi, s)
 end
 

@@ -14,8 +14,8 @@
 # UTC ↔ TAI is in leap_seconds.jl, TDB − TT in tdb.jl; which pairs are joined, and how a longer
 # conversion is routed, is in graph.jl.
 #
-# To add a scale, write its transforms to and from one existing scale here and add both to
-# SCALE_TRANSFORMS in graph.jl.
+# To add a scale, write its transforms to and from one existing scale here, then see graph.jl for
+# everything else a scale needs.
 
 const TTMTAI = 32.184                      # TT − TAI, s, exact by definition
 const _DJM77 = 43144.0                     # MJD of 1977-01-01
@@ -91,8 +91,8 @@ end
 # scales it is given; the two differ by under two milliseconds, which changes TDB − TT by less than
 # a picosecond, so neither direction iterates.
 
-"eraTttdb: TT to TDB, with TDB − TT from `tdb_minus_tt`."
-tttdb(tt1, tt2) = _add_small(tt1, tt2, tdb_minus_tt(tt1, tt2) / SECONDS_IN_DAY)
+"eraTttdb: TT to TDB, with TDB − TT from `_tdb_minus_tt_parts`."
+tttdb(tt1, tt2) = _add_small(tt1, tt2, _tdb_minus_tt_parts(tt1, tt2) / SECONDS_IN_DAY)
 
-"eraTdbtt: TDB to TT, with TDB − TT from `tdb_minus_tt`."
-tdbtt(tdb1, tdb2) = _add_small(tdb1, tdb2, -tdb_minus_tt(tdb1, tdb2) / SECONDS_IN_DAY)
+"eraTdbtt: TDB to TT, with TDB − TT from `_tdb_minus_tt_parts`."
+tdbtt(tdb1, tdb2) = _add_small(tdb1, tdb2, -_tdb_minus_tt_parts(tdb1, tdb2) / SECONDS_IN_DAY)

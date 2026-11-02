@@ -9,20 +9,21 @@
 #
 # ─────────────────────────────── TDB − TT ─────────────────────────────────
 #
-# `tdb_minus_tt(jd1, jd2)` is the one function the scale conversions call for TDB − TT. It evaluates
-# `dtdb` at the geocentre, as Astropy does when a Time has no location. The series agrees with
-# ephemeris-based TDB to a few nanoseconds over 1600-2200.
+# `_tdb_minus_tt_parts(jd1, jd2)` is the one function the scale conversions call for TDB − TT. It
+# evaluates `dtdb` at the geocentre, as Astropy does when a Time has no location. ERFA documents the
+# series as agreeing with ephemeris-based TDB to a few nanoseconds over 1600-2200; AstroEpochs has
+# not checked that against an ephemeris.
 #
-# To use a different model, for example one computed from a planetary ephemeris, replace the body
-# of `tdb_minus_tt` or dispatch it on a model type; nothing else in AstroEpochs computes TDB − TT.
+# A different geocentric model would change this one function and nothing else. An observer's terms
+# are the public `tdb_minus_tt(t, position)`, which is not part of a scale conversion.
 
 """
-    tdb_minus_tt(jd1, jd2) -> seconds
+    _tdb_minus_tt_parts(jd1, jd2) -> seconds
 
 TDB − TT at the two-part Julian date `jd1 + jd2`, which may be in TT or TDB (the difference is
 below a picosecond), evaluated at the geocentre.
 """
-tdb_minus_tt(jd1, jd2) = dtdb(jd1, jd2, 0.0, 0.0, 0.0, 0.0)
+_tdb_minus_tt_parts(jd1, jd2) = dtdb(jd1, jd2, 0.0, 0.0, 0.0, 0.0)
 # The observer arguments are plain constants, not zeros of the date's type: the geocentric result
 # does not depend on them, and ForwardDiff's `rem` gives a NaN derivative at an argument of exactly
 # zero, which `u * sin(...)` would then carry into the result even though u is zero.

@@ -78,6 +78,62 @@ end
     @test ForwardDiff.value(d.jd2) == t.jd2
 end
 
+@testset "interface — isot refuses a number of decimals it cannot write" begin
+    t = Time(2451545.0, 0.123456789, TT(), JD())
+    @test_throws ArgumentError isot(t; digits = -1)
+    @test_throws ArgumentError isot(t; digits = 13)
+    @test_throws ArgumentError isot(t; digits = 19)
+    for digits in 0:12
+        text = isot(t; digits)
+        @test Time(text, TT(), ISOT()) isa Time
+        @test digits == 0 ? !occursin('.', text) : length(split(text, '.')[2]) == digits
+    end
+end
+
+@testset "interface — printing: one line inside something else, a block at the REPL" begin
+    iso = Time("2024-02-29T12:34:56.123", TAI(), ISOT())
+    jd  = Time(2451545.0, 0.25, TT(), JD())
+    mjd = Time(60000.5, UTC(), MJD())
+    @test sprint(show, iso) == "Time(\"2024-02-29T12:34:56.123\", TAI(), ISOT())"
+    @test sprint(show, jd) == "Time(2.451545e6, 0.25, TT(), JD())"
+    @test sprint(show, mjd) == "Time(60000.5, UTC(), MJD())"
+    @test "t = $jd" == "t = Time(2.451545e6, 0.25, TT(), JD())"
+    @test !occursin('\n', sprint(show, [iso, iso]))
+
+    # What a JD time prints can be pasted back, and is the same time.
+    @test eval(Meta.parse(sprint(show, jd))) == jd
+
+    block = sprint(show, MIME"text/plain"(), jd)
+    @test occursin("value  = 2451545.250000000", block)
+    @test occursin("scale  = TT()", block) && occursin("format = JD()", block)
+    @test occursin("value  = 60000.5", sprint(show, MIME"text/plain"(), mjd))
+
+    # Nothing about a date stops it printing.
+    bad = Time(Time(NaN, TT(), JD()), ISOT())
+    @test !occursin('\n', sprint(show, bad)) && occursin("NaN", sprint(show, bad))
+    far = Time(Time(2451545.0, TT(), JD()) + 1e10, ISOT())
+    @test !occursin('\n', sprint(show, far))
+end
+
+@testset "interface — messages say what to do" begin
+    t = Time(2451545.0, TT(), JD())
+    msg(f) = try f(); "" catch e; sprint(showerror, e) end
+    @test occursin("Available: jd1, jd2", msg(() -> t.ut1))
+    @test occursin("YYYY-MM-DDTHH:MM:SS", msg(() -> Time("2024-01-01T00:00:00Z", UTC(), ISOT())))
+    @test occursin("time zone", msg(() -> Time("2024-01-01", UTC(), ISOT())))
+    @test occursin("YYYY-MM-DDTHH:MM:SS", msg(() -> Time("2024-01-01T00:00:00\n", UTC(), ISOT())))
+    @test occursin("YYYY-MM-DDTHH:MM:SS", msg(() -> Time("٢٠٢٤-01-01T00:00:00", UTC(), ISOT())))
+    @test occursin("`a < b.tt`", msg(() -> t < t.tdb))
+    @test occursin("`t2 - t1.tt`", msg(() -> t - t.tdb))
+    @test occursin("Time: the month", msg(() -> Time("2024-13-01T00:00:00", TT(), ISOT())))
+    @test occursin("Time: the month", msg(() -> Time(2024, 13, 1, 0, 0, 0.0, TT(), ISOT())))
+    @test occursin("has 29 days", msg(() -> Time(2024, 2, 30, 0, 0, 0.0, TT(), ISOT())))
+    @test occursin("three numbers", msg(() -> tdb_minus_tt(t, [1.0, 2.0])))
+    @test occursin("list expires", sprint(show, AstroEpochs.LeapSecondTable([0.0], [37.0], 100.0)))
+    @test occursin("built-in", sprint(show, AstroEpochs._builtin_leap_table()))
+    @test occursin("37 s from 2017-01-01", sprint(show, AstroEpochs._builtin_leap_table()))
+end
+
 @testset "interface — isot(t; digits) writes as many decimals as asked" begin
     t = Time(2451545.0, 0.25, TT(), JD())
     @test isot(t) == t.isot == "2000-01-01T18:00:00.000"
@@ -188,16 +244,17 @@ end
         end
         @test isnan(bad.jd)
         @test isnan((bad + 1.0).jd)
-        @test occursin("value", sprint(show, bad))
+        @test occursin("value", sprint(show, MIME"text/plain"(), bad))
+        @test !occursin('\n', sprint(show, bad))
         err = try bad.isot; nothing catch e; e end
         @test err isa ArgumentError
         @test occursin("no calendar date", sprint(showerror, err))
     end
-    @test occursin("no calendar date", sprint(show, Time(Time(NaN, TT(), JD()), ISOT())))
+    @test occursin("no calendar date", sprint(show, MIME"text/plain"(), Time(Time(NaN, TT(), JD()), ISOT())))
 
     # So does a date too far off for the calendar, and printing still works.
     huge = Time(Time(2451545.0, TT(), JD()) + 1e10, ISOT())
-    @test occursin("no calendar date", sprint(show, huge))
+    @test occursin("no calendar date", sprint(show, MIME"text/plain"(), huge))
 
     # A derivative survives to the end of the computation, as NaN.
     s = ForwardDiff.Dual{Nothing}(NaN, 1.0)
@@ -209,6 +266,16 @@ end
     @test tai_minus_utc(Time("2024-01-01T00:00:00", TT(), ISOT())) == 37.0
     @test tai_minus_utc(Time("2016-12-31T23:59:59", UTC(), ISOT())) == 36.0
     @test tai_minus_utc(Time("2017-01-01T00:00:00", UTC(), ISOT())) == 37.0
+
+    # The old value holds to the last moment of a leap second. One number at the size of a Julian
+    # date cannot see these; the two parts can.
+    for second in ("60.5", "60.9", "60.99", "60.999", "60.9999", "60.99999", "60.999999", "60.9999999")
+        @test tai_minus_utc(Time("2016-12-31T23:59:$second", UTC(), ISOT())) == 36.0
+    end
+    @test tai_minus_utc(Time(Time("2017-01-01T00:00:00", UTC(), ISOT()).tai, UTC())) == 37.0
+    @test tai_minus_utc(Time("2017-01-01T00:00:36.9999999", TAI(), ISOT())) == 36.0
+    @test tai_minus_utc(Time("2017-01-01T00:00:37", TAI(), ISOT())) == 37.0
+    @test isnan(tai_minus_utc(Time(NaN, UTC(), JD())))
 end
 
 @testset "interface — TDB − TT at a time, at the geocentre and at an observer" begin

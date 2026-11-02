@@ -53,8 +53,8 @@ end
 
 ERFA's `eraJd2cal`: a two-part Julian date to a Gregorian date and fraction of a day. The date may
 be split between the parts in any way; the fraction is summed with compensation (Klein 2006), so
-the split costs no precision. Throws `DomainError` below JD -68569.5 (4713 BC January 1) or above
-1e9.
+the split costs no precision. Throws `DomainError` below JD -68569.5 (Gregorian 4901 BC March 1) or
+above 1e9.
 """
 function jd2cal(dj1, dj2)
     dj = dj1 + dj2
@@ -224,10 +224,10 @@ function dtf2d(scale::Symbol, iy::Integer, im::Integer, id::Integer, ihr::Intege
         day += dleap
         (ihr == 23 && imn == 59) && (seclim += dleap)
     end
-    (0 <= ihr <= 23) || throw(ArgumentError("Hour must be between 0 and 23. Got: $ihr"))
-    (0 <= imn <= 59) || throw(ArgumentError("Minute must be between 0 and 59. Got: $imn"))
+    (0 <= ihr <= 23) || throw(ArgumentError("Time: the hour must be between 0 and 23; got $ihr."))
+    (0 <= imn <= 59) || throw(ArgumentError("Time: the minute must be between 0 and 59; got $imn."))
     (0 <= sec < seclim) || throw(ArgumentError(
-        "Seconds must be >= 0.0 and < $(seclim == 60.0 ? "60.0" : "$(seclim), this being a " *
+        "Time: seconds must be >= 0.0 and < $(seclim == 60.0 ? "60.0" : "$(seclim), this being a " *
         "leap-second day in UTC"). Got: $sec"))
     time = (60.0 * (60 * ihr + imn) + sec) / day
     return dj, time

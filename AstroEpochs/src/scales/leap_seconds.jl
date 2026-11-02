@@ -42,6 +42,16 @@ struct LeapSecondTable
     expires::Float64            # UTC days since J2000 after which the list is out of date
 end
 
+# What a table says, rather than its raw arrays in days since J2000.
+function Base.show(io::IO, table::LeapSecondTable)
+    date(days) = begin
+        y, m, d, _ = jd2cal(J2000_EPOCH, days)
+        string(y, "-", lpad(m, 2, '0'), "-", lpad(d, 2, '0'))
+    end
+    print(io, "LeapSecondTable: TAI − UTC = ", Int(table.delta[end]), " s from ", date(table.starts[end]), ", ",
+          isfinite(table.expires) ? "list expires " * date(table.expires) : "built-in, with no expiry")
+end
+
 const _LEAP       = Ref{Union{Nothing, LeapSecondTable}}(nothing)
 const _LEAP_LOCK  = ReentrantLock()
 
@@ -121,7 +131,7 @@ const _BUILTIN_LEAP_SECONDS = (
     (1996, 1, 1, 30.0), (1997, 7, 1, 31.0), (1999, 1, 1, 32.0), (2006, 1, 1, 33.0),
     (2009, 1, 1, 34.0), (2012, 7, 1, 35.0), (2015, 7, 1, 36.0), (2017, 1, 1, 37.0))
 
-"The built-in table, used when no list has ever been downloaded. It never expires."
+"The built-in table, used when no list can be had. Its expiry of -Inf marks it as having none."
 function _builtin_leap_table()
     # cal2jd gives 0h on the date as (MJD zero point, MJD); held as days since J2000.
     starts = [(first(cal2jd(y, m, d)) - J2000_EPOCH) + last(cal2jd(y, m, d))
@@ -247,9 +257,13 @@ The list is otherwise downloaded on a session's first UTC conversion, if no curr
 so this is only needed to pick up a newly announced leap second before the stored list expires, or
 in a session that has run past the expiry.
 
+# Notes
+This replaces the stored copy of the list and the table in use.
+
 # Returns
-The table now in use. Throws when the download fails, rather than falling back as a first
-conversion does, because a caller who asks for a refresh wants to know it did not happen.
+The table now in use, which prints its last change and its expiry. Throws when the download fails or
+the list is refused, and the table in use stays as it was. A first conversion falls back instead,
+because a caller who asks for a refresh wants to know it did not happen.
 
 # Example
 ```julia
@@ -269,7 +283,7 @@ function _refresh_leap_seconds!(path, url, timeout)
 end
 
 "TAI − UTC in seconds at a UTC date given as days since J2000."
-function tai_minus_utc(utc_days)
+function _tai_minus_utc_days(utc_days)
     table = leap_second_table()
     idx = searchsortedlast(table.starts, utc_days)
     idx < 1 && return _before_leap_seconds()
@@ -279,7 +293,7 @@ function tai_minus_utc(utc_days)
     return table.delta[idx]
 end
 
-# The warnings are kept out of `tai_minus_utc` because a logging macro contains a try block, which
+# The warnings are kept out of `_tai_minus_utc_days` because a logging macro contains a try block, which
 # automatic differentiation cannot compile, and each shows once per session: a propagation or an
 # optimisation converts at every step, and a warning per conversion buries everything else.
 
@@ -320,7 +334,7 @@ TAI − UTC at 0h UTC on a Gregorian date, from the leap-second table. It plays 
 """
 function _dat(iy, im, id)
     djm0, djm = cal2jd(iy, im, id)
-    return tai_minus_utc((djm0 - J2000_EPOCH) + djm)
+    return _tai_minus_utc_days((djm0 - J2000_EPOCH) + djm)
 end
 
 # ─────────────────────────────── UTC ↔ TAI ─────────────────────────────────
@@ -329,7 +343,7 @@ end
 # library). See THIRD_PARTY_NOTICES.md.
 #
 # A UTC two-part date is a quasi-Julian date: on a day that ends with a leap second the fraction of
-# the day runs over 86401 SI seconds, so 23:59:60.5 is day fraction 86399.5/86401 and 0h is still a
+# the day runs over 86401 SI seconds, so 23:59:60.5 is day fraction 86400.5/86401 and 0h is still a
 # whole day. That is ERFA's and Astropy's representation, and so AstroEpochs'.
 
 """

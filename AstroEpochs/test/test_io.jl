@@ -21,9 +21,9 @@ end
     t2 = Time(60369.52426068287, TAI(), MJD())
     t3 = Time(2452090.024260688, TAI(), JD())
 
-    output1 = sprint(show, t1)
-    output2 = sprint(show, t2)
-    output3 = sprint(show, t3)
+    output1 = sprint(show, MIME"text/plain"(), t1)
+    output2 = sprint(show, MIME"text/plain"(), t2)
+    output3 = sprint(show, MIME"text/plain"(), t3)
 
     @test occursin("AstroEpochs.Time", output1)
     @test occursin("scale  = TAI()", output1)
@@ -33,7 +33,7 @@ end
     @test occursin("60369.52426068287", output2)
     @test occursin("format = MJD()", output2)
 
-    @test occursin("2.452090024260688e6", output3)
+    @test occursin("2452090.024260688", output3)
     @test occursin("format = JD()", output3)
 end
 
