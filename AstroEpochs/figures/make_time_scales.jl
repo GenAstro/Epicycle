@@ -4,19 +4,20 @@
 # Draws time_scales.svg for the AstroEpochs guide from AstroEpochs itself. It needs nothing else, and
 # the numbers are the package's own. Rerun it when the conversions change:
 #
-#   julia --project=<env> AstroEpochs/docs/src/assets/make_time_scales.jl
+#   julia --project=<env> AstroEpochs/figures/make_time_scales.jl
 #
 # The form follows Figure 1 of Seidelmann and Fukushima, "Why new time scales?", Astronomy and
 # Astrophysics 265, 833 (1992): every scale against TAI on one axis, with the periodic terms of TDB
-# and TCB magnified by 100 so they can be seen. UTC starts at 1972, where AstroEpochs starts modeling
-# it, and stops at the last year this figure was drawn for, since later leap seconds are unknown.
+# and TCB magnified by 100. UTC starts at 1972, where AstroEpochs starts modeling it, and stops at the
+# last year this figure was drawn for, since later leap seconds are unknown. The names on the lines
+# stand in for a legend, since TT, TDB and TCG run close together and color alone would not tell them.
 
 using AstroEpochs
 
 const INK, MUTED, GRID, SURFACE = "#0b0b0b", "#52514e", "#dcdbd5", "#fcfcfb"
 const COLORS = (TAI = "#2a78d6", TT = "#eb6834", TDB = "#1baf7a", TCG = "#eda100", TCB = "#e87ba4", UTC = "#008300")
-const WIDTH, HEIGHT = 860, 540
-const LEFT, RIGHT, TOP, BOTTOM = 70, 24, 54, 52
+const WIDTH, HEIGHT = 860, 510
+const LEFT, RIGHT, TOP, BOTTOM = 70, 24, 24, 52
 
 const FIRST_YEAR, LAST_YEAR, LAST_UTC_YEAR = 1950.0, 2030.0, 2026.0
 const MAGNIFY_PERIODIC = 100.0
@@ -51,7 +52,7 @@ function draw(path)
               (:UTC, leap, utc_offset, ""))
 
     open(path, "w") do io
-        println(io, """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $WIDTH $HEIGHT" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="Each time scale's offset from TAI from 1950 to 2030. TT is a constant 32.184 seconds. TDB and TCG stay close to TT. TCB drifts from about 19 to about 58 seconds. UTC steps down from minus 10 seconds at 1972 to minus 37 seconds.">""")
+        println(io, """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $WIDTH $HEIGHT" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="Each time scale's offset from TAI from 1950 to 2030, with the periodic terms of TDB and TCB magnified by 100. TT is a constant 32.184 seconds. TDB and TCG stay close to TT. TCB drifts from about 19 to about 58 seconds. UTC steps down from minus 10 seconds at 1972 to minus 37 seconds, and ends at 2026.">""")
         println(io, """<rect width="$WIDTH" height="$HEIGHT" fill="$SURFACE"/>""")
 
         for y in ymin:20.0:ymax
@@ -70,14 +71,8 @@ function draw(path)
             println(io, """<polyline points="$points" fill="none" stroke="$(COLORS[name])" stroke-width="2" stroke-linejoin="round"$dashes/>""")
         end
 
-        # The legend, then the names on the lines, since TT, TDB and TCG run close together.
-        x = float(LEFT)
-        for (name, _, _, dash) in series
-            dashes = isempty(dash) ? "" : """ stroke-dasharray="$dash\""""
-            println(io, """<line x1="$x" x2="$(x + 26)" y1="26" y2="26" stroke="$(COLORS[name])" stroke-width="2"$dashes/>""")
-            println(io, """<text x="$(x + 32)" y="31" font-size="14" fill="$INK">$name</text>""")
-            x += 88
-        end
+        println(io, """<text x="$(px(1952.0))" y="$(py(13.0))" font-size="13" fill="$MUTED">Periodic terms of TDB and TCB × 100</text>""")
+        println(io, """<text x="$(px(LAST_UTC_YEAR) + 6)" y="$(py(utc_offset(LAST_UTC_YEAR)) + 4)" font-size="13" fill="$MUTED">$(Int(LAST_UTC_YEAR))</text>""")
         for (name, year, value, label_year, label_value) in (("TCB", 2006.0, tcb_offset(2006.0), 1999.0, 52.0),
                                                              ("TDB", 1962.0, tdb_offset(1962.0), 1956.0, 43.0),
                                                              ("TCG", 2018.0, tcg_offset(2018.0), 2022.0, 42.0),
@@ -91,4 +86,4 @@ function draw(path)
     end
 end
 
-draw(joinpath(@__DIR__, "time_scales.svg"))
+draw(joinpath(@__DIR__, "..", "docs", "src", "assets", "time_scales.svg"))

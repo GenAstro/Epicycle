@@ -20,8 +20,8 @@ makedocs(;
     pages=[
         "index.md",
     ],
-    warnonly=[:missing_docs, :cross_references],   # doctests and examples are fatal
-    checkdocs=:none        # Skip docstring completeness checks
+    warnonly=[:cross_references],   # doctests are fatal, and so is an exported name with no docstring
+    checkdocs=:exports
 )
 
 deploydocs(;

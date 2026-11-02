@@ -24,7 +24,7 @@
 <text x="70" y="105" font-size="12" text-anchor="middle" fill="#52514e">civil</text>
 <rect x="380.0" y="61.0" width="92" height="58" rx="4" fill="#ffffff" stroke="#eb6834" stroke-width="2.5"/>
 <text x="426" y="87" font-size="16" font-weight="600" text-anchor="middle" fill="#0b0b0b">TT</text>
-<text x="426" y="105" font-size="12" text-anchor="middle" fill="#52514e">Earth dynamics</text>
+<text x="426" y="105" font-size="12" text-anchor="middle" fill="#52514e">terrestrial</text>
 <rect x="558.0" y="61.0" width="92" height="58" rx="4" fill="#ffffff" stroke="#1baf7a" stroke-width="2.5"/>
 <text x="604" y="87" font-size="16" font-weight="600" text-anchor="middle" fill="#0b0b0b">TDB</text>
 <text x="604" y="105" font-size="12" text-anchor="middle" fill="#52514e">solar system</text>

@@ -5,7 +5,7 @@
 # separates them. It stops with an error if the links drawn here are not the links AstroEpochs has, so
 # the figure cannot drift from the code. Rerun it when the conversion graph changes:
 #
-#   julia --project=<env> AstroEpochs/docs/src/assets/make_scale_graph.jl
+#   julia --project=<env> AstroEpochs/figures/make_scale_graph.jl
 
 using AstroEpochs
 
@@ -16,7 +16,7 @@ const NODE_W, NODE_H = 92, 58
 # The colors match time_scales.svg, so a scale looks the same in both figures.
 const NODES = (tai = (name = "TAI", about = "atomic", x = 248, y = 90, color = "#2a78d6"),
                utc = (name = "UTC", about = "civil", x = 70, y = 90, color = "#008300"),
-               tt  = (name = "TT", about = "Earth dynamics", x = 426, y = 90, color = "#eb6834"),
+               tt  = (name = "TT", about = "terrestrial", x = 426, y = 90, color = "#eb6834"),
                tdb = (name = "TDB", about = "solar system", x = 604, y = 90, color = "#1baf7a"),
                tcb = (name = "TCB", about = "barycentric", x = 782, y = 90, color = "#e87ba4"),
                tcg = (name = "TCG", about = "geocentric", x = 426, y = 256, color = "#eda100"))
@@ -66,4 +66,4 @@ function draw(path)
     end
 end
 
-draw(joinpath(@__DIR__, "scale_graph.svg"))
+draw(joinpath(@__DIR__, "..", "docs", "src", "assets", "scale_graph.svg"))

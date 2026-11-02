@@ -1,25 +1,6 @@
-
 # AstroEpochs
 
-## Epicycle Overview
-
-Epicycle is an application and package ecosystem for space mission design and navigation. It contains packages that handle astrodynamics models and algorithms that integrate seamlessly to allow users to setup and solve hard problems, fast.
-
-## AstroEpochs Overview
-
-The AstroEpochs module provides time system implementations for astronomical applications. AstroEpochs supports high-precision time representations using dual-float Julian Date storage - parameterized for differentiability - and conversions between time scales and formats.  
-
-The API for AstroEpochs is inspired by AstroPy.time which allows for an interface that works across Epicycle components and provides type stability when time systems must change during a simulation. 
-
-Acknowledgement: the time-scale transforms, TDB − TT, calendar and ISOT formatting in AstroEpochs are ported from ERFA (BSD 3-Clause), the library Astropy uses, and the two-part date normalisation from Astropy (BSD 3-Clause). The built-in leap-second table was adapted from Julia Space Mission Design's Tempo.jl (MIT). See `THIRD_PARTY_NOTICES.md`.
-
-**Key Features:**
-- **High-precision storage** using dual Float64 values (`jd1`, `jd2`) to represent Julian Dates
-- **Automatic scale conversion** via property access (e.g., `t.tt`, `t.utc`, `t.tdb`)
-- **Multiple input formats** including Julian Date, Modified Julian Date, and ISO 8601 strings
-- **Time arithmetic** supporting addition and subtraction of time intervals
-- **One type across scales**, so a scale change does not change the type of a `Time`
-- **Differentiability** using standard packages such as ForwardDiff and Zygote
+AstroEpochs provides `Time`, an astronomical epoch held as a two-part Julian date in TAI, TT, UTC, TDB, TCB or TCG. It converts between those scales, reads and writes Julian dates, Modified Julian Dates and ISO 8601 timestamps, and keeps the IERS leap-second list current. Its algorithms are ERFA's, and it is tested against Astropy.
 
 ## Installation
 
@@ -28,21 +9,6 @@ using Pkg
 Pkg.add("AstroEpochs")
 ```
 
-## Documentation
+## Usage
 
-Full documentation is available at: [AstroEpochs Documentation](https://genastro.github.io/Epicycle/AstroEpochs/dev/)
-
-## Comparison with Other Julia Time-Keeping Libraries
-
-Tempo.jl and AstroTime.jl also handle astronomical time in Julia. AstroTime.jl, from the JuliaAstro community, supports six time scales (TAI, TT, TCG, TCB, TDB and UT1) with a separate type for each scale, so a conversion changes the type. Tempo.jl supports UTC, TAI, TT, TDB, TCG and TCB with allocation-free conversions, and changes scale without changing the type. AstroEpochs also keeps one type across scales, which Epicycle's propagation and optimization rely on, but its conversions are not allocation-free: TT ↔ TDB evaluates ERFA's 787-term series, 2.5 to 6.5 µs a conversion depending on the epoch, and allocates a little. AstroEpochs follows the interface of Astropy's `Time` and uses its algorithms (ERFA), agreeing with it to the last bit of the date, and keeps the IERS leap-second list current itself.
-
-## Contributing
-
-The terms for contributions are in [LICENSE.md](LICENSE.md).
-
-## License
-
-AstroEpochs is open source under the [MIT License](LICENSE.md).
-
-## Notes
-Claude Sonnet and ChatGPT are used in the development of Epicycle.
+Full documentation is available on the AstroEpochs documentation site.
