@@ -138,7 +138,7 @@ The conversions are written to resemble astrodynamics textbooks with the intenti
 
 ## Automatic Differentiation 
 
-The conversions are differentiable with ForwardDiff, including at periapsis, apoapsis and a zero node or argument of periapsis. The test suite checks this for every representation: the Jacobian of the conversion from Cartesian times the Jacobian of the conversion back is the identity, and each conversion to Cartesian matches finite differences. Where a Keplerian element is undefined, at the node of an exactly equatorial orbit or the periapsis of an exactly circular one, it has no derivative, and the one returned is not meaningful. The equinoctial, alternate equinoctial and modified equinoctial elements are defined there, and so are their derivatives.
+AstroStates conversions are differentiable with ForwardDiff.
 
 ```julia
 using ForwardDiff
