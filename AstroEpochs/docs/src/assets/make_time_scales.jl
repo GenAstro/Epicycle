@@ -5,60 +5,88 @@
 # the numbers are the package's own. Rerun it when the conversions change:
 #
 #   julia --project=<env> AstroEpochs/docs/src/assets/make_time_scales.jl
+#
+# The form follows Figure 1 of Seidelmann and Fukushima, "Why new time scales?", Astronomy and
+# Astrophysics 265, 833 (1992): every scale against TAI on one axis, with the periodic terms of TDB
+# and TCB magnified by 100 so they can be seen. UTC starts at 1972, where AstroEpochs starts modeling
+# it, and stops at the last year this figure was drawn for, since later leap seconds are unknown.
 
 using AstroEpochs
 
-const INK, MUTED, GRID, MARK = "#1f2933", "#52606d", "#d9dee3", "#1f6f8b"
-const PANEL_W, PANEL_H, LEFT, TOP, GAP_X, GAP_Y = 400, 200, 70, 44, 90, 84
+const INK, MUTED, GRID, SURFACE = "#0b0b0b", "#52514e", "#dcdbd5", "#fcfcfb"
+const COLORS = (TAI = "#2a78d6", TT = "#eb6834", TDB = "#1baf7a", TCG = "#eda100", TCB = "#e87ba4", UTC = "#008300")
+const WIDTH, HEIGHT = 860, 540
+const LEFT, RIGHT, TOP, BOTTOM = 70, 24, 54, 52
+
+const FIRST_YEAR, LAST_YEAR, LAST_UTC_YEAR = 1950.0, 2030.0, 2026.0
+const MAGNIFY_PERIODIC = 100.0
+const TT_MINUS_TAI = 32.184
 
 year_jd(y) = 2451545.0 + (y - 2000.0) * 365.25
-date_at(y, scale) = Time(year_jd(y), scale, JD())
-parts_minus(a, b) = ((a.jd1 - b.jd1) + (a.jd2 - b.jd2)) * 86400.0   # seconds between the numbers
+parts_minus(a, b) = ((a.jd1 - b.jd1) + (a.jd2 - b.jd2)) * 86400.0     # seconds between the two dates
 
-# Each panel's numbers.
-const LONG = range(1972.01, 2030.0; length = 240)
+tai_at(y) = Time(year_jd(y), TAI(), JD())
+periodic(y) = tdb_minus_tt(tai_at(y))
 
-function leap_series()
-    ys = [tai_minus_utc(date_at(y, UTC())) for y in range(1972.01, 2030.0; length = 2320)]
-    return collect(range(1972.01, 2030.0; length = 2320)), ys
-end
-
-tcg_series() = (collect(LONG), [parts_minus(date_at(y, TT()).tcg, date_at(y, TT())) for y in LONG])
-tcb_series() = (collect(LONG), [parts_minus(date_at(y, TDB()).tcb, date_at(y, TDB())) for y in LONG])
-
-function tdb_series()
-    xs = collect(range(2020.0, 2024.0; length = 480))
-    return xs, [tdb_minus_tt(date_at(y, TT())) * 1e3 for y in xs]
-end
-
-function panel(io, col, row, title, xs, ys, xticks, yticks)
-    x0 = LEFT + col * (PANEL_W + GAP_X)
-    y0 = TOP + row * (PANEL_H + GAP_Y)
-    px(x) = x0 + (x - first(xticks)) / (last(xticks) - first(xticks)) * PANEL_W
-    py(y) = y0 + PANEL_H - (y - first(yticks)) / (last(yticks) - first(yticks)) * PANEL_H
-    println(io, """<text x="$x0" y="$(y0 - 14)" font-size="16" font-weight="600" fill="$INK">$title</text>""")
-    for t in yticks
-        println(io, """<line x1="$x0" x2="$(x0 + PANEL_W)" y1="$(py(t))" y2="$(py(t))" stroke="$GRID" stroke-width="1"/>""")
-        println(io, """<text x="$(x0 - 10)" y="$(py(t) + 4)" font-size="13" text-anchor="end" fill="$MUTED">$(t)</text>""")
-    end
-    for t in xticks
-        println(io, """<text x="$(px(t))" y="$(y0 + PANEL_H + 22)" font-size="13" text-anchor="middle" fill="$MUTED">$(Int(t))</text>""")
-    end
-    points = join(("$(round(px(x); digits = 2)),$(round(py(y); digits = 2))" for (x, y) in zip(xs, ys)), " ")
-    println(io, """<polyline points="$points" fill="none" stroke="$MARK" stroke-width="2" stroke-linejoin="round"/>""")
-end
+tt_offset(y)  = parts_minus(tai_at(y).tt, tai_at(y))
+tcg_offset(y) = parts_minus(tai_at(y).tcg, tai_at(y))
+tdb_offset(y) = TT_MINUS_TAI + MAGNIFY_PERIODIC * periodic(y)
+tcb_offset(y) = parts_minus(tai_at(y).tcb, tai_at(y).tdb) + TT_MINUS_TAI + MAGNIFY_PERIODIC * periodic(y)
+utc_offset(y) = -tai_minus_utc(Time(year_jd(y), UTC(), JD()))
 
 function draw(path)
-    width  = LEFT + 2PANEL_W + GAP_X + 30
-    height = TOP + 2PANEL_H + GAP_Y + 44
+    plot_w, plot_h = WIDTH - LEFT - RIGHT, HEIGHT - TOP - BOTTOM
+    ymin, ymax = -40.0, 60.0
+    px(x) = round(LEFT + (x - FIRST_YEAR) / (LAST_YEAR - FIRST_YEAR) * plot_w; digits = 1)
+    py(y) = round(TOP + plot_h - (y - ymin) / (ymax - ymin) * plot_h; digits = 1)
+
+    fine = collect(range(FIRST_YEAR, LAST_YEAR; length = 1600))
+    coarse = [FIRST_YEAR, LAST_YEAR]
+    leap = collect(range(1972.01, LAST_UTC_YEAR; length = 2160))
+    series = ((:TAI, coarse, y -> 0.0, ""),
+              (:TDB, fine, tdb_offset, ""),
+              (:TT, coarse, tt_offset, ""),      # over the TDB curve, whose middle it runs through
+              (:TCG, coarse, tcg_offset, "7 4"),
+              (:TCB, fine, tcb_offset, ""),
+              (:UTC, leap, utc_offset, ""))
+
     open(path, "w") do io
-        println(io, """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $width $height" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="Four panels against time: TAI minus UTC steps from 10 to 37 seconds, TDB minus TT oscillates within about 1.7 milliseconds each year, and TCG minus TT and TCB minus TDB each drift steadily.">""")
-        println(io, """<rect width="$width" height="$height" fill="#ffffff"/>""")
-        decades = 1970.0:20.0:2030.0
-        panel(io, 0, 0, "TAI − UTC, s: a step at each leap second", leap_series()..., decades, 0.0:10.0:40.0)
-        panel(io, 1, 0, "TDB − TT, ms: a yearly cycle (2020 to 2024)", tdb_series()..., 2020.0:1.0:2024.0, -2.0:1.0:2.0)
-        panel(io, 0, 1, "TCG − TT, s: a steady drift", tcg_series()..., decades, -0.5:0.5:1.5)
-        panel(io, 1, 1, "TCB − TDB, s: a faster steady drift", tcb_series()..., decades, -10.0:10.0:30.0)
+        println(io, """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $WIDTH $HEIGHT" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="Each time scale's offset from TAI from 1950 to 2030. TT is a constant 32.184 seconds. TDB and TCG stay close to TT. TCB drifts from about 19 to about 58 seconds. UTC steps down from minus 10 seconds at 1972 to minus 37 seconds.">""")
+        println(io, """<rect width="$WIDTH" height="$HEIGHT" fill="$SURFACE"/>""")
+
+        for y in ymin:20.0:ymax
+            println(io, """<line x1="$LEFT" x2="$(LEFT + plot_w)" y1="$(py(y))" y2="$(py(y))" stroke="$GRID" stroke-width="1"/>""")
+            println(io, """<text x="$(LEFT - 10)" y="$(py(y) + 4)" font-size="13" text-anchor="end" fill="$MUTED">$(Int(y))</text>""")
+        end
+        for x in FIRST_YEAR:10.0:LAST_YEAR
+            println(io, """<text x="$(px(x))" y="$(TOP + plot_h + 22)" font-size="13" text-anchor="middle" fill="$MUTED">$(Int(x))</text>""")
+        end
+        println(io, """<text x="$(LEFT + plot_w / 2)" y="$(HEIGHT - 8)" font-size="13" text-anchor="middle" fill="$MUTED">Year</text>""")
+        println(io, """<text transform="translate(18 $(TOP + plot_h / 2)) rotate(-90)" font-size="13" text-anchor="middle" fill="$MUTED">Offset from TAI, s</text>""")
+
+        for (name, xs, f, dash) in series
+            points = join(("$(px(x)),$(py(f(x)))" for x in xs), " ")
+            dashes = isempty(dash) ? "" : """ stroke-dasharray="$dash\""""
+            println(io, """<polyline points="$points" fill="none" stroke="$(COLORS[name])" stroke-width="2" stroke-linejoin="round"$dashes/>""")
+        end
+
+        # The legend, then the names on the lines, since TT, TDB and TCG run close together.
+        x = float(LEFT)
+        for (name, _, _, dash) in series
+            dashes = isempty(dash) ? "" : """ stroke-dasharray="$dash\""""
+            println(io, """<line x1="$x" x2="$(x + 26)" y1="26" y2="26" stroke="$(COLORS[name])" stroke-width="2"$dashes/>""")
+            println(io, """<text x="$(x + 32)" y="31" font-size="14" fill="$INK">$name</text>""")
+            x += 88
+        end
+        for (name, year, value, label_year, label_value) in (("TCB", 2006.0, tcb_offset(2006.0), 1999.0, 52.0),
+                                                             ("TDB", 1962.0, tdb_offset(1962.0), 1956.0, 43.0),
+                                                             ("TCG", 2018.0, tcg_offset(2018.0), 2022.0, 42.0),
+                                                             ("TT", 1993.0, TT_MINUS_TAI, 1999.0, 21.0),
+                                                             ("TAI", 2010.0, 0.0, 2014.0, 7.0),
+                                                             ("UTC", 1990.0, utc_offset(1990.0), 1982.0, -33.0))
+            println(io, """<line x1="$(px(label_year))" y1="$(py(label_value))" x2="$(px(year))" y2="$(py(value))" stroke="$MUTED" stroke-width="1"/>""")
+            println(io, """<text x="$(px(label_year))" y="$(py(label_value) + (label_value > value ? -5 : 15))" font-size="14" text-anchor="middle" fill="$INK">$name</text>""")
+        end
         println(io, "</svg>")
     end
 end

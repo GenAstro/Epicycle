@@ -83,9 +83,11 @@ AstroEpochs supports various astronomical time scales.
 | **TCB** | Barycentric Coordinate Time - Coordinate time in the barycentric reference system |
 | **TCG** | Geocentric Coordinate Time - Coordinate time in the geocentric reference system |
 
-The scales differ in ways worth seeing. TT and TAI differ by a constant 32.184 s, so they are not shown here. UTC steps at each leap second. TDB swings about TT over the year. TCG and TCB each run at a steady rate against TT and TDB.
+The figure shows every scale against TAI. TT sits a constant 32.184 s away. TDB follows TT with a yearly cycle of about 1.7 ms, and TCB adds the same cycle to a steady drift. TCG drifts slowly away from TT. UTC steps at each leap second. The periodic terms of TDB and TCB are magnified by 100 so they can be seen.
 
-![How the time scales differ: TAI − UTC steps at each leap second, TDB − TT cycles over a year, and TCG − TT and TCB − TDB drift steadily.](assets/time_scales.svg)
+![Each time scale's offset from TAI from 1950 to 2030. TT is a constant 32.184 s, TDB and TCG stay close to it, TCB drifts from about 19 s to about 58 s, and UTC steps from −10 s at 1972 to −37 s.](assets/time_scales.svg)
+
+*The numbers are from AstroEpochs. The form of the figure follows Figure 1 of Seidelmann and Fukushima, "Why new time scales?", Astronomy and Astrophysics 265, 833 (1992).*
 
 Use UTC for the times you read in and write out. It is a civil scale built for clocks, not one to do dynamics in, so Epicycle's models work in TT and TDB. UTC is defined from 1972 here: before that date AstroEpochs uses TAI − UTC = 0 and warns, where the historical offset was up to about 10 s.
 
