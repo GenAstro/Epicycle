@@ -16,7 +16,24 @@ const EA = EpicycleIO
 const W = 2π / 5400                                                    # rad/s
 circ(s) = [7000cos(W * s), 7000sin(W * s), 0.0, -7000W * sin(W * s), 7000W * cos(W * s), 0.0]
 const T0 = Time("2026-10-21T00:00:00", UTC(), ISOT())
-at(s) = Time(T0.jd1, T0.jd2 + s / 86400, :utc, :jd)
+at(s) = Time(T0.jd1, T0.jd2 + s / 86400, UTC(), JD())
+
+@testset "ephemeris times — seconds across a leap second are elapsed seconds" begin
+    a = Time("2016-12-31T23:59:00.000", UTC(), ISOT())
+    b = Time("2017-01-01T00:01:00.000", UTC(), ISOT())
+    @test EA._seconds(a, b) ≈ 121.0 atol = 1e-6
+    @test EA._seconds(b, a) ≈ -121.0 atol = 1e-6
+    @test EA._seconds(a, b.tdb) ≈ 121.0 atol = 1e-4
+    @test EA._seconds(a, a) == 0.0
+    @test EA._seconds_after(a, 121.0).isot == b.isot
+    @test EA._seconds_after(a, 60.5).isot == "2016-12-31T23:59:60.500"
+    @test EA._seconds_after(a, 0.0).scale === UTC()
+
+    # Other scales measure in their own.
+    t = b.tdb
+    @test EA._seconds(t, t + 1.0) ≈ 86400.0 atol = 1e-6
+    @test EA._seconds_after(t, 86400.0) - t ≈ 1.0 atol = 1e-12
+end
 
 function history(ranges...; cs = CoordinateSystem(earth, ICRF()), interp = nothing)
     segs = HistorySegment[]
@@ -380,7 +397,7 @@ end
         @test maximum(dist(to_vector(x), truth(t)) for (t, x) in zip(s.times, s.states)) < at_epochs
         @test all(to_vector(CartesianState(state_at(eph, t))) == to_vector(x) for (t, x) in zip(s.times, s.states))
         # Halfway between each pair, interpolated with the file's own method.
-        mids = [Time(a.jd1, a.jd2 + EA._seconds(a, b) / 2 / 86400, a.scale, :jd) for (a, b) in zip(s.times[1:end-1], s.times[2:end])]
+        mids = [Time(a.jd1, a.jd2 + EA._seconds(a, b) / 2 / 86400, a.scale, JD()) for (a, b) in zip(s.times[1:end-1], s.times[2:end])]
         @test maximum(dist(to_vector(CartesianState(state_at(eph, t))), truth(t)) for t in mids) < between
     end
 end

@@ -553,7 +553,7 @@ const _TT_MINUS_TAI = 32.184
 # indexes the leap-second table correctly, so TAI − UTC is read from it and the date formed
 # from TT, which has no leap seconds.
 function _ordinary_utc_jd(t::Time)
-    dat = AstroEpochs.tai_minus_utc(t.utc.jd - 2451545.0)
+    dat = AstroEpochs.tai_minus_utc(t)
     return t.tt.jd1 + (t.tt.jd2 - (_TT_MINUS_TAI + dat) / 86_400)
 end
 

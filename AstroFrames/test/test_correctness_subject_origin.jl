@@ -31,7 +31,7 @@ using EpicycleBase: AbstractPoint
 using LinearAlgebra
 using Test
 
-const _SUBJ_EPOCH = Time(2458849.5, 0.0, :tdb, :jd)
+const _SUBJ_EPOCH = Time(2458849.5, 0.0, TDB(), JD())
 
 """A minimal origin that carries its own state, as a spacecraft does."""
 struct _Chief <: AbstractPoint
@@ -146,7 +146,7 @@ end
     # build the frame from an orbit the origin has since left, and be wrong by
     # however far it moved — silently. Made loud.
     later = _subject([7010.0, 0.0, 0.0, 0.0, 7.546, 0.0],
-                     Time(2458850.5, 0.0, :tdb, :jd))     # one day on
+                     Time(2458850.5, 0.0, TDB(), JD()))     # one day on
 
     message = try
         Coordinate(later, CoordinateSystem(_CHIEF, RIC()))

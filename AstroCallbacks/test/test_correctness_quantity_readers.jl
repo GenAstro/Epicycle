@@ -24,7 +24,7 @@ using AstroUniverse
 using LinearAlgebra
 using EpicycleBase: label, is_cyclic, cycle, is_settable
 
-const _EPOCH = Time(2458849.5, 0.0, :tdb, :jd)
+const _EPOCH = Time(2458849.5, 0.0, TDB(), JD())
 
 _subject() = Spacecraft(CartesianState([7000.0, 1000.0, 2000.0, 1.5, 6.5, 1.0]), _EPOCH;
                         coord_sys = CoordinateSystem(earth, ICRF()))

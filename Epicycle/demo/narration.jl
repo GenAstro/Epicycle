@@ -180,7 +180,7 @@ Each epoch is put in TT first: a history can hold segments recorded in different
 and `Time - Time` refuses a difference across them.
 """
 function _hours(times)
-    tt = [x.scale === :tt ? x : x.tt for x in times]
+    tt = [x.tt for x in times]
     return [((x.jd1 - tt[1].jd1) + (x.jd2 - tt[1].jd2)) * 24 for x in tt]
 end
 

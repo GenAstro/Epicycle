@@ -6,41 +6,18 @@ using AstroEpochs
 
 @testset "Time Input Validation" begin
 
-# Invalid scale 
-#@test begin
-#    err = try
-#        Time(2451545.0, 0.0, "tt", :jd)
-#        nothing
-#    catch e
-#        e
-#    end
-#    err isa ArgumentError && occursin("invalid time input types. scale must be Symbol; got String.", sprint(showerror, err))
-#end
-#=
-# Invalid scale (scale passed as String)
-err_scale = let e = try
-        Time(2451545.0, 0.0, "tt", :jd)
-        nothing
-    catch err
-        err
-    end
-    e
+# Scales and formats are tags. A symbol or a string fails with a message that shows the tag form.
+for bad in (() -> Time(2451545.0, 0.0, :tt, JD()), () -> Time(2451545.0, :tt, JD()),
+            () -> Time("2024-01-01T00:00:00", :tt, ISOT()), () -> Time(2451545.0, 0.0, "tt", JD()))
+    err = try bad(); nothing catch e; e end
+    @test err isa ArgumentError
+    @test occursin("scale must be a time scale tag such as TT()", sprint(showerror, err))
 end
-@test err_scale isa ArgumentError
-@test sprint(showerror, err_scale) == "ArgumentError: Time: invalid time input types. scale must be Symbol; got String."
-
-# Invalid format (format passed as String)
-err_format = let e = try
-        Time(2451545.0, 0.0, :tt, "jd")
-        nothing
-    catch err
-        err
-    end
-    e
+for bad in (() -> Time(2451545.0, 0.0, TT(), :jd), () -> Time(2451545.0, TT(), :jd))
+    err = try bad(); nothing catch e; e end
+    @test err isa ArgumentError
+    @test occursin("format must be a time format tag such as JD()", sprint(showerror, err))
 end
-@test err_format isa ArgumentError
-@test sprint(showerror, err_format) == "ArgumentError: Time: invalid time input types. format must be Symbol; got String."
-=#
 # Tests error in input format coupling 
 @test begin
     err = try
@@ -55,7 +32,7 @@ end
 # Test error is thrown when Real is provided for ISOT format. 
 @test begin
     err = try
-        Time(59000.0, :tt, :isot)  # Real with :isot triggers Unsupported time format
+        Time(59000.0, TT(), ISOT())  # Real with :isot triggers Unsupported time format
         nothing
     catch e
         e
@@ -66,10 +43,7 @@ end
 
 
 # get_conversion_path (scales/graph.jl): the reverse MULTI_HOPS path
-#@test begin
-#    p = AstroEpochs.get_conversion_path(:tcb, :tai)  
-#    p == [:tcb, :tdb, :tt, :tai]
-#end
+@test AstroEpochs.get_conversion_path(:tcb, :tai) == [:tcb, :tdb, :tt, :tai]
 
 
 # Test missing path is trapped and thrown
@@ -83,7 +57,7 @@ end
     err !== nothing && occursin("No known time scale conversion path", sprint(showerror, err))
 end
 
-# Invalid input types path (non-Symbol scale/format)
+# Invalid input types path
 @test_throws ArgumentError Time(2451545.0, 0.25, 42, 99)
    
 end

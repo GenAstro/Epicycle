@@ -420,7 +420,7 @@ end
         # tested — most of this suite calls the scalar form, which would
         # otherwise leave the `Time` path almost unexercised.
         jd = 2458849.5
-        t  = Time(jd, 0.0, :tdb, :jd)
+        t  = Time(jd, 0.0, TDB(), JD())
         for (a, b) in ((ICRF(), MJ2000Eq()), (ICRF(), MODEq()),
                        (MODEq(), TODEq()),   (TODEq(), PEF()),
                        (PEF(), ITRF()),      (GCRF(), CIRS()),
@@ -430,7 +430,7 @@ end
         # The scalar form means TDB, and nothing but the docstring says so —
         # which is why the Time form exists.
         @test axes_rotation(ICRF(), ITRF(), jd) ==
-              axes_rotation(ICRF(), ITRF(), Time(jd, 0.0, :tdb, :jd))
+              axes_rotation(ICRF(), ITRF(), Time(jd, 0.0, TDB(), JD()))
     end
 
     @testset "Correctness: edge_theory is declared both ways round" begin
@@ -453,7 +453,7 @@ end
     @testset "Correctness: the epoch accessors read the scales they name" begin
         # The public way a user's own frame reads the epoch. Reading the wrong
         # scale is a ~70 s error, invisible in a rotation matrix.
-        t = Time(_EPOCHS[2], 0.0, :tdb, :jd)
+        t = Time(_EPOCHS[2], 0.0, TDB(), JD())
         e = AstroFrames._scales(t)
 
         @test epoch_tdb(e) == t.tdb.jd
@@ -506,15 +506,15 @@ end
         # linear terms differ by another 0.12 mas/century. It showed up only in
         # the ecliptic edges, where ε appears as a single rotation with nothing
         # to cancel against.
-        e0 = EpochScales(Time(2451545.0, 0.0, :tt, :jd))
+        e0 = EpochScales(Time(2451545.0, 0.0, TT(), JD()))
         @test rad2deg(AstroFrames._mean_obliquity(e0)) * 3600 ≈ 84_381.448 atol = 1e-6
 
         # The rotation actually applied by the edge carries the same value.
-        R = axes_rotation(MODEq(), MODEc(), Time(2451545.0, 0.0, :tt, :jd))[1:3, 1:3]
+        R = axes_rotation(MODEq(), MODEc(), Time(2451545.0, 0.0, TT(), JD()))[1:3, 1:3]
         @test rad2deg(atan(R[2, 3], R[2, 2])) * 3600 ≈ 84_381.448 atol = 1e-6
 
         # And the drift matches the published rate over a century.
-        e1 = EpochScales(Time(2451545.0 + 36_525.0, 0.0, :tt, :jd))
+        e1 = EpochScales(Time(2451545.0 + 36_525.0, 0.0, TT(), JD()))
         drift = (AstroFrames._mean_obliquity(e1) - AstroFrames._mean_obliquity(e0))
         @test rad2deg(drift) * 3600 ≈ -46.8150 - 0.00059 + 0.001813 atol = 1e-6
     end
@@ -537,8 +537,8 @@ end
         # instead of TDB must give a different answer, because it is a
         # different instant — 64 s apart at J2000.
         jd    = 2458849.5
-        M_tdb = axes_rotation(ICRF(), MODEq(), Time(jd, 0.0, :tdb, :jd))
-        M_utc = axes_rotation(ICRF(), MODEq(), Time(jd, 0.0, :utc, :jd))
+        M_tdb = axes_rotation(ICRF(), MODEq(), Time(jd, 0.0, TDB(), JD()))
+        M_utc = axes_rotation(ICRF(), MODEq(), Time(jd, 0.0, UTC(), JD()))
         @test M_tdb != M_utc
 
         # And the bare-number entry point means TDB.

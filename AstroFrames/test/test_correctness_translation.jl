@@ -52,12 +52,12 @@ const _JD = 2458849.5
         # The `Time` overload is the one a user reaches for, because a `Time`
         # carries its own scale and cannot be passed as the wrong one.
         Δ_jd   = origin_translation(earth, moon, ICRF(), _JD)
-        Δ_time = origin_translation(earth, moon, ICRF(), Time(_JD, 0.0, :tdb, :jd))
+        Δ_time = origin_translation(earth, moon, ICRF(), Time(_JD, 0.0, TDB(), JD()))
         @test all(isapprox.(Δ_jd, Δ_time; rtol = 1e-14))
 
         # And the scale is honoured rather than ignored: the same number read
         # as UTC is a different instant, so the Moon is somewhere else.
-        Δ_utc = origin_translation(earth, moon, ICRF(), Time(_JD, 0.0, :utc, :jd))
+        Δ_utc = origin_translation(earth, moon, ICRF(), Time(_JD, 0.0, UTC(), JD()))
         @test !all(isapprox.(Δ_jd, Δ_utc; rtol = 1e-12))
     end
 

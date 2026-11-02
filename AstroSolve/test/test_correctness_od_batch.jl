@@ -64,7 +64,7 @@ _od_sc(y0) = Spacecraft(state = CartesianState(copy(y0)), time = _OD_T0,
 # though both store the same `jd1 + jd2`. Records read from a TDM carry `isot`, so relabel the
 # generated epochs to match rather than handing the estimator data no file would produce. The
 # numbers are untouched; only the tag changes.
-_od_as_isot(t) = AstroEpochs._time_jd(t.jd1, t.jd2, t.scale, :isot)   # Julian-date parts, shown as ISOT
+_od_as_isot(t) = Time(t, ISOT())
 
 # The measurements a single station reports, which is what a TDM from that station carries.
 _od_specs(gs, sc) = AbstractMeasurement[

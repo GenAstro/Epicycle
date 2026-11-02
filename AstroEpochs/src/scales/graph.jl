@@ -81,6 +81,9 @@ function apply_transforms(jd1::Real, jd2::Real, from::Symbol, to::Symbol)
     # type part-way would make the whole conversion type-unstable.
     T = promote_type(typeof(jd1), typeof(jd2), Float64)
     a1, a2 = T(jd1), T(jd2)
+    # A time with no finite date stays that way in every scale, so an optimizer can step through
+    # one and be told by what it computes, rather than by the leap-second lookup failing.
+    isfinite(a1 + a2) || return (T(NaN), T(NaN))
     s = from
     while s !== to
         n = _next_scale(s, to)

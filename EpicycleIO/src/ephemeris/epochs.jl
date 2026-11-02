@@ -6,8 +6,9 @@
 
 # Time systems an ephemeris file may use, by the name files give them. GPS is not an AstroEpochs
 # scale; it is TAI less 19 s exactly, so it is read and written through TAI.
-const _TIME_SYSTEMS = Dict("UTC" => :utc, "TAI" => :tai, "TT" => :tt, "TDB" => :tdb,
-                           "TCB" => :tcb, "TCG" => :tcg, "GPS" => :gps)
+struct _GpsTime end
+const _TIME_SYSTEMS = Dict{String, Any}("UTC" => UTC(), "TAI" => TAI(), "TT" => TT(), "TDB" => TDB(),
+                                        "TCB" => TCB(), "TCG" => TCG(), "GPS" => _GpsTime())
 const _GPS_MINUS_TAI = -19.0                                       # s
 # Registered systems Epicycle cannot convert, so a file using one is named clearly rather than
 # misread.
@@ -64,19 +65,19 @@ function _parse_epoch(text::AbstractString, system::AbstractString)
     (sec < 60 || (system == "UTC" && sec < 61)) ||
         return nothing, notes, "seconds $sec out of range" * (system == "UTC" ? "" : "; only UTC has leap seconds")
     scale = _TIME_SYSTEMS[system]
-    if scale === :gps
-        jd1, jd2 = AstroEpochs.dtf2d(:tai, y, mo, d, h, mi, sec)
-        return Time(jd1, jd2 - _GPS_MINUS_TAI / 86400, :tai, :jd), notes, ""
+    if scale isa _GpsTime
+        tai = Time(y, mo, d, h, mi, sec, TAI(), JD())
+        return Time(tai.jd1, tai.jd2 - _GPS_MINUS_TAI / 86400, TAI(), JD()), notes, ""
     end
     # A UTC second of 60 passes the range check above but is real only in the last minute of a
-    # day that ends with a leap second, which dtf2d knows from the leap-second table.
-    jd1, jd2 = try
-        AstroEpochs.dtf2d(scale, y, mo, d, h, mi, sec)
+    # day that ends with a leap second, which Time knows from the leap-second table.
+    t = try
+        Time(y, mo, d, h, mi, sec, scale, JD())
     catch e
         e isa ArgumentError || rethrow()
         return nothing, notes, @sprintf("seconds %g: %04d-%02d-%02d has no leap second at %02d:%02d", sec, y, mo, d, h, mi)
     end
-    return Time(jd1, jd2, scale, :jd), notes, ""
+    return t, notes, ""
 end
 
 """
@@ -88,15 +89,9 @@ reads `:60`.
 """
 function _format_epoch(t::Time, system::AbstractString, digits::Integer)
     scale = _TIME_SYSTEMS[system]
-    if scale === :gps
+    if scale isa _GpsTime
         tai = t.tai
-        jd1, jd2 = tai.jd1, tai.jd2 + _GPS_MINUS_TAI / 86400
-        scale = :tai
-    else
-        u = getproperty(t, scale)
-        jd1, jd2 = u.jd1, u.jd2
+        return AstroEpochs.isot(Time(tai.jd1, tai.jd2 + _GPS_MINUS_TAI / 86400, TAI(), JD()); digits)
     end
-    y, mo, d, h, mi, s, f = AstroEpochs.d2dtf(scale, digits, jd1, jd2)
-    base = @sprintf("%04d-%02d-%02dT%02d:%02d:%02d", y, mo, d, h, mi, s)
-    return digits == 0 ? base : base * "." * lpad(string(f), digits, '0')
+    return AstroEpochs.isot(Time(t, scale); digits)
 end

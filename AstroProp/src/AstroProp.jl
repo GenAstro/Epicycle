@@ -357,7 +357,7 @@ _start_epoch(forces, sc::Spacecraft) = sc.time.tdb
 The epoch `t` seconds after `start`, on `start`'s scale, as a Julian date. Added to the fraction of
 the day, so the two-part date keeps its precision.
 """
-_epoch_at(start::Time, t::Real) = Time(start.jd1, start.jd2 + t / 86400.0, start.scale, :jd)
+_epoch_at(start::Time, t::Real) = Time(start.jd1, start.jd2 + t / 86400.0, start.scale, JD())
 
 """
     _same_frame(a, b) -> Bool
@@ -571,7 +571,7 @@ function _stop_duration(stop::StopAt{<:Any, <:IntegratorTimeCalc}, start::Time)
     var = stop.var
     var isa PropDurationSeconds && return Float64(stop.target)
     var isa PropDurationDays    && return Float64(stop.target) * 86400.0
-    var isa PropEpoch           && return (getproperty(stop.target, start.scale) - start) * 86400.0
+    var isa PropEpoch           && return (Time(stop.target, start.scale) - start) * 86400.0
     error("Unknown IntegratorTimeCalc type: $(typeof(var))")
 end
 

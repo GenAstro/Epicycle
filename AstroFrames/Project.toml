@@ -14,7 +14,7 @@ SatelliteToolboxTransformations = "6b019ec1-7a1e-4f04-96c7-a9db1ca5514d"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-AstroEpochs = "0.6"
+AstroEpochs = "0.7"
 AstroStates = "0.11"
 AstroUniverse = "0.4"
 EpicycleBase = "0.1.1"

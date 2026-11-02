@@ -141,8 +141,7 @@ same_time = to_float64(time)  # Returns input unchanged
 ```
 """
 to_float64(t::Time{Float64}) = t  # No-op for Float64
-to_float64(t::Time) = AstroEpochs._time_jd(_value_to_float64(t.jd1), _value_to_float64(t.jd2),
-                                            getfield(t, :scale), getfield(t, :format))
+to_float64(t::Time) = Time(Time(_value_to_float64(t.jd1), _value_to_float64(t.jd2), t.scale, JD()), t.format)
 
 """
     to_float64(state::CartesianState{Float64})
@@ -216,8 +215,8 @@ function Base.show(io::IO, segment::HistorySegment)
         end_lines = split(String(take!(end_io)), '\n')
         end_value = strip(split(end_lines[2], '=')[2])
         
-        # Format scale (handle symbol -> uppercase string)
-        scale_str = uppercase(string(start_time.scale))
+        # The scale by name, such as TDB
+        scale_str = string(nameof(typeof(start_time.scale)))
         
         println(io, "  Start Time: ", start_value, " ", scale_str)
         println(io, "  End Time: ", end_value, " ", scale_str)

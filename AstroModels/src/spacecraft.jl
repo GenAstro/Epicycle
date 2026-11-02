@@ -224,8 +224,7 @@ function Spacecraft(state::Union{AbstractState,OrbitState}, time::TT;
     mass_T = Tnum(mass)
 
     # Rebuild time with promoted numeric type (preserve scale/format)
-    t_T = AstroEpochs._time_jd(Tnum(time.jd1), Tnum(time.jd2),     # Julian-date parts, format kept
-                               getfield(time, :scale), getfield(time, :format))
+    t_T = Time{Tnum}(time)
     TTIME = typeof(t_T)
 
     # History default: empty SpacecraftHistory
@@ -516,8 +515,7 @@ function Base.promote(sc::Spacecraft{S,TT,CS,T}, ::Type{Tnew}) where {S,TT,CS,T,
     state_promoted = OrbitState(Tnew.(copy(sc.state.state)), sc.state.statetype)
     
     # Promote the time to new type (preserve scale/format)
-    time_promoted = AstroEpochs._time_jd(Tnew(sc.time.jd1), Tnew(sc.time.jd2),  # Julian-date parts, format kept
-                        getfield(sc.time, :scale), getfield(sc.time, :format))
+    time_promoted = Time{Tnew}(sc.time)
     
     # Promote the mass to new type
     mass_promoted = Tnew(total_mass(sc))

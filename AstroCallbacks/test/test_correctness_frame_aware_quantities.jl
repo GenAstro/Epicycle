@@ -22,7 +22,7 @@ using AstroStates
 using AstroEpochs
 using AstroUniverse
 
-const _EPOCH_FQ = Time(2458849.5, 0.0, :tdb, :jd)
+const _EPOCH_FQ = Time(2458849.5, 0.0, TDB(), JD())
 const _VEC_FQ   = [7000.0, 1200.0, 400.0, -1.3, 6.9, 2.1]
 const _EQ_FQ    = CoordinateSystem(earth, MJ2000Eq())
 

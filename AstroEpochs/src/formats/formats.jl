@@ -22,22 +22,45 @@ Return time value in Modified Julian Date (MJD) format.
 end
 
 """
-    _to_isot(t::Time)
+    isot(t::Time; digits = 3) -> String
 
-Return the time as an ISO 8601 string rounded to the millisecond, by ERFA's `d2dtf` as Astropy
-formats it: the rounding carries into the minute, hour and date, and in UTC a time inside a leap
-second reads 23:59:60.
+`t` as an ISO 8601 string with `digits` decimal places of seconds. `t.isot` is this at the default
+three places.
+
+The string is written by ERFA's `d2dtf`, as Astropy formats it: the rounding carries into the minute,
+hour and date, and in UTC a time inside a leap second reads 23:59:60.
+
+# Arguments
+- `t`: The time, written in its own scale.
+- `digits`: Decimal places of seconds. With 0 the string ends at the whole second.
+
+# Returns
+The string `YYYY-MM-DDThh:mm:ss.fff`.
+
+# Examples
+```julia
+t = Time(2451545.0, 0.25, TT(), JD())
+isot(t; digits = 6)      # "2000-01-01T18:00:00.000000"
+```
 """
-function _to_isot(t::Time)
-    y, m, d, h, mi, s, f = d2dtf(t.scale, 3, t.jd1, t.jd2)
-    return @sprintf("%04d-%02d-%02dT%02d:%02d:%02d.%03d", y, m, d, h, mi, s, f)
+function isot(t::Time; digits::Integer = 3)
+    isfinite(t.jd1 + t.jd2) || throw(ArgumentError(
+        "Time: a time whose Julian date is $(t.jd1 + t.jd2) has no calendar date to write."))
+    y, m, d, h, mi, s, f = d2dtf(_scale_of(t), digits, t.jd1, t.jd2)
+    whole = @sprintf("%04d-%02d-%02dT%02d:%02d:%02d", y, m, d, h, mi, s)
+    return digits == 0 ? whole : whole * "." * lpad(string(f), digits, '0')
 end
+
+_to_isot(t::Time) = isot(t)
 
 """
     _from_format(value::Real, scale::Symbol, format::Symbol) -> Time{T}
 
-Construct a Time{T} from a JD/MJD numeric value, preserving T = typeof(value).
+Construct a Time{T} from a JD/MJD numeric value, preserving T = typeof(value). An integer becomes
+floating point, since a date in integers has no fraction of a day to carry.
 """
+_from_format(value::Integer, scale::Symbol, format::Symbol) = _from_format(float(value), scale, format)
+
 function _from_format(value::Real, scale::Symbol, format::Symbol)
     T = typeof(value)
     if format == :jd
@@ -56,12 +79,12 @@ function _from_format(value::Real, scale::Symbol, format::Symbol)
 end
 
 """
-    _isot_to_date(isostr::String) → Tuple{Int, Int, Int, Int, Int, Real}
+    _isot_to_date(isostr::AbstractString) → Tuple{Int, Int, Int, Int, Int, Real}
 
 Validate and parse an ISO 8601 string of the form `"YYYY-MM-DDTHH:MM:SS.sss"`.
 Returning calendar fields: `(year, month, day, hour, minute, second)`.
 """
-function _isot_to_date(isostr::String)
+function _isot_to_date(isostr::AbstractString)
     # Match ISO 8601 format with optional fractional seconds
     m = match(r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)$", isostr)
     if m === nothing

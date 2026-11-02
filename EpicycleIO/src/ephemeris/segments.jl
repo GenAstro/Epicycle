@@ -128,5 +128,14 @@ end
 
 # Seconds from a to b, measured in a's time scale; b may be in another. One scale throughout
 # matters: elapsed TDB and elapsed UTC differ by about 1 µs an hour, so a table of epochs and the
-# time it is interpolated at must be measured the same way.
-_seconds(a::Time, b::Time) = (getproperty(b, a.scale) - a) * 86400.0
+# time it is interpolated at must be measured the same way. UTC is measured through TAI, which runs
+# at the same rate and has no leap seconds, or a table across one would interpolate a second out.
+_seconds(a::Time, b::Time) =
+    a.scale === UTC() ? (b.tai - a.tai) * 86400.0 : (Time(b, a.scale) - a) * 86400.0
+
+# The epoch `seconds` after `t`, as `_seconds` measures them, in t's scale.
+function _seconds_after(t::Time, seconds::Real)
+    t.scale === UTC() || return Time(t.jd1, t.jd2 + seconds / 86400, t.scale, JD())
+    tai = t.tai
+    return Time(Time(tai.jd1, tai.jd2 + seconds / 86400, TAI(), JD()), UTC())
+end

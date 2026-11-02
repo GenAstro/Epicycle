@@ -29,7 +29,7 @@ const IO_ = EpicycleIO
 
 IO_.auto_open!(false)
 
-const _OV_EPOCH = Time(2458849.5, 0.0, :tdb, :jd)
+const _OV_EPOCH = Time(2458849.5, 0.0, TDB(), JD())
 
 """A spacecraft with two recorded arcs and a 1-sample marker between them.
 
@@ -47,7 +47,7 @@ function _recorded(; gap_sample = true, marker_name = "TOI")
     function arc(name, k0, n; vy = 7.35)
         seg = AstroModels.HistorySegment(cs; name = name)
         for k in k0:(k0 + n - 1)
-            push!(seg.times,  Time(2458849.5 + k * 0.01, 0.0, :tdb, :jd))
+            push!(seg.times,  Time(2458849.5 + k * 0.01, 0.0, TDB(), JD()))
             push!(seg.states, CartesianState([7000.0 + 10k, 100.0k, 1300.0, 0.0, vy, 1.0]))
         end
         return seg
@@ -75,7 +75,7 @@ function _recorded_three_burns()
     function seg!(name, k0, n, vy)
         s = AstroModels.HistorySegment(cs; name = name)
         for k in k0:(k0 + n - 1)
-            push!(s.times,  Time(2458849.5 + k * 0.01, 0.0, :tdb, :jd))
+            push!(s.times,  Time(2458849.5 + k * 0.01, 0.0, TDB(), JD()))
             push!(s.states, CartesianState([7000.0 + 10k, 100.0k, 1300.0, 0.0, vy, 1.0]))
         end
         push!(sat.history.segments, s)
@@ -346,7 +346,7 @@ end
     for (nm, k0, n) in (("coast 1", 0, 4), ("boundary", 4, 1), ("coast 2", 4, 4))
         s = AstroModels.HistorySegment(cs; name = nm)
         for k in k0:(k0 + n - 1)
-            push!(s.times,  Time(2458849.5 + k * 0.01, 0.0, :tdb, :jd))
+            push!(s.times,  Time(2458849.5 + k * 0.01, 0.0, TDB(), JD()))
             push!(s.states, CartesianState([7000.0 + 10k, 100.0k, 1300.0, 0.0, 7.35, 1.0]))
         end
         push!(sat.history.segments, s)
@@ -394,13 +394,13 @@ end
 
     tai = AstroModels.HistorySegment(cs; name = "coast 1")
     for k in 0:3
-        push!(tai.times,  AstroEpochs._time_jd(t0.jd1, t0.jd2 + k * 0.001, :tai, :isot))
+        push!(tai.times,  Time(Time(t0.jd1, t0.jd2 + k * 0.001, TAI(), JD()), ISOT()))
         push!(tai.states, CartesianState([7000.0 + 10k, 100.0k, 1300.0, 0.0, 7.35, 1.0]))
     end
     tt0 = t0.tt
     tt  = AstroModels.HistorySegment(cs; name = "coast 2")
     for k in 0:3
-        push!(tt.times,  Time(tt0.jd1, tt0.jd2 + 0.01 + k * 0.001, :tt, :jd))
+        push!(tt.times,  Time(tt0.jd1, tt0.jd2 + 0.01 + k * 0.001, TT(), JD()))
         push!(tt.states, CartesianState([7100.0 + 10k, 100.0k, 1300.0, 0.0, 7.35, 1.0]))
     end
     push!(sat.history.segments, tai, tt)

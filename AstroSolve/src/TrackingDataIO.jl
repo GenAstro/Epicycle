@@ -23,7 +23,6 @@ module TrackingDataIO
 using Printf
 using AstroEpochs
 using AstroEpochs: Time, UTC, TAI, TT, TDB, TCG, TCB, ISOT
-using AstroEpochs: jd2cal          # AstroEpochs' calendar routine, adapted from Tempo.jl
 
 # =============================================================================
 # 1. Format tag
@@ -256,34 +255,6 @@ end
 # because all records in one segment share a scale by construction).
 _jd_total(t::Time) = t.jd1 + t.jd2
 
-# Format `t` as a millisecond-precision ISOT string with proper carry
-# from 60.000 s into the next minute (avoids a bug in AstroEpochs'
-# `_to_isot` which can emit `:60.000` for boundary fractions).
-function _format_isot(t::Time)
-    # Calendar date + civil-day fraction (fd ∈ [0, 1)).
-    y, m, d, fd = jd2cal(t.jd1, t.jd2)
-
-    # Snap fd to the millisecond grid.
-    ms = round(Int, fd * 86_400_000)
-    if ms >= 86_400_000
-        # Boundary case: carry into next civil day.
-        ms -= 86_400_000
-        y, m, d, _ = jd2cal(t.jd1 + 1.0, t.jd2)
-    elseif ms < 0
-        # Unreachable through jd2cal, which normalizes the day fraction into [0, 1) so `ms` is
-        # never negative. Kept as the mirror of the forward carry above: if a future epoch
-        # backend returns a signed fraction, this carries rather than emitting a negative field.
-        ms += 86_400_000                                  # COV_EXCL_LINE
-        y, m, d, _ = jd2cal(t.jd1 - 1.0, t.jd2)           # COV_EXCL_LINE
-    end
-
-    h,  rem1 = divrem(ms,   3_600_000)
-    mi, rem2 = divrem(rem1, 60_000)
-    s,  msr  = divrem(rem2, 1_000)
-
-    return @sprintf("%04d-%02d-%02dT%02d:%02d:%02d.%03d",
-                    y, m, d, h, mi, s, msr)
-end
 
 # =============================================================================
 # 7. Writer — CCSDS_KVN
@@ -426,8 +397,8 @@ function write_records(file::TrackingDataFile{CCSDS_KVN},
             # Metadata
             println(io, "META_START")
             println(io, "TIME_SYSTEM   = ", meta.time_system)
-            println(io, "START_TIME    = ", _format_isot(t_start))
-            println(io, "STOP_TIME     = ", _format_isot(t_stop))
+            println(io, "START_TIME    = ", t_start.isot)
+            println(io, "STOP_TIME     = ", t_stop.isot)
             println(io, "PARTICIPANT_1 = ", meta.participant_1)
             println(io, "PARTICIPANT_2 = ", meta.participant_2)
             println(io, "MODE          = ", meta.mode)
@@ -442,7 +413,7 @@ function write_records(file::TrackingDataFile{CCSDS_KVN},
                 # Always write `observed`.  `computed` is round-trip-only
                 # via OD pipeline metadata, not part of TDM data lines.
                 println(io, String(r.measurement_type), " = ",
-                        _format_isot(r.t_receive), " ", r.observed)
+                        r.t_receive.isot, " ", r.observed)
             end
             println(io, "DATA_STOP")
             seg_idx == length(nonempty_metas) || println(io)

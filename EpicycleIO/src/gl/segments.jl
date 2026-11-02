@@ -127,8 +127,8 @@ end
 # AstroEpochs refuses `Time - Time` across scales or formats. Comparing the Julian dates in one
 # scale is what the view needs, since it only ever orders samples and offsets them from the first.
 function _days_between(a::Time, b::Time)
-    a_tt = a.scale === :tt ? a : a.tt
-    b_tt = b.scale === :tt ? b : b.tt
+    a_tt = a.scale === TT() ? a : a.tt
+    b_tt = b.scale === TT() ? b : b.tt
     return (a_tt.jd1 - b_tt.jd1) + (a_tt.jd2 - b_tt.jd2)
 end
 
@@ -138,7 +138,7 @@ _time_sub_seconds(a::Time, b::Time) = _days_between(a, b) * 86400.0
 # Convert an AstroEpochs Time to an ISO 8601 UTC string ending in "Z".
 # `t.utc` returns the equivalent Time in UTC scale; `.isot` gives the ISO string.
 function _iso_from_time(t::Time)
-    utc_time = t.scale === :utc ? t : getproperty(t, :utc)
-    iso = String(getproperty(utc_time, :isot))
+    utc_time = t.scale === UTC() ? t : t.utc
+    iso = String(utc_time.isot)
     return endswith(iso, 'Z') || endswith(iso, 'z') ? iso : iso * "Z"
 end

@@ -18,7 +18,7 @@ function spk_segment(n; t0 = "2026-10-21T00:00:00", interp = Hermite(7), step = 
     w = 2π / 5400
     EK.EphemerisSegmentData(object_name = name, object_id = "-900001", center = "EARTH", frame = frame,
         time_system = "UTC", interpolation = interp,
-        times = [Time(t.jd1, t.jd2 + step * k / 86400, :utc, :jd) for k in 0:n-1],
+        times = [Time(t.jd1, t.jd2 + step * k / 86400, UTC(), JD()) for k in 0:n-1],
         states = [SVector(7000cos(w * step * k), 7000sin(w * step * k), 1000sin(w * step * k / 3),
                           -7000w * sin(w * step * k), 7000w * cos(w * step * k), 1000w / 3 * cos(w * step * k / 3))
                   for k in 0:n-1])

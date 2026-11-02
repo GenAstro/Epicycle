@@ -56,7 +56,7 @@ end
 
 @testset "a quantity with no setter is refused at build time" begin
     sat = Spacecraft(CartesianState([7000.0, 0.0, 1300.0, 0.0, 7.35, 1.0]),
-                     Time(2458849.5, 0.0, :tdb, :jd);
+                     Time(2458849.5, 0.0, TDB(), JD());
                      coord_sys = CoordinateSystem(earth, ICRF()))
     e = try; Vary(position_dot_velocity, sat); nothing; catch e; e; end
     @test e isa ArgumentError
@@ -72,7 +72,7 @@ end
     # two must produce the same numbers. When the tag stack goes, this goes.
     man_a, man_b = _v_burn(), _v_burn()
     sat = Spacecraft(CartesianState([7000.0, 0.0, 1300.0, 0.0, 7.35, 1.0]),
-                     Time(2458849.5, 0.0, :tdb, :jd);
+                     Time(2458849.5, 0.0, TDB(), JD());
                      coord_sys = CoordinateSystem(earth, ICRF()))
 
     new_way = Vary(delta_v, man_a; lower_bound = [0.0, 0.0, 0.0], upper_bound = [8.0, 8.0, 8.0])

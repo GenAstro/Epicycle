@@ -409,7 +409,7 @@ function _stk_build!(d, file, seg0, h, data_kind, rows, skipped, boundaries, cov
     end
     epoch = seg0.start_time
     base = seg0.time_system == "TDB" ? epoch.tdb : epoch.tai
-    at(sec) = Time(base.jd1, base.jd2 + sec / 86400, base.scale, :jd)
+    at(sec) = Time(base.jd1, base.jd2 + sec / 86400, base.scale, JD())
     ncols = _STK_DATA_KEYS[data_kind]
     data_kind == "EPHEMERISTIMEPOS" && _note!(d, 0, "EphemerisTimePos",
         "no velocities in the file; they are the derivative of the Lagrange polynomial through the positions")
@@ -571,7 +571,7 @@ Write `data` as an STK ephemeris file (`.e`), version stamp `stk.v.11.0`.
 ```jldoctest
 using AstroEpochs, StaticArrays
 t0 = Time("2026-10-21T00:00:00", UTC(), ISOT())
-times = [Time(t0.jd1, t0.jd2 + k / 1440, :utc, :jd) for k in 0:7]
+times = [Time(t0.jd1, t0.jd2 + k / 1440, UTC(), JD()) for k in 0:7]
 states = [SVector(7000.0, 450.0k, 0.0, 0.0, 7.5, 0.0) for k in 0:7]
 seg = EpicycleIO.EphemerisSegmentData(center = "EARTH", frame = "EME2000", time_system = "UTC",
           times = times, states = states, interpolation = EpicycleIO.Lagrange(5))

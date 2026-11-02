@@ -21,7 +21,7 @@ using AstroFrames
 using AstroUniverse
 using EpicycleBase: label, is_settable, set_quantity!
 
-const _S_EPOCH = Time(2458849.5, 0.0, :tdb, :jd)
+const _S_EPOCH = Time(2458849.5, 0.0, TDB(), JD())
 
 _burn() = ImpulsiveManeuver(axes = VNB(), element1 = 1.0, element2 = 2.0, element3 = 3.0)
 _sat()  = Spacecraft(CartesianState([7000.0, 1000.0, 2000.0, 1.5, 6.5, 1.0]), _S_EPOCH;

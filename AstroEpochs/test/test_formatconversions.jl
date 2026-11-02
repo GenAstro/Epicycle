@@ -24,7 +24,7 @@ end
     ref_iso = "2024-02-29T12:34:56.000"
 
     # Symbol based construction
-    t = Time("2024-02-29T12:34:56", :tai, :isot)
+    t = Time("2024-02-29T12:34:56", TAI(), ISOT())
     @test isapprox(t.jd1, ref_jd1; atol=1e-12)
     @test isapprox(t.jd2, ref_jd2; atol=1e-15)
     @test isapprox(t.jd,  ref_jd;  atol=1e-12)
@@ -50,7 +50,7 @@ end
     ref_isot = "2001-06-29T12:34:56.123"
 
     # Symbol based construction from high-precision ISO string
-    t = Time("2001-06-29T12:34:56.123456789", :tai, :isot)
+    t = Time("2001-06-29T12:34:56.123456789", TAI(), ISOT())
     @test isapprox(t.jd1, ref_jd1; atol=1e-12)
     @test isapprox(t.jd2, ref_jd2; atol=1e-15)
     @test isapprox(t.jd,  ref_jd;  atol=1e-12)
@@ -75,7 +75,7 @@ end
     isot_ref = "1997-06-29T01:42:34.987"
 
     # Symbol based ISOT construction
-    t1 = Time("1997-06-29T01:42:34.987", :tai, :isot)
+    t1 = Time("1997-06-29T01:42:34.987", TAI(), ISOT())
     @test isapproxrel(t1.jd, jd_ref)
     @test isapproxrel(t1.jd1, jd1_ref)
     @test isapproxrel(t1.jd2, jd2_ref)
@@ -96,14 +96,14 @@ end
     # date the same way (day_frac).
     jd2_from_jd  = -0.42876172438263893       # Time(jd_ref,  format="jd",  scale="tai")
     jd2_from_mjd = -0.42876172453543404       # Time(mjd_ref, format="mjd", scale="tai")
-    for t2 in (Time(jd_ref, :tai, :jd), Time(jd_ref, TAI(), JD()))
+    for t2 in (Time(jd_ref, TAI(), JD()), Time(jd_ref, TAI(), JD()))
         @test t2.jd1 == jd1_ref
         @test t2.jd2 == jd2_from_jd
         @test isapproxrel(t2.jd, jd_ref)
         @test isapproxrel(t2.mjd, mjd_ref)
         @test t2.isot == isot_ref
     end
-    for t3 in (Time(mjd_ref, :tai, :mjd), Time(mjd_ref, TAI(), MJD()))
+    for t3 in (Time(mjd_ref, TAI(), MJD()), Time(mjd_ref, TAI(), MJD()))
         @test t3.jd1 == jd1_ref
         @test t3.jd2 == jd2_from_mjd
         @test isapproxrel(t3.jd, jd_ref)

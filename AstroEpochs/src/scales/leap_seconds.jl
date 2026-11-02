@@ -11,6 +11,11 @@
 # an expired copy is used with a warning, and with no copy at all the built-in table below is
 # used; that table ends at the 2017-01-01 leap second.
 #
+# A list is checked before it is used or stored, so a truncated or altered file is refused rather
+# than giving a date the wrong offset until the list expires. Getting a table never stops a
+# conversion: a depot that cannot be written and processes downloading at once both still end in
+# a table. Each process downloads to its own temporary file.
+#
 # TAI − UTC changes at 0h UTC on the date in the table. Dates are held as days since J2000,
 # JD 2451545.0.
 #
@@ -20,6 +25,7 @@
 
 using Downloads: download
 using Scratch: @get_scratch!
+using SHA: sha1
 
 const LEAP_SECONDS_URL = "https://data.iana.org/time-zones/tzdb/leap-seconds.list"
 
@@ -44,25 +50,61 @@ const _LEAP_LOCK  = ReentrantLock()
 
 Parse an IETF/IANA `leap-seconds.list`: one `NTP-seconds  TAI−UTC` pair per data line, and the
 expiry on the line that begins `#@`.
+
+The file is refused with an `ArgumentError` unless its `#h` hash matches and its entries could be
+real: every change through 2017 as the built-in table has it, dates in order, and each later change
+one second. The hash sits on the last line of the file, so a file cut off anywhere fails it.
 """
 function parse_leap_seconds(text::AbstractString)
-    starts, delta = Float64[], Float64[]
-    expires = NaN
+    updated = expiry = file_hash = nothing
+    data = Tuple{SubString{String}, SubString{String}}[]
     for line in eachline(IOBuffer(text))
         s = strip(line)
         isempty(s) && continue
-        if startswith(s, "#@")
-            expires = _ntp_to_j2000_days(parse(Float64, split(s)[2]))
+        fields = split(s)
+        if fields[1] == "#\$" && length(fields) >= 2
+            updated = fields[2]
+        elseif fields[1] == "#@" && length(fields) >= 2
+            expiry = fields[2]
+        elseif fields[1] == "#h" && length(fields) >= 2
+            file_hash = lowercase(join(fields[2:end]))
         elseif !startswith(s, "#")
-            fields = split(s)
-            push!(starts, _ntp_to_j2000_days(parse(Float64, fields[1])))
-            push!(delta,  parse(Float64, fields[2]))
+            length(fields) >= 2 || throw(ArgumentError("leap-second list has a line with no offset: $s"))
+            push!(data, (fields[1], fields[2]))
         end
     end
-    isempty(starts) && throw(ArgumentError("leap-second list has no entries"))
-    issorted(starts) || throw(ArgumentError("leap-second list is not in date order"))
-    isnan(expires) && throw(ArgumentError("leap-second list has no expiry line (#@)"))
-    return LeapSecondTable(starts, delta, expires)
+    isempty(data) && throw(ArgumentError("leap-second list has no entries"))
+    expiry === nothing && throw(ArgumentError("leap-second list has no expiry line (#@)"))
+    updated === nothing && throw(ArgumentError("leap-second list has no update line (#\$)"))
+    file_hash === nothing && throw(ArgumentError("leap-second list has no hash line (#h); the file may be cut off"))
+    computed = bytes2hex(sha1(updated * expiry * join(a * b for (a, b) in data)))
+    computed == file_hash || throw(ArgumentError("leap-second list does not match its hash (#h)"))
+
+    starts = [_ntp_to_j2000_days(_list_number(a)) for (a, _) in data]
+    delta  = [_list_number(b) for (_, b) in data]
+    issorted(starts) && allunique(starts) || throw(ArgumentError("leap-second list is not in date order"))
+    _check_leap_entries(starts, delta)
+    return LeapSecondTable(starts, delta, _ntp_to_j2000_days(_list_number(expiry)))
+end
+
+function _list_number(field)
+    value = tryparse(Float64, field)
+    (value === nothing || !isfinite(value)) &&
+        throw(ArgumentError("leap-second list has $(repr(String(field))) where a number belongs"))
+    return value
+end
+
+# Every list has the changes the built-in table has, and TAI − UTC has only ever moved a second at a
+# time. The hash catches damage; this catches a list that hashes correctly and is still not the list.
+function _check_leap_entries(starts, delta)
+    builtin = _builtin_leap_table()
+    n = length(builtin.starts)
+    length(starts) >= n && starts[1:n] == builtin.starts && delta[1:n] == builtin.delta ||
+        throw(ArgumentError("leap-second list does not hold the changes through 2017-01-01 " *
+                            "that every list has"))
+    all(step -> abs(step) == 1.0, diff(delta[n:end])) ||
+        throw(ArgumentError("leap-second list changes TAI − UTC by something other than one second"))
+    return nothing
 end
 
 _ntp_to_j2000_days(ntp_seconds) = _NTP_EPOCH_JD + ntp_seconds / SECONDS_IN_DAY - J2000_EPOCH
@@ -100,6 +142,9 @@ function leap_second_table()
 end
 
 function _load_leap_second_table!()
+    # Precompiling a package that converts a UTC time must not reach for the network, or an install
+    # would depend on it. The table is not kept, so the first real use gets the list.
+    ccall(:jl_generating_output, Cint, ()) == 1 && return _builtin_leap_table()
     lock(_LEAP_LOCK) do
         _LEAP[] === nothing || return _LEAP[]
         _LEAP[] = _fetch_leap_second_table()
@@ -107,15 +152,36 @@ function _load_leap_second_table!()
     end
 end
 
-# Where the downloaded list is kept, across sessions.
-_leap_seconds_path() = joinpath(@get_scratch!("leap_seconds"), "leap-seconds.list")
+# Where the downloaded list is kept, across sessions. A depot that cannot be written, as in a
+# container or on a shared system, costs only the keeping: the list goes to a temporary folder and
+# is downloaded again next session.
+function _leap_seconds_path()
+    try
+        return joinpath(@get_scratch!("leap_seconds"), "leap-seconds.list")
+    catch e
+        e isa InterruptException && rethrow()
+        @warn "AstroEpochs: cannot store the leap-second list in the Julia depot " *
+              "($(first(DEPOT_PATH))); it will not be kept for the next session." maxlog = 1
+        return joinpath(mktempdir(), "leap-seconds.list")
+    end
+end
+
+# The stored list, if there is one and it can be read and passes its checks.
+function _stored_leap_table(path)
+    try
+        return isfile(path) ? parse_leap_seconds(read(path, String)) : nothing
+    catch e
+        e isa InterruptException && rethrow()
+        return nothing
+    end
+end
 
 # The table to use: the stored list while it is current, else a fresh download, else the stored
 # list though expired, else the built-in table. The path, URL and timeout are arguments so the
 # tests can run each branch against a temporary folder and a URL that fails.
 function _fetch_leap_second_table(path = _leap_seconds_path(); url = LEAP_SECONDS_URL,
                                   timeout = _LEAP_DOWNLOAD_TIMEOUT)
-    cached = isfile(path) ? _try_parse(read(path, String)) : nothing
+    cached = _stored_leap_table(path)
     cached !== nothing && cached.expires > _now_j2000_days() && return cached
 
     fresh = try
@@ -125,6 +191,10 @@ function _fetch_leap_second_table(path = _leap_seconds_path(); url = LEAP_SECOND
         nothing
     end
     fresh !== nothing && return fresh
+
+    # Another process may have stored a current list while this one was failing to.
+    latest = _stored_leap_table(path)
+    latest !== nothing && latest.expires > _now_j2000_days() && return latest
 
     if cached !== nothing
         @warn "AstroEpochs: the leap-second list expired and could not be refreshed from " *
@@ -137,20 +207,35 @@ function _fetch_leap_second_table(path = _leap_seconds_path(); url = LEAP_SECOND
     return _builtin_leap_table()
 end
 
-_try_parse(text) = try parse_leap_seconds(text) catch; nothing end
-
 # Download the list to `path`, parsing it before it replaces the stored copy, and leave no partial
-# file behind if either step fails.
+# file behind if either step fails. The temporary file is this process's own and sits beside `path`,
+# so the rename replaces the stored copy in one step, and processes downloading at once do not
+# touch each other's files.
 function _download_leap_seconds(path, url, timeout)
-    tmp = path * ".download"
+    tmp, io = mktemp(dirname(path))
+    close(io)
     try
         download(url, tmp; timeout = timeout)
         table = parse_leap_seconds(read(tmp, String))
-        mv(tmp, path; force = true)
+        _replace_stored_list(tmp, path)
         return table
     finally
-        rm(tmp; force = true)
+        try
+            rm(tmp; force = true)
+        catch e
+            e isa InterruptException && rethrow()    # a leftover temporary file costs nothing
+        end
     end
+end
+
+# A rename can lose to another process doing the same one. That is fine if a good list is there.
+function _replace_stored_list(tmp, path)
+    try
+        Base.Filesystem.rename(tmp, path)
+    catch e
+        _stored_leap_table(path) === nothing && rethrow()
+    end
+    return nothing
 end
 
 """
@@ -158,8 +243,9 @@ end
 
 Download the IERS leap-second list now and use it for every later conversion.
 
-The list is otherwise downloaded on the first UTC conversion and again once it expires, so this
-is only needed to pick up a newly announced leap second before the stored list expires.
+The list is otherwise downloaded on a session's first UTC conversion, if no current copy is stored,
+so this is only needed to pick up a newly announced leap second before the stored list expires, or
+in a session that has run past the expiry.
 
 # Returns
 The table now in use. Throws when the download fails, rather than falling back as a first

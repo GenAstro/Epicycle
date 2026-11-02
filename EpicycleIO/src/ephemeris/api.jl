@@ -412,8 +412,10 @@ function state_at(eph::Union{SpacecraftHistory, Spacecraft}, t::Time; overlap::S
     return _interpolate_segment(segs[k], t)
 end
 
-_label(t::Time) = _format_epoch(t, uppercase(String(t.scale)) in keys(_TIME_SYSTEMS) ? uppercase(String(t.scale)) : "UTC", 3) *
-                  " " * uppercase(String(t.scale))
+function _label(t::Time)
+    system = _time_system_name(t.scale)
+    return _format_epoch(t, system, 3) * " " * system
+end
 
 function _interpolate_segment(s::HistorySegment, t::Time)
     # One state, as a maneuver records: exact at its epoch, which is all it covers.
@@ -696,7 +698,7 @@ function _to_segment(s::HistorySegment, target, step, interpolation, sys, object
         total = _seconds(t0, last(times))
         offs = collect(0.0:Float64(step):total)
         total - last(offs) > 1e-9 && push!(offs, total)
-        newtimes = [Time(t0.jd1, t0.jd2 + o / 86400, t0.scale, :jd) for o in offs]
+        newtimes = [_seconds_after(t0, o) for o in offs]
         newtimes[end] = last(times)
         states = [SVector{6, Float64}(to_vector(CartesianState(_interpolate_segment(s, t)))) for t in newtimes]
         times = newtimes

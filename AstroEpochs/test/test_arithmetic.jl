@@ -6,7 +6,7 @@ using AstroEpochs
 
 @testset "Time Arithmetic Tests" begin
     # Construct a base time
-    t0 = Time("2025-07-31T12:00:00", :tt, :isot)
+    t0 = Time("2025-07-31T12:00:00", TT(), ISOT())
     
     # Scalar addition
     t1 = t0 + 0.25  # add 6 hours
@@ -25,12 +25,12 @@ using AstroEpochs
     @test isapprox(dt, 0.25; atol=1e-12)
 
     # Rebalancing test near day boundaries
-    t4 = Time(t0.jd1, 0.499999999, :tt, :jd)
+    t4 = Time(t0.jd1, 0.499999999, TT(), JD())
     t5 = t4 + 1e-6
     @test abs(t5.jd2) < 0.5  # Should rebalance so jd2 is still within [-0.5, 0.5]
 
     # Time scale mismatch should error on subtraction, and say how to convert
-    t6 = Time(t0.jd1, t0.jd2, :tdb, :jd)
+    t6 = Time(t0.jd1, t0.jd2, TDB(), JD())
     @test_throws ArgumentError t6 - t0
     @test occursin("t1.tdb", sprint(showerror, try t6 - t0 catch e e end))
 
@@ -60,17 +60,31 @@ end
 
 @testset "Time == and isequal tests" begin
     # Equality across numeric types and split variants
-    a = Time(2451545.0, 0.25, :tt, :jd)
-    b = Time(big(2451545.0), big(0.25), :tt, :jd)  # different T, same value
+    a = Time(2451545.0, 0.25, TT(), JD())
+    b = Time(big(2451545.0), big(0.25), TT(), JD())  # different T, same value
     @test a == b
 
     # Same value but different split (still equal by jd sum)
-    c = Time(a.jd1 + 0.75, a.jd2 - 0.75, :tt, :jd)
+    c = Time(a.jd1 + 0.75, a.jd2 - 0.75, TT(), JD())
     @test a == c
 
-    # Inequality due to different scale and different format (early returns)
-    d = Time(a.jd1, a.jd2, :tai, :jd)
-    e = Time(a.mjd, :tt, :mjd)
+    # A different scale is a different time; the format only sets how a time displays
+    d = Time(a.jd1, a.jd2, TAI(), JD())
+    e = Time(a.mjd, TT(), MJD())
     @test a != d
-    @test a != e
+    @test a == e
+    @test Time(a, ISOT()) == a
+
+    # Written separately, the same nominal instant differs by how each float rounded
+    @test Time(2460000.123, TT(), JD()) != Time(59999.623, TT(), MJD())
+    @test abs(Time(2460000.123, TT(), JD()) - Time(59999.623, TT(), MJD())) * 86400 < 1e-4
+
+    # Equal times hash alike, so they are one key: across formats, numeric types and signs of zero
+    for other in (e, b, Time(a, ISOT()), Time(2451545.0f0, 0.25f0, TT(), JD()))
+        @test a == other && isequal(a, other) && hash(a) == hash(other)
+    end
+    @test length(Set([a, e, b])) == 1
+    @test a != d && hash(a) != hash(d)
+    z = Time(2451545.0, 0.0, TT(), JD())
+    @test hash(z) == hash(Time(2451545.0, -0.0, TT(), JD()))
 end

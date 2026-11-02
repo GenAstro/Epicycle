@@ -20,7 +20,7 @@ using AstroEpochs
 using AstroFrames
 using AstroUniverse
 
-const _H_EPOCH = Time(2458849.5, 0.0, :tdb, :jd)
+const _H_EPOCH = Time(2458849.5, 0.0, TDB(), JD())
 
 """A spacecraft with a short recorded history, built without propagating."""
 function _recorded()
@@ -28,7 +28,7 @@ function _recorded()
                      coord_sys = CoordinateSystem(earth, ICRF()), name = "rec")
     seg = AstroModels.HistorySegment(CoordinateSystem(earth, ICRF()); name = "seg")
     for k in 0:4
-        push!(seg.times,  Time(2458849.5 + k * 0.01, 0.0, :tdb, :jd))
+        push!(seg.times,  Time(2458849.5 + k * 0.01, 0.0, TDB(), JD()))
         push!(seg.states, CartesianState([7000.0 + 10k, 100.0k, 1300.0, 0.0, 7.35, 1.0]))
     end
     push!(sat.history.segments, seg)
@@ -77,7 +77,7 @@ end
     # Two recordings with their own sample times, so two walks and two columns
     # that need not be the same length.
     a, b = _recorded(), _recorded()
-    push!(b.history.segments[1].times,  Time(2458849.56, 0.0, :tdb, :jd))
+    push!(b.history.segments[1].times,  Time(2458849.56, 0.0, TDB(), JD()))
     push!(b.history.segments[1].states, CartesianState([7060.0, 500.0, 1300.0, 0.0, 7.35, 1.0]))
 
     eq = CoordinateSystem(earth, MJ2000Eq())

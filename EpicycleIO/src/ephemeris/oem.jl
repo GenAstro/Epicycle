@@ -691,7 +691,7 @@ Write `data` as a CCSDS Orbit Ephemeris Message in keyword = value form, version
 ```jldoctest
 using AstroEpochs, StaticArrays
 t0 = Time("2026-10-21T00:00:00", UTC(), ISOT())
-times = [Time(t0.jd1, t0.jd2 + k / 1440, :utc, :jd) for k in 0:7]
+times = [Time(t0.jd1, t0.jd2 + k / 1440, UTC(), JD()) for k in 0:7]
 states = [SVector(7000.0, 450.0k, 0.0, 0.0, 7.5, 0.0) for k in 0:7]
 seg = EpicycleIO.EphemerisSegmentData(object_name = "SAT", object_id = "2026-001A",
           center = "EARTH", frame = "EME2000", time_system = "UTC", times = times, states = states)

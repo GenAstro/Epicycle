@@ -187,25 +187,25 @@ end
 
     back, _, metas = read_records(file)
     @test [m.time_system for m in metas] == ["TAI", "TT"]
-    @test back[1].t_receive.scale == :tai
-    @test back[2].t_receive.scale == :tt
+    @test back[1].t_receive.scale == TAI()
+    @test back[2].t_receive.scale == TT()
     @test abs(back[1].t_receive.jd - back[2].t_receive.tai.jd) <= _TDM_MS
 end
 
 @testset "TDM — epochs format on the millisecond grid, including the carry" begin
-    # _format_isot rounds to the millisecond and carries 60.000 s into the next minute, which
-    # AstroEpochs' own _to_isot does not. An epoch a hair under a minute boundary is the case
-    # that distinguishes them, and an emitted `:60.000` is not a legal ISO 8601 second field.
+    # An epoch rounds to the millisecond and carries 60.000 s into the next minute. An epoch a hair
+    # under a minute boundary is the case to check, since an emitted `:60.000` is not a legal
+    # ISO 8601 second field outside a leap second.
     base = Time("2020-03-01T00:00:59.9999", TT(), ISOT())
-    @test _TDM._format_isot(base) == "2020-03-01T00:01:00.000"
+    @test base.isot == "2020-03-01T00:01:00.000"
 
     # Midnight carries the civil day as well as the minute.
     eod = Time("2020-03-01T23:59:59.9999", TT(), ISOT())
-    @test _TDM._format_isot(eod) == "2020-03-02T00:00:00.000"
+    @test eod.isot == "2020-03-02T00:00:00.000"
 
     # Nothing else moves: an epoch already on the grid formats to itself.
     on_grid = Time("2020-03-01T12:34:56.789", TT(), ISOT())
-    @test _TDM._format_isot(on_grid) == "2020-03-01T12:34:56.789"
+    @test on_grid.isot == "2020-03-01T12:34:56.789"
 
     # And the carry survives a round trip rather than only a format call.
     recs = [ObservationRecord(:RANGE, base, 500.0, "DSS-14")]

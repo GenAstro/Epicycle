@@ -17,7 +17,7 @@ using LinearAlgebra
 using Test
 
 const _JD_C  = 2458849.5
-const _EP_C  = Time(_JD_C, 0.0, :tdb, :jd)
+const _EP_C  = Time(_JD_C, 0.0, TDB(), JD())
 const _VEC_C = [7000.0, 0.0, 0.0, 0.0, 7.5460491, 0.0]
 const _EQ    = CoordinateSystem(earth, MJ2000Eq())
 

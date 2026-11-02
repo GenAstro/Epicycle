@@ -93,7 +93,7 @@ function _sv_records(offsets)
     for dt in offsets
         propagate!(prop, sc, StopAt(sc, PropDurationSeconds(), dt - prev))
         prev = dt
-        t    = AstroEpochs._time_jd(sc.time.jd1, sc.time.jd2, sc.time.scale, :isot)
+        t    = Time(sc.time, ISOT())
         y    = to_posvel(sc)
         path = SignalPath(gs, sc, gs)
         for (kind, spec) in ((:RANGE,   TwoWayRange(path;   noise = MeasurementNoise(_SV_SIG_R))),

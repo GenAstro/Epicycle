@@ -349,7 +349,7 @@ const _TOL_FK5 = (
     try
         set_frame_theory!(IAU2006())
         for case in _TRUTH
-            t = Time(case.jd_utc, 0.0, :utc, :jd)       # the epoch the truth is defined at; see above
+            t = Time(case.jd_utc, 0.0, UTC(), JD())       # the epoch the truth is defined at; see above
             m = case.matrices
             for (truth, from, to) in ((m.GCRF_to_CIRS,         GCRF(), CIRS()),
                                       (m.CIRS_to_TIRS,         CIRS(), TIRS()),
@@ -369,7 +369,7 @@ end
     try
         set_frame_theory!(FK5())
         for case in _TRUTH
-            t = Time(case.jd_utc, 0.0, :utc, :jd)       # the epoch the truth is defined at; see above
+            t = Time(case.jd_utc, 0.0, UTC(), JD())       # the epoch the truth is defined at; see above
             m = case.matrices
             for (truth, from, to, tol) in
                     ((m.ICRF_to_MJ2000Eq,  ICRF(),     MJ2000Eq(), _TOL_FK5.ICRF_to_MJ2000Eq),
@@ -394,7 +394,7 @@ end
     try
         set_frame_theory!(FK5())
         for case in _TRUTH
-            t = Time(case.jd_utc, 0.0, :utc, :jd)       # the epoch the truth is defined at; see above
+            t = Time(case.jd_utc, 0.0, UTC(), JD())       # the epoch the truth is defined at; see above
             for (ε_truth, src, dst) in ((case.mean_obliquity, MODEq(), MODEc()),
                                         (case.true_obliquity, TODEq(), TODEc()))
                 R = axes_rotation(src, dst, t)[1:3, 1:3]

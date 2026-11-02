@@ -7,6 +7,7 @@ not need Python.
 |---|---|---|
 | `make_reference.py` | `reference.csv`: 1793 epochs, each with Astropy's two-part JD and ISOT string in every scale | `test_correctness_astropy_benchmark.jl` |
 | `make_erfa_parity.py` | printed Julia literals: pyerfa's output for each ported ERFA routine at its edge cases | `test_correctness_erfa_parity.jl` |
+| `make_dtdb_observer.py` | `dtdb_observer.csv`: pyerfa's TDB − TT with observer terms at 100 random dates and observers | `test_correctness_arithmetic_precision.jl` |
 
 Rerun them when AstroEpochs' conversions change on purpose, or to benchmark against a newer Astropy.
 They need Python with the versions below installed, and run from the AstroEpochs folder:
@@ -14,6 +15,7 @@ They need Python with the versions below installed, and run from the AstroEpochs
 ```
 python test/astropy/make_reference.py
 python test/astropy/make_erfa_parity.py
+python test/astropy/make_dtdb_observer.py
 ```
 
 `make_reference.py` turns off Astropy's automatic IERS download, so the leap-second table is the

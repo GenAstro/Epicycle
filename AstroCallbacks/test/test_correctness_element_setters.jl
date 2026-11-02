@@ -45,7 +45,7 @@ end
 """A spacecraft whose six elements are all distinct, so a swap cannot hide."""
 function _subject()
     return Spacecraft(CartesianState([7000.0, 1000.0, 2000.0, 1.5, 6.5, 1.0]),
-                      Time(2458849.5, 0.0, :tdb, :jd);
+                      Time(2458849.5, 0.0, TDB(), JD());
                       coord_sys = CoordinateSystem(earth, ICRF()))
 end
 

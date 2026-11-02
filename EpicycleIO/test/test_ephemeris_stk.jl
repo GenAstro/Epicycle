@@ -221,7 +221,7 @@ function stk_segment(n; t0 = "2026-10-21T00:00:00", acc = false, interp = Lagran
     w = 2π / 5400
     seg = ES.EphemerisSegmentData(object_name = "TESTSAT", object_id = "2026-001A", center = "EARTH",
         frame = "EME2000", time_system = "UTC", interpolation = interp,
-        times = [Time(t.jd1, t.jd2 + 30.123456789k / 86400, :utc, :jd) for k in 0:n-1],
+        times = [Time(t.jd1, t.jd2 + 30.123456789k / 86400, UTC(), JD()) for k in 0:n-1],
         states = [SVector(7000cos(w * 30k), 7000sin(w * 30k), 1234.5678901234567,
                           -7000w * sin(w * 30k), 7000w * cos(w * 30k) + dv, 1e-3 / 3) for k in 0:n-1])
     acc && (seg.accelerations = [SVector(-1e-3, 2e-3, π * 1e-6) for _ in 1:n])
@@ -249,7 +249,7 @@ end
     end
     # Endpoints a fraction of a nanosecond apart, which the writer accepts as shared, still
     # write as a repeated time and read back as two segments.
-    b.times[1] = Time(last(a.times).jd1, last(a.times).jd2 + 5e-10 / 86400, :utc, :jd)
+    b.times[1] = Time(last(a.times).jd1, last(a.times).jd2 + 5e-10 / 86400, UTC(), JD())
     ES.write_stk(path, ES.EphemerisFileData(segments = [a, b]))
     @test length(ES.read_stk(path; strict = true).segments) == 2
     # Hermite 7 is written as 3 samples less one, and reads back as Hermite 7.

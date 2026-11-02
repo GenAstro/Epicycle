@@ -29,7 +29,7 @@ function _et(t::Time)
 end
 function _from_et(et::Real)
     days = floor(et / 86400.0)
-    return Time(_J2000_TDB_JD + days, (et - days * 86400.0) / 86400.0, :tdb, :jd)
+    return Time(_J2000_TDB_JD + days, (et - days * 86400.0) / 86400.0, TDB(), JD())
 end
 
 function _naif_center(code::Integer)
@@ -74,7 +74,7 @@ An [`EphemerisFileData`](@ref) with `format = :spk`, one segment per SPK segment
 ```jldoctest
 using AstroEpochs, StaticArrays
 t0 = Time("2026-10-21T00:00:00", UTC(), ISOT())
-times = [Time(t0.jd1, t0.jd2 + k / 1440, :utc, :jd) for k in 0:9]
+times = [Time(t0.jd1, t0.jd2 + k / 1440, UTC(), JD()) for k in 0:9]
 states = [SVector(7000.0, 450.0k, 0.0, 0.0, 7.5, 0.0) for k in 0:9]
 seg = EpicycleIO.EphemerisSegmentData(center = "EARTH", frame = "ICRF", time_system = "UTC",
           times = times, states = states, interpolation = EpicycleIO.Hermite(7))

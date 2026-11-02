@@ -413,7 +413,7 @@ function _act_estimation()
             propagate!(prop, truth, StopAt(truth, PropDurationSeconds(), OD_CADENCE_S))
             y = to_posvel(truth)
             truth_at[round(Int, k * OD_CADENCE_S)] = y
-            t = Time(truth.time.jd1, truth.time.jd2, truth.time.scale, :jd)   # the file writes ISO
+            t = Time(truth.time.jd1, truth.time.jd2, truth.time.scale, JD())   # the file writes ISO
             for gs in stations
                 AstroModels.is_visible(gs, y[1:3], truth.time) || continue
                 r_gs, v_gs = get_state(gs, truth.time)

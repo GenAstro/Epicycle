@@ -22,8 +22,9 @@ Organization. Every algorithm here is one of two kinds, and each has its own fol
 This file holds the types, the `Time` struct, its construction, accessors and arithmetic.
 
 Notes
-- Leap seconds come from the IERS leap-second list, downloaded on first use and refreshed when
-  it expires; see `scales/leap_seconds.jl`. UTC on a day that ends with a leap second is ERFA's
+- Leap seconds come from the IERS leap-second list, downloaded on first use. A stored copy past
+  its expiry is replaced the next time a session loads the table; a running session keeps the table
+  it loaded. See `scales/leap_seconds.jl`. UTC on a day that ends with a leap second is ERFA's
   quasi-Julian date, whose fraction of the day runs over 86401 s, so 23:59:60.5 is representable.
 - UTC before 1972 uses TAI − UTC = 0, with a warning once per session, and steps to 10 s at
   1972-01-01T00:00:00. Astropy (ERFA) applies the drifting pre-1972 offsets, which differ by up
@@ -34,8 +35,7 @@ Notes
   Time with no location. It agrees with ephemeris-based TDB to a few nanoseconds over 1600-2200.
   `tdb_minus_tt` in `scales/tdb.jl` is the one function that supplies it, so a topocentric or
   ephemeris-based model replaces that function and nothing else.
-- This module currently mixes symbols and instances for time scales and formats.
-  Future versions will standardize on typed tags (e.g., TT(), TDB(), JD()) to avoid ambiguity.
+- Scales and formats are tags, such as `TT()` and `JD()`. Symbols are only how a `Time` stores them.
 """
 module AstroEpochs
 
@@ -47,6 +47,7 @@ export Time
 export TAI, TT, TDB, UTC, TCB, TCG
 export JD, MJD, ISOT
 export refresh_leap_seconds!
+export isot, tai_minus_utc, tdb_minus_tt
 
 import Base: +,-
 
@@ -75,7 +76,7 @@ Time(2451545.0, TT(), JD()).scale
 
 # output
 
-:tt
+TT()
 ```
 """
 struct TT   <: AbstractTimeScale end
@@ -91,7 +92,7 @@ Time(2451545.0, TDB(), JD()).scale
 
 # output
 
-:tdb
+TDB()
 ```
 """
 struct TDB  <: AbstractTimeScale end
@@ -107,7 +108,7 @@ Time(2451545.0, UTC(), JD()).scale
 
 # output
 
-:utc
+UTC()
 ```
 """
 struct UTC  <: AbstractTimeScale end
@@ -123,7 +124,7 @@ Time(2451545.0, TCB(), JD()).scale
 
 # output
 
-:tcb
+TCB()
 ```
 """
 struct TCB  <: AbstractTimeScale end
@@ -139,7 +140,7 @@ Time(2451545.0, TCG(), JD()).scale
 
 # output
 
-:tcg
+TCG()
 ```
 """
 struct TCG  <: AbstractTimeScale end
@@ -155,7 +156,7 @@ Time(2451545.0, TAI(), JD()).scale
 
 # output
 
-:tai
+TAI()
 ```
 """
 struct TAI  <: AbstractTimeScale end
@@ -171,7 +172,7 @@ Time(2451545.0, TT(), JD()).format
 
 # output
 
-:jd
+JD()
 ```
 """
 struct JD     <: AbstractTimeFormat end
@@ -187,7 +188,7 @@ Time(51544.5, TT(), MJD()).format
 
 # output
 
-:mjd
+MJD()
 ```
 """
 struct MJD    <: AbstractTimeFormat end   
@@ -203,12 +204,12 @@ Time("2000-01-01T12:00:00.000", TT(), ISOT()).format
 
 # output
 
-:isot
+ISOT()
 ```
 """
 struct ISOT   <: AbstractTimeFormat end
 
-# Map tags -> existing Symbol API
+# Tag -> the symbol a Time stores
 @inline _scale_symbol(::TT)  = :tt       # COV_EXCL_LINE
 @inline _scale_symbol(::TDB) = :tdb      # COV_EXCL_LINE
 @inline _scale_symbol(::UTC) = :utc      # COV_EXCL_LINE
@@ -220,17 +221,23 @@ struct ISOT   <: AbstractTimeFormat end
 @inline _format_symbol(::MJD)    = :mjd   # COV_EXCL_LINE
 @inline _format_symbol(::ISOT)   = :isot  # COV_EXCL_LINE
 
-# Map  Symbol -> tags
-@inline _scale_tag(::Val{:tt})  = TT()
-@inline _scale_tag(::Val{:tdb}) = TDB()
-@inline _scale_tag(::Val{:utc}) = UTC()
-@inline _scale_tag(::Val{:tcb}) = TCB()
-@inline _scale_tag(::Val{:tcg}) = TCG()
-@inline _scale_tag(::Val{:tai}) = TAI()
+# The symbol a Time stores -> its tag
+function _scale_tag(s::Symbol)
+    s === :tt  && return TT()
+    s === :tdb && return TDB()
+    s === :utc && return UTC()
+    s === :tcb && return TCB()
+    s === :tcg && return TCG()
+    s === :tai && return TAI()
+    throw(ArgumentError("Time: unknown time scale :$s"))
+end
 
-@inline _format_tag(::Val{:jd})   = JD()
-@inline _format_tag(::Val{:mjd})  = MJD()
-@inline _format_tag(::Val{:isot}) = ISOT()
+function _format_tag(f::Symbol)
+    f === :jd   && return JD()
+    f === :mjd  && return MJD()
+    f === :isot && return ISOT()
+    throw(ArgumentError("Time: unknown time format :$f"))
+end
 
 """ 
     _typename_paren(x) = string(nameof(typeof(x)), "()")
@@ -251,8 +258,8 @@ High-precision astronomical epoch represented as a split Julian Date with an ass
 Fields
 - _jd1::Real — first component of the split Julian Date (access via `t.jd1`).
 - _jd2::Real — second component of the split Julian Date (access via `t.jd2`).
-- scale::Symbol — time scale tag, one of: :tt, :tai, :tdb, :utc, :tcg, :tcb.
-- format::Symbol — time format tag, one of: :jd, :mjd, :isot.
+- _scale::Symbol — the time scale (access via `t.scale`, which returns a tag such as `TT()`).
+- _format::Symbol — the time format (access via `t.format`, which returns a tag such as `JD()`).
 
 # Notes:
 - Invariant: `jd1 + jd2` equals the epoch’s Julian Date. Internally, `_rebalance` keeps `jd1` a whole
@@ -264,12 +271,12 @@ Fields
 - Property access performs on-demand conversions:
   - `t.tt`, `t.tdb`, `t.utc`, … return a new Time converted to that scale.
   - `t.jd` and `t.mjd` return numeric date values; `t.isot` returns an ISO 8601 string.
-- Constructors accept Symbols (shown) and also typed tags (e.g., `TT(), TDB(), JD(), MJD(), ISOT()`).
-- Time arithmetic uses days: `t + 1.0` advances by one day; `t2 - t1` returns a Real (days).
-- Validation is strict: scales and formats must be supported; ISO input strings must match YYYY-MM-DDTHH:MM:SS.sss.
-- Time currently mixes symbols and instances for time scales and formats.
-  Future versions will standardize on typed tags (e.g., TT(), TDB(), JD()) to avoid ambiguity.
-- To maintain precision, jd2 should remain small (~< 1.0); use jd1 for large offsets.
+- Time arithmetic uses days: `t + 1.0` advances by one day; `t2 - t1` returns a Real (days). It
+  happens in the scale you are in, so a difference between two UTC times is not elapsed time; use
+  `b.tai - a.tai` for that.
+- Validation is strict: ISO input strings must match YYYY-MM-DDTHH:MM:SS.sss.
+- Change a held time with `Time(t, TDB())` for the scale, `Time(t, MJD())` for the format and
+  `Time{BigFloat}(t)` for the numeric type.
 
   # Examples
 ```julia
@@ -299,7 +306,7 @@ println(t4.jd)       # numeric JD
 t5 = t3 + 2.0
 println(t5.jd - t3.jd)
 
-# Difference (days), same scale/format required
+# Difference (days), same scale required; the formats may differ
 dt = t5 - t3
 println(dt)
 ```
@@ -307,10 +314,10 @@ println(dt)
 struct Time{T<:Real}
     _jd1::T
     _jd2::T
-    scale::Symbol
-    format::Symbol
+    _scale::Symbol
+    _format::Symbol
 
-    # Julian-date parts, whatever the format; `format` only sets how the time displays.
+    # Julian-date parts, whatever the format; the format only sets how the time displays.
     # Reached through `_time_jd`, never directly by a caller.
     function Time{T}(::_JDParts, jd1::T, jd2::T, scale::Symbol, format::Symbol) where {T<:Real}
         jd1, jd2 = _rebalance(jd1, jd2)
@@ -333,16 +340,18 @@ function _time_jd(jd1::Real, jd2::Real, scale::Symbol, format::Symbol)
     return Time{T}(_JDParts(), T(jd1), T(jd2), scale, format)
 end
 
-"""
-    Time(val1::Real, val2::Real, scale::Symbol, format::Symbol)
+# The stored scale and format, for this package's own code. `t.scale` and `t.format` return tags.
+@inline _scale_of(t::Time)  = getfield(t, :_scale)
+@inline _format_of(t::Time) = getfield(t, :_format)
 
-A time from two parts of a date in `format`, summed: Julian-date parts for `:jd`, Modified
-Julian Date parts for `:mjd`, as in AstroPy. Splitting a date into a whole and a fractional part
-keeps full precision. An ISOT time is a string; two numbers with `:isot` raise an `ArgumentError`.
-The numeric type is `promote_type(typeof(val1), typeof(val2))`.
-"""
-function Time(val1::Real, val2::Real, scale::Symbol, format::Symbol)
-    _validate_format(format)
+# A date cannot be held in integers, since its fraction of a day is what it carries.
+_real_parts(val1::Real, val2::Real) = promote(val1, val2)
+_real_parts(val1::Integer, val2::Integer) = (float(val1), float(val2))
+
+# Two parts of a date in `format`, summed: Julian-date parts for `:jd`, Modified Julian Date parts
+# for `:mjd`, as in AstroPy.
+function _time_parts(val1::Real, val2::Real, scale::Symbol, format::Symbol)
+    val1, val2 = _real_parts(val1, val2)
     format === :isot && throw(ArgumentError(
         "Time: an ISOT time is a string, such as Time(\"2024-01-01T00:00:00\", UTC(), ISOT()); " *
         "two numbers are the parts of a Julian date or a Modified Julian Date."))
@@ -356,52 +365,34 @@ function Time(val1::Real, val2::Real, scale::Symbol, format::Symbol)
     return _time_jd(val1, val2, scale, format)
 end
 
-"""
-    Time(jd1, jd2, scale, format)
-
-Construct time given single-value Julian Date with validation.
-"""
-function Time(jd1, jd2, scale, format)
+# Anything the methods below do not take: name what was wrong, and show the form that works.
+function _invalid_time_input(pieces...)
     msg = IOBuffer()
-    bad = false
-    if !(jd1 isa Real); print(msg, "jd1 must be Real; got ", typeof(jd1), ". "); 
-        bad = true end
-    if !(jd2 isa Real); print(msg, "jd2 must be Real; got ", typeof(jd2), ". "); 
-        bad = true end
-    if !(scale isa Symbol); print(msg, "scale must be Symbol; got ", typeof(scale), ". "); 
-        bad = true end
-    if !(format isa Symbol); print(msg, "format must be Symbol; got ", 
-        typeof(format), ". "); bad = true end
-    if !bad
-        # This should be an unreachable error, throw internal error if encountered
-        error("Internal error: invalid time input types.") # COV_EXCL_LINE
+    for (name, value, want, wanted) in pieces
+        value isa want || print(msg, name, " must be ", wanted, "; got ", typeof(value), ". ")
     end
-    throw(ArgumentError("Time: invalid time input types. " * String(take!(msg))))
+    throw(ArgumentError("Time: invalid time input types. " * String(take!(msg)) *
+                        "For example: Time(2451545.0, TT(), JD())."))
 end
 
-"""
-    Time(value::Real, scale::Symbol, format::Symbol)
+Time(val1, val2, scale, format) = _invalid_time_input(
+    ("the first part", val1, Real, "Real"), ("the second part", val2, Real, "Real"),
+    ("scale", scale, AbstractTimeScale, "a time scale tag such as TT()"),
+    ("format", format, AbstractTimeFormat, "a time format tag such as JD()"))
 
-Construct time given single-value Julian Date.
-"""
-function Time(value::Real, scale::Symbol, format::Symbol)
-    _validate_scale(scale)
-    _validate_format(format)
+Time(value, scale, format) = _invalid_time_input(
+    ("value", value, Union{Real, AbstractString}, "Real, or a string for ISOT()"),
+    ("scale", scale, AbstractTimeScale, "a time scale tag such as TT()"),
+    ("format", format, AbstractTimeFormat, "a time format tag such as JD()"))
+
+function _time_value(value::Real, scale::Symbol, format::Symbol)
     _validate_inputcoupling(value,format)
     return _from_format(value, scale, format)
 end
 
-"""
-    Time(isostr::String, scale::Symbol, format::Symbol) → Time
-
-Construct time given time in ISOT format.
-""" 
-function Time(isostr::String, scale::Symbol, format::Symbol)
-
-    _validate_scale(scale)
-    _validate_format(format)
+function _time_value(isostr::AbstractString, scale::Symbol, format::Symbol)
     _validate_inputcoupling(isostr,format)
-    
+
     y, m, d, h, mi, s = _isot_to_date(isostr)
     jd1, jd2 = dtf2d(scale, y, m, d, h, mi, s)          # ERFA, as Astropy parses it
 
@@ -416,50 +407,187 @@ Construct a time from two parts of a date in the format `f`, with typed scale an
 Julian-date parts for `JD()`, Modified Julian Date parts for `MJD()`.
 """
 Time(jd1::Real, jd2::Real, s::AbstractTimeScale, f::AbstractTimeFormat) =
-    Time(jd1, jd2, _scale_symbol(s), _format_symbol(f))
+    _time_parts(jd1, jd2, _scale_symbol(s), _format_symbol(f))
 
 
 """
     Time(value::Real, s::AbstractTimeScale, f::AbstractTimeFormat) -> Time
 
-Construct time given single-value JD and typed scale/format tags.
+Construct a time from one number: a Julian date for `JD()`, a Modified Julian Date for `MJD()`.
+An integer is promoted to floating point.
 """
 Time(value::Real, s::AbstractTimeScale, f::AbstractTimeFormat) =
-    Time(value, _scale_symbol(s), _format_symbol(f))
+    _time_value(value, _scale_symbol(s), _format_symbol(f))
 
-""" 
-    _typename_paren(x) = string(nameof(typeof(x)), "()")
+# The tag as it prints, for messages. A symbol that names no scale or format prints as itself.
+@inline _scale_tag_str(s::Symbol) =
+    s in TIME_SCALES ? _typename_paren(_scale_tag(s)) : ":" * String(s)
 
-Helper function to print type name with parentheses in show(). 
-"""
-@inline function _scale_tag_str(s::Symbol)
-    try
-        return _typename_paren(_scale_tag(Val(s)))
-    catch
-        return ":" * String(s)
-    end
-end
-
-""" 
-    _typename_paren(x) = string(nameof(typeof(x)), "()")
-
-Helper function to print type name with parentheses in show(). 
-"""
-@inline function _format_tag_str(f::Symbol)
-    try
-        return _typename_paren(_format_tag(Val(f)))
-    catch
-        return ":" * String(f)
-    end
-end
+@inline _format_tag_str(f::Symbol) =
+    f in TIME_FORMATS ? _typename_paren(_format_tag(f)) : ":" * String(f)
 
 """
-    Time(isostr::String, s::AbstractTimeScale, f::AbstractTimeFormat) -> Time
+    Time(isostr::AbstractString, s::AbstractTimeScale, f::AbstractTimeFormat) -> Time
 
 Construct time given ISOT string and typed scale/format tags.
 """
-Time(isostr::String, s::AbstractTimeScale, f::AbstractTimeFormat) =
-    Time(isostr, _scale_symbol(s), _format_symbol(f))
+Time(isostr::AbstractString, s::AbstractTimeScale, f::AbstractTimeFormat) =
+    _time_value(isostr, _scale_symbol(s), _format_symbol(f))
+
+"""
+    Time(year, month, day, hour, minute, second, s::AbstractTimeScale, f::AbstractTimeFormat) -> Time
+
+Construct a time from calendar fields in the scale `s`, displayed in the format `f`.
+
+# Arguments
+- `year`, `month`, `day`, `hour`, `minute`: Integers.
+- `second`: Real, and it can carry a fraction. In UTC, 60 and above is valid only in the last minute
+  of a day that ends with a leap second.
+- `s`: The time scale of the fields, such as `UTC()`.
+- `f`: The format the time displays in, such as `ISOT()`.
+
+# Returns
+A `Time` at that calendar date.
+
+# Examples
+```julia
+t = Time(2016, 12, 31, 23, 59, 60.5, UTC(), ISOT())
+t.isot     # "2016-12-31T23:59:60.500"
+```
+"""
+function Time(year::Integer, month::Integer, day::Integer, hour::Integer, minute::Integer,
+              second::Real, s::AbstractTimeScale, f::AbstractTimeFormat)
+    scale = _scale_symbol(s)
+    jd1, jd2 = _rebalance(dtf2d(scale, year, month, day, hour, minute, second)...)
+    return _time_jd(jd1, jd2, scale, _format_symbol(f))
+end
+
+"""
+    Time(t::Time, s::AbstractTimeScale) -> Time
+
+The same instant as `t` in the scale `s`, keeping the format. `t.tdb` says the same thing when the
+scale is known as you write the script; this form is for a scale held in a variable.
+
+# Arguments
+- `t`: The time to convert.
+- `s`: The time scale to convert to, such as `TDB()`.
+
+# Returns
+A `Time` in the scale `s`.
+
+# Examples
+```julia
+a = Time(2451545.0, TT(), JD())
+b = Time(2451545.5, TDB(), JD())
+Time(b, a.scale) - a              # days between them, measured in the scale of a
+```
+"""
+Time(t::Time, s::AbstractTimeScale) = getproperty(t, _scale_symbol(s))
+
+"""
+    Time(t::Time, f::AbstractTimeFormat) -> Time
+
+`t` displayed in the format `f`. The format only sets how a time displays, so the date is held
+exactly as it was, which rebuilding the time from `t.mjd` or `t.isot` does not do.
+
+# Arguments
+- `t`: The time.
+- `f`: The format to display in, such as `ISOT()`.
+
+# Returns
+A `Time` at the same date, in the same scale.
+
+# Examples
+```julia
+t = Time(2451545.25, TT(), JD())
+Time(t, ISOT())                   # displays as 2000-01-01T18:00:00.000
+```
+"""
+Time(t::Time, f::AbstractTimeFormat) = _time_jd(t.jd1, t.jd2, _scale_of(t), _format_symbol(f))
+
+"""
+    Time{T}(t::Time) -> Time{T}
+
+`t` with its date held as the numeric type `T`, in the same scale and format.
+
+# Arguments
+- `t`: The time.
+
+# Returns
+A `Time{T}`. `convert(Time{T}, t)` does the same.
+
+# Examples
+```julia
+t = Time(2451545.0, 0.25, TT(), JD())
+Time{BigFloat}(t)
+```
+"""
+Time{T}(t::Time) where {T<:Real} = _time_jd(T(t.jd1), T(t.jd2), _scale_of(t), _format_of(t))
+
+Base.convert(::Type{Time{T}}, t::Time) where {T<:Real} = Time{T}(t)
+Base.convert(::Type{Time{T}}, t::Time{T}) where {T<:Real} = t
+
+"""
+    tai_minus_utc(t::Time) -> Float64
+
+TAI − UTC at `t`, in seconds, from the leap-second list.
+
+# Arguments
+- `t`: The time, in any scale.
+
+# Returns
+TAI − UTC in seconds. Before 1972 the list has no value; this returns 0 and warns.
+
+# Examples
+```julia
+tai_minus_utc(Time("2024-01-01T00:00:00", UTC(), ISOT()))     # 37.0
+```
+"""
+tai_minus_utc(t::Time) = tai_minus_utc(t.utc.jd - 2451545.0)
+
+"""
+    tdb_minus_tt(t::Time) -> seconds
+    tdb_minus_tt(t::Time, position) -> seconds
+
+TDB − TT at `t`, in seconds, from ERFA's `dtdb`: at the geocentre, or at an observer on the Earth.
+
+# Arguments
+- `t`: The time, in any scale.
+- `position`: The observer's position in Earth-fixed axes, in km. UTC stands in for UT1 in the
+  observer's terms, which changes the result by well under a nanosecond.
+
+# Returns
+TDB − TT in seconds, in the numeric type of the date.
+
+# Examples
+```julia
+t = Time("2024-01-01T00:00:00", TT(), ISOT())
+tdb_minus_tt(t)
+tdb_minus_tt(t, [-2353.6, -4641.3, 3677.1])
+```
+"""
+function tdb_minus_tt(t::Time)
+    tt = t.tt
+    return tdb_minus_tt(tt.jd1, tt.jd2)
+end
+
+function tdb_minus_tt(t::Time, position::AbstractVector)
+    tt, ut = t.tt, t.utc
+    fraction_of_day = mod((ut.jd1 - 0.5) + ut.jd2, 1.0)
+    return dtdb(tt.jd1, tt.jd2, fraction_of_day, atan(position[2], position[1]),
+                hypot(position[1], position[2]), position[3])
+end
+
+# Printing a time never fails, even one with no calendar date: an optimizer can step to a NaN time
+# and the message about what went wrong still has to print.
+function _isot_for_display(t::Time)
+    try
+        return t.isot
+    catch e
+        e isa InterruptException && rethrow()
+        return string("no calendar date (Julian date ", t.jd, ")")
+    end
+end
 
 """
     Base.show(io::IO, ::MIME"text/plain", t::Time)
@@ -467,31 +595,13 @@ Time(isostr::String, s::AbstractTimeScale, f::AbstractTimeFormat) =
 Pretty, stable text/plain rendering for Time.
 """
 function Base.show(io::IO, ::MIME"text/plain", t::Time)
-    value = if t.format == :jd
-        t.jd
-    elseif t.format == :mjd
-        t.mjd
-    elseif t.format == :isot
-        t.isot
-    else
-        "Unknown format: $(t.format)"
-    end
-
-    scale_str = try
-        _typename_paren(_scale_tag(Val(t.scale)))
-    catch
-        string(t.scale)
-    end
-    format_str = try
-        _typename_paren(_format_tag(Val(t.format)))
-    catch
-        string(t.format)
-    end
+    format = _format_of(t)
+    value = format === :jd ? t.jd : format === :mjd ? t.mjd : _isot_for_display(t)
 
     println(io, "AstroEpochs.Time")
     println(io, "  value  = ", value)
-    println(io, "  scale  = ", scale_str)
-    println(io, "  format = ", format_str)
+    println(io, "  scale  = ", _scale_tag_str(_scale_of(t)))
+    println(io, "  format = ", _format_tag_str(format))
 end
 
 """
@@ -554,13 +664,14 @@ Provide field access and on-demand conversions for Time via property syntax.
 Arguments
 - t::Time — the epoch object.
 - name::Symbol — one of:
-  - Raw fields: :jd1, :jd2, :scale, :format
+  - The date's parts: :jd1, :jd2
+  - The scale and format tags: :scale, :format
   - Format accessors: :jd (Real), :mjd (Real), :isot (String)
   - Scale conversions: any of `:tt, :tai, :tdb, :utc, :tcg, :tcb` to return a new Time in that scale.
 
 Returns
 - Real for :jd, :mjd, :jd1, :jd2
-- Symbol for :scale, :format
+- A tag for :scale and :format, such as `TT()` and `JD()`
 - String for :isot
 - Time for scale symbols (converted, preserving current `format`)
 
@@ -579,15 +690,17 @@ using AstroEpochs
 
 t = Time("2024-02-29T12:34:56.123", TAI(), ISOT())
 
-# Raw fields
-t.jd1; t.jd2; t.scale; t.format
+# The date's parts, and the scale and format
+t.jd1; t.jd2
+t.scale == TAI()      # true
+t.format == ISOT()    # true
 
 # Format accessors
 t.jd        # numeric JD
 t.mjd       # numeric MJD
 t.isot      # ISO 8601 string
 
-# Scale conversion (preserves current format :isot)
+# Scale conversion (preserves the current format, ISOT)
 tt_time = t.tt
 tai_time = tt_time.tai
 ```
@@ -599,23 +712,25 @@ function Base.getproperty(t::Time, name::Symbol)
         return getfield(t, :_jd1)
     elseif name === :jd2
         return getfield(t, :_jd2)
-    elseif name === :scale || name === :format
-        return getfield(t, name)
+    elseif name === :scale
+        return _scale_tag(_scale_of(t))
+    elseif name === :format
+        return _format_tag(_format_of(t))
     end
 
     # Time format conversion
     if name === :isot
         return _to_isot(t)
     elseif name === :jd
-        return t.jd1 + t.jd2
-    elseif name === :mjd 
+        return getfield(t, :_jd1) + getfield(t, :_jd2)
+    elseif name === :mjd
         return _to_mjd(t)
     end
 
     # Time scale conversion 
     if name in TIME_SCALES
-        newjd1, newjd2 = apply_transforms(t.jd1, t.jd2, t.scale, name)
-        return _time_jd(newjd1, newjd2, name, t.format)
+        newjd1, newjd2 = apply_transforms(t.jd1, t.jd2, _scale_of(t), name)
+        return _time_jd(newjd1, newjd2, name, _format_of(t))
     end
 
     # Fall back to normal field access
@@ -668,15 +783,22 @@ Promote to a common type and normalise, as the typed method.
 """
 @inline _rebalance(a::Real, b::Real) = _rebalance(promote(a, b)...)
 
+# Comparing two times means measuring them on one clock, so times on different clocks are refused
+# with the conversion that makes them comparable.
+function _require_one_scale(t2::Time, t1::Time, action::AbstractString)
+    _scale_of(t1) === _scale_of(t2) || throw(ArgumentError(
+        "Time: cannot $action times in different scales ($(_scale_tag_str(_scale_of(t2))) and " *
+        "$(_scale_tag_str(_scale_of(t1)))); convert one first, for example `t2 - t1.$(_scale_of(t2))`."))
+    return nothing
+end
+
 """
     function -(t2::Time, t1::Time)
 
   Subtract two `Time` objects, returning the difference in days.
 """
 function -(t2::Time, t1::Time)::Real
-    t1.scale === t2.scale || throw(ArgumentError(
-        "Time: cannot subtract times in different scales ($(_scale_tag_str(t2.scale)) and " *
-        "$(_scale_tag_str(t1.scale))); convert one first, for example `t2 - t1.$(t2.scale)`."))
+    _require_one_scale(t2, t1, "subtract")
     return (t2.jd1 - t1.jd1) + (t2.jd2 - t1.jd2)
 end
 
@@ -698,7 +820,7 @@ function +(t::Time, dt::Real)
     δ1, δ2 = _rebalance(dt, zero(dt))
     jd1 = t.jd1 + δ1
     jd2 = t.jd2 + δ2
-    return _time_jd(jd1, jd2, t.scale, t.format)
+    return _time_jd(jd1, jd2, _scale_of(t), _format_of(t))
 end
 
 """
@@ -713,15 +835,69 @@ end
 """
     ==(a::Time, b::Time)
 
-Equality operator for Time: the same scale and format, and the same instant. Both dates are held
-normalised (see `_rebalance`), so the same instant has the same two parts and they are compared
-directly; summing them first would round away differences below about 40 µs.
+Equality operator for Time: the same scale and the same date, to the last bit. The format only
+sets how a time displays, so it plays no part. Both dates are held normalised (see `_rebalance`), so
+the same date has the same two parts and they are compared directly; summing them first would round
+away differences below about 40 µs.
+
+Two times written separately are rarely equal to the last bit, even when they mean the same instant:
+`Time(2460000.123, TT(), JD())` and `Time(59999.623, TT(), MJD())` differ by 12 µs, because each is
+one float rounded on its own. Compare those with a tolerance, such as `abs(a - b) * 86400 < 1e-3`.
+Times in different scales are never equal; convert one first.
 """
 function Base.:(==)(a::Time, b::Time)
-    a.scale === b.scale || return false
-    a.format === b.format || return false
+    _scale_of(a) === _scale_of(b) || return false
     return getfield(a, :_jd1) == getfield(b, :_jd1) && getfield(a, :_jd2) == getfield(b, :_jd2)
 end
+
+# Equal times hash alike, across numeric types. Adding zero turns -0.0, which equals 0.0 but hashes
+# differently, into 0.0.
+Base.hash(t::Time, h::UInt) =
+    hash(t.jd1 + zero(t.jd1), hash(t.jd2 + zero(t.jd2), hash(_scale_of(t), hash(:Time, h))))
+
+# Order. `<`, `sort`, `min` and `max` come from `isless`.
+function Base.isless(a::Time, b::Time)
+    _require_one_scale(a, b, "compare")
+    return (a.jd1 - b.jd1) + (a.jd2 - b.jd2) < 0
+end
+
+"""
+    isapprox(a::Time, b::Time; atol = 1e-9) -> Bool
+
+Whether two times in the same scale are within `atol` seconds of each other. Times written
+separately rarely satisfy `==`, since each number is rounded on its own; this is the comparison for
+them. Times in different scales throw; convert one first.
+
+# Arguments
+- `a`, `b`: The times, in the same scale.
+- `atol`: The tolerance, in seconds.
+
+# Returns
+`true` when the two differ by no more than `atol` seconds.
+
+# Examples
+```julia
+a = Time(2460000.123, TT(), JD())
+b = Time(59999.623, TT(), MJD())
+
+a == b                  # false: they differ by 12 µs
+a ≈ b                   # false at the default of a nanosecond
+isapprox(a, b; atol = 1e-3)
+```
+"""
+function Base.isapprox(a::Time, b::Time; atol::Real = 1e-9)
+    _require_one_scale(a, b, "compare")
+    return abs(a - b) * 86400.0 <= atol
+end
+
+# A time is one thing in a broadcast, so `t .+ offsets` gives one time per offset.
+Base.broadcastable(t::Time) = Ref(t)
+
+# What `t.` offers: the properties that work, not the fields that hold them.
+Base.propertynames(::Time, private::Bool = false) =
+    private ? (:jd1, :jd2, :scale, :format, :jd, :mjd, :isot, :tt, :tai, :tdb, :utc, :tcg, :tcb,
+               :_jd1, :_jd2, :_scale, :_format) :
+              (:jd1, :jd2, :scale, :format, :jd, :mjd, :isot, :tt, :tai, :tdb, :utc, :tcg, :tcb)
 
 # Format transforms, which read and write a Time, so they come after it.
 include("formats/formats.jl")

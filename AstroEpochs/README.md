@@ -18,8 +18,8 @@ Acknowledgement: the time-scale transforms, TDB − TT, calendar and ISOT format
 - **Automatic scale conversion** via property access (e.g., `t.tt`, `t.utc`, `t.tdb`)
 - **Multiple input formats** including Julian Date, Modified Julian Date, and ISO 8601 strings
 - **Time arithmetic** supporting addition and subtraction of time intervals
-- **Type stability** preserving numeric types through operations
-- **Differentiability** using standard packages such as FiniteDiff and Zygote
+- **One type across scales**, so a scale change does not change the type of a `Time`
+- **Differentiability** using standard packages such as ForwardDiff and Zygote
 
 ## Installation
 
@@ -34,7 +34,7 @@ Full documentation is available at: [AstroEpochs Documentation](https://genastro
 
 ## Comparison with Other Julia Time-Keeping Libraries
 
-Tempo.jl and AstroTime.jl also handle astronomical time in Julia. AstroTime.jl, from the JuliaAstro community, supports six time scales (TAI, TT, TCG, TCB, TDB and UT1) with a separate type for each scale, so a conversion changes the type. Tempo.jl supports UTC, TAI, TT, TDB, TCG and TCB with allocation-free conversions, and changes scale without changing the type. AstroEpochs also keeps one type across scales, which Epicycle's propagation and optimization rely on, but its conversions are not allocation-free: TT ↔ TDB evaluates ERFA's 787-term series, 2.5 to 6.5 µs a conversion depending on the epoch, without allocating. AstroEpochs follows the interface of Astropy's `Time` and uses its algorithms (ERFA), agreeing with it to the last bit of the date, and keeps the IERS leap-second list current itself.
+Tempo.jl and AstroTime.jl also handle astronomical time in Julia. AstroTime.jl, from the JuliaAstro community, supports six time scales (TAI, TT, TCG, TCB, TDB and UT1) with a separate type for each scale, so a conversion changes the type. Tempo.jl supports UTC, TAI, TT, TDB, TCG and TCB with allocation-free conversions, and changes scale without changing the type. AstroEpochs also keeps one type across scales, which Epicycle's propagation and optimization rely on, but its conversions are not allocation-free: TT ↔ TDB evaluates ERFA's 787-term series, 2.5 to 6.5 µs a conversion depending on the epoch, and allocates a little. AstroEpochs follows the interface of Astropy's `Time` and uses its algorithms (ERFA), agreeing with it to the last bit of the date, and keeps the IERS leap-second list current itself.
 
 ## Contributing
 

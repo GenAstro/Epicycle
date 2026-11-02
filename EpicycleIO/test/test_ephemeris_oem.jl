@@ -331,7 +331,7 @@ end
 # A segment as Epicycle would write it: n states a minute apart.
 function make_segment(n; acc = false, cov = false, interp = Lagrange(7), t0 = "2026-10-21T00:00:00")
     t = utc(t0)
-    times = [Time(t.jd1, t.jd2 + (k * 60.123456789) / 86400, :utc, :jd) for k in 0:n-1]
+    times = [Time(t.jd1, t.jd2 + (k * 60.123456789) / 86400, UTC(), JD()) for k in 0:n-1]
     w = 2π / 5400
     states = [SVector(7000cos(w * 60k) + 1e-9k, 7000sin(w * 60k), 1234.5678901234567,
                       -7000w * sin(w * 60k), 7000w * cos(w * 60k), 1e-3 / 3) for k in 0:n-1]
@@ -424,7 +424,7 @@ end
     msg = try E.write_oem(path, good(); version = "1.0"); "" catch e sprint(showerror, e) end
     @test occursin("\"3.0\" or \"2.0\"", msg) && read(path, String) == "existing content"
     # Epochs that increase but round to the same text at `digits` would repeat an epoch.
-    d = good(); d.segments[1].times[5] = Time(d.segments[1].times[4].jd1, d.segments[1].times[4].jd2 + 0.1 / 86400, :utc, :jd)
+    d = good(); d.segments[1].times[5] = Time(d.segments[1].times[4].jd1, d.segments[1].times[4].jd2 + 0.1 / 86400, UTC(), JD())
     msg = try E.write_oem(path, d; digits = 0); "" catch e sprint(showerror, e) end
     @test occursin("increase strictly at state 5", msg) && occursin("digits = 0", msg)
     @test read(path, String) == "existing content"

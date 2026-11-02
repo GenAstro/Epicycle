@@ -42,7 +42,7 @@ using Sockets
 # a trajectory on a globe means nothing without a frame and an epoch. Confined to src/gl, so a
 # change here cannot reach plotting and the plotting tests need no spacecraft.
 using AstroModels: Spacecraft, HistorySegment
-using AstroEpochs: Time
+using AstroEpochs: Time, TT, TAI, TDB, TCB, TCG, JD
 
 # Ephemeris files. Frames, centers and time systems are named in files, so reading and writing
 # them needs the objects those names stand for; interpolation lives in AstroRoutines.

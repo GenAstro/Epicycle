@@ -15,20 +15,18 @@
 using Test
 using AstroEpochs
 using AstroEpochs: leap_second_table, _fetch_leap_second_table, _refresh_leap_seconds!,
-                   _try_parse
+                   _download_leap_seconds, _leap_seconds_path, parse_leap_seconds
 using Sockets
 
-const _NTP_JD = 2415020.5                                   # 1900-01-01, the list's time origin
-_ntp(jd) = round(Int, (jd - _NTP_JD) * 86400)
+include("leap_list_helpers.jl")
+
 _today_jd() = time() / 86400 + 2440587.5
 
-# A two-entry list in the IANA format, expiring at `expires_jd`.
-_list(expires_jd) = """
-    #\tA test list
-    #@\t$(_ntp(expires_jd))
-    2272060800\t10\t# 1 Jan 1972
-    3692217600\t37\t# 1 Jan 2017
-    """
+# A list in the IANA format, expiring at `expires_jd`.
+_list(expires_jd) = _valid_leap_list(_list_ntp(expires_jd))
+
+# Nothing left behind in the folder: each download's temporary file is gone.
+_no_temporary_files(dir) = !any(startswith("jl_"), readdir(dir))
 
 _file_url(path) = "file:///" * replace(abspath(path), "\\" => "/")
 const _REFUSED = "http://127.0.0.1:1/leap-seconds.list"
@@ -66,8 +64,8 @@ _expires_jd(table) = table.expires + 2451545.0
             write(fresh, _list(now + 200))
             table = @test_logs _fetch_leap_second_table(path; url = _file_url(fresh))
             @test _expires_jd(table) ≈ now + 200 atol = 1e-5
-            @test _try_parse(read(path, String)).expires == table.expires
-            @test !isfile(path * ".download")
+            @test parse_leap_seconds(read(path, String)).expires == table.expires
+            @test _no_temporary_files(dir)
         end
 
         @testset "a download that is not a list: the stored copy is kept, nothing left behind" begin
@@ -78,7 +76,62 @@ _expires_jd(table) = table.expires + 2451545.0
             table = @test_logs (:warn, r"expired copy") _fetch_leap_second_table(path; url = _file_url(bad))
             @test _expires_jd(table) ≈ now - 100 atol = 1e-5
             @test read(path) == stored
-            @test !isfile(path * ".download")
+            @test _no_temporary_files(dir)
+        end
+
+        @testset "a download cut off partway: the stored copy is kept, and the cut file is not stored" begin
+            write(path, _list(now - 100))
+            stored = read(path)
+            cut = joinpath(dir, "cut.list")
+            write(cut, join(split(_list(now + 200), '\n')[1:27], '\n'))
+            table = @test_logs (:warn, r"expired copy") _fetch_leap_second_table(path; url = _file_url(cut))
+            @test _expires_jd(table) ≈ now - 100 atol = 1e-5
+            @test read(path) == stored
+            @test _no_temporary_files(dir)
+        end
+
+        @testset "a stored list that is damaged is not used" begin
+            write(path, join(split(_list(now + 100), '\n')[1:27], '\n'))       # current, but cut off
+            table = @test_logs (:warn, r"built-in table") _fetch_leap_second_table(path; url = _REFUSED)
+            @test table.expires == -Inf
+            @test table.delta[end] == 37.0
+        end
+
+        @testset "a folder that cannot be written to: the built-in table, with a warning" begin
+            missing_folder = joinpath(dir, "not_there", "leap-seconds.list")
+            table = @test_logs (:warn, r"built-in table") _fetch_leap_second_table(missing_folder; url = _REFUSED)
+            @test table.expires == -Inf
+        end
+
+        @testset "a depot that cannot be written to: a warning, and a temporary home for the list" begin
+            blocked = joinpath(dir, "blocked_depot")
+            mkpath(blocked)
+            write(joinpath(blocked, "scratchspaces"), "a file where the folder has to go")
+            saved = copy(DEPOT_PATH)
+            try
+                DEPOT_PATH[1] = blocked
+                where_to = @test_logs (:warn, r"cannot store") match_mode = :any _leap_seconds_path()
+                @test !startswith(where_to, blocked)
+                @test isdir(dirname(where_to))
+                fresh = joinpath(dir, "for_blocked.list")
+                write(fresh, _list(now + 200))
+                table = _fetch_leap_second_table(where_to; url = _file_url(fresh))
+                @test _expires_jd(table) ≈ now + 200 atol = 1e-5
+            finally
+                copy!(DEPOT_PATH, saved)
+            end
+        end
+
+        @testset "downloads running at once do not disturb each other" begin
+            shared = joinpath(dir, "shared.list")
+            fresh = joinpath(dir, "for_shared.list")
+            write(fresh, _list(now + 400))
+            tasks = [@async _download_leap_seconds(shared, _file_url(fresh), 10.0) for _ in 1:6]
+            for table in fetch.(tasks)
+                @test _expires_jd(table) ≈ now + 400 atol = 1e-5
+            end
+            @test parse_leap_seconds(read(shared, String)).delta[end] == 37.0
+            @test _no_temporary_files(dir)
         end
 
         @testset "a server that never answers: the timeout ends the wait" begin
@@ -99,7 +152,7 @@ _expires_jd(table) = table.expires + 2451545.0
                 end
                 @test _expires_jd(table) ≈ now - 100 atol = 1e-5
                 @test elapsed < 10.0
-                @test !isfile(path * ".download")
+                @test _no_temporary_files(dir)
             finally
                 close(server)
                 foreach(close, held)
@@ -120,7 +173,7 @@ _expires_jd(table) = table.expires + 2451545.0
                 table = _refresh_leap_seconds!(path, _file_url(fresh), 1.0)
                 @test leap_second_table() === table
                 @test _expires_jd(table) ≈ now + 300 atol = 1e-5
-                @test _try_parse(read(path, String)).expires == table.expires
+                @test parse_leap_seconds(read(path, String)).expires == table.expires
             finally
                 AstroEpochs._LEAP[] = in_use              # the session's own table back
             end

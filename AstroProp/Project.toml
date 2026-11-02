@@ -24,7 +24,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 AstroCallbacks = "0.5.0"
-AstroEpochs = "0.6"
+AstroEpochs = "0.7"
 AstroFrames = "0.4"
 AstroManeuvers = "0.3.0"
 AstroModels = "0.3.0"
