@@ -26,7 +26,7 @@ end
 
 # SPICE's own state at `et`, with only `path` loaded for the duration.
 function spice_state(path, target, et, center = 399)
-    lock(EK._SPICE_LOCK) do
+    lock(EK._SPICE_LOCK()) do
         SPICE.furnsh(path)
         try
             return SPICE.spkgeo(target, et, "J2000", center)[1]
@@ -81,7 +81,7 @@ end
     # Two objects in one file: naif_id chooses.
     p2 = tempname() * ".bsp"
     EK.write_spk(p2, EK.EphemerisFileData(segments = [a]); naif_id = -77)
-    lock(EK._SPICE_LOCK) do                                              # append a second object
+    lock(EK._SPICE_LOCK()) do                                              # append a second object
         h = SPICE.spkopa(p2)
         s = spk_segment(10; name = "OTHER")
         SPICE.spkw13(h, -88, 399, "J2000", EK._et(s.times[1]), EK._et(s.times[end]), "OTHER", 7,
@@ -98,7 +98,7 @@ end
     # SPK type 8 (equal-step Lagrange) is not read directly; it goes through SPICE.
     s = spk_segment(60; step = 60.0)
     path = tempname() * ".bsp"
-    lock(EK._SPICE_LOCK) do
+    lock(EK._SPICE_LOCK()) do
         h = SPICE.spkopn(path, "TEST", 0)
         SPICE.spkw08(h, -900002, 399, "J2000", EK._et(s.times[1]), EK._et(s.times[end]), "TYPE8", 7,
                      [collect(v) for v in s.states], EK._et(s.times[1]), 60.0)
@@ -120,22 +120,22 @@ end
     @test reported ≈ actual rtol = 0.01
 
     # Reading leaves the caller's kernels as they were: a file the caller loaded stays loaded.
-    lock(EK._SPICE_LOCK) do
+    lock(EK._SPICE_LOCK()) do
         SPICE.furnsh(path)
     end
     EK.read_spk(path; step = 30.0)
-    loaded = lock(EK._SPICE_LOCK) do
+    loaded = lock(EK._SPICE_LOCK()) do
         try SPICE.spkgeo(-900002, EK._et(s.times[10]), "J2000", 399)[1][1] catch; NaN end
     end
     @test loaded ≈ s.states[10][1]
-    lock(EK._SPICE_LOCK) do
+    lock(EK._SPICE_LOCK()) do
         SPICE.unload(path)
     end
 
     # Each segment is sampled from itself, even where a later segment of the file covers the
     # same times and SPICE's own lookup would take that one.
     two = tempname() * ".bsp"
-    lock(EK._SPICE_LOCK) do
+    lock(EK._SPICE_LOCK()) do
         h = SPICE.spkopn(two, "TEST", 0)
         for (name, shift) in (("FIRST", 0.0), ("SECOND", 100.0))
             SPICE.spkw08(h, -900002, 399, "J2000", EK._et(s.times[1]), EK._et(s.times[end]), name, 7,
@@ -151,10 +151,10 @@ end
     s = spk_segment(20)
     ets = EK._et.(s.times)
     # An ECLIPJ2000 segment, as another tool would write it, reads as ICRF with SPICE's rotation.
-    R = SMatrix{3, 3}(lock(() -> SPICE.pxform("J2000", "ECLIPJ2000", 0.0), EK._SPICE_LOCK))
+    R = SMatrix{3, 3}(lock(() -> SPICE.pxform("J2000", "ECLIPJ2000", 0.0), EK._SPICE_LOCK()))
     eclip = [Vector(vcat(R * x[SVector(1, 2, 3)], R * x[SVector(4, 5, 6)])) for x in s.states]
     path = tempname() * ".bsp"
-    lock(EK._SPICE_LOCK) do
+    lock(EK._SPICE_LOCK()) do
         h = SPICE.spkopn(path, "TEST", 0)
         SPICE.spkw13(h, -900003, 399, "ECLIPJ2000", ets[1], ets[end], "ECLIPTIC", 3, eclip, ets)
         SPICE.spkcls(h)
@@ -196,7 +196,7 @@ end
     EK.write_spk(path, EK.EphemerisFileData(segments = [spk_segment(20)]); naif_id = -900001)
     @test_throws "integer NAIF ID" EK.read_spk(path; naif_id = 1.5)
     # The type 13 window size is the second-to-last word of the segment; make it impossible.
-    ic = only(lock(() -> EK._spk_summaries(EK._Diagnostics(path; strict = false), path), EK._SPICE_LOCK)).ic
+    ic = only(lock(() -> EK._spk_summaries(EK._Diagnostics(path; strict = false), path), EK._SPICE_LOCK())).ic
     bytes = read(path)
     bytes[(ic[6] - 2) * 8 + 1:(ic[6] - 1) * 8] = reinterpret(UInt8, [-5.0])
     write(path, bytes)
@@ -211,7 +211,7 @@ end
     # A file written straight through SPICE: `segments` is a list of (center, frame, type) to write.
     function spk_file(segments...)
         p = tempname() * ".bsp"
-        lock(EK._SPICE_LOCK) do
+        lock(EK._SPICE_LOCK()) do
             h = SPICE.spkopn(p, "TEST", 0)
             for (center, frame, typ) in segments
                 typ == 13 ? SPICE.spkw13(h, -900002, center, frame, et0, et1, "T", 7, states, EK._et.(s.times)) :

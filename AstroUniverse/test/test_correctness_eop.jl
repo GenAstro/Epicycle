@@ -415,7 +415,7 @@ end
             @test path == cached
 
             # A week-old copy: every source fails, so the copy is used, with a warning.
-            AU._EOP_AGE_LIMIT[] = 0.0
+            AU._EOP_AGE_LIMIT[] = -Inf
             path = @test_logs (:warn, r"using the cached copy") AU._eop_file(IAU2006())
             @test path == cached && read(cached) == before
 

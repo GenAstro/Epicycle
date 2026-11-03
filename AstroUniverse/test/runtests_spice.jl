@@ -6,6 +6,20 @@ using AstroUniverse
 using SPICE
 using Logging
 
+# Most of this exercises a real ephemeris file, fetched into the kernel cache the first time. With
+# no copy and no network it is reported as skipped, not as passed.
+_HAVE_DE440S = try
+    download_spice_kernel("de440s.bsp",
+        "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp")
+    true
+catch
+    false
+end
+
+if !_HAVE_DE440S
+    @test_skip "SPICE kernel management needs de440s.bsp"
+else
+
 @testset "SPICE Kernel Management" begin
     
     @testset "Default Kernels on Init" begin
@@ -58,10 +72,9 @@ using Logging
         @test contains(dir, "spice_kernels")
     end
     
-    @testset "list_downloaded_spice_kernels()" begin
-        # Should not error and should display downloaded kernel info
-        @test_nowarn list_downloaded_spice_kernels()
-        
+    @testset "cached_spice_kernels()" begin
+        @test "naif0012.tls" in cached_spice_kernels()
+
         # Verify default kernels are in the storage directory
         storage_dir = get_spice_directory()
         downloaded_files = readdir(storage_dir)
@@ -70,10 +83,7 @@ using Logging
         @test "de440s.bsp" in downloaded_files  # From earlier test
     end
     
-    @testset "list_cached_spice_kernels()" begin
-        # Should not error - shows what's loaded in SPICE memory
-        @test_nowarn list_cached_spice_kernels()
-        
+    @testset "loaded_spice_kernels()" begin
         # Ensure de440s.bsp is NOT loaded to start with clean state
         try
             unload_spice_kernel("de440s.bsp")
@@ -286,5 +296,7 @@ using Logging
         end
         @test SPICE.ktotal("ALL") == length(AstroUniverse.DEFAULT_KERNELS)
     end
-    
+
+end
+
 end

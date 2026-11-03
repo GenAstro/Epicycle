@@ -37,7 +37,7 @@ const _JD = 2458849.5
         # structural check would catch, so it is pinned against the raw
         # ephemeris, whose own direction is documented the other way round.
         Δ  = origin_translation(earth, moon, ICRF(), _JD)
-        mre = translate_state(earth, moon, _JD)      # Moon seen from Earth
+        mre = translate_state(earth, moon, Time(_JD, TDB(), JD()))      # Moon seen from Earth
         @test all(isapprox.(Δ, -mre; rtol = 1e-12))
 
         # Stated as the degenerate case that fixes the convention: a point at

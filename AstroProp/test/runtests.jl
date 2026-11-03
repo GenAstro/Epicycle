@@ -130,7 +130,7 @@ end
 
     #  Put spacecraft at center of the moon and test error is thrown
     t_tdb = t.tdb
-    pos = AstroUniverse.translate(earth,moon,t_tdb.jd)
+    pos = AstroUniverse.translate(earth,moon,t_tdb)
     posvel = zeros(6)
     posvel[1:3] = pos;
     err = try

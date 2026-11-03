@@ -49,7 +49,8 @@ using AstroEpochs: Time, TT, TAI, TDB, TCB, TCG, JD
 import AstroEpochs
 using AstroFrames: ICRF, GCRF, CIRS, TIRS, ITRF, MJ2000Eq, MODEq, TODEq, MJ2000Ec, PEF, TEME,
                    MoonPA, MoonME, CelestialBodyFixed
-using AstroUniverse: sun, mercury, venus, earth, moon, mars, jupiter, saturn, uranus, neptune, pluto
+using AstroUniverse: sun, mercury, venus, earth, moon, mars, jupiter, saturn, uranus, neptune, pluto,
+                     spice_lock
 using AstroRoutines: AbstractInterpolationMethod, Lagrange, Hermite, required_points, interpolate,
                      interpolate_with_derivative
 import SPICE

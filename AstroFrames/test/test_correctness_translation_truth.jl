@@ -918,13 +918,13 @@ const _TOL_ROW = 1e-13
         @testset "$(row.observer) → $(row.target)" begin
             for case in row.states
                 truth = collect(case.state)
-                state = translate_state(observer, target, case.jd_tdb)
+                state = translate_state(observer, target, Time(case.jd_tdb, TDB(), JD()))
                 @test norm(state[1:3] - truth[1:3]) / norm(truth[1:3]) < _TOL_ROW
                 @test norm(state[4:6] - truth[4:6]) / norm(truth[4:6]) < _TOL_ROW
 
                 # `translate` is the position-only path and a separate SPICE
                 # call, so it is pinned too rather than assumed to agree.
-                @test translate(observer, target, case.jd_tdb) ≈ truth[1:3] rtol=_TOL_ROW
+                @test translate(observer, target, Time(case.jd_tdb, TDB(), JD())) ≈ truth[1:3] rtol=_TOL_ROW
             end
         end
     end
@@ -947,8 +947,8 @@ end
     barycentre = CelestialBody("EMB", earth.mu + moon.mu, 1.0, 0.0, 3)
 
     for jd in _TRANSLATION_EPOCHS
-        r_earth = translate(barycentre, earth, jd)
-        r_moon  = translate(barycentre, moon,  jd)
+        r_earth = translate(barycentre, earth, Time(jd, TDB(), JD()))
+        r_moon  = translate(barycentre, moon,  Time(jd, TDB(), JD()))
 
         separation = norm(r_moon - r_earth)
         residual = norm(earth.mu .* r_earth .+ moon.mu .* r_moon) /
@@ -974,11 +974,11 @@ end
     for (observer, target) in ((earth, moon), (earth, mars), (sun, jupiter),
                                (sun, earth), (earth, sun))
         for jd in _TRANSLATION_EPOCHS
-            forward  = translate(observer, target, jd + h_days)
-            backward = translate(observer, target, jd - h_days)
+            forward  = translate(observer, target, Time(jd + h_days, TDB(), JD()))
+            backward = translate(observer, target, Time(jd - h_days, TDB(), JD()))
             numerical = (forward - backward) ./ (2 * h_days * 86_400.0)
 
-            velocity = translate_state(observer, target, jd)[4:6]
+            velocity = translate_state(observer, target, Time(jd, TDB(), JD()))[4:6]
             @test norm(numerical - velocity) / norm(velocity) < 1e-5
         end
     end
@@ -990,8 +990,8 @@ end
     for jd in _TRANSLATION_EPOCHS
         for (a, b, c) in ((earth, sun, mars), (earth, moon, sun),
                           (sun, jupiter, saturn), (earth, sun, pluto))
-            direct  = translate(a, c, jd)
-            through = translate(a, b, jd) .+ translate(b, c, jd)
+            direct  = translate(a, c, Time(jd, TDB(), JD()))
+            through = translate(a, b, Time(jd, TDB(), JD())) .+ translate(b, c, Time(jd, TDB(), JD()))
             @test norm(direct - through) / norm(direct) < 1e-14
         end
     end
@@ -1000,12 +1000,12 @@ end
 @testset "direction and the degenerate case" begin
     for jd in _TRANSLATION_EPOCHS
         # A body relative to itself is exactly zero, not nearly zero.
-        @test translate(earth, earth, jd) == zeros(3)
-        @test translate_state(mars, mars, jd) == zeros(6)
+        @test translate(earth, earth, Time(jd, TDB(), JD())) == zeros(3)
+        @test translate_state(mars, mars, Time(jd, TDB(), JD())) == zeros(6)
 
         # Reversing observer and target negates, exactly.
-        @test translate(earth, mars, jd) == -translate(mars, earth, jd)
-        @test translate_state(sun, jupiter, jd) == -translate_state(jupiter, sun, jd)
+        @test translate(earth, mars, Time(jd, TDB(), JD())) == -translate(mars, earth, Time(jd, TDB(), JD()))
+        @test translate_state(sun, jupiter, Time(jd, TDB(), JD())) == -translate_state(jupiter, sun, Time(jd, TDB(), JD()))
     end
 end
 
@@ -1025,7 +1025,7 @@ end
 
     for jd in _TRANSLATION_EPOCHS
         for (body, perihelion, aphelion) in bounds
-            r = norm(translate(sun, body, jd)) / _AU
+            r = norm(translate(sun, body, Time(jd, TDB(), JD()))) / _AU
             @test perihelion <= r <= aphelion
         end
     end

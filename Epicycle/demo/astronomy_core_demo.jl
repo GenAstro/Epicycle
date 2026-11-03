@@ -159,13 +159,13 @@ function _act_universe()
 
     _say("  Positions come from JPL ephemerides through SPICE, read at an epoch you name.")
     epoch = _repl("epoch = Time(\"2026-09-17T00:00:00.000\", UTC(), ISOT())")
-    _repl("r_moon = translate(earth, moon, epoch.tdb.jd)")
+    _repl("r_moon = translate(earth, moon, epoch)")
     _pause(1.0)
 
     @step "Measuring the solar system at that epoch" begin
-        d_moon  = norm(translate(earth, moon, epoch.tdb.jd))
-        d_sun   = norm(translate(earth, sun, epoch.tdb.jd))
-        d_mars  = norm(translate(earth, mars, epoch.tdb.jd))
+        d_moon  = norm(translate(earth, moon, epoch))
+        d_sun   = norm(translate(earth, sun, epoch))
+        d_mars  = norm(translate(earth, mars, epoch))
         au      = 1.495978707e8
         g_phobos = phobos.mu / phobos.equatorial_radius^2 * 1e3      # m/s² at the surface
     end

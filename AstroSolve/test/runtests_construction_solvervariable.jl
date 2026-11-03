@@ -99,7 +99,7 @@ end
 @testset "SolverVariable: BodyCalc GravParam" begin
     # Local mutable body with ASCII mu field
 
-    b = CelestialBody(name = "Moon", mu = 4000.0)
+    b = CelestialBody(name = "Moon", mu = 4000.0, equatorial_radius = 1737.4, naifid = 301)
 
     calc = BodyCalc(b, GravParam())
     sv   = SolverVariable(calc = calc, name = "mu", lower_bound = -Inf, upper_bound = Inf)

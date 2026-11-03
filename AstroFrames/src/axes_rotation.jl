@@ -28,7 +28,7 @@ using AstroUniverse: AbstractFrameTheory, FK5, IAU2006, eop, frame_theory
 
 const _J2000_TDB_JD = 2451545.0
 
-_et_from_jd_tdb(jd_tdb::Real) = (jd_tdb - _J2000_TDB_JD) * 86400.0
+_et_from_epoch(e) = ((e.tdb_hi - _J2000_TDB_JD) + e.tdb_lo) * 86400.0
 
 # --- Epoch handling ---------------------------------------------------------
 #
@@ -66,7 +66,8 @@ derives the scales once for each transformation and passes them to each edge.
 Frame extensions read these values with [`epoch_tdb`](@ref), [`epoch_tt`](@ref),
 and [`epoch_utc`](@ref) rather than accessing the fields directly.
 
-- `tdb` — barycentric dynamical time, Julian date.
+- `tdb` — barycentric dynamical time, Julian date. [`epoch_tdb_time`](@ref) gives it as a
+  `Time`, in two parts, which is what the ephemeris and orientation models take.
 - `tt` — terrestrial time, Julian date.
 - `utc` — the ordinary UTC Julian date used to index EOP. It never reaches the
   next day's midnight: during a positive leap second it is held at the last
@@ -115,16 +116,19 @@ struct EpochScales{T<:Real}
     utc::T
     utc_hi::T
     utc_lo::T
+    tdb_hi::T
+    tdb_lo::T
 end
 
 EpochScales(tdb::Real, tt::Real, utc::Real) =
-    EpochScales(promote(tdb, tt, utc, utc, zero(utc))...)
+    EpochScales(promote(tdb, tt, utc, utc, zero(utc), tdb, zero(tdb))...)
 
 # TT − TAI, in seconds.
 const _TT_MINUS_TAI = 32.184
 
 @inline function EpochScales(t::Time)
     tt  = t.tt
+    tdb = t.tdb
     # TAI − UTC in effect: AstroEpochs' own UTC date indexes the leap-second table correctly,
     # only its fraction of a leap-second day is stretched.
     utc = t.utc
@@ -139,7 +143,7 @@ const _TT_MINUS_TAI = 32.184
     # otherwise UT1-UTC jumps a second early and Earth rotation pauses for the next second.
     ordinary = tt.jd1 + lo
     index = min(ordinary, prevfloat(day + 1))
-    return EpochScales(promote(t.tdb.jd, tt.jd, index, tt.jd1, lo)...)
+    return EpochScales(promote(tdb.jd, tt.jd, index, tt.jd1, lo, tdb.jd1, tdb.jd2)...)
 end
 
 """
@@ -168,6 +172,28 @@ days_since_j2000 = epoch_tdb(e) - 2451545.0
 ```
 """
 @inline epoch_tdb(e::EpochScales) = e.tdb
+
+"""
+    epoch_tdb_time(e::EpochScales) -> Time
+
+Barycentric dynamical time as a `Time`, in both parts of the date, for a call that takes one:
+`translate`, `translate_state`, `body_axes_rotation`.
+
+# Arguments
+- `e::EpochScales` — the epoch bundle handed to a frame's `axes_rotation`.
+
+# Returns
+The epoch as a TDB `Time`. No conversion is made, so this is cheap to call for each lookup.
+
+# Example
+```julia
+using AstroEpochs, AstroFrames, AstroUniverse
+
+e = EpochScales(Time("2024-03-01T12:00:00", UTC(), ISOT()))
+translate(earth, moon, epoch_tdb_time(e))
+```
+"""
+@inline epoch_tdb_time(e::EpochScales) = Time(e.tdb_hi, e.tdb_lo, TDB(), JD())
 
 """
     epoch_tt(e::EpochScales)
@@ -348,7 +374,7 @@ end
 #
 # The dispatch itself is not free — see the note on the method above.
 @inline _body_fixed_rotation(model::M, naifid, e::EpochScales) where {M<:AbstractOrientationModel} =
-    body_axes_rotation(model, naifid, epoch_tdb(e))
+    body_axes_rotation(model, naifid, epoch_tdb_time(e))
 
 # Earth's orientation model is its frame theory, and its body-fixed axes are
 # ITRF, reached by that theory's chain whatever theory is active. The chain
@@ -385,7 +411,7 @@ Use this function to select an orientation model explicitly, for example to
 match the axes of a gravity field. In contrast,
 `axes_rotation(ICRF(), CelestialBodyFixed{N}(), epoch)` uses the body's
 registered model. Non-Earth models are evaluated through
-`body_axes_rotation(model, naifid, jd_tdb)`; Earth frame theories use their
+`body_axes_rotation(model, naifid, t)`; Earth frame theories use their
 ICRF-to-ITRF chains, including the required UT1 and TT conversions.
 
 # Returns
@@ -444,7 +470,7 @@ function _lunar_frame_error(frame::AbstractString, et::Real, cause)
                load_spice_kernel("moon_pa_de440_200625.bpc")
                load_spice_kernel("moon_de440_250416.tf")"""
 
-    if _spice_namfrm(String(frame)) == 0
+    if @lock(AstroUniverse.spice_lock(), _spice_namfrm(String(frame))) == 0
         return ArgumentError(
             "$(axes) axes need the DE440 lunar frame kernel, moon_de440_250416.tf, and it is not loaded.
 " *
@@ -492,8 +518,9 @@ function _lunar_sxform(from::AbstractString, to::AbstractString, et::Real)
     et isa Union{AbstractFloat, Integer} || throw(ArgumentError(
         "MoonPA and MoonME axes are read from SPICE and are not differentiable, so " *
         "they cannot take an epoch of type $(typeof(et))."))
+    AstroUniverse.require_spice_kernels()
     try
-        return _spice_sxform(String(from), String(to), Float64(et))
+        return @lock AstroUniverse.spice_lock() _spice_sxform(String(from), String(to), Float64(et))
     catch cause
         # Only SPICE's own failures are about the kernels; anything else is not.
         cause isa SpiceError || rethrow()
@@ -504,25 +531,25 @@ function _lunar_sxform(from::AbstractString, to::AbstractString, et::Real)
 end
 
 function axes_rotation(::ICRF, ::MoonPA, e::EpochScales)
-    et = _et_from_jd_tdb(e.tdb)
+    et = _et_from_epoch(e)
     M = _lunar_sxform("J2000", _MOON_PA, et)
     return SMatrix{6,6,Float64,36}(M)
 end
 
 function axes_rotation(::MoonPA, ::ICRF, e::EpochScales)
-    et = _et_from_jd_tdb(e.tdb)
+    et = _et_from_epoch(e)
     M = _lunar_sxform(_MOON_PA, "J2000", et)
     return SMatrix{6,6,Float64,36}(M)
 end
 
 function axes_rotation(::ICRF, ::MoonME, e::EpochScales)
-    et = _et_from_jd_tdb(e.tdb)
+    et = _et_from_epoch(e)
     M = _lunar_sxform("J2000", _MOON_ME, et)
     return SMatrix{6,6,Float64,36}(M)
 end
 
 function axes_rotation(::MoonME, ::ICRF, e::EpochScales)
-    et = _et_from_jd_tdb(e.tdb)
+    et = _et_from_epoch(e)
     M = _lunar_sxform(_MOON_ME, "J2000", et)
     return SMatrix{6,6,Float64,36}(M)
 end
@@ -1655,7 +1682,7 @@ end
 _epoch_free(::AbstractAxes) = false
 _epoch_free(::Union{ICRF, GCRF, MJ2000Eq, MJ2000Ec, RIC, LVLH, VNB}) = true
 
-const _NO_EPOCH = EpochScales(NaN, NaN, NaN, NaN, NaN)
+const _NO_EPOCH = EpochScales(NaN, NaN, NaN, NaN, NaN, NaN, NaN)
 
 @inline _scales_for(from, to, epoch) =
     _epoch_free(from) && _epoch_free(to) ? _NO_EPOCH : _scales(epoch)

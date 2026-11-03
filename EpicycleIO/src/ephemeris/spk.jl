@@ -10,7 +10,8 @@
 # size less one and N, the Hermite degree being 2·(window size) − 1.
 
 # CSPICE keeps global state and is not safe to call from several threads at once.
-const _SPICE_LOCK = ReentrantLock()
+# CSPICE is not thread-safe, and AstroUniverse calls it too, so there is one lock for both.
+const _SPICE_LOCK = spice_lock
 
 const _SPK_FRAMES = Dict(1 => "ICRF", 17 => "ECLIPJ2000")          # SPICE frame code → name; ECLIPJ2000 is rotated to ICRF on reading
 # Written in ICRF only. SPICE's ECLIPJ2000 is the ecliptic of its J2000, which is ICRF, while
@@ -94,7 +95,7 @@ function read_spk(path::AbstractString; naif_id = nothing, step = nothing, stric
         "read_spk: naif_id is the object's integer NAIF ID, such as -82; got $(repr(naif_id))"))
     d = _Diagnostics(path; strict)
     file = EphemerisFileData(format = :spk, version = "")
-    segs = lock(_SPICE_LOCK) do
+    segs = lock(_SPICE_LOCK()) do
         _spk_summaries(d, path)
     end
     if !_has_errors(d)
@@ -180,7 +181,7 @@ function _spk_segment!(d, path, k, s, step)
     if seg.frame == "ECLIPJ2000"
         # SPICE's ecliptic is built on its J2000, which is ICRF; Epicycle has no such axes, so the
         # states go to ICRF with SPICE's own constant rotation.
-        R = SMatrix{3, 3}(lock(() -> SPICE.pxform("ECLIPJ2000", "J2000", 0.0), _SPICE_LOCK))
+        R = SMatrix{3, 3}(lock(() -> SPICE.pxform("ECLIPJ2000", "J2000", 0.0), _SPICE_LOCK()))
         seg.states = [SVector{6}(vcat(R * x[SVector(1, 2, 3)], R * x[SVector(4, 5, 6)])) for x in seg.states]
         seg.frame = "ICRF"
         _note!(d, 0, "frame", "$where_ is in SPICE's ECLIPJ2000; rotated to ICRF, on which SPICE builds it")
@@ -200,7 +201,7 @@ function _spk_sample!(d, path, s, seg, step, where_)
     b - last(ets) > 1e-6 * step ? push!(ets, b) : (ets[end] = b)
     length(ets) >= 8 || (_error!(d, 0, "step", "$where_ spans $(b - a) s; a step of $step s gives $(length(ets)) samples and at least 8 are needed"); return false)
     states, mids = Vector{Float64}[], Vector{Float64}[]
-    ok = lock(_SPICE_LOCK) do
+    ok = lock(_SPICE_LOCK()) do
         handle = nothing
         try
             handle = SPICE.dafopr(path)
@@ -308,7 +309,7 @@ function write_spk(path::AbstractString, data::EphemerisFileData; naif_id, disca
     dir = dirname(abspath(path))
     isdir(dir) || throw(ArgumentError("write_spk: folder $dir does not exist"))
     tmp = joinpath(dir, ".spk_" * string(rand(UInt64); base = 16) * ".bsp")   # SPICE will not open an existing file
-    lock(_SPICE_LOCK) do
+    lock(_SPICE_LOCK()) do
         handle = nothing
         try
             handle = SPICE.spkopn(tmp, "Epicycle", 0)

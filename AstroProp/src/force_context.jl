@@ -97,15 +97,15 @@ end
 """
     force_position(params, from::CelestialBody, to::CelestialBody, t::Time) -> SVector{3}
 
-`translate(from, to, jd_tdb)`, km in ICRF axes, looked up once per evaluation for each pair.
+`translate(from, to, t)`, km in ICRF axes, looked up once per evaluation for each pair.
 """
 function force_position(params, from::CelestialBody, to::CelestialBody, t::Time)
     ctx = _context(params, t)
-    ctx === nothing && return SVector{3}(translate(from, to, t.tdb.jd))
+    ctx === nothing && return SVector{3}(translate(from, to, t))
     key = (from.naifid, to.naifid)
     i = findfirst(==(key), ctx.position_keys)
     i === nothing || return ctx.positions[i]
-    r = SVector{3,Float64}(translate(from, to, force_epoch(params, t).tdb))
+    r = SVector{3,Float64}(translate(from, to, epoch_tdb_time(force_epoch(params, t))))
     push!(ctx.position_keys, key)
     push!(ctx.positions, r)
     return r
@@ -114,16 +114,16 @@ end
 """
     force_state(params, from::CelestialBody, to::CelestialBody, t::Time) -> SVector{6}
 
-`translate_state(from, to, jd_tdb)`, km and km/s in ICRF axes, looked up once per evaluation for
+`translate_state(from, to, t)`, km and km/s in ICRF axes, looked up once per evaluation for
 each pair.
 """
 function force_state(params, from::CelestialBody, to::CelestialBody, t::Time)
     ctx = _context(params, t)
-    ctx === nothing && return SVector{6}(translate_state(from, to, t.tdb.jd))
+    ctx === nothing && return SVector{6}(translate_state(from, to, t))
     key = (from.naifid, to.naifid)
     i = findfirst(==(key), ctx.state_keys)
     i === nothing || return ctx.states[i]
-    s = SVector{6,Float64}(translate_state(from, to, force_epoch(params, t).tdb))
+    s = SVector{6,Float64}(translate_state(from, to, epoch_tdb_time(force_epoch(params, t))))
     push!(ctx.state_keys, key)
     push!(ctx.states, s)
     return s

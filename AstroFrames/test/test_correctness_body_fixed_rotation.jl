@@ -49,7 +49,7 @@ using Test
         end
 
         @testset "a planet: the model's own rotation, at the epoch's TDB" begin
-            @test body_fixed_rotation(IAU1991(), 499, t) == body_axes_rotation(IAU1991(), 499, t.tdb.jd)
+            @test body_fixed_rotation(IAU1991(), 499, t) == body_axes_rotation(IAU1991(), 499, t)
             @test body_fixed_rotation(IAU2015(), 499, t) == axes_rotation(ICRF(), CelestialBodyFixed{499}(), t)
             # A TDB Julian date is accepted as the epoch too.
             @test body_fixed_rotation(IAU1991(), 499, t.tdb.jd) == body_fixed_rotation(IAU1991(), 499, t)

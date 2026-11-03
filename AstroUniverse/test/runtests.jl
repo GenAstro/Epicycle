@@ -23,14 +23,6 @@ end
     @test b.flattening == 0.1
     @test b.naifid == 123
 
-    # Keyword constructor defaults to EARTH_DEFAULTS
-    d = CelestialBody()
-    @test d.name == "unnamed"
-    @test d.mu == AstroUniverse.EARTH_DEFAULTS.mu
-    @test d.equatorial_radius == AstroUniverse.EARTH_DEFAULTS.equatorial_radius
-    @test d.flattening == AstroUniverse.EARTH_DEFAULTS.flattening
-    @test d.naifid == AstroUniverse.EARTH_DEFAULTS.naifid
-
     # Type promotion (BigFloat)
     bb = CelestialBody(name="B", mu=big(1.0), equatorial_radius=2.0, flattening=0.5, naifid=1)
     @test bb.mu isa BigFloat
@@ -48,9 +40,8 @@ end
     @test occursin("name               = ShowMe", s_plain)
     @test occursin("NAIF ID            = 42", s_plain)
 
-    # Generic delegator
-    s_generic = sprint(show, b)
-    @test s_generic == s_plain
+    # One line, inside a string or a collection
+    @test sprint(show, b) == "CelestialBody(\"ShowMe\", naifid = 42)"
 end
 
 @testset "Canonical body instances" begin
@@ -83,11 +74,11 @@ end
         jd = 2458018.0
 
         # Returns a 3-element vector
-        r_em = translate(earth, moon, jd)
+        r_em = translate(earth, moon, Time(jd, TDB(), JD()))
         @test length(r_em) == 3
 
         # Same body → zero vector
-        r_ee = translate(earth, earth, jd)
+        r_ee = translate(earth, earth, Time(jd, TDB(), JD()))
         @test r_ee == zeros(length(r_ee))
     else
         @info "SPICE kernels not loaded; skipping translate tests."
@@ -102,7 +93,7 @@ end
     # pos,vel from GMAT R2022a
     pos = [150111759.0438753, -4823271.352340085, -2092193.447543865];
     #vel = [0.5463431391132124, 27.21155496102735, 11.7965546582813];
-    r_em = translate(sun, earth, t.jd)
+    r_em = translate(sun, earth, t)
 
     tol = 1e-10
     @test isapprox(r_em[1], pos[1]; rtol=tol)
@@ -113,7 +104,7 @@ end
     t = Time("1995-05-10T00:00:00.000", TDB(), ISOT())
     pos = [365758.2395306571, -107619.1828216814, -16569.18869984438];
     vel = [0.2181927510507531, 0.9448998938751025, 0.3403413852066187];
-    r_em = translate(moon, earth, t.jd)
+    r_em = translate(moon, earth, t)
 
     tol = 1e-10
     @test isapprox(r_em[1], pos[1]; rtol=tol)
@@ -193,5 +184,6 @@ include("runtests_texture_file.jl")
 include("runtests_spice.jl")
 include("runtests_orientation.jl")
 include("test_correctness_eop.jl")
+include("test_robustness_universe.jl")
 
 nothing

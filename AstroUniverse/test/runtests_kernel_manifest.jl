@@ -67,8 +67,7 @@ end
 
 @testset "downloads are checked before they are cached" begin
     if !have_network()
-        @info "No network; skipping checksum tests."
-        @test true
+        @test_skip "checksum tests need the network"
     else
         source = kernel_source("naif0012.tls")   # 5 KB, so this is cheap
 
@@ -103,7 +102,8 @@ end
 
         # An already-cached kernel is not re-downloaded, so its checksum is not
         # re-examined. Deliberate: rehashing 94 MB on every startup would cost
-        # more than it catches.
+        # more than it catches. Its size is checked when one is given, which
+        # test_robustness_universe.jl covers.
         mktempdir() do dir
             path = joinpath(dir, source.filename)
             write(path, "not a kernel")
@@ -120,7 +120,7 @@ end
     # against it these six raised a bare SPICE error instead of a position.
     jd = 2458849.5
     for body in (mercury, venus, mars, jupiter, saturn, uranus, neptune, pluto, moon, sun)
-        r = translate(earth, body, jd)
+        r = translate(earth, body, Time(jd, TDB(), JD()))
         @test length(r) == 3
         @test all(isfinite, r)
         @test norm(r) > 0
@@ -130,7 +130,7 @@ end
     # the Mars barycenter, and both are in the file.
     mars_barycenter = CelestialBody("MarsBarycenter", mars.mu, mars.equatorial_radius,
                                     mars.flattening, 4)
-    @test norm(translate(earth, mars, jd) - translate(earth, mars_barycenter, jd)) < 1e-3
+    @test norm(translate(earth, mars, Time(jd, TDB(), JD())) - translate(earth, mars_barycenter, Time(jd, TDB(), JD()))) < 1e-3
 end
 
 @testset "the merged kernel carries what it claims" begin

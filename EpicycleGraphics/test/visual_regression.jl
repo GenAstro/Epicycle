@@ -268,6 +268,7 @@ using FileIO
             name = "BadTexture",
             mu = 398600.4418,
             equatorial_radius = 6378.137,
+            naifid = 399,
             texture_file = "nonexistent_texture.png"
         )
         
@@ -301,6 +302,7 @@ using FileIO
             name = "GrayBody",
             mu = 398600.4418,
             equatorial_radius = 6378.137,
+            naifid = 399,
             texture_file = ""
         )
         

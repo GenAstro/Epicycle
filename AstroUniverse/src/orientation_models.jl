@@ -35,7 +35,7 @@ Supertype for models describing how a body is oriented in space.
 # Interface
 An abstract type, so it has no fields of its own. A model must provide:
 
-- [`body_axes_rotation`](@ref)`(model, naifid, jd_tdb)` — **required.** The
+- [`body_axes_rotation`](@ref)`(model, naifid, t)` — **required.** The
   rotation from inertial to body-fixed axes at that epoch.
 - [`orientation_parameters`](@ref)`(model)` — optional. Defaults to the model's
   fields, which is right for a model written as a plain struct.
@@ -73,8 +73,8 @@ struct SimpleSpin{T<:Real} <: AbstractOrientationModel
     spin_rate::T        # deg/day
 end
 
-function AstroUniverse.body_axes_rotation(m::SimpleSpin, naifid, jd_tdb)
-    d = jd_tdb - 2451545.0
+function AstroUniverse.body_axes_rotation(m::SimpleSpin, naifid, t::Time)
+    d = t.tdb.jd - 2451545.0
     Ẇ = deg2rad(m.spin_rate)
     return pole_axes_rotation(deg2rad(m.pole_ra), deg2rad(m.pole_dec),
                               deg2rad(m.pm0) + Ẇ * d,
@@ -141,8 +141,8 @@ of the usual shape, a pole direction and a spin about it, which covers nearly
 every planet, moon and asteroid:
 
 ```julia
-function AstroUniverse.body_axes_rotation(m::MySpin, naifid, jd_tdb)
-    d = jd_tdb - 2451545.0
+function AstroUniverse.body_axes_rotation(m::MySpin, naifid, t::Time)
+    d = t.tdb.jd - 2451545.0
     W = m.W₀ + m.spin_rate * d
     return pole_axes_rotation(m.α₀, m.δ₀, W, 0.0, 0.0, m.spin_rate / 86400)
 end
@@ -209,10 +209,9 @@ function pole_axes_rotation(α₀::Real, δ₀::Real, W::Real,
 end
 
 """
-    body_axes_rotation(model, naifid, jd_tdb) -> SMatrix{6,6}
+    body_axes_rotation(model, naifid, t::Time) -> SMatrix{6,6}
 
-Rotation from inertial axes to the body-fixed axes of body `naifid` at TDB
-Julian date `jd_tdb`.
+Rotation from inertial axes to the body-fixed axes of body `naifid` at the epoch `t`.
 
 This is the one method an orientation model has to implement.
 
@@ -220,7 +219,8 @@ This is the one method an orientation model has to implement.
 - `model` — the orientation model, an [`AbstractOrientationModel`](@ref).
 - `naifid::Integer` — NAIF ID of the body being oriented. Passed so one model
   type can serve several bodies. A model for one body may leave it unused.
-- `jd_tdb::Real` — epoch as a Julian date in barycentric dynamical time (TDB).
+- `t::Time` — epoch, in any time scale. Orientation models are defined in TDB, so a model
+  reads `t.tdb`. A dual-number epoch carries derivatives through a model written in Julia.
 
 # Returns
 A 6×6 matrix rotating a state from inertial axes into the body's rotating
@@ -244,8 +244,8 @@ struct SimpleSpin <: AbstractOrientationModel
     spin_rate::Float64    # deg/day
 end
 
-function AstroUniverse.body_axes_rotation(m::SimpleSpin, naifid, jd_tdb)
-    d = jd_tdb - 2451545.0
+function AstroUniverse.body_axes_rotation(m::SimpleSpin, naifid, t::Time)
+    d = t.tdb.jd - 2451545.0
     Ẇ = deg2rad(m.spin_rate)
     return pole_axes_rotation(deg2rad(m.pole_ra), deg2rad(m.pole_dec),
                               deg2rad(m.pm0) + Ẇ * d, 0.0, 0.0, Ẇ / 86_400)
@@ -253,6 +253,9 @@ end
 ```
 """
 function body_axes_rotation end
+
+body_axes_rotation(::AbstractOrientationModel, ::Integer, ::Real) =
+    throw(_bare_date_error("body_axes_rotation"))
 
 # --- Reading and writing the parameters being solved for --------------------
 
@@ -408,31 +411,22 @@ for Earth and [`LunarPA`](@ref) or [`LunarME`](@ref) for the Moon.
 
 # Example
 ```jldoctest
-julia> using AstroUniverse
+julia> using AstroUniverse, AstroEpochs
 
 julia> orientation_model(jupiter)
 IAU2015()
 
-julia> size(body_axes_rotation(IAU2015(), 599, 2458849.5))
+julia> size(body_axes_rotation(IAU2015(), 599, Time(2458849.5, TDB(), JD())))
 (6, 6)
 ```
 """
 struct IAU2015 <: AbstractOrientationModel end
 
-function body_axes_rotation(::IAU2015, naifid::Integer, jd_tdb::Real)
-    o = iau2015_orientation(naifid, jd_tdb)
+function body_axes_rotation(::IAU2015, naifid::Integer, t::Time)
+    o = iau2015_orientation(naifid, t)
     return pole_axes_rotation(o.ra_pole, o.dec_pole, o.prime_meridian,
                               o.ra_pole_rate, o.dec_pole_rate, o.prime_meridian_rate)
 end
-
-"""
-    IauPolynomialOrientation
-
-Deprecated: the former name of [`IAU2015`](@ref), kept as an alias of the type so
-that code using it as one, `m isa IauPolynomialOrientation` or a method on it,
-still works. Use `IAU2015`; the alias will be removed in a later release.
-"""
-const IauPolynomialOrientation = IAU2015
 
 # --- Shipped model: the IAU 1991 report, for Mars ----------------------------
 
@@ -460,19 +454,19 @@ Differentiable in time.
 
 # Example
 ```jldoctest
-julia> using AstroUniverse
+julia> using AstroUniverse, AstroEpochs
 
-julia> size(body_axes_rotation(IAU1991(), 499, 2458849.5))
+julia> size(body_axes_rotation(IAU1991(), 499, Time(2458849.5, TDB(), JD())))
 (6, 6)
 ```
 """
 struct IAU1991 <: AbstractOrientationModel end
 
-function body_axes_rotation(::IAU1991, naifid::Integer, jd_tdb::Real)
+function body_axes_rotation(::IAU1991, naifid::Integer, t::Time)
     naifid == 499 || throw(ArgumentError(
         "IAU1991() is implemented for Mars (NAIF 499) only; got NAIF $(naifid). " *
         "Use IAU2015() for the current report."))
-    d = jd_tdb - _J2000_TDB_JD
+    d = t.tdb.jd - _J2000_TDB_JD
     T = d / 36525.0
     α₀ = deg2rad(317.681 - 0.108 * T)
     δ₀ = deg2rad(52.886 - 0.061 * T)
@@ -503,6 +497,7 @@ supplies periodic and libration terms without duplicating its coefficients.
 
 # Example
 ```julia
+download_spice_kernel("pck00011.tpc")
 load_spice_kernel("pck00011.tpc")
 set_orientation!(mars, SpiceOrientation("IAU_MARS"))
 
@@ -529,11 +524,11 @@ set_orientation_parameters(m::SpiceOrientation, nt::NamedTuple) =
         "from the kernel. Register a model written in Julia to estimate orientation; " *
         "see `pole_axes_rotation`."))
 
-function body_axes_rotation(m::SpiceOrientation, naifid::Integer, jd_tdb::Real)
-    _check_spice_date(m, jd_tdb)
-    # SPICE ephemeris time is seconds past the J2000 epoch.
-    et = (jd_tdb - _J2000_TDB_JD) * _SECONDS_PER_DAY
-    return SMatrix{6,6,Float64,36}(sxform("J2000", m.frame, et))
+function body_axes_rotation(m::SpiceOrientation, naifid::Integer, t::Time)
+    _check_spice_date(m, t)
+    et = _ephemeris_seconds(t)
+    require_spice_kernels()
+    return SMatrix{6,6,Float64,36}(@lock _SPICE_LOCK sxform("J2000", m.frame, et))
 end
 
 # --- Shipped models: the Moon ------------------------------------------------
@@ -561,7 +556,7 @@ versioned name, `SpiceOrientation("MOON_PA_DE421")`.
 
 # Example
 ```julia
-size(body_axes_rotation(LunarPA(), 301, 2458849.5))   # (6, 6)
+size(body_axes_rotation(LunarPA(), 301, Time(2458849.5, TDB(), JD())))   # (6, 6)
 ```
 """
 struct LunarPA <: AbstractOrientationModel end
@@ -588,14 +583,15 @@ _spice_frame(::LunarME) = "MOON_ME_DE440_ME421"
 
 orientation_parameters(::Union{LunarPA,LunarME}) = NamedTuple()
 
-function body_axes_rotation(m::Union{LunarPA,LunarME}, naifid::Integer, jd_tdb::Real)
+function body_axes_rotation(m::Union{LunarPA,LunarME}, naifid::Integer, t::Time)
     naifid == 301 || throw(ArgumentError(
         "$(nameof(typeof(m)))() gives axes of the Moon (NAIF 301); got NAIF $(naifid)."))
-    _check_spice_date(m, jd_tdb)
+    _check_spice_date(m, t)
     frame = _spice_frame(m)
-    et = (jd_tdb - _J2000_TDB_JD) * _SECONDS_PER_DAY
+    et = _ephemeris_seconds(t)
+    require_spice_kernels()
     M = try
-        sxform("J2000", frame, et)
+        @lock _SPICE_LOCK sxform("J2000", frame, et)
     catch cause
         # Only SPICE's own failures are about the kernels; anything else is not.
         cause isa SPICE.SpiceError || rethrow()
@@ -615,10 +611,10 @@ end
 # rather than let the conversion fail somewhere less clear.
 _plain_number(x) = x isa Union{AbstractFloat, Integer, Rational}
 
-function _check_spice_date(m, jd_tdb)
-    _plain_number(jd_tdb) || throw(ArgumentError(
+function _check_spice_date(m, t::Time)
+    _plain_number(t.jd1) || throw(ArgumentError(
         "$(nameof(typeof(m))) reads its orientation from SPICE and is not " *
-        "differentiable, so it cannot take a date of type $(typeof(jd_tdb)). A " *
+        "differentiable, so it cannot take a date of type $(typeof(t.jd1)). A " *
         "derivative through body-fixed axes needs a model written in Julia; see " *
         "`pole_axes_rotation`."))
     return nothing

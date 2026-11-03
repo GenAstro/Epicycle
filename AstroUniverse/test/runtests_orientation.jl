@@ -73,7 +73,7 @@ end
 
     @testset "every body it covers produces a proper rotation" begin
         for n in (10, 199, 299, 499, 599, 699, 799, 899, 999)
-            M = body_axes_rotation(IAU2015(), n, _JD_OR)
+            M = body_axes_rotation(IAU2015(), n, Time(_JD_OR, TDB(), JD()))
             R = M[1:3, 1:3]
             @test norm(R' * R - I) < 1e-14
             @test det(R) ≈ 1
@@ -84,7 +84,7 @@ end
         # The NAIF-ID method is what the model interface calls; the body method
         # is what existing code calls. They must not drift apart.
         for (b, n) in ((sun, 10), (mars, 499), (jupiter, 599), (pluto, 999))
-            @test iau2015_orientation(b, _JD_OR) === iau2015_orientation(n, _JD_OR)
+            @test iau2015_orientation(b, Time(_JD_OR, TDB(), JD())) === iau2015_orientation(n, Time(_JD_OR, TDB(), JD()))
         end
     end
 
@@ -93,39 +93,30 @@ end
         # model that carries the pole as a parameter.
         @test isempty(orientation_parameters(IAU2015()))
     end
-
-    @testset "the old name still works, as a type" begin
-        # It was an exported type in 0.3, so code may test or dispatch on it.
-        @test IauPolynomialOrientation === IAU2015
-        @test IauPolynomialOrientation() === IAU2015()
-        @test IAU2015() isa IauPolynomialOrientation
-        _old(::IauPolynomialOrientation) = :dispatched
-        @test _old(IAU2015()) === :dispatched
-    end
 end
 
 @testset "the IAU 1991 model" begin
     @testset "a proper rotation, with the rate block its derivative" begin
-        M = body_axes_rotation(IAU1991(), 499, _JD_OR)
+        M = body_axes_rotation(IAU1991(), 499, Time(_JD_OR, TDB(), JD()))
         R, Ṙ = M[1:3, 1:3], M[4:6, 1:3]
         @test norm(R' * R - I) < 1e-14
         @test det(R) ≈ 1
         # ForwardDiff through the date: a finite difference on a date near
         # 2.46e6 resolves only about 40 µs.
-        dR = ForwardDiff.derivative(d -> Matrix(body_axes_rotation(IAU1991(), 499, d)[1:3, 1:3]),
+        dR = ForwardDiff.derivative(d -> Matrix(body_axes_rotation(IAU1991(), 499, Time(d, TDB(), JD()))[1:3, 1:3]),
                                     _JD_OR)
         @test norm(Ṙ - dR / 86_400) / norm(Ṙ) < 1e-12
     end
 
     @testset "Mars only" begin
-        e = try; body_axes_rotation(IAU1991(), 599, _JD_OR); nothing; catch e; e; end
+        e = try; body_axes_rotation(IAU1991(), 599, Time(_JD_OR, TDB(), JD())); nothing; catch e; e; end
         @test e isa ArgumentError
         @test occursin("Mars", e.msg)
     end
 
     @testset "0.236° from IAU 2015 at J2000, nearly all of it prime meridian" begin
-        A = body_axes_rotation(IAU1991(), 499, 2451545.0)[1:3, 1:3]
-        B = body_axes_rotation(IAU2015(), 499, 2451545.0)[1:3, 1:3]
+        A = body_axes_rotation(IAU1991(), 499, Time(2451545.0, TDB(), JD()))[1:3, 1:3]
+        B = body_axes_rotation(IAU2015(), 499, Time(2451545.0, TDB(), JD()))[1:3, 1:3]
         @test rad2deg(acos((tr(A * B') - 1) / 2)) ≈ 0.236 atol = 0.001
         @test rad2deg(acos(clamp(dot(A[3, :], B[3, :]), -1, 1))) < 0.001      # poles
     end
@@ -138,8 +129,8 @@ end
         pole_dec::T
         spin_rate::T
     end
-    AstroUniverse.body_axes_rotation(m::_TestSpin, naifid, jd) =
-        pole_axes_rotation(m.pole_ra, m.pole_dec, m.spin_rate * (jd - 2451545.0),
+    AstroUniverse.body_axes_rotation(m::_TestSpin, naifid, t::Time) =
+        pole_axes_rotation(m.pole_ra, m.pole_dec, m.spin_rate * (t.tdb.jd - 2451545.0),
                            zero(m.pole_ra), zero(m.pole_ra), m.spin_rate / 86_400)
 
     @testset "defaults are the published models, unasked" begin
@@ -171,7 +162,7 @@ end
         @test frame_theory() === original
 
         # The chain needs UT1 and TT, so a TDB date alone points to AstroFrames.
-        e = try; body_axes_rotation(IAU2006(), 399, _JD_OR); nothing; catch e; e; end
+        e = try; body_axes_rotation(IAU2006(), 399, Time(_JD_OR, TDB(), JD())); nothing; catch e; e; end
         @test e isa ArgumentError
         @test occursin("body_fixed_rotation", e.msg)
         @test FK5() isa AbstractOrientationModel
@@ -274,7 +265,7 @@ end
     _pck = "pck00011.tpc"
 
     _pck_loaded = try
-        body_axes_rotation(SpiceOrientation("IAU_MARS"), 499, _JD_OR)
+        body_axes_rotation(SpiceOrientation("IAU_MARS"), 499, Time(_JD_OR, TDB(), JD()))
         true
     catch
         false
@@ -294,12 +285,12 @@ end
 
     if _pck_loaded
         @testset "it works where a kernel defines the frame" begin
-            R = body_axes_rotation(SpiceOrientation("IAU_MARS"), 499, _JD_OR)[1:3, 1:3]
+            R = body_axes_rotation(SpiceOrientation("IAU_MARS"), 499, Time(_JD_OR, TDB(), JD()))[1:3, 1:3]
             @test norm(R' * R - I) < 1e-12
             @test det(R) ≈ 1
         end
 
-        @testset "it agrees with the polynomial model to microarcseconds" begin
+        @testset "it agrees with the polynomial model within 10 microarcseconds" begin
             # Two independent implementations of the same IAU constants: our
             # polynomials, and NAIF's in pck00011.tpc. Agreement is at the
             # level of floating-point roundoff, so the tolerance is set to
@@ -316,11 +307,23 @@ end
                                     (499, "IAU_MARS"),    (599, "IAU_JUPITER"),
                                     (699, "IAU_SATURN"),  (799, "IAU_URANUS"),
                                     (899, "IAU_NEPTUNE"), (999, "IAU_PLUTO"))
-                A = body_axes_rotation(SpiceOrientation(frame), naifid, _JD_OR)[1:3, 1:3]
-                B = body_axes_rotation(IAU2015(), naifid, _JD_OR)[1:3, 1:3]
+                A = body_axes_rotation(SpiceOrientation(frame), naifid, Time(_JD_OR, TDB(), JD()))[1:3, 1:3]
+                B = body_axes_rotation(IAU2015(), naifid, Time(_JD_OR, TDB(), JD()))[1:3, 1:3]
                 D = A * B'
                 v = 0.5 .* (D[3,2] - D[2,3], D[1,3] - D[3,1], D[2,1] - D[1,2])
-                @test rad2deg(asin(sqrt(sum(abs2, v)))) * 3600 < 1e-3   # arcseconds
+                @test rad2deg(asin(sqrt(sum(abs2, v)))) * 3600 < 1e-5   # arcseconds
+            end
+        end
+
+        @testset "its rates agree with the polynomial model" begin
+            # The block a trajectory's velocity passes through, which the check above leaves out.
+            for (naifid, frame) in ((199, "IAU_MERCURY"), (299, "IAU_VENUS"),
+                                    (499, "IAU_MARS"),    (599, "IAU_JUPITER"),
+                                    (699, "IAU_SATURN"),  (799, "IAU_URANUS"),
+                                    (899, "IAU_NEPTUNE"), (999, "IAU_PLUTO"))
+                A = body_axes_rotation(SpiceOrientation(frame), naifid, Time(_JD_OR, TDB(), JD()))[4:6, 1:3]
+                B = body_axes_rotation(IAU2015(), naifid, Time(_JD_OR, TDB(), JD()))[4:6, 1:3]
+                @test norm(A - B) / norm(B) < 1e-9
             end
         end
     end
@@ -358,8 +361,8 @@ end
     if fetched
         try
             for jd in (2451545.0, _JD_OR, 2462502.5)          # 2000, the test epoch, 2030
-                A = body_axes_rotation(SpiceOrientation("IAU_MARS"), 499, jd)
-                B = body_axes_rotation(IAU1991(), 499, jd)
+                A = body_axes_rotation(SpiceOrientation("IAU_MARS"), 499, Time(jd, TDB(), JD()))
+                B = body_axes_rotation(IAU1991(), 499, Time(jd, TDB(), JD()))
                 D = A[1:3, 1:3] * B[1:3, 1:3]'
                 v = 0.5 .* (D[3,2] - D[2,3], D[1,3] - D[3,1], D[2,1] - D[1,2])
                 @test rad2deg(asin(sqrt(sum(abs2, v)))) * 3600 < 1e-3   # arcseconds
@@ -372,24 +375,24 @@ end
 end
 
 @testset "the lunar models" begin
-    M = body_axes_rotation(LunarPA(), 301, _JD_OR)
+    M = body_axes_rotation(LunarPA(), 301, Time(_JD_OR, TDB(), JD()))
     @test norm(M[1:3, 1:3]' * M[1:3, 1:3] - I) < 1e-12
     # They read the versioned DE440 frames, which is what the aliases name in
     # the frame kernel loaded at startup.
-    @test M == body_axes_rotation(SpiceOrientation("MOON_PA_DE440"), 301, _JD_OR)
-    @test body_axes_rotation(LunarME(), 301, _JD_OR) ==
-          body_axes_rotation(SpiceOrientation("MOON_ME_DE440_ME421"), 301, _JD_OR)
+    @test M == body_axes_rotation(SpiceOrientation("MOON_PA_DE440"), 301, Time(_JD_OR, TDB(), JD()))
+    @test body_axes_rotation(LunarME(), 301, Time(_JD_OR, TDB(), JD())) ==
+          body_axes_rotation(SpiceOrientation("MOON_ME_DE440_ME421"), 301, Time(_JD_OR, TDB(), JD()))
     # Principal axes and mean-Earth axes: about 875 m apart on the surface.
-    A, B = M[1:3, 1:3], body_axes_rotation(LunarME(), 301, _JD_OR)[1:3, 1:3]
+    A, B = M[1:3, 1:3], body_axes_rotation(LunarME(), 301, Time(_JD_OR, TDB(), JD()))[1:3, 1:3]
     @test 800 < acos((tr(A * B') - 1) / 2) * 1737.4e3 < 950
     @test isempty(orientation_parameters(LunarPA()))
-    e = try; body_axes_rotation(LunarPA(), 499, _JD_OR); nothing; catch e; e; end
+    e = try; body_axes_rotation(LunarPA(), 499, Time(_JD_OR, TDB(), JD())); nothing; catch e; e; end
     @test e isa ArgumentError && occursin("Moon", e.msg)
 
     # A dual date cannot pass into SPICE, and the error says that rather than blaming the kernels.
     for m in (LunarPA(), LunarME(), SpiceOrientation("MOON_PA_DE440"))
         e = try
-            ForwardDiff.derivative(d -> body_axes_rotation(m, 301, d)[1, 1], _JD_OR)
+            ForwardDiff.derivative(d -> body_axes_rotation(m, 301, Time(d, TDB(), JD()))[1, 1], _JD_OR)
             nothing
         catch e; e; end
         @test e isa ArgumentError
@@ -397,7 +400,7 @@ end
     end
 
     # Outside the kernel's coverage, SPICE's failure is reported with what to do about it.
-    e = try; body_axes_rotation(LunarPA(), 301, 1.0e5); nothing; catch e; e; end
+    e = try; body_axes_rotation(LunarPA(), 301, Time(1.0e5, TDB(), JD())); nothing; catch e; e; end
     @test e isa ArgumentError
     @test occursin("1550 to 2650", e.msg) && occursin("SPICE reported", e.msg)
 

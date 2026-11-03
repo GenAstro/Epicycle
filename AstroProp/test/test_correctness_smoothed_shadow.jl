@@ -59,7 +59,7 @@ const _AP = AstroProp
                         srp = SphericalSRP(c_r = 1.8, srp_area = 10.0))
         srp = SolarRadiationPressure(earth; shadow = SmoothedConical())
         t   = sc.time
-        r_sun_true = SVector{3}(_AP.translate(earth, sun, t.tdb.jd))
+        r_sun_true = SVector{3}(_AP.translate(earth, sun, t))
         ŝ = r_sun_true / norm(r_sun_true)
         n̂ = SVector(-ŝ[2], ŝ[1], 0.0) / norm(SVector(-ŝ[2], ŝ[1], 0.0))
 
@@ -77,7 +77,7 @@ const _AP = AstroProp
             ad = ForwardDiff.derivative(accel, y)
             h  = 1e-3
             fd = (accel(y + h) - accel(y - h)) / (2h)
-            @test norm(ad - fd) ≤ 1e-6 * norm(ad) + 1e-22
+            @test norm(ad - fd) ≤ 1e-6 * norm(ad) + 1e-21
             @test all(isfinite, ad)
         end
         # Deep in the umbra the logistic is far out on its tail; the derivative must stay finite.

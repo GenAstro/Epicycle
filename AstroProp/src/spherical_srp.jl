@@ -111,7 +111,7 @@ speed of light, and ``r_{\\mathrm{AU}}`` is `nominal_sun`.
 # Notes
 Reads reflectivity ``C_r`` and area ``A`` from the spacecraft's `SphericalSRP`, and mass from the
 spacecraft — set `sc.srp` before propagating. The Sun's position is looked up from the ephemeris
-via `AstroUniverse.translate(body, sun, jd_tdb)` in km, inertial.
+via `AstroUniverse.translate(body, sun, t)` in km, inertial.
 
 With `DualCone` the acceleration has a kink at each edge of the penumbra, and `propagate!` ends a
 step at each one rather than stepping across it, so the integration error stays what the tolerance
@@ -180,14 +180,26 @@ function _shadow_factor(::DualCone, r_sat, r_sun, R_sun, R_occ)
     elseif c < (a - b)
         return 1.0 - b^2 / a^2            # occulting body fully within the Sun disk
     else                                  # penumbra
-        # On the penumbra's edges x/a and (c − x)/b reach ±1 and a² − x² reaches 0, where round-off
-        # can step outside the domain; a step landed on the edge by the shadow events puts it there.
+        # The overlap of the two disks is two circular segments, one of each disk, cut by their
+        # common chord at distance x from the Sun's centre with half-length y. Each segment is
+        # r²(θ − sinθ cosθ) for its half-angle θ, taken by atan from the chord, which stays
+        # accurate as the overlap closes. The usual form, a² acos(x/a) + b² acos((c − x)/b) − c y,
+        # takes acos of ratios near 1, which loses half the digits; close to the planet, where b is
+        # near a radian and a a few milliradians, that left the lighting factor wrong by parts in
+        # 10⁴ near the edge, above 1 just inside it, and its gradient noise.
         x = (c^2 + a^2 - b^2) / (2.0 * c)
-        y = sqrt(max(a^2 - x^2, zero(x)))
-        area = a^2 * acos(clamp(x / a, -one(x), one(x))) +
-               b^2 * acos(clamp((c - x) / b, -one(x), one(x))) - c * y
+        y = sqrt(max((a - x) * (a + x), 1e-300))   # off zero so the derivative stays finite on the edge
+        area = _segment(a, atan(y, x)) + _segment(b, atan(y, c - x))
         return 1.0 - area / (π * a^2)
     end
+end
+
+# The area of the segment of a disk of radius r cut off by a chord that subtends 2θ at the centre:
+# r²(2θ − sin 2θ)/2, by its series where the difference would cancel.
+@inline function _segment(r, θ)
+    φ = 2θ
+    s = abs(φ) < 1e-2 ? φ^3 / 6 * (1 - φ^2 / 20 * (1 - φ^2 / 42)) : φ - sin(φ)
+    return r^2 * s / 2
 end
 
 # The logistic written so that neither branch overflows: deep in the umbra x is a few hundred.

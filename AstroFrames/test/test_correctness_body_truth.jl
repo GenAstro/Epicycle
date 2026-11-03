@@ -503,8 +503,8 @@ _phobos_angles(T) = ntuple(i -> deg2rad(_PHOBOS.angles[i][1] +
 
 struct _PhobosSpice <: AbstractOrientationModel end
 
-function AstroUniverse.body_axes_rotation(::_PhobosSpice, naifid, jd_tdb)
-    d = jd_tdb - 2451545.0
+function AstroUniverse.body_axes_rotation(::_PhobosSpice, naifid, t::Time)
+    d = t.tdb.jd - 2451545.0
     T = d / 36_525
     M = _phobos_angles(T)
 
@@ -542,7 +542,7 @@ end
 struct PhobosFixedTruth <: AstroFrames.AbstractAxes end
 AstroFrames.hub_axes(::Type{PhobosFixedTruth}) = ICRF()
 AstroFrames.axes_rotation(::ICRF, ::PhobosFixedTruth, e::EpochScales) =
-    body_axes_rotation(_PhobosSpice(), 401, epoch_tdb(e))
+    body_axes_rotation(_PhobosSpice(), 401, epoch_tdb_time(e))
 
 @testset "a user-defined body against SPICE" begin
     # Looser than the shipped bodies: Phobos turns 1128°/day, so its prime

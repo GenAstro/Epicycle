@@ -70,7 +70,7 @@ Compute the gravitational acceleration on a central body due to a tuple of pertu
 - If `jac == true`: `(a_pert::Vector{Float64}, jacobian::Matrix{Float64})`
 
 # Notes
-- Requires `AstroUniverse.translate(from::CelestialBody, to::CelestialBody, jd_tdb::Float64)` to return the vector from `from` to `to` in inertial coordinates.
+- Requires `AstroUniverse.translate(from::CelestialBody, to::CelestialBody, t::Time)` to return the vector from `from` to `to` in inertial coordinates.
 - Units must be consistent with the gravitational parameters (`mu`) of the celestial bodies.
 """
 function compute_point_mass_gravity!(

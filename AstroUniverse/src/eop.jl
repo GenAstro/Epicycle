@@ -64,7 +64,7 @@ abstract type AbstractFrameTheory <: AbstractOrientationModel end
 # A frame theory is Earth's orientation model, but its rotation is the ITRF
 # chain, which reads UT1 and TT and lives in AstroFrames. A TDB Julian date alone
 # cannot give it, so this points there rather than approximating.
-function body_axes_rotation(th::AbstractFrameTheory, naifid::Integer, jd_tdb::Real)
+function body_axes_rotation(th::AbstractFrameTheory, naifid::Integer, ::Time)
     throw(ArgumentError(
         "$(th) is Earth's orientation, the ITRF chain, which needs UT1 and TT as well " *
         "as TDB. Evaluate it with AstroFrames: `body_fixed_rotation($(th), 399, epoch)` " *
@@ -265,11 +265,16 @@ has no length of day, so LOD and the uncertainties are Bulletin A's either way.
   from the file.
 - `theory`: the theory the file is for. A `finals2000A` file carries the IAU
   2000A offsets [`IAU2006`](@ref) needs, a `finals` file the IAU 1980
-  corrections [`FK5`](@ref) needs.
+  corrections [`FK5`](@ref) needs, and a file of the other series is refused.
 - `bulletin`: `:A` for the rapid values, `:B` for the final values where published.
 
 # Returns
 The parsed and installed EOP table.
+
+# Notes
+A table's columns do not end together. Past its polar motion and UT1−UTC, the end values are
+held with a warning. LOD and the celestial pole offsets end earlier and are held without one,
+since they move a position far less.
 
 # Example
 ```julia
@@ -293,9 +298,16 @@ function eop_load(path::AbstractString;
             push!(temporary, csv)
             _finals_to_csv(path, csv, theory)
         end
+        _check_eop_series(csv, theory, path)
         if bulletin === :B
             csv = _finals_with_bulletin_b(csv)
             push!(temporary, csv)
+        end
+        try
+            _check_eop_csv(csv)
+        catch err
+            err isa ErrorException || rethrow()
+            throw(ArgumentError("eop_load: $(path): $(err.msg)."))
         end
         return set_eop!(read_iers_eop(csv, _stb_theory_symbol(theory)))
     finally
@@ -448,7 +460,7 @@ The installed vector.
 
 # Example
 ```julia
-set_eop_corrections!([OceanTideEop(), LibrationEop()])
+set_eop_corrections!([OceanTideEop(), LibrationEop()])   # models from EpicycleEnterprise
 set_eop_corrections!([])                                 # the table alone
 ```
 """
@@ -526,8 +538,8 @@ here reaches all of them.
   form to use otherwise.
 
 # Returns
-An [`EopValues`](@ref). The numeric type follows the epoch, so a dual-number date
-gives dual-number values.
+An [`EopValues`](@ref). The numeric type follows the epoch and the corrections, so a
+dual-number date or an estimated offset gives dual-number values.
 
 # Example
 ```julia
@@ -551,10 +563,15 @@ const _TT_MINUS_TAI = 32.184
 # The UTC Julian date as an ordinary date, every day 86400 s long. AstroEpochs' own UTC
 # stretches a leap-second day over 86401 s, which the IERS tables do not; its date still
 # indexes the leap-second table correctly, so TAI − UTC is read from it and the date formed
-# from TT, which has no leap seconds.
+# from TT, which has no leap seconds. During 23:59:60 the ordinary date has already reached the
+# next day while TAI − UTC is still today's, so the date stays on this side of midnight until
+# midnight; otherwise UT1−UTC jumps a second early. AstroFrames' `EpochScales` does the same.
 function _ordinary_utc_jd(t::Time)
     dat = AstroEpochs.tai_minus_utc(t)
-    return t.tt.jd1 + (t.tt.jd2 - (_TT_MINUS_TAI + dat) / 86_400)
+    ordinary = t.tt.jd1 + (t.tt.jd2 - (_TT_MINUS_TAI + dat) / 86_400)
+    utc = t.utc
+    day = utc.jd1 + floor(utc.jd2 + 0.5) - 0.5
+    return min(ordinary, prevfloat(day + 1))
 end
 
 # The tables come out of abstractly typed slots, so these read them behind a barrier where the
@@ -574,15 +591,17 @@ function _eop_values(theory::FK5, table::EopIau1980, jd_utc::T) where {T<:Real}
 end
 
 
-function _corrected(v::EopValues{Th, T}, models::Vector{AbstractEopCorrection}, jd_utc,
-                    jd_tt) where {Th, T}
+function _corrected(v::EopValues{Th}, models::Vector{AbstractEopCorrection}, jd_utc,
+                    jd_tt) where {Th}
     isempty(models) && return v
     x, y, ut1_utc, lod = v.x, v.y, v.ut1_utc, v.lod
     for m in models
         c = eop_correction(m, jd_utc, jd_tt)
-        x += T(c.x); y += T(c.y); ut1_utc += T(c.ut1_utc); lod += T(c.lod)
+        x += c.x; y += c.y; ut1_utc += c.ut1_utc; lod += c.lod
     end
-    return EopValues{Th, T}(v.theory, x, y, ut1_utc, lod, v.celestial_pole)
+    # A correction estimated in a fit carries derivatives though the date does not.
+    T = promote_type(typeof(x), typeof(y), typeof(ut1_utc), typeof(lod), eltype(v.celestial_pole))
+    return EopValues{Th, T}(v.theory, x, y, ut1_utc, lod, T.(v.celestial_pole))
 end
 
 # Outside the table SatelliteToolboxTransformations holds the end values, and the rotation stays
@@ -626,10 +645,24 @@ function _load_eop!(theory::AbstractFrameTheory)
         slot = _eop_slot(theory)
         # Re-check under the lock: another task may have filled it while we
         # waited.
-        slot[] === nothing &&
-            (slot[] = read_iers_eop(_eop_file(theory), _stb_theory_symbol(theory)))
+        slot[] === nothing && (slot[] = _read_cached_eop(theory))
         return slot[]
     end
+end
+
+# A cached file that cannot be read is as good as none, so it is replaced rather than left to block
+# Earth orientation until it ages out. With no source to replace it, the error says so and the file
+# stays.
+function _read_cached_eop(theory)
+    path = _eop_file(theory)
+    try
+        return read_iers_eop(path, _stb_theory_symbol(theory))
+    catch err
+        err isa InterruptException && rethrow()
+        @warn "The cached Earth orientation file $(path) cannot be read, so it is being " *
+              "downloaded again: $(_one_line(err))"
+    end
+    return read_iers_eop(_eop_file(theory; refresh = true), _stb_theory_symbol(theory))
 end
 
 # --- Sources and the cache ---------------------------------------------------
@@ -763,6 +796,7 @@ function _download_eop!(path, source::_EopSource, theory)
         else
             _replace_file(raw, csv)
         end
+        _check_eop_series(csv, theory, source.url)
         read_iers_eop(csv, _stb_theory_symbol(theory))
         last = _check_eop_csv(csv)
         last >= _today_mjd() || error(
@@ -779,9 +813,62 @@ end
 # UT1-UTC, LOD and their errors, and the nutation corrections of both theories with their errors.
 # The 33-column layout lacks the four polar-motion rate columns, so the later columns move up four.
 function _eop_value_columns(ncol)
-    ncol == 37 && return (ut1 = 15, all = [6:9; 15:18; 20:27])
-    ncol == 33 && return (ut1 = 11, all = [6:9; 11:14; 16:23])
+    ncol == 37 && return (ut1 = 15, dpsi = 20, dx = 24, all = [6:9; 15:18; 20:27])
+    ncol == 33 && return (ut1 = 11, dpsi = 16, dx = 20, all = [6:9; 11:14; 16:23])
     error("an IERS CSV has 33 or 37 columns; this one has $(ncol)")
+end
+
+# The fixed-width files of the two series have one layout, with different quantities in their
+# nutation columns, so a file of the wrong series reads without complaint unless the values are
+# looked at. They are easily told apart: since 1995 (MJD 50000) dPsi has stayed well above this
+# limit in milliarcseconds, and dX well below it. Earlier years are left unjudged, since dPsi
+# passes through zero in the 1980s.
+const _EOP_SERIES_LIMIT_MAS = 10.0
+const _EOP_SERIES_FROM_MJD = 50_000.0
+
+_eop_series_text(::FK5) = "the IAU 1980 corrections dPsi, dEpsilon, the series FK5() uses"
+_eop_series_text(::IAU2006) = "the IAU 2000A offsets dX, dY, the series IAU2006() uses"
+_eop_series_file(::FK5) = "finals"
+_eop_series_file(::IAU2006) = "finals2000A"
+_other_theory(::FK5) = IAU2006()
+_other_theory(::IAU2006) = FK5()
+
+"""
+    _check_eop_series(csv, theory, source)
+
+Throw when the nutation columns of an IERS CSV belong to the other series. `source` names the file
+in the message. A file with no nutation values at all is left to the reader.
+"""
+function _check_eop_series(csv, theory::AbstractFrameTheory, source)
+    wanted, other = Bool[], false
+    recent = Float64[]
+    open(csv) do io
+        cols = _eop_value_columns(count(==(';'), readline(io)) + 1)
+        here, there = theory isa FK5 ? (cols.dpsi, cols.dx) : (cols.dx, cols.dpsi)
+        for line in eachline(io)
+            f = split(line, ';')
+            length(f) >= max(here, there) || continue
+            other |= !isempty(f[there])
+            v = tryparse(Float64, f[here])
+            v === nothing && continue
+            push!(wanted, true)
+            mjd = tryparse(Float64, f[1])
+            mjd !== nothing && mjd >= _EOP_SERIES_FROM_MJD && push!(recent, abs(v))
+        end
+    end
+    wrong = if isempty(wanted)
+        other
+    elseif isempty(recent)
+        false
+    else
+        typical = sort!(recent)[(length(recent) + 1) ÷ 2]
+        theory isa FK5 ? typical < _EOP_SERIES_LIMIT_MAS : typical > _EOP_SERIES_LIMIT_MAS
+    end
+    wrong || return nothing
+    throw(ArgumentError(
+        "$(source) holds $(_eop_series_text(_other_theory(theory))), and this load is for " *
+        "$(theory). Load it with `theory = $(_other_theory(theory))`, or load a " *
+        "$(_eop_series_file(theory)) file for $(theory)."))
 end
 
 """

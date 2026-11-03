@@ -154,7 +154,7 @@ end
     # immediately.
     angles = Float64[]
     for jd in 2458849.5:7.0:(2458849.5 + 364.0)
-        earth_icrf = translate(moon, earth, jd)
+        earth_icrf = translate(moon, earth, Time(jd, TDB(), JD()))
         R = Matrix(axes_rotation(ICRF(), MoonPA(), jd))[1:3, 1:3]
         earth_pa = R * earth_icrf
         push!(angles, rad2deg(acos(clamp(earth_pa[1] / norm(earth_pa), -1, 1))))
@@ -262,7 +262,7 @@ end
            "moon_pa_de421_1900-2050.bpc" =>
                "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/moon_pa_de421_1900-2050.bpc")
     jd = 2458849.5
-    alias(jd) = body_axes_rotation(SpiceOrientation("MOON_PA"), 301, jd)
+    alias(jd) = body_axes_rotation(SpiceOrientation("MOON_PA"), 301, Time(jd, TDB(), JD()))
     pa, me, alias_before = axes_rotation(ICRF(), MoonPA(), jd), axes_rotation(ICRF(), MoonME(), jd), alias(jd)
     @test alias_before == pa                         # with only DE440 loaded, the alias is DE440
 

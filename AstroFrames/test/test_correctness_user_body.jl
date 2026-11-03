@@ -35,8 +35,8 @@ struct SimpleSpin{T<:Real} <: AbstractOrientationModel
 end
 SimpleSpin(a, d, w, s) = SimpleSpin(promote(a, d, w, s)...)
 
-function AstroUniverse.body_axes_rotation(m::SimpleSpin, naifid, jd_tdb)
-    d  = jd_tdb - 2451545.0
+function AstroUniverse.body_axes_rotation(m::SimpleSpin, naifid, t::Time)
+    d  = t.tdb.jd - 2451545.0
     Ẇ  = deg2rad(m.spin_rate)                      # rad/day
     return pole_axes_rotation(deg2rad(m.pole_ra), deg2rad(m.pole_dec),
                               deg2rad(m.pm0) + Ẇ * d,
@@ -49,7 +49,7 @@ AstroFrames.hub_axes(::Type{PhobosFixed}) = ICRF()
 AstroFrames.valid_origin(::PhobosFixed, o) = o.naifid == 401
 
 function AstroFrames.axes_rotation(::ICRF, ::PhobosFixed, e::EpochScales)
-    return body_axes_rotation(orientation_model(phobos), 401, epoch_tdb(e))
+    return body_axes_rotation(orientation_model(phobos), 401, epoch_tdb_time(e))
 end
 AstroFrames.axes_rotation(a::PhobosFixed, ::ICRF, e::EpochScales) =
     inv(axes_rotation(ICRF(), a, e))
@@ -226,7 +226,7 @@ end
     @testset "with respect to the pole being estimated" begin
         function R11(q)
             m = SimpleSpin(q[1], q[2], 35.06, 1128.8445850)
-            return body_axes_rotation(m, 401, _JD_UB)[1, 1]
+            return body_axes_rotation(m, 401, Time(_JD_UB, TDB(), JD()))[1, 1]
         end
         g = ForwardDiff.gradient(R11, [317.68, 52.90])
         @test all(isfinite, g)
@@ -239,7 +239,7 @@ end
     end
 
     @testset "with respect to the spin rate" begin
-        f = s -> body_axes_rotation(SimpleSpin(317.68, 52.90, 35.06, s), 401, _JD_UB)[1, 1]
+        f = s -> body_axes_rotation(SimpleSpin(317.68, 52.90, 35.06, s), 401, Time(_JD_UB, TDB(), JD()))[1, 1]
         d = ForwardDiff.derivative(f, 1128.8445850)
         @test isfinite(d) && abs(d) > 1e-6
     end
@@ -285,7 +285,7 @@ end
         # Recorded so nobody builds an estimator on a SPICE-backed frame and
         # finds out late. This is a property of SPICE, not a defect here.
         # Since AstroUniverse 0.4 it says so, rather than failing in a conversion.
-        f = x -> body_axes_rotation(SpiceOrientation("IAU_MARS"), 499, x)[1, 1]
+        f = x -> body_axes_rotation(SpiceOrientation("IAU_MARS"), 499, Time(x, TDB(), JD()))[1, 1]
         e = try; ForwardDiff.derivative(f, _JD_UB); nothing; catch e; e; end
         @test e isa ArgumentError
         @test occursin("not differentiable", e.msg)

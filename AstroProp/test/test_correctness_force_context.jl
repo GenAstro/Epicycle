@@ -32,29 +32,29 @@ const _APC = AstroProp
         e = _APC.force_epoch(params, t)
         @test e.tdb == t.tdb.jd && e.tt == t.tt.jd && e.utc == t.utc.jd
         @test _APC.force_rotation(params, om, 399, t) == body_fixed_rotation(om, 399, t)
-        @test _APC.force_position(params, earth, sun, t) == translate(earth, sun, t.tdb.jd)
-        @test _APC.force_position(params, earth, moon, t) == translate(earth, moon, t.tdb.jd)
-        @test _APC.force_state(params, sun, earth, t) == translate_state(sun, earth, t.tdb.jd)
+        @test _APC.force_position(params, earth, sun, t) == translate(earth, sun, t)
+        @test _APC.force_position(params, earth, moon, t) == translate(earth, moon, t)
+        @test _APC.force_state(params, sun, earth, t) == translate_state(sun, earth, t)
     end
 
     @testset "computed once per evaluation" begin
         @test length(ctx.rotations) == 1 && length(ctx.positions) == 2 && length(ctx.states) == 1
         # A second request is served from the context: change the stored value and it comes back.
         ctx.positions[1] = ctx.positions[1] .+ 1.0
-        @test _APC.force_position(params, earth, sun, t) == translate(earth, sun, t.tdb.jd) .+ 1.0
+        @test _APC.force_position(params, earth, sun, t) == translate(earth, sun, t) .+ 1.0
         @test length(ctx.positions) == 2
         # A reset empties it.
         _APC._reset!(ctx, t)
         @test isempty(ctx.positions) && ctx.epoch === nothing
-        @test _APC.force_position(params, earth, sun, t) == translate(earth, sun, t.tdb.jd)
+        @test _APC.force_position(params, earth, sun, t) == translate(earth, sun, t)
     end
 
     @testset "another epoch, or none, is computed directly" begin
         _APC._reset!(ctx, t)
-        @test _APC.force_position(params, earth, sun, t2) == translate(earth, sun, t2.tdb.jd)
+        @test _APC.force_position(params, earth, sun, t2) == translate(earth, sun, t2)
         @test isempty(ctx.positions)
         @test _APC.force_rotation(nothing, om, 399, t2) == body_fixed_rotation(om, 399, t2)
-        @test _APC.force_position([], earth, moon, t2) == translate(earth, moon, t2.tdb.jd)
+        @test _APC.force_position([], earth, moon, t2) == translate(earth, moon, t2)
         # A Dual epoch, as when the time itself is differentiated, leaves the context unused.
         td = Time(ForwardDiff.Dual(t.tt.jd, 1.0), 0.0, TT(), JD())
         _APC._reset!(ctx, td)

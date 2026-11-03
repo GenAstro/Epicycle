@@ -36,7 +36,7 @@ export AbstractCoordinateSystem, CoordinateSystem
 export axes_rotation, origin_translation, edge_theory, body_fixed_rotation
 
 # The extension contract - what you write a frame of your own against.
-export EpochScales, epoch_tdb, epoch_tt, epoch_utc
+export EpochScales, epoch_tdb, epoch_tdb_time, epoch_tt, epoch_utc
 export cip_interpolation, set_cip_interpolation!
 export hub_axes, valid_origin, needs_reference_orbit
 

@@ -38,6 +38,13 @@ struct IAU2015Orientation{T<:Real}
     prime_meridian_rate::T
 end
 
+# A date that carries derivatives or more digits meets the constant angles and rates of a body
+# whose polynomial leaves some terms out, so the six are brought to one type here.
+IAU2015Orientation(ra_pole::Real, dec_pole::Real, prime_meridian::Real, ra_pole_rate::Real,
+                   dec_pole_rate::Real, prime_meridian_rate::Real) =
+    IAU2015Orientation(promote(ra_pole, dec_pole, prime_meridian, ra_pole_rate, dec_pole_rate,
+                               prime_meridian_rate)...)
+
 const _SECONDS_PER_DAY     = 86400.0
 const _SECONDS_PER_CENTURY = _SECONDS_PER_DAY * 36525.0
 const _J2000_TDB_JD        = 2451545.0
@@ -285,9 +292,9 @@ end
 # =============================================================================
 
 """
-    iau2015_orientation(body::CelestialBody, jd::Real) → IAU2015Orientation
+    iau2015_orientation(body, t::Time) → IAU2015Orientation
 
-Return the IAU 2015 orientation parameters for `body` at TDB Julian date `jd`.
+Return the IAU 2015 orientation parameters for `body` at the epoch `t`.
 
 Supported bodies: Sun, Mercury, Venus, Mars, Jupiter, Saturn, Uranus,
 Neptune, Pluto.
@@ -303,9 +310,8 @@ Neptune, Pluto.
   `MoonPA` and `MoonME` axes.
 
 # Arguments
-- `body::CelestialBody`
-- `jd::Real` — TDB Julian date. Callers are responsible for converting from
-  other time scales.
+- `body`: a `CelestialBody`, or a NAIF ID.
+- `t::Time`: epoch, in any time scale. The polynomials are evaluated in TDB.
 
 # Errors
 Throws `ArgumentError` for Earth and Moon (see above) and for any other body
@@ -320,15 +326,18 @@ An [`IAU2015Orientation`](@ref) containing pole, prime-meridian, and rate values
 
 # Example
 ```jldoctest
-julia> using AstroUniverse
+julia> using AstroUniverse, AstroEpochs
 
-julia> iau2015_orientation(mars, 2451545.0) isa IAU2015Orientation
+julia> iau2015_orientation(mars, Time(2451545.0, TDB(), JD())) isa IAU2015Orientation
 true
 ```
 """
-iau2015_orientation(body::CelestialBody, jd::Real) = iau2015_orientation(body.naifid, jd)
+iau2015_orientation(body::CelestialBody, t::Time) = iau2015_orientation(body.naifid, t)
+iau2015_orientation(n::Integer, t::Time) = _iau2015_orientation(n, t.tdb.jd)
+iau2015_orientation(::Union{CelestialBody, Integer}, ::Real) =
+    throw(_bare_date_error("iau2015_orientation"))
 
-function iau2015_orientation(n::Integer, jd::Real)
+function _iau2015_orientation(n::Integer, jd::Real)
     if     n == 10 ; return _iau2015_orientation_sun(jd)
     elseif n == 199; return _iau2015_orientation_mercury(jd)
     elseif n == 299; return _iau2015_orientation_venus(jd)

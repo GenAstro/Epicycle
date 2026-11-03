@@ -119,7 +119,7 @@ end
         # model directly, so a mix-up between bodies cannot pass.
         for naif in (10, 199, 299, 499, 599, 699, 799, 899, 999)
             R = axes_rotation(ICRF(), CelestialBodyFixed{naif}(), _JD_BF)[1:3, 1:3]
-            o = iau2015_orientation(naif, _JD_BF)
+            o = iau2015_orientation(naif, Time(_JD_BF, TDB(), JD()))
             pole = [cos(o.dec_pole)cos(o.ra_pole), cos(o.dec_pole)sin(o.ra_pole), sin(o.dec_pole)]
             @test R[3, :] ≈ pole atol = 1e-12
         end

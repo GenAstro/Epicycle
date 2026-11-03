@@ -453,8 +453,8 @@ struct SimpleSpin <: AbstractOrientationModel
     spin_rate::Float64     # deg/day
 end
 
-function AstroUniverse.body_axes_rotation(m::SimpleSpin, naifid, jd_tdb)
-    d = jd_tdb - 2451545.0
+function AstroUniverse.body_axes_rotation(m::SimpleSpin, naifid, t::Time)
+    d = t.tdb.jd - 2451545.0
     Ẇ = deg2rad(m.spin_rate)
     return pole_axes_rotation(deg2rad(m.pole_ra), deg2rad(m.pole_dec),
                               deg2rad(m.pm0) + Ẇ * d, 0.0, 0.0, Ẇ / 86_400)
