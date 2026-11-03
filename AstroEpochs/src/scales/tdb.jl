@@ -10,7 +10,7 @@
 # ─────────────────────────────── TDB − TT ─────────────────────────────────
 #
 # `_tdb_minus_tt_parts(jd1, jd2)` is the one function the scale conversions call for TDB − TT. It
-# evaluates `dtdb` at the geocentre, as Astropy does when a Time has no location. ERFA documents the
+# evaluates `dtdb` at the geocenter, as Astropy does when a Time has no location. ERFA documents the
 # series as agreeing with ephemeris-based TDB to a few nanoseconds over 1600-2200; AstroEpochs has
 # not checked that against an ephemeris.
 #
@@ -21,7 +21,7 @@
     _tdb_minus_tt_parts(jd1, jd2) -> seconds
 
 TDB − TT at the two-part Julian date `jd1 + jd2`, which may be in TT or TDB (the difference is
-below a picosecond), evaluated at the geocentre.
+below a picosecond), evaluated at the geocenter.
 """
 _tdb_minus_tt_parts(jd1, jd2) = dtdb(jd1, jd2, 0.0, 0.0, 0.0, 0.0)
 # The observer arguments are plain constants, not zeros of the date's type: the geocentric result
@@ -33,7 +33,7 @@ _tdb_minus_tt_parts(jd1, jd2) = dtdb(jd1, jd2, 0.0, 0.0, 0.0, 0.0)
 
 ERFA's `eraDtdb`: TDB − TT at the TDB (or TT) date `date1 + date2`, for an observer at longitude
 `elong` [rad], distance `u` [km] from the Earth's spin axis and `v` [km] north of the equatorial
-plane, at UT1 fraction of day `ut`. With `u = v = 0` the observer is at the geocentre and `ut`
+plane, at UT1 fraction of day `ut`. With `u = v = 0` the observer is at the geocenter and `ut`
 and `elong` have no effect.
 """
 function dtdb(date1, date2, ut, elong, u, v)

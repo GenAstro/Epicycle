@@ -51,7 +51,7 @@ const SCALE_TRANSFORMS = Dict{Tuple{Symbol, Symbol}, Function}(
 """
     get_conversion_path(from::Symbol, to::Symbol) → Vector{Symbol}
 
-Returns conversion path from `from` to `to` time scales.
+Return the sequence of scales used to convert from `from` to `to`.
 """
 function get_conversion_path(from::Symbol, to::Symbol)::Vector{Symbol}
     if from == to
@@ -73,8 +73,8 @@ end
 """
     apply_transforms(jd1, jd2, from::Symbol, to::Symbol) -> (jd1, jd2)
 
-Convert a two-part Julian date from scale `from` to scale `to`, one transform per hop of the
-route, then rebalance the parts as a Time holds them.
+Convert a two-part Julian date from `from` to `to`, applying each transformation along the
+conversion path and normalizing the result.
 """
 function apply_transforms(jd1::Real, jd2::Real, from::Symbol, to::Symbol)
     from === to && return _rebalance(jd1, jd2)

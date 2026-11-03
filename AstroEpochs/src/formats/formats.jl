@@ -15,7 +15,7 @@ const TIME_FORMATS = Set([:jd, :mjd, :isot])
 """
     _to_mjd(t::Time)
 
-Return time value in Modified Julian Date (MJD) format.
+Return the date as a single Modified Julian Date value.
 """
 @inline function _to_mjd(t::Time)
     return (t.jd1 - MJD_EPOCH) + t.jd2
@@ -24,24 +24,21 @@ end
 """
     isot(t::Time; digits = 3) -> String
 
-`t` as an ISO 8601 string with `digits` decimal places of seconds. `t.isot` is this at the default
-three places.
+Format `t` as a calendar timestamp in its current scale, with `digits` decimal places in the
+seconds field. `t.isot` is equivalent to `isot(t; digits = 3)`.
 
-The string is written by ERFA's `d2dtf`, as Astropy formats it: the rounding carries into the minute,
-hour and date, and in UTC a time inside a leap second reads 23:59:60.
-
-# Arguments
-- `t`: The time, written in its own scale.
-- `digits`: Decimal places of seconds. With 0 the string ends at the whole second.
-
-# Returns
-The string `YYYY-MM-DDThh:mm:ss`, with `digits` decimal places after a point when `digits` is above 0.
-It names no scale.
+The output has the form `YYYY-MM-DDTHH:MM:SS`, followed by fractional seconds when `digits > 0`.
+It does not include a scale or time zone suffix. Rounding carries into the next minute, hour,
+or date as needed. UTC output can include `23:59:60` during a positive leap second.
 
 # Notes
-- `digits` runs from 0 to 12, and anything else throws. A `Time` resolves about 10 ps, so more than 11
-  places carry nothing.
-- A date that is not finite, or too far off for the calendar, has no string and throws.
+- `digits` must be between 0 and 12; other values throw an error.
+- For `Time{Float64}`, fractional-day resolution is on the order of 10 ps. Extra displayed digits
+  do not guarantee extra accuracy; precision depends on the input and numeric type.
+- Nonfinite dates and dates outside the supported calendar range throw an error.
+
+# Returns
+The timestamp as a `String`.
 
 # Examples
 ```jldoctest
@@ -68,8 +65,8 @@ _to_isot(t::Time) = isot(t)
 """
     _from_format(value::Real, scale::Symbol, format::Symbol) -> Time{T}
 
-Construct a Time{T} from a JD/MJD numeric value, preserving T = typeof(value). An integer becomes
-floating point, since a date in integers has no fraction of a day to carry.
+Create a `Time{T}` from a JD or MJD value, preserving `T = typeof(value)`.
+Integer input is promoted to floating point so the date can include a fractional day.
 """
 _from_format(value::Integer, scale::Symbol, format::Symbol) = _from_format(float(value), scale, format)
 
@@ -103,8 +100,7 @@ end
 """
     _isot_to_date(isostr::AbstractString) → Tuple{Int, Int, Int, Int, Int, Real}
 
-Validate and parse an ISO 8601 string of the form `"YYYY-MM-DDTHH:MM:SS.sss"`.
-Returning calendar fields: `(year, month, day, hour, minute, second)`.
+Parse and validate an ISOT timestamp, returning `(year, month, day, hour, minute, second)`.
 """
 function _isot_to_date(isostr::AbstractString)
     # The form this package reads, with optional fractional seconds

@@ -4,9 +4,9 @@ CurrentModule = AstroEpochs
 
 # AstroEpochs
 
-The AstroEpochs package provides `Time`, an astronomical epoch held as a two-part Julian date in one of six time scales: TAI, TT, UTC, TDB, TCB and TCG. It converts between the scales, reads and writes Julian dates, Modified Julian Dates and calendar timestamps, and keeps the IERS leap-second list current. Packages such as AstroFrames, AstroProp and AstroSolve use it for every time they handle.
+AstroEpochs represents astronomical epochs and converts between six time scales: TAI, TT, UTC, TDB, TCB, and TCG. Its `Time` type stores a Julian date in two parts and supports Julian dates, Modified Julian Dates, and calendar timestamps. The package manages a cached leap-second table for UTC conversions. Other Epicycle packages, including AstroFrames, AstroProp, and AstroSolve, use `Time` to represent epochs.
 
-AstroEpochs uses the algorithms of Astropy's `Time`, which come from ERFA, and is tested against Astropy.
+The API is inspired by Astropy's `Time`, with algorithms adapted from ERFA and Astropy. The test suite compares its results with Astropy reference data.
 
 ## Quick Start
 
@@ -37,9 +37,9 @@ AstroEpochs.Time
   format = ISOT()
 ```
 
-Inside something else, such as a vector or a string, it prints on one line, as `Time("2017-01-01T00:00:00.000", UTC(), ISOT())`.
+In a collection or string, a time uses a compact representation such as `Time("2017-01-01T00:00:00.000", UTC(), ISOT())`.
 
-`Dates` exports `Time` and `UTC` too. If a script uses both packages, import what you need from `Dates`, as in `using Dates: DateTime`, or write `AstroEpochs.Time` and `AstroEpochs.UTC`. The two packages exchange times as strings:
+Both `AstroEpochs` and `Dates` export `Time` and `UTC`. To avoid name conflicts, import only the names you need from `Dates`, such as `using Dates: DateTime`, or use `AstroEpochs.Time` and `AstroEpochs.UTC`. The following example converts through timestamp strings:
 
 ```julia
 using AstroEpochs
@@ -49,9 +49,11 @@ t = Time(string(DateTime(2024, 1, 1, 12)), UTC(), ISOT())
 DateTime(t.isot)    # 2024-01-01T12:00:00
 ```
 
+`DateTime` does not record the time scale or represent leap seconds, so keep the scale alongside exported strings.
+
 ## Creating a Time
 
-The scale you pass says how to read the input. It does not convert anything, so give the scale your source states. The same text read on two scales gives two different instants, and to convert a time you already hold, use a property such as `t.tt`.
+The constructor interprets input in the scale you provide. The same timestamp in UTC and TT represents two different instants. To convert an existing `Time`, use a scale property such as `t.tt` or call `Time(t, TT())`.
 
 ```julia
 using AstroEpochs
@@ -62,7 +64,7 @@ Time(text, UTC(), ISOT()).tt.isot    # "2017-01-01T00:01:09.184"
 Time(text, TT(), ISOT()).tt.isot     # "2017-01-01T00:00:00.000"
 ```
 
-A format sets how a time is written. It never changes the date.
+The format determines how input is interpreted and how the resulting `Time` is displayed. Changing the format of an existing `Time` preserves the instant and scale.
 
 | Format | Input | Example |
 |:-------|:------|:--------|
@@ -70,7 +72,7 @@ A format sets how a time is written. It never changes the date.
 | `MJD()` | Modified Julian date: the Julian date less 2400000.5 | `Time(51544.5, TT(), MJD())` |
 | `ISOT()` | Timestamp, `YYYY-MM-DDTHH:MM:SS` with optional decimal seconds and a four-digit year | `Time("2000-01-01T12:00:00", TT(), ISOT())` |
 
-A timestamp has no time zone suffix, since the scale says what clock it is on, and the time of day is required. A timestamp string does not record its scale, so keep the scale with it when you write times to a file.
+ISOT input requires a date and time with a four-digit year and no time zone suffix, such as `Z` or `+00:00`. Supply the time scale separately. The output string does not include its scale, so store the scale alongside exported timestamps.
 
 ```julia
 using AstroEpochs
@@ -95,19 +97,19 @@ AstroEpochs has six time scales.
 | `TCB()` | Barycentric Coordinate Time, which gains about 0.49 s a year on TDB |
 | `TCG()` | Geocentric Coordinate Time, which gains about 0.022 s a year on TT |
 
-The figure shows every scale against TAI. TT sits a constant 32.184 s away. TDB follows TT with its yearly cycle, and TCB adds the same cycle to a steady drift. TCG drifts slowly away from TT. UTC steps at each leap second, and the figure stops it at 2026, since later leap seconds are unknown. The periodic term of TCB is magnified by 100 so it can be seen. TDB's, also magnified, still lies within the width of the TT line.
+The figure compares each scale with TAI. TT has a constant offset of 32.184 s. TDB adds a small periodic variation, while TCB and TCG also drift relative to TAI. UTC changes in steps at leap seconds. The plotted UTC series ends in 2026 because later leap seconds are unknown. The periodic terms of TDB and TCB are magnified by 100; even then, the TDB curve overlaps the TT line.
 
 ![Each time scale's offset from TAI from 1950 to 2030, with the periodic terms of TDB and TCB magnified by 100. TT is a constant 32.184 s, TDB and TCG stay close to it, TCB drifts from about 19 s to about 58 s, and UTC steps from −10 s at 1972 to −37 s at 2017, ending at 2026.](assets/time_scales.svg)
 
 *The numbers are from AstroEpochs. The form of the figure follows Figure 1 of Seidelmann and Fukushima (1992).*
 
-The scales connect as a graph, and a conversion walks it. Going from TCB to UTC passes through TDB, TT and TAI in turn, so you ask for the scale you want and the route is taken care of.
+AstroEpochs routes conversions through the available scale transformations. For example, converting TCB to UTC follows TCB → TDB → TT → TAI → UTC. You only need to request the destination scale.
 
 ![The conversion graph. UTC joins TAI by leap seconds, TAI joins TT by a constant 32.184 s, TT joins TDB by a yearly cycle of about 1.7 ms, TDB joins TCB by a steady rate of 0.49 s a year, and TT joins TCG by a steady rate of 0.022 s a year.](assets/scale_graph.svg)
 
-Use UTC for the times you read in and write out. It is a civil scale built for clocks, not one to do dynamics in, so Epicycle's dynamics work in TT and TDB. UTC is defined here from 1972: before that date AstroEpochs uses TAI − UTC = 0 and warns, where the historical offset was up to about 10 s.
+Use the scale your data specifies. UTC is for input and output, not a scale to work in; Epicycle uses TT and TDB for dynamics. AstroEpochs does not model historical UTC offsets before 1972. For those dates, it uses TAI − UTC = 0 and warns. Results can differ from historical UTC by up to about 10 s.
 
-A property converts to a scale you name in the script. `Time(t, scale)` does the same when the scale is held in a variable. A conversion keeps the format.
+Use a property such as `t.tdb` to convert to a specific scale. Use `Time(t, scale)` when the destination scale is held in a variable. Both preserve the display format.
 
 ```julia
 using AstroEpochs
@@ -126,13 +128,13 @@ tdb_minus_tt(t)              # -9.930719894379447e-5
 tai_minus_utc(t)             # 32.0
 ```
 
-`t.tdb` is TDB at the geocentre, since a `Time` carries no location. For an observer on the Earth, `tdb_minus_tt(t, position)` adds the observer's terms, up to about 2 µs. `position` is the observer's position from the Earth's centre in km, in Earth-fixed axes.
+`t.tdb` uses the geocentric TDB − TT correction because `Time` does not store an observer location. For an observer on Earth, `tdb_minus_tt(t, position)` returns an offset that includes the observer correction, which can reach about 2 µs. Supply `position` as three Earth-fixed coordinates in km from Earth's center. This returns an offset; it does not create an observer-specific `Time`.
 
 AstroEpochs does not provide UT1, GPS time or time zones. UT1 for Earth rotation comes from the Earth orientation data in AstroUniverse.
 
 ## Leap Seconds
 
-UTC differs from TAI by a whole number of seconds, TAI − UTC, which changes when the IERS adds a leap second. The IERS announces each one in Bulletin C, about six months ahead, and TAI − UTC has been 37 s since 2017-01-01.
+From 1972 onward, UTC and TAI differ by an integer number of seconds. This offset, TAI − UTC, changes when a leap second takes effect. The IERS announces leap seconds in Bulletin C, about six months ahead. TAI − UTC has been 37 s since 2017-01-01.
 
 AstroEpochs reads TAI − UTC from `leap-seconds.list`, the IERS list as IANA publishes it at <https://data.iana.org/time-zones/tzdb/leap-seconds.list>. Each data line gives the date of a change, in seconds since 1900-01-01, and the value of TAI − UTC from that date. The line that begins `#@` gives the date the list expires, which the IERS extends each time it confirms that no leap second is coming. The change takes effect at 0h UTC on the date given.
 
@@ -142,19 +144,19 @@ The file is stored in AstroEpochs' Scratch space:
 <depot>/scratchspaces/241dcde3-d7a4-450d-948f-15f2ea2ba1fa/leap_seconds/leap-seconds.list
 ```
 
-where `<depot>` is the first entry of `DEPOT_PATH`, usually `~/.julia`. AstroEpochs downloads the list the first time a session needs TAI − UTC, which includes reading or writing a timestamp in UTC, when no stored copy exists or the stored copy has passed its expiry date. That first use waits at most 10 s for the download. A session checks once and keeps that table until it ends.
+where `<depot>` is the first entry of `DEPOT_PATH`, usually `~/.julia`. AstroEpochs loads the table the first time a session needs TAI − UTC, including when reading or writing a UTC timestamp. If no valid, unexpired copy is stored, it tries to download one with a 10 s timeout. The session keeps the loaded table until it ends or you refresh it.
 
-| Situation | What AstroEpochs uses | What it says |
+| Condition | Table used | Warning |
 |:----------|:----------------------|:-------------|
-| A current stored copy | The stored copy | Nothing |
-| An expired copy, and no network | The expired copy | A warning |
-| No copy, and no network | The built-in table, which ends at the 2017-01-01 leap second | A warning |
-| A depot that cannot be written | The list, downloaded for this session only | A warning |
-| A damaged list | The list is refused, and the row above that applies is used | The warning of that row |
+| A current stored copy | The stored copy | None |
+| An expired copy, and a failed download | The expired copy | A warning |
+| No copy, and a failed download | The built-in table, which ends at the 2017-01-01 leap second | A warning |
+| A depot that cannot be used | The downloaded list, stored in a temporary folder for the session | A warning |
+| A stored copy that fails validation | The copy is ignored and AstroEpochs tries a download. If that fails, it uses the built-in table. | A warning if the download fails |
 
-A list must match the hash on its last line and hold every change through 2017. That catches a damaged file. It does not establish where the file came from.
+AstroEpochs checks the list's hash and verifies that it includes every expected change through 2017. A truncated file fails validation. The hash covers the data lines, update timestamp, and expiry, not comments or lines after the hash. These checks detect damaged or inconsistent data; they do not authenticate the source.
 
-A UTC date after the list's last entry uses its last value, since future leap seconds are unknown. More than five years past the list's expiry, this warns once per session.
+For UTC dates after the last listed change, AstroEpochs uses the last known offset. It warns once per session when a requested date is more than five years beyond the table's expiry date.
 
 ```julia
 using AstroEpochs
@@ -168,7 +170,9 @@ path = joinpath(DEPOT_PATH[1], "scratchspaces", "241dcde3-d7a4-450d-948f-15f2ea2
 isfile(path) && print(read(path, String))
 ```
 
-`refresh_leap_seconds!()` downloads the list now, which picks up a newly announced leap second in a running session or before the stored copy expires. It replaces the stored copy and the table in use, and returns that table. If the download fails or the list is refused, it throws, and the table in use stays as it was.
+`refresh_leap_seconds!()` downloads and stores the latest list, then activates it. Use it to pick up newly announced leap seconds without restarting Julia or waiting for the stored list to expire. If the depot cannot be used, the list is stored in a temporary folder for the session, with a warning. If storing otherwise fails, or downloading or validation fails, the function throws and the table in use stays unchanged. It returns the activated table.
+
+The following output is an example; the dates will differ with the downloaded list.
 
 ```@raw html
 <!-- doc-fragment -->
@@ -182,7 +186,7 @@ refresh_leap_seconds!()    # LeapSecondTable: TAI − UTC = 37 s from 2017-01-01
 
 ## Formats and Precision
 
-The format properties give a time as a number or a string. `Time(t, format)` changes how a time displays and holds the date exactly as it was, which building a new time from `t.mjd` or `t.isot` does not do, since each of those is rounded.
+Format properties return a number or string: `t.jd`, `t.mjd`, and `t.isot`. To change the display format without changing the stored date parts, use `Time(t, format)`. Reconstructing a time from a single number or timestamp string can lose precision.
 
 ```julia
 using AstroEpochs
@@ -201,9 +205,9 @@ isot(t; digits = 6)       # "2000-01-01T18:00:00.000000"
 Time(t, MJD()).format     # MJD()
 ```
 
-`isot` writes from 0 to 12 decimal places. A `Time` resolves about 10 ps, so more than 11 carry nothing.
+`isot(t; digits)` supports 0–12 decimal places in the seconds field. For `Time{Float64}`, the fractional day has a resolution on the order of 10 ps. Extra displayed digits do not guarantee extra accuracy; precision depends on the input and numeric type.
 
-A `Time` holds a date in two parts, a whole day and a fraction, so two times can differ by far less than a nanosecond at any date and the difference still comes back. The precision is only as good as what you pass in and read out. One number at the size of a Julian date resolves about 40 µs, and a Modified Julian Date about 0.6 µs. To keep everything, build a time from two parts and save `t.jd1` and `t.jd2`, not `t.jd`, along with the scale. Those figures are for `Float64`.
+`Time` stores a Julian date as an integer-valued day and a fraction between −0.5 and 0.5. The fraction can be negative: `Time(2451545.5, 0.0, TT(), JD())` stores 2451546 and −0.5. This representation retains small differences that a single number would lose. Near contemporary dates, a single `Float64` JD resolves about 40 µs, compared with about 0.6 µs for MJD. To save a time at full precision, write `t.jd1`, `t.jd2` and the scale, and don't round the two parts when you save them.
 
 ```julia
 using AstroEpochs
@@ -218,11 +222,11 @@ b = a + 1e-12
 b.jd == a.jd       # true
 ```
 
-A whole-number date is promoted to floating point. `Time{T}(t)` changes the numeric type of a time you hold. A scale conversion promotes to at least `Float64`, so a `Time{Float32}` comes back as `Time{Float64}`, and `BigFloat` and derivative types carry through.
+Integer inputs are promoted to floating point. Use `Time{T}(t)` to change the storage type. Scale conversions promote calculations to at least `Float64`; `BigFloat` and automatic differentiation types are preserved.
 
 ## Arithmetic and Comparison
 
-Adding a number moves a time by that many days, and subtracting two times in the same scale gives the days between them. The format of each plays no part.
+Adding a number shifts a time by that many days in its current scale. Subtracting two times in the same scale returns their difference in days. Display formats do not affect the calculation.
 
 ```julia
 using AstroEpochs
@@ -237,7 +241,7 @@ later.isot    # "2000-01-01T18:00:00.000"
 later - t     # 0.25
 ```
 
-Arithmetic happens in the scale you are in. UTC has leap seconds, so a difference between two UTC times is not elapsed time. For elapsed time, convert first:
+UTC arithmetic operates on UTC date coordinates. Because UTC includes leap seconds, subtracting UTC dates does not always give elapsed time. Convert both times to TAI before calculating elapsed seconds:
 
 ```julia
 using AstroEpochs
@@ -252,7 +256,7 @@ b = Time("2020-01-01T00:00:00", UTC(), ISOT())
 (b.tai - a.tai) * 86400    # 6.31152005e8
 ```
 
-On a day with a leap second, UTC runs 86,401 seconds to the day, and a UTC date's fraction stretches over all of them. Results that touch that day can differ from clock time by up to a second, and a number means the fraction, not the clock.
+On a day with a positive leap second, the UTC fractional day spans 86,401 seconds. A fraction of 0.5 represents half that interval: 12:00:00.5 rather than noon.
 
 ```julia
 using AstroEpochs
@@ -265,12 +269,12 @@ Times compare within one scale.
 
 | Operation | Different scales | Meaning |
 |:----------|:-----------------|:--------|
-| `a == b` | `false` | The same date, to the last bit. The format plays no part, and `hash` agrees |
+| `a == b` | `false` | Equal stored date parts in the same scale; display format is ignored, and equal times have equal hashes |
 | `isapprox(a, b; atol)`, `a ≈ b` | Throws | Within `atol` seconds, a nanosecond by default |
 | `a < b`, `sort`, `minimum`, `maximum` | Throws | The order of the instants |
 | `a - b` | Throws | Days between the dates |
 
-Two times written separately rarely satisfy `==`, even when they mean the same instant, because each number is rounded on its own. `isapprox` is the comparison for them.
+Inputs that describe the same intended instant can round differently. The JD and MJD inputs below differ by about 12 µs. Use `isapprox` with a tolerance appropriate to the input precision. Its default tolerance is 1 ns, so this example needs an explicit larger tolerance.
 
 ```julia
 using AstroEpochs
@@ -283,7 +287,7 @@ a == b                         # false
 isapprox(a, b; atol = 1e-3)    # true
 ```
 
-Broadcasting adds to one time, which gives a grid of times in one line:
+Use broadcasting to create a sequence of times from a starting epoch and a range of day offsets:
 
 ```julia
 using AstroEpochs
@@ -298,15 +302,15 @@ t < grid[end]                  # true
 
 ## Conventions
 
-- An interval is in days. `isapprox`, `tai_minus_utc` and `tdb_minus_tt` work in seconds.
-- An observer's position is in km, in Earth-fixed axes.
-- Calendar dates are proleptic Gregorian.
-- A format sets how a time displays and never changes the date.
-- A time with no finite date passes through arithmetic and conversion, prints, and has no calendar date to write.
+- Arithmetic offsets and differences are in days. `isapprox` tolerances and the results of `tai_minus_utc` and `tdb_minus_tt` are in seconds.
+- Observer positions are Earth-fixed coordinates in km from Earth's center.
+- Calendar operations use the proleptic Gregorian calendar.
+- Changing the display format preserves the instant and scale.
+- Nonfinite dates can pass through arithmetic and scale conversions, but cannot be formatted as calendar timestamps.
 
 ## Differentiability
 
-Construction, day arithmetic and scale conversions are differentiable with ForwardDiff, as the test suite checks against a central difference. The date's whole day is a rounded number, so the derivative is carried in the fraction, and calendar dates, timestamps and leap-second steps have no derivative.
+Numeric construction, day arithmetic, and scale conversions support ForwardDiff away from discontinuities such as leap-second boundaries. The fractional date part carries the derivative. Calendar-field and timestamp operations are not differentiable interfaces. The tests compare derivatives of scale conversions with central finite differences.
 
 ```julia
 using AstroEpochs, ForwardDiff
@@ -319,13 +323,13 @@ ForwardDiff.derivative(s -> ((t + s / 86400).tai - t.tai) * 86400, 0.0)    # 1.0
 
 ## Validation
 
-The test suite compares AstroEpochs with stored results from Astropy 8.0.1 at 1793 epochs across every scale, to 20 ps in the date and exactly in the millisecond timestamp, except for UTC before 1972, which differs by up to about 10 s. Separate runs with new random epochs matched every part of the date exactly.
+The test suite compares AstroEpochs with stored reference data from Astropy 8.0.1 at 1,793 epochs across the supported scales. Tests require agreement within 20 ps for the two-part date and exact agreement for millisecond timestamps. Pre-1972 UTC offsets are checked separately: AstroEpochs uses zero rather than the historical offsets modeled by Astropy, so results can differ from historical UTC by up to about 10 s.
 
-The test suite compares TDB − TT with observer terms with pyerfa at 100 random dates and observers, to 1e-17 s. This is agreement with an implementation, not a measure of physical accuracy: ERFA documents the TDB series as agreeing with ephemeris-based TDB to a few nanoseconds over 1600 to 2200, which AstroEpochs has not checked against an ephemeris.
+Observer-dependent TDB − TT results are compared with pyerfa at 100 random dates and observer positions, with a tolerance of 1e-17 s. Agreement with another implementation does not establish physical accuracy. ERFA documents the series as agreeing with ephemeris-based TDB to a few nanoseconds over 1600–2200; AstroEpochs has not independently checked it against an ephemeris.
 
 ## Comparison with Other Packages
 
-AstroTime.jl supports TAI, TT, TCG, TCB, TDB and UT1, and Tempo.jl supports TAI, TT, TDB, TCG, TCB, UTC and GPS, among others. Both carry the scale in the type of an epoch, so a conversion changes the type. AstroEpochs holds the scale as a value, so one `Time` type covers every scale, which Epicycle's propagation and optimization rely on, and it keeps the IERS leap-second list current itself.
+[AstroTime.jl 0.7.3](https://github.com/JuliaAstro/AstroTime.jl/tree/v0.7.3) supports TAI, TT, TCG, TCB, TDB, and UT1 epochs, with UTC available for timestamp input and output. [Tempo.jl 1.3.1](https://github.com/JuliaSpaceMissionDesign/Tempo.jl/tree/v1.3.1) supports TAI, TT, TDB, TCG, TCB, UTC, and GPS, among others. In both versions, the epoch type includes the scale, so converting to another scale changes the type. AstroEpochs stores the scale as a value, allowing one `Time` type to cover every scale for Epicycle's propagation and optimization code. It also manages its leap-second cache automatically.
 
 ## References
 
@@ -349,7 +353,7 @@ Private = false
 Order = [:type, :function, :macro, :constant]
 ```
 
-These extend functions in Base, which do not belong to AstroEpochs' own list above.
+AstroEpochs also extends the following Base functions for `Time`:
 
 ```@docs
 Base.getproperty(::Time, ::Symbol)

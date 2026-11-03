@@ -58,12 +58,13 @@ const _LEAP_LOCK  = ReentrantLock()
 """
     parse_leap_seconds(text::AbstractString) -> LeapSecondTable
 
-Parse an IETF/IANA `leap-seconds.list`: one `NTP-seconds  TAI−UTC` pair per data line, and the
-expiry on the line that begins `#@`.
+Parse an IETF/IANA `leap-seconds.list`: one `NTP-seconds TAI−UTC` pair per data line, with the
+expiry on the `#@` line.
 
-The file is refused with an `ArgumentError` unless its `#h` hash matches and its entries could be
-real: every change through 2017 as the built-in table has it, dates in order, and each later change
-one second. The hash sits on the last line of the file, so a file cut off anywhere fails it.
+Throw an `ArgumentError` if the hash does not match, historical entries through 2017 differ
+from the built-in table, dates are not unique and chronological, or later changes are not
+one second. A truncated file fails validation. The hash covers the data lines and expiry,
+as well as the update timestamp; it does not cover comments or lines after the hash.
 """
 function parse_leap_seconds(text::AbstractString)
     updated = expiry = file_hash = nothing
@@ -143,7 +144,7 @@ end
 """
     leap_second_table() -> LeapSecondTable
 
-The table in use, loaded on first call. See the file header for where it comes from.
+Return the active leap-second table, loading it on first use.
 """
 function leap_second_table()
     t = _LEAP[]
@@ -251,19 +252,21 @@ end
 """
     refresh_leap_seconds!() -> LeapSecondTable
 
-Download the IERS leap-second list now and use it for every later conversion.
+Download and store the latest IERS leap-second list, then activate it.
 
-The list is otherwise downloaded on a session's first UTC conversion, if no current copy is stored,
-so this is only needed to pick up a newly announced leap second before the stored list expires, or
-in a session that has run past the expiry.
+Use this to load newly announced leap seconds without restarting Julia or waiting for the
+stored list to expire. Normally, AstroEpochs loads the table on first use and tries a download
+if no valid, unexpired copy is stored.
 
 # Notes
-This replaces the stored copy of the list and the table in use.
+- The list is stored before it is activated. If the depot cannot be used, the list is stored
+  in a temporary folder for the session, with a warning.
+- If storing otherwise fails, or downloading or validation fails, this throws and the table
+  in use stays unchanged. An explicit refresh does not fall back to an older table.
+- The download has a 60 s timeout.
 
 # Returns
-The table now in use, which prints its last change and its expiry. Throws when the download fails or
-the list is refused, and the table in use stays as it was. A first conversion falls back instead,
-because a caller who asks for a refresh wants to know it did not happen.
+The activated `LeapSecondTable`, which displays its last recorded offset and expiry date.
 
 # Example
 ```julia
@@ -295,7 +298,7 @@ end
 
 # The warnings are kept out of `_tai_minus_utc_days` because a logging macro contains a try block, which
 # automatic differentiation cannot compile, and each shows once per session: a propagation or an
-# optimisation converts at every step, and a warning per conversion buries everything else.
+# optimization converts at every step, and a warning per conversion buries everything else.
 
 # Before 1972 UTC was not an integer offset from TAI, and the list has no value for it.
 @noinline function _before_leap_seconds()

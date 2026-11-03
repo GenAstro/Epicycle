@@ -1,6 +1,6 @@
 # AstroEpochs
 
-AstroEpochs provides `Time`, an astronomical epoch held as a two-part Julian date in TAI, TT, UTC, TDB, TCB or TCG. It converts between those scales, reads and writes Julian dates, Modified Julian Dates and ISO 8601 timestamps, and keeps the IERS leap-second list current. Its algorithms are ERFA's, and it is tested against Astropy.
+AstroEpochs represents astronomical epochs and converts between TAI, TT, UTC, TDB, TCB, and TCG. Its `Time` type stores a Julian date in two parts and supports Julian dates, Modified Julian Dates, and ISOT timestamps. The package manages a cached IERS leap-second table. Its API is inspired by Astropy, with algorithms adapted from ERFA and Astropy and results tested against Astropy reference data.
 
 ## Installation
 
