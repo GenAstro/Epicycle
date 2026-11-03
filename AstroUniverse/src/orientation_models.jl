@@ -66,6 +66,8 @@ estimated, since a kernel cannot carry derivative information.
 
 # Example
 ```julia
+using AstroEpochs, AstroUniverse
+
 struct SimpleSpin{T<:Real} <: AbstractOrientationModel
     pole_ra::T          # deg
     pole_dec::T         # deg
@@ -81,6 +83,7 @@ function AstroUniverse.body_axes_rotation(m::SimpleSpin, naifid, t::Time)
                               zero(Ẇ), zero(Ẇ), Ẇ / 86_400)
 end
 
+bennu = CelestialBody("Bennu", 4.892e-9, 0.2825, 0.0, 2101955)
 set_orientation!(bennu, SimpleSpin(85.46, -60.36, 89.6, 2011.145))
 ```
 """
@@ -237,6 +240,8 @@ SPICE cannot carry derivative information; see [`SpiceOrientation`](@ref).
 
 # Example
 ```julia
+using AstroEpochs, AstroUniverse
+
 struct SimpleSpin <: AbstractOrientationModel
     pole_ra::Float64      # deg
     pole_dec::Float64     # deg
@@ -497,6 +502,8 @@ supplies periodic and libration terms without duplicating its coefficients.
 
 # Example
 ```julia
+using AstroFrames, AstroUniverse
+
 download_spice_kernel("pck00011.tpc")
 load_spice_kernel("pck00011.tpc")
 set_orientation!(mars, SpiceOrientation("IAU_MARS"))
@@ -556,6 +563,8 @@ versioned name, `SpiceOrientation("MOON_PA_DE421")`.
 
 # Example
 ```julia
+using AstroEpochs, AstroUniverse
+
 size(body_axes_rotation(LunarPA(), 301, Time(2458849.5, TDB(), JD())))   # (6, 6)
 ```
 """

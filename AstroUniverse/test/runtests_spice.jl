@@ -5,20 +5,29 @@ using Test
 using AstroUniverse
 using SPICE
 using Logging
+using Scratch: with_scratch_directory
 
-# Most of this exercises a real ephemeris file, fetched into the kernel cache the first time. With
-# no copy and no network it is reported as skipped, not as passed.
-_HAVE_DE440S = try
-    download_spice_kernel("de440s.bsp",
-        "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp")
-    true
-catch
-    false
+# Managing kernels needs no ephemeris and no network, and these tests leave the real kernel cache
+# alone. They run in a temporary cache holding a copy of the default kernels, and their extra kernel
+# is a small file written here and fetched from a file URL.
+_EXTRA = "extra_constants.tpc"
+AstroUniverse.require_spice_kernels()
+_DEFAULT_PATHS = [joinpath(get_spice_directory(), k) for k in AstroUniverse.DEFAULT_KERNELS]
+
+mktempdir() do dir
+_source = joinpath(dir, _EXTRA)
+write(_source, "KPL/PCK\n\n\\begindata\n   EPICYCLE_TEST_VALUE = ( 1.0 )\n\\begintext\n")
+_url = "file:///" * lstrip(replace(_source, '\\' => '/'), '/')
+_scratch = mkpath(joinpath(dir, "scratch"))
+
+with_scratch_directory(_scratch) do
+unload_all_spice_kernels()
+for path in _DEFAULT_PATHS
+    cp(path, joinpath(get_spice_directory(), basename(path)))
 end
-
-if !_HAVE_DE440S
-    @test_skip "SPICE kernel management needs de440s.bsp"
-else
+for k in AstroUniverse.DEFAULT_KERNELS
+    load_spice_kernel(k)
+end
 
 @testset "SPICE Kernel Management" begin
     
@@ -48,22 +57,19 @@ else
     end
     
     @testset "Download Operations" begin
-        # Download de440s.bsp for testing
-        download_spice_kernel("de440s.bsp",
-            "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp")
+        download_spice_kernel(_EXTRA, _url)
         
         cache_dir = get_spice_directory()
-        kernel_path = joinpath(cache_dir, "de440s.bsp")
+        kernel_path = joinpath(cache_dir, _EXTRA)
         
         # Verify file was downloaded
         @test isfile(kernel_path)
         
-        # Verify file size is reasonable (de440s.bsp should be ~31 MB)
-        @test filesize(kernel_path) > 1_000_000  # At least 1 MB
-        
-        # Test idempotency - re-downloading should not error
-        @test_nowarn download_spice_kernel("de440s.bsp",
-            "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp")
+        @test read(kernel_path) == read(_source)
+
+        # A file already in the cache is kept, so this does not go back to the source.
+        rm(_source)
+        @test_nowarn download_spice_kernel(_EXTRA, _url)
     end
     
     @testset "get_spice_directory()" begin
@@ -80,24 +86,24 @@ else
         downloaded_files = readdir(storage_dir)
         @test "naif0012.tls" in downloaded_files
         @test "epicycle_de440_1950-2100.bsp" in downloaded_files
-        @test "de440s.bsp" in downloaded_files  # From earlier test
+        @test _EXTRA in downloaded_files  # From earlier test
     end
     
     @testset "loaded_spice_kernels()" begin
-        # Ensure de440s.bsp is NOT loaded to start with clean state
+        # Ensure the extra kernel is NOT loaded to start with clean state
         try
-            unload_spice_kernel("de440s.bsp")
+            unload_spice_kernel(_EXTRA)
         catch
             # Ignore if not already loaded
         end
         
         # After loading a kernel, verify it appears in the kernel pool
-        download_spice_kernel("de440s.bsp", "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp")
+        download_spice_kernel(_EXTRA, _url)
         initial_count = SPICE.ktotal("ALL")
-        load_spice_kernel("de440s.bsp")
+        load_spice_kernel(_EXTRA)
         @test SPICE.ktotal("ALL") == initial_count + 1
         
-        # Verify de440s.bsp is in the cached (loaded) list
+        # Verify the extra kernel is in the cached (loaded) list
         cached_kernels = String[]
         for i in 1:SPICE.ktotal("ALL")
             result = SPICE.kdata(i, "ALL")
@@ -105,19 +111,19 @@ else
                 push!(cached_kernels, basename(result[1]))
             end
         end
-        @test "de440s.bsp" in cached_kernels
+        @test _EXTRA in cached_kernels
         for filename in AstroUniverse.DEFAULT_KERNELS
             @test filename in cached_kernels
         end
         
         # Clean up
-        unload_spice_kernel("de440s.bsp")
+        unload_spice_kernel(_EXTRA)
     end
     
     @testset "Load/Unload Operations" begin
-        # Ensure de440s.bsp is NOT loaded to start with clean state
+        # Ensure the extra kernel is NOT loaded to start with clean state
         try
-            unload_spice_kernel("de440s.bsp")
+            unload_spice_kernel(_EXTRA)
         catch
             # Ignore if not already loaded
         end
@@ -125,11 +131,11 @@ else
         # Count kernels before operations
         initial_count = SPICE.ktotal("ALL")
         
-        # Load de440s.bsp
-        @test_nowarn load_spice_kernel("de440s.bsp")
+        # Load the extra kernel
+        @test_nowarn load_spice_kernel(_EXTRA)
         @test SPICE.ktotal("ALL") == initial_count + 1
         
-        # Verify de440s.bsp is actually in the kernel pool
+        # Verify the extra kernel is actually in the kernel pool
         loaded_kernels = String[]
         for i in 1:SPICE.ktotal("ALL")
             result = SPICE.kdata(i, "ALL")
@@ -137,17 +143,17 @@ else
                 push!(loaded_kernels, basename(result[1]))
             end
         end
-        @test "de440s.bsp" in loaded_kernels
+        @test _EXTRA in loaded_kernels
         
         # Try to load again - should warn and not increase count
-        @test_logs (:warn, r"already loaded") load_spice_kernel("de440s.bsp")
+        @test_logs (:warn, r"already loaded") load_spice_kernel(_EXTRA)
         @test SPICE.ktotal("ALL") == initial_count + 1
         
-        # Unload de440s.bsp
-        @test_nowarn unload_spice_kernel("de440s.bsp")
+        # Unload the extra kernel
+        @test_nowarn unload_spice_kernel(_EXTRA)
         @test SPICE.ktotal("ALL") == initial_count
         
-        # Verify de440s.bsp is no longer in the kernel pool
+        # Verify the extra kernel is no longer in the kernel pool
         loaded_kernels = String[]
         for i in 1:SPICE.ktotal("ALL")
             result = SPICE.kdata(i, "ALL")
@@ -155,14 +161,14 @@ else
                 push!(loaded_kernels, basename(result[1]))
             end
         end
-        @test !("de440s.bsp" in loaded_kernels)
+        @test !(_EXTRA in loaded_kernels)
         
         # Try to unload again - should warn
-        @test_logs (:warn, r"not currently loaded") unload_spice_kernel("de440s.bsp")
+        @test_logs (:warn, r"not currently loaded") unload_spice_kernel(_EXTRA)
         @test SPICE.ktotal("ALL") == initial_count
         
         # Load it again for later tests
-        load_spice_kernel("de440s.bsp")
+        load_spice_kernel(_EXTRA)
     end
     
     @testset "unload_all_spice_kernels()" begin
@@ -212,9 +218,9 @@ else
     end
     
     @testset "Kernel Swapping Workflow" begin
-        # Ensure clean state - unload de440s.bsp from previous test, ensure epicycle_de440_1950-2100.bsp is loaded
+        # Ensure clean state - unload the extra kernel from previous test, ensure epicycle_de440_1950-2100.bsp is loaded
         try
-            unload_spice_kernel("de440s.bsp")
+            unload_spice_kernel(_EXTRA)
         catch
         end
         
@@ -239,11 +245,11 @@ else
         end
         @test !("epicycle_de440_1950-2100.bsp" in loaded_kernels)
         
-        # Load de440s.bsp instead
-        load_spice_kernel("de440s.bsp")
+        # Load the extra kernel instead
+        load_spice_kernel(_EXTRA)
         @test SPICE.ktotal("ALL") == initial_count
         
-        # Verify de440s.bsp is in the pool
+        # Verify the extra kernel is in the pool
         loaded_kernels = String[]
         for i in 1:SPICE.ktotal("ALL")
             result = SPICE.kdata(i, "ALL")
@@ -251,15 +257,15 @@ else
                 push!(loaded_kernels, basename(result[1]))
             end
         end
-        @test "de440s.bsp" in loaded_kernels
+        @test _EXTRA in loaded_kernels
         @test !("epicycle_de440_1950-2100.bsp" in loaded_kernels)
         
         # Swap back
-        unload_spice_kernel("de440s.bsp")
+        unload_spice_kernel(_EXTRA)
         load_spice_kernel("epicycle_de440_1950-2100.bsp")
         @test SPICE.ktotal("ALL") == initial_count
         
-        # Verify final state: epicycle_de440_1950-2100.bsp is in pool, de440s.bsp is not
+        # Verify final state: epicycle_de440_1950-2100.bsp is in pool, the extra kernel is not
         loaded_kernels = String[]
         for i in 1:SPICE.ktotal("ALL")
             result = SPICE.kdata(i, "ALL")
@@ -268,7 +274,7 @@ else
             end
         end
         @test "epicycle_de440_1950-2100.bsp" in loaded_kernels
-        @test !("de440s.bsp" in loaded_kernels)
+        @test !(_EXTRA in loaded_kernels)
     end
     
     @testset "Custom Configuration Workflow" begin
@@ -280,7 +286,7 @@ else
         load_spice_kernel("naif0012.tls")
         @test SPICE.ktotal("ALL") == 1
         
-        load_spice_kernel("de440s.bsp")
+        load_spice_kernel(_EXTRA)
         @test SPICE.ktotal("ALL") == 2
         
         # Restore what AstroUniverse.__init__ loaded, read from DEFAULT_KERNELS. This is the
@@ -299,4 +305,11 @@ else
 
 end
 
+unload_all_spice_kernels()   # releases the temporary copies, so they can be deleted
+end
+end
+
+# Every later suite in the process reads the real cache again.
+for k in AstroUniverse.DEFAULT_KERNELS
+    load_spice_kernel(k)
 end

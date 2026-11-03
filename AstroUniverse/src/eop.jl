@@ -200,6 +200,8 @@ An `EopIau1980` table for `FK5()` or an `EopIau2000A` table for `IAU2006()`.
 
 # Example
 ```julia
+using AstroUniverse
+
 table = eop(IAU2006())
 ```
 """
@@ -228,6 +230,9 @@ The installed table.
 
 # Example
 ```julia
+using AstroUniverse
+
+table = eop(IAU2006())
 set_eop!(table)
 ```
 """
@@ -361,6 +366,8 @@ The downloaded and installed EOP table.
 
 # Example
 ```julia
+using AstroUniverse
+
 table = eop_refresh!(; theory = IAU2006())
 ```
 """

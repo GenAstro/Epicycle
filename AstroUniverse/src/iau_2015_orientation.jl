@@ -23,9 +23,9 @@ recommendations, plus their time derivatives.
 
 # Example
 ```jldoctest
-julia> using AstroUniverse
+julia> using AstroEpochs, AstroUniverse
 
-julia> iau2015_orientation(mars, 2451545.0) isa IAU2015Orientation
+julia> iau2015_orientation(mars, Time(2451545.0, TDB(), JD())) isa IAU2015Orientation
 true
 ```
 """

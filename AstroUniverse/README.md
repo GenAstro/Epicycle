@@ -17,8 +17,9 @@ using Pkg
 Pkg.add("AstroUniverse")
 ```
 
-The first `using AstroUniverse` downloads about 110 MB of SPICE kernels, most of it the DE440
-ephemeris, and needs a network connection. Later sessions use the stored copy and work offline.
+The first call that needs an ephemeris downloads about 111 MB of SPICE kernels, most of it the
+DE440 ephemeris, and needs a network connection. `using AstroUniverse` itself never reaches the
+network, and later sessions use the stored copy and work offline.
 
 ## Documentation
 

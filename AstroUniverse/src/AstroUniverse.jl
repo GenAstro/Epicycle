@@ -245,19 +245,19 @@ into SPICE - use [`load_spice_kernel`](@ref) after downloading.
 `nothing` after the kernel is present in the cache.
 
 # Arguments
-- `filename`: Name of the kernel file (e.g., "de441.bsp")
+- `filename`: Name of the kernel file (e.g., "de440s.bsp")
 - `url`: Full URL to download the kernel from
 
 # Examples
 ```julia
 using AstroUniverse
 
-# Download Mars satellite ephemeris (Phobos, Deimos)
-download_spice_kernel("mar099.bsp",
-    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/mar099.bsp")
+# The short DE440, 1849 to 2150, about 32 MB
+download_spice_kernel("de440s.bsp",
+    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp")
 
 # Then load it
-load_spice_kernel("mar099.bsp")
+load_spice_kernel("de440s.bsp")
 ```
 
 All kernels available at: https://naif.jpl.nasa.gov/pub/naif/generic_kernels/
@@ -292,6 +292,8 @@ The kernel is cached and not loaded. Call [`load_spice_kernel`](@ref) to use it.
 # Examples
 
 ```julia
+using AstroUniverse
+
 # The lunar frames need orientation data and the frames that go with it.
 download_spice_kernel("moon_pa_de440_200625.bpc")
 download_spice_kernel("moon_de440_250416.tf")
@@ -331,16 +333,16 @@ if needed). This calls SPICE.furnsh() to register the kernel.
 `nothing` after the kernel is loaded or found already loaded.
 
 # Arguments
-- `filename`: Name of the kernel file in the cache (e.g., "de441.bsp")
+- `filename`: Name of the kernel file in the cache (e.g., "de440s.bsp")
 
 # Examples
 ```julia
 using AstroUniverse
 
 # Download then load
-download_spice_kernel("de440.bsp",
-    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440.bsp")
-load_spice_kernel("de440.bsp")
+download_spice_kernel("de440s.bsp",
+    "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp")
+load_spice_kernel("de440s.bsp")
 
 # Or just load if already downloaded
 load_spice_kernel("naif0012.tls")  # Default kernel
@@ -378,15 +380,15 @@ This calls SPICE.unload() to remove the kernel from memory. The file remains in 
 `nothing` after every loaded instance is removed.
 
 # Arguments
-- `filename`: Name of the kernel file to unload (e.g., "de440.bsp")
+- `filename`: Name of the kernel file to unload (e.g., "de440s.bsp")
 
 # Examples
 ```julia
 using AstroUniverse
 
 # Swap planetary ephemeris versions
-unload_spice_kernel("de440.bsp")
-load_spice_kernel("de440.bsp")
+unload_spice_kernel("de440s.bsp")
+load_spice_kernel("de440s.bsp")
 ```
 
 See also: [`load_spice_kernel`](@ref), [`unload_all_spice_kernels`](@ref)
@@ -553,9 +555,10 @@ A celestial body and its physical constants.
 - Every value is checked when it is set, in the constructor or afterward.
 
 # Examples
-```julia
+```jldoctest
 using AstroUniverse
 phobos = CelestialBody(name = "Phobos", mu = 7.087e-4, equatorial_radius = 13.0, naifid = 401)
+println(phobos)
 
 # output
 CelestialBody("Phobos", naifid = 401)

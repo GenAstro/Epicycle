@@ -101,7 +101,7 @@ end
         end
 
         # An already-cached kernel is not re-downloaded, so its checksum is not
-        # re-examined. Deliberate: rehashing 94 MB on every startup would cost
+        # re-examined. Deliberate: rehashing 98 MB on every startup would cost
         # more than it catches. Its size is checked when one is given, which
         # test_robustness_universe.jl covers.
         mktempdir() do dir

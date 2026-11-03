@@ -9,7 +9,7 @@ SPICE ephemerides, and orientation models for astrodynamics applications. It shi
 with definitions for the Sun, Moon, planets, and Pluto, and supports additional
 bodies through `CelestialBody`.
 
-Planet and Moon positions come from the DE440 ephemeris, downloaded the first time AstroUniverse loads. Planetary
+Planet and Moon positions come from the DE440 ephemeris, downloaded the first time a call needs it. Planetary
 orientations use the IAU 2015 model by default. Earth orientation is handled
 separately through IERS Earth orientation parameters and a selectable frame theory.
 
@@ -41,13 +41,16 @@ The built-in bodies are `sun`, `mercury`, `venus`, `earth`, `moon`, `mars`,
 ## Ephemeris Translation
 
 `translate` and `translate_state` evaluate relative positions and states from
-loaded SPICE kernels. Epochs are TDB Julian dates.
+loaded SPICE kernels. The epoch is an AstroEpochs `Time`, in any time scale. A bare
+Julian date is an error, because a number does not say which scale it is in.
 
 ```julia
-jd_tdb = 2458849.5
+using AstroEpochs, AstroUniverse
 
-r_mars_from_earth = translate(earth, mars, jd_tdb)
-x_moon_from_earth = translate_state(earth, moon, jd_tdb)
+t = Time("2020-01-01T00:00:00", UTC(), ISOT())
+
+r_mars_from_earth = translate(earth, mars, t)
+x_moon_from_earth = translate_state(earth, moon, t)
 ```
 
 ## Body Orientation
@@ -65,8 +68,11 @@ A custom body can use a Julia orientation model or a frame supplied by a loaded
 SPICE kernel, `SpiceOrientation("…")`.
 
 ```julia
+using AstroEpochs, AstroUniverse
+
+t = Time(2458849.5, TDB(), JD())
 model = orientation_model(mars)                       # IAU2015()
-rotation = body_axes_rotation(model, mars.naifid, 2458849.5)
+rotation = body_axes_rotation(model, mars.naifid, t)
 
 set_orientation!(moon, LunarME())                     # body-fixed Moon coordinates in map axes
 ```
@@ -78,8 +84,7 @@ which needs UT1 and TT as well as TDB; AstroFrames evaluates it, and its
 included.
 
 Data defined in axes other than a body's default, such as a gravity field, name
-their own model rather than changing the body's. `IauPolynomialOrientation()` is
-the former name of `IAU2015()`; it still works and warns once.
+their own model rather than changing the body's.
 
 ## Earth Orientation
 
@@ -87,6 +92,8 @@ The active frame theory selects the default Earth precession-nutation chain.
 `IAU2006()` is the default; `FK5()` selects the classical IAU-76/80 chain.
 
 ```julia
+using AstroUniverse
+
 frame_theory()
 set_frame_theory!(FK5())
 ```
@@ -132,14 +139,18 @@ checksums, and stores them between Julia sessions with Scratch.jl. The default
 set contains a leap-second kernel, the 1950-2100 DE440 ephemeris, and the lunar
 orientation kernels used by Moon frames.
 
-The download happens the first time AstroUniverse loads, directly or through a
-package that uses it, and is about 110 MB, most of it the ephemeris. That first
-load needs a network connection and waits for the download; later sessions read
-the stored kernels and work offline.
+The download happens at the first call that needs a kernel, directly or through a
+package that uses AstroUniverse, and is about 111 MB, most of it the ephemeris. That
+call needs a network connection and waits for the download; `using AstroUniverse`
+itself never reaches the network, and later sessions read the stored kernels and work
+offline. If the download fails, the error names each file, where it comes from, and
+the folder to place it in by hand.
 
 Additional kernels can be downloaded and loaded independently:
 
 ```julia
+using AstroUniverse
+
 download_spice_kernel(
     "de440s.bsp",
     "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp",
@@ -147,8 +158,8 @@ download_spice_kernel(
 load_spice_kernel("de440s.bsp")
 ```
 
-`list_downloaded_spice_kernels` reports files stored on disk, while
-`list_cached_spice_kernels` reports kernels loaded in the current process.
+`cached_spice_kernels()` returns the names of the files stored on disk, and
+`loaded_spice_kernels()` the names of the kernels loaded in the current process.
 `unload_spice_kernel` and `unload_all_spice_kernels` remove kernels from the
 current SPICE session without deleting downloaded files.
 
