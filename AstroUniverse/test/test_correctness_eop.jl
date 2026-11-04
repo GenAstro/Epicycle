@@ -454,6 +454,36 @@ end
     end
 end
 
+@testset "EOP — a cached file that cannot be read is replaced, or kept when nothing can replace it" begin
+    # Truth: the cached bytes, and the table read back. The file is fresh, so only the failed read
+    # sends it to the sources; a cache that merely aged out takes a different path.
+    unreadable = "<html><body>Request Rejected</body></html>"
+    _with_eop_restored() do
+        _with_sources([_good_fw()]) do cached
+            write(cached, unreadable)
+            AU._eop_2000a[] = nothing
+            table = @test_logs (:warn, r"cannot be read, so it is being downloaded again") AU._load_eop!(IAU2006())
+            @test table isa EopIau2000A
+            @test AU._eop_2000a[] === table
+            @test _reads_as_table(cached)
+        end
+
+        bad = [AU._EopSource(_missing_url(), :csv), AU._EopSource(_missing_url(), :finals)]
+        _with_sources(bad) do cached
+            write(cached, unreadable)
+            AU._eop_2000a[] = nothing
+            err = @test_logs (:warn, r"cannot be read") match_mode = :any try
+                AU._load_eop!(IAU2006()); nothing
+            catch e
+                e
+            end
+            @test err isa ErrorException && occursin("is unchanged", sprint(showerror, err))
+            @test read(cached, String) == unreadable
+            @test AU._eop_2000a[] === nothing
+        end
+    end
+end
+
 @testset "EOP — the rename itself leaves the destination whole when it fails" begin
     # Truth: the destination's bytes. Renaming a file that does not exist fails in the operating
     # system's rename, which must not have removed the file it would have replaced.

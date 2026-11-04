@@ -4,7 +4,8 @@
 __precompile__()
 
 """
-Module containing models such as celestial bodies, ephemerides, and related utilities.
+Celestial-body definitions, physical constants, SPICE ephemerides, and body orientation models
+for Epicycle.
 """
 module AstroUniverse
 
@@ -44,12 +45,10 @@ import EpicycleBase: AbstractParamTag, get_field, set_field!
 """
     KernelSource(filename, url, sha256, size, purpose)
 
-Where a SPICE kernel comes from, and what it should contain when it arrives.
+Download metadata and expected contents for a registered SPICE kernel.
 
-The checksum is verified once, against the bytes just downloaded, before the
-file is put in place. Rehashing a hundred megabytes on every `using AstroUniverse`
-would cost far more than it catches, so a cached file has its size checked instead,
-which finds a truncated copy for almost no cost.
+A download is verified by SHA-256 before it is cached. A cached file is checked by size, which
+detects an incomplete file without hashing a hundred megabytes each time the package loads.
 
 # Fields
 - `filename::String`: Local kernel filename.
@@ -77,18 +76,15 @@ end
 """
     KERNEL_SOURCES
 
-Every kernel Epicycle knows how to fetch by name.
+The registered SPICE kernel sources, with their download URLs, checksums, sizes, and descriptions.
 
-All but one are NAIF files served unchanged by JPL. Their file names carry
-their own version -- a new leap second brings a `naif0013.tls` rather than an
-edit to `naif0012.tls` -- so a pinned checksum stays valid.
+All but one are NAIF files served unchanged by JPL. A NAIF file name carries its version, so a
+pinned checksum stays valid.
 
-The exception is `epicycle_de440_1950-2100.bsp`, which Gen Astro builds and
-hosts. It is DE440 for the whole solar system over 1950 to 2100, and it carries
-both the barycenter and the center of every planet. That matters because every
-`CelestialBody` in Epicycle names a body center: JPL's own `de440.bsp` stops at
-Mercury and Venus, so against it `translate(earth, mars, t)` raises rather than
-returning a position.
+The exception is `epicycle_de440_1950-2100.bsp`, which Gen Astro builds and hosts. It is DE440 for
+the whole solar system over 1950 to 2100, with both the barycenter and the center of every planet.
+Every `CelestialBody` names a body center, and JPL's `de440.bsp` has no planet center beyond Earth,
+so with that kernel alone `translate(earth, mars, t)` raises an error.
 
 # Example
 ```jldoctest
@@ -137,7 +133,7 @@ const KERNEL_SOURCES = (
 """
     kernel_source(filename) -> Union{KernelSource,Nothing}
 
-The manifest entry for a kernel, or `nothing` if Epicycle does not know it.
+Return the registered source for `filename`, or `nothing` if the filename is not registered.
 
 # Returns
 A [`KernelSource`](@ref) when `filename` is registered, otherwise `nothing`.
@@ -160,15 +156,12 @@ end
 """
     DEFAULT_KERNELS
 
-The kernels Epicycle needs for ephemeris and lunar orientation.
+The default SPICE kernels: leap seconds, solar system positions, and the lunar orientation data
+behind `LunarPA` and `LunarME`.
 
-Leap seconds and solar system positions, because nothing works without them,
-and lunar orientation, because `MoonPA` and `MoonME` are frames Epicycle
-offers and each has to work when it is named, without a separate download.
-
-Together these are about 111 MB. They are downloaded at the first call that needs
-them and cached across sessions, and those already cached load when AstroUniverse
-starts, so `using AstroUniverse` never reaches the network.
+Together these are about 111 MB. Cached defaults load when AstroUniverse starts, and missing ones
+are downloaded at the first call that needs them, so `using AstroUniverse` never reaches the
+network.
 """
 const DEFAULT_KERNELS = ("naif0012.tls",
                          "epicycle_de440_1950-2100.bsp",
@@ -236,10 +229,13 @@ const _KERNEL_DOWNLOAD_TIMEOUT = 3600.0     # seconds
 
 Download a SPICE kernel from the given URL to the cache directory.
 
-The kernel is cached in the AstroUniverse managed scratch directory, so it will only be
-downloaded once and persist across Julia sessions. A file of that name already in the
-cache is kept; delete it to fetch a new one. This function does NOT load the kernel
-into SPICE - use [`load_spice_kernel`](@ref) after downloading.
+The kernel is cached in the AstroUniverse managed scratch directory and persists across Julia
+sessions. A file of that name already in the cache is reused; delete it to fetch a new one.
+
+When `filename` and `url` match a registered source, the download is verified against its checksum
+and a cached file of the wrong size is fetched again. Any other download is not checked.
+
+This function does not load the kernel. Use [`load_spice_kernel`](@ref) after downloading.
 
 # Returns
 `nothing` after the kernel is present in the cache.
@@ -278,11 +274,12 @@ end
 """
     download_spice_kernel(filename::AbstractString)
 
-Download one of the kernels Epicycle knows about, by name, and check it.
+Download a registered SPICE kernel and verify its checksum.
 
-The download location and expected checksum come from [`KERNEL_SOURCES`](@ref), so
-no URL is required and a bad transfer is caught rather than cached. Use
-the two-argument form for a kernel that is not in the manifest.
+The download location and expected checksum come from [`KERNEL_SOURCES`](@ref), so no URL is
+required and a bad transfer is not cached. A file already in the cache is checked by size, and
+fetched again only if the size is wrong. Use the two-argument form for a kernel that is not
+registered.
 
 The kernel is cached and not loaded. Call [`load_spice_kernel`](@ref) to use it.
 
@@ -324,10 +321,10 @@ end
 """  
     load_spice_kernel(filename::AbstractString)
 
-Load a SPICE kernel from the cache directory into the SPICE system.
+Load a cached kernel into the process-wide SPICE kernel pool.
 
-The kernel file must already exist in the cache (use [`download_spice_kernel`](@ref) first
-if needed). This calls SPICE.furnsh() to register the kernel.
+The kernel file must already exist in the cache; use [`download_spice_kernel`](@ref) first if
+needed.
 
 # Returns
 `nothing` after the kernel is loaded or found already loaded.
@@ -372,9 +369,9 @@ end
 """  
     unload_spice_kernel(filename::AbstractString)
 
-Unload a specific SPICE kernel from the SPICE system.
+Unload a SPICE kernel from the kernel pool.
 
-This calls SPICE.unload() to remove the kernel from memory. The file remains in the cache.
+Every loaded instance with this file name is removed. The file remains in the cache.
 
 # Returns
 `nothing` after every loaded instance is removed.
@@ -386,7 +383,7 @@ This calls SPICE.unload() to remove the kernel from memory. The file remains in 
 ```julia
 using AstroUniverse
 
-# Swap planetary ephemeris versions
+# Unload a kernel and load it again
 unload_spice_kernel("de440s.bsp")
 load_spice_kernel("de440s.bsp")
 ```
@@ -425,10 +422,11 @@ end
 """  
     unload_all_spice_kernels()
 
-Unload all SPICE kernels from memory.
+Unload every SPICE kernel and turn off automatic loading of the default kernels for the rest of
+the session.
 
-This calls SPICE.kclear() to remove all loaded kernels. Useful for creating custom kernel
-configurations. The files remain in the storage directory.
+Afterward, the kernels you download and load are the only ones in use. The files remain in the
+cache.
 
 # Returns
 `nothing` after the SPICE kernel pool is cleared.
@@ -441,9 +439,6 @@ using AstroUniverse
 unload_all_spice_kernels()
 loaded_spice_kernels()  # Empty
 ```
-
-After this call the default kernels are no longer fetched or loaded for you, so the
-configuration you load is the one in force.
 
 See also: [`load_spice_kernel`](@ref), [`unload_spice_kernel`](@ref)
 """
@@ -486,11 +481,11 @@ get_spice_directory() = @get_scratch!("spice_kernels")
 """
     cached_spice_kernels() -> Vector{String}
 
-The SPICE kernel files in the cache directory, sorted by name. These are the files available
-to load; [`loaded_spice_kernels`](@ref) gives the ones in use.
+Return the cached SPICE kernel file names, sorted alphabetically without regard to case. These
+are the files available to load; [`loaded_spice_kernels`](@ref) gives the ones in use.
 
 # Returns
-The file names, of every kernel type.
+The file names with a recognized kernel extension.
 
 # Examples
 ```julia
@@ -509,7 +504,7 @@ _is_kernel_file(name) = lowercase(last(splitext(name))) in
 """
     loaded_spice_kernels() -> Vector{String}
 
-The SPICE kernels loaded in this session, in the order they were loaded. A kernel loaded
+Return the file names of the kernels in the SPICE kernel pool, in load order. A kernel loaded
 twice appears twice. [`cached_spice_kernels`](@ref) gives the files on disk.
 
 # Returns
@@ -547,12 +542,14 @@ A celestial body and its physical constants.
 - `equatorial_radius::T`: km.
 - `flattening::T`: geometric flattening, dimensionless, in [0, 1).
 - `naifid::Int`: NAIF body ID, which selects the body's ephemeris and orientation.
-- `texture_file::String`: path to a texture image for visualization, or empty.
+- `texture_file::String`: path to a texture image for visualization, or an empty string.
 
 # Notes
 - The numeric fields share one element type `T`, at least `Float64`. A `BigFloat` or a dual
   number in any of them promotes the others.
-- Every value is checked when it is set, in the constructor or afterward.
+- `mu` and `equatorial_radius` must be finite and positive, and `flattening` must be finite and
+  in [0, 1). These are checked when a value is set, in the constructor or afterward. The name and
+  the texture path are not checked.
 
 # Examples
 ```jldoctest
@@ -661,7 +658,7 @@ show(io::IO, body::CelestialBody) = print(io, "CelestialBody(", repr(body.name),
 # ---------------------------------------------------------------------------
 
 """
-Sun (NAIF ID 10) CelestialBody model.
+The built-in Sun (NAIF ID 10).
 
 # Example
 ```jldoctest
@@ -672,7 +669,7 @@ julia> using AstroUniverse; sun.naifid
 const sun = CelestialBody("Sun", 1.3271244004127942e11, 695700.0, 0.0, 10)
 
 """
-Mercury (NAIF ID 199) CelestialBody model.
+The built-in Mercury (NAIF ID 199).
 
 # Example
 ```jldoctest
@@ -683,7 +680,7 @@ julia> using AstroUniverse; mercury.naifid
 const mercury = CelestialBody("Mercury", 2.2031868551400003e4, 2440.53, 1 - 2438.26 / 2440.53, 199)
 
 """
-Venus (NAIF ID 299) CelestialBody model.
+The built-in Venus (NAIF ID 299).
 
 # Example
 ```jldoctest
@@ -694,7 +691,7 @@ julia> using AstroUniverse; venus.naifid
 const venus = CelestialBody("Venus", 3.24858592e5, 6051.8, 0.0, 299)
 
 """
-Earth (NAIF ID 399) CelestialBody model.
+The built-in Earth (NAIF ID 399), with the WGS84 constants.
 
 # Example
 ```jldoctest
@@ -705,7 +702,7 @@ julia> using AstroUniverse; earth.naifid
 const earth = CelestialBody("Earth", 398600.4418, 6378.137, 1 / 298.257223563, 399)
 
 """
-Moon (NAIF ID 301) CelestialBody model.
+The built-in Moon (NAIF ID 301).
 
 # Example
 ```jldoctest
@@ -716,7 +713,7 @@ julia> using AstroUniverse; moon.naifid
 const moon = CelestialBody("Moon", 4.9028001184575496e3, 1737.4, 0.0, 301)
 
 """
-Mars (NAIF ID 499) CelestialBody model.
+The built-in Mars (NAIF ID 499). Its gravitational parameter includes its moons.
 
 # Example
 ```jldoctest
@@ -727,7 +724,7 @@ julia> using AstroUniverse; mars.naifid
 const mars = CelestialBody("Mars", 4.2828375815756102e4, 3396.19, 1 - 3376.20 / 3396.19, 499)
 
 """
-Jupiter (NAIF ID 599) CelestialBody model.
+The built-in Jupiter (NAIF ID 599). Its gravitational parameter includes its moons.
 
 # Example
 ```jldoctest
@@ -738,7 +735,7 @@ julia> using AstroUniverse; jupiter.naifid
 const jupiter = CelestialBody("Jupiter", 1.2671276409999998e8, 71492.0, 1 - 66854.0 / 71492.0, 599)
 
 """
-Saturn (NAIF ID 699) CelestialBody model.
+The built-in Saturn (NAIF ID 699). Its gravitational parameter includes its moons.
 
 # Example
 ```jldoctest
@@ -749,7 +746,7 @@ julia> using AstroUniverse; saturn.naifid
 const saturn = CelestialBody("Saturn", 3.7940584841799997e7, 60268.0, 1 - 54364.0 / 60268.0, 699)
 
 """
-Uranus (NAIF ID 799) CelestialBody model.
+The built-in Uranus (NAIF ID 799). Its gravitational parameter includes its moons.
 
 # Example
 ```jldoctest
@@ -760,7 +757,7 @@ julia> using AstroUniverse; uranus.naifid
 const uranus = CelestialBody("Uranus", 5.7945563999999985e6, 25559.0, 1 - 24973.0 / 25559.0, 799)
 
 """
-Neptune (NAIF ID 899) CelestialBody model.
+The built-in Neptune (NAIF ID 899). Its gravitational parameter includes its moons.
 
 # Example
 ```jldoctest
@@ -771,7 +768,7 @@ julia> using AstroUniverse; neptune.naifid
 const neptune = CelestialBody("Neptune", 6.8365271005803989e6, 24764.0, 1 - 24341.0 / 24764.0, 899)
 
 """
-Pluto (NAIF ID 999) CelestialBody model.
+The built-in Pluto (NAIF ID 999). Its gravitational parameter includes its moons.
 
 # Example
 ```jldoctest
@@ -881,7 +878,8 @@ _bare_date_error(name) = ArgumentError(
 """
     translate(from::CelestialBody, to::CelestialBody, t::Time) -> Vector{Float64}
 
-Position of `to` relative to `from` at the epoch `t`, in ICRF.
+Return the geometric position of `to` relative to `from` at the epoch `t`, in ICRF axes. No
+light-time or aberration correction is applied.
 
 # Arguments
 - `from`: Observing/origin body.
@@ -893,9 +891,14 @@ The 3-element position `[x, y, z]`, in km.
 
 # Notes
 SPICE labels this frame `"J2000"`; it is ICRF-aligned and is not the FK5 mean equator and
-equinox of J2000. Safe to call from threads, one at a time, since SPICE is not thread-safe.
-Converting `t` from UTC or TT costs several times the lookup, so a loop over many bodies at one
-epoch is faster with `t.tdb`.
+equinox of J2000.
+
+The default kernels are loaded on first use, downloading any that are missing. A date outside the
+loaded kernels' coverage raises an error from SPICE, and a `Time` that carries derivatives raises
+an error, since SPICE is not differentiable.
+
+Safe to call from threads, and the SPICE queries run one at a time. A loop over many bodies at one
+epoch can convert the epoch once and pass `t.tdb`.
 
 # Examples
 ```jldoctest
@@ -922,7 +925,8 @@ translate(::CelestialBody, ::CelestialBody, ::Real) = throw(_bare_date_error("tr
 """
     translate_state(from::CelestialBody, to::CelestialBody, t::Time) -> Vector{Float64}
 
-Position **and velocity** of `to` relative to `from` at the epoch `t`, in ICRF.
+Return the geometric position and velocity of `to` relative to `from` at the epoch `t`, in ICRF
+axes. No light-time or aberration correction is applied.
 
 # Arguments
 - `from`: Observing/origin body.
@@ -933,15 +937,10 @@ Position **and velocity** of `to` relative to `from` at the epoch `t`, in ICRF.
 - 6-element state `[x, y, z, vx, vy, vz]` in km and km/s, from `from` to `to`.
 
 # Notes
-- The name differs from [`translate`](@ref) because the *return shape*
-  differs: one is a position, the other a state. Overloading a single name to
-  return three or six elements depending on the call would make the shape
-  depend on something the reader has to infer.
-- SPICE labels this frame `"J2000"`, which is **ICRF-aligned** and is not the
-  FK5 mean equator and equinox of J2000. The two differ by the ~23 mas frame
-  bias. Callers should treat the result as ICRF.
-- **Not differentiable.** SPICE is a C library, so an origin shift built on
-  this sits outside any AD path.
+- SPICE labels this frame `"J2000"`, which is ICRF-aligned and is not the FK5 mean equator and
+  equinox of J2000. The two differ by the ~23 mas frame bias.
+- Kernel loading, coverage errors, threading, and differentiability are as for
+  [`translate`](@ref).
 
 # Examples
 ```julia
@@ -977,7 +976,8 @@ true
 """
     set_gravparam!(body, μ)
 
-Set the body’s gravitational parameter μ.
+Set the body’s gravitational parameter μ, in km³/s². The value must be finite and positive. The
+body passed in is changed, so a built-in body changes for the rest of the session.
 
 # Returns
 The modified body.

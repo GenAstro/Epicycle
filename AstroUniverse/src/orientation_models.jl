@@ -42,11 +42,11 @@ An abstract type, so it has no fields of its own. A model must provide:
 - [`set_orientation_parameters`](@ref)`(model, nt)` — optional. Defaults to
   copying the model with those fields replaced.
 
-The two optional ones are what an estimation reads and writes, and the defaults
-mean a plain struct needs no extra code for them.
+Estimation code can use the optional methods to read and update a model's parameters, and the
+defaults mean a plain struct needs no extra code for them.
 
-Shipped models, each named for the publication that defines it:
-- [`IAU2015`](@ref), the default for the Sun, the planets and Pluto;
+Included models, each named for the publication that defines it:
+- [`IAU2015`](@ref), the default for the Sun, the planets other than Earth, and Pluto;
   [`IAU1991`](@ref) for data defined in the older Mars axes.
 - [`LunarPA`](@ref), the Moon's default, and [`LunarME`](@ref).
 - [`IAU2006`](@ref) and [`FK5`](@ref), the frame theories, which are Earth's
@@ -60,8 +60,8 @@ Set a model on a body with [`set_orientation!`](@ref); read it back with
 [`orientation_model`](@ref). Until a body has one, body-fixed axes for it raise
 and say so.
 
-A custom model covers a body Epicycle ships none for, such as an asteroid,
-a comet or a newly visited moon. It also covers a body whose orientation is being
+A custom model covers a body with no included model, such as an asteroid, a comet or a newly
+visited moon. It also covers a body whose orientation is being
 estimated, since a kernel cannot carry derivative information.
 
 # Example
@@ -126,24 +126,30 @@ end
 """
     pole_axes_rotation(α₀, δ₀, W, α̇₀, δ̇₀, Ẇ) -> SMatrix{6,6}
 
-Build the rotation from inertial axes to body-fixed axes, given where the
-body's north pole points and how far its prime meridian has turned.
+Build the 6×6 state rotation from inertial axes to a body's rotating axes, given where its north
+pole points and how far its prime meridian has turned.
 
 # Arguments
 - `α₀`, `δ₀` — right ascension and declination of the body's north pole in
   inertial axes, in radians.
 - `W` — angle from the node of the body's equator on the inertial equator to
   the body's prime meridian, in radians.
-- `α̇₀`, `δ̇₀`, `Ẇ` — their rates, in **radians per second**. A spin rate quoted
-  in degrees per day needs `deg2rad(rate) / 86_400`; getting this wrong is the
-  common mistake and shows up as a rotation period out by 86 400.
+- `α̇₀`, `δ̇₀`, `Ẇ` — their rates, in radians per second. Convert a rate in degrees per day with
+  `deg2rad(rate) / 86_400`.
 
-The result is a 6×6 that rotates position and velocity together, so the
-`ω × r` term every rotating frame contributes is already in it. It suits a model
-of the usual shape, a pole direction and a spin about it, which covers nearly
+It suits a model of the usual shape, a pole direction and a spin about it, which covers nearly
 every planet, moon and asteroid:
 
 ```julia
+using AstroEpochs, AstroUniverse
+
+struct MySpin <: AbstractOrientationModel
+    α₀::Float64          # rad
+    δ₀::Float64          # rad
+    W₀::Float64          # rad at J2000
+    spin_rate::Float64   # rad/day
+end
+
 function AstroUniverse.body_axes_rotation(m::MySpin, naifid, t::Time)
     d = t.tdb.jd - 2451545.0
     W = m.W₀ + m.spin_rate * d
@@ -151,15 +157,10 @@ function AstroUniverse.body_axes_rotation(m::MySpin, naifid, t::Time)
 end
 ```
 
-The construction is `R_z(W) · R_x(π/2 − δ₀) · R_z(π/2 + α₀)`, the convention
-of the IAU working group on cartographic coordinates and rotational elements
-(Archinal et al., 2018 §2.1).
-
 # Returns
-A 6×6 matrix that rotates a state, position stacked on velocity, from inertial
-axes into the body's rotating axes. Position in the top three rows,
-velocity in the bottom three, with the `ω × r` term every rotating frame
-contributes already included.
+A 6×6 matrix that rotates a state, position stacked on velocity, from inertial axes into the body's
+rotating axes. Position is in the top three rows and velocity in the bottom three, with the `ω × r`
+term of the rotating axes already included.
 
 # Notes
 The rotation is `R_z(W) · R_x(π/2 − δ₀) · R_z(π/2 + α₀)`, the convention of the
@@ -230,9 +231,11 @@ A 6×6 matrix rotating a state from inertial axes into the body's rotating
 axes, as [`pole_axes_rotation`](@ref) returns.
 
 # Notes
-[`pole_axes_rotation`](@ref) builds the result from the pole direction and the
-prime-meridian angle with their rates, and does the rest. Only a model of an
-unusual shape needs to build the matrix itself.
+Use [`pole_axes_rotation`](@ref) for a model expressed as pole angles, a prime-meridian angle, and
+their rates.
+
+Earth's frame theories are evaluated through AstroFrames, so this raises an error for
+[`IAU2006`](@ref) and [`FK5`](@ref) and points there.
 
 Write it in plain Julia if the body's orientation is being estimated, or if a
 trajectory's derivatives run through these axes. A model that calls out to
@@ -242,18 +245,18 @@ SPICE cannot carry derivative information; see [`SpiceOrientation`](@ref).
 ```julia
 using AstroEpochs, AstroUniverse
 
-struct SimpleSpin <: AbstractOrientationModel
-    pole_ra::Float64      # deg
-    pole_dec::Float64     # deg
-    pm0::Float64          # deg at J2000
-    spin_rate::Float64    # deg/day
+struct SimpleSpin{T<:Real} <: AbstractOrientationModel
+    pole_ra::T      # deg
+    pole_dec::T     # deg
+    pm0::T          # deg at J2000
+    spin_rate::T    # deg/day
 end
 
 function AstroUniverse.body_axes_rotation(m::SimpleSpin, naifid, t::Time)
     d = t.tdb.jd - 2451545.0
     Ẇ = deg2rad(m.spin_rate)
     return pole_axes_rotation(deg2rad(m.pole_ra), deg2rad(m.pole_dec),
-                              deg2rad(m.pm0) + Ẇ * d, 0.0, 0.0, Ẇ / 86_400)
+                              deg2rad(m.pm0) + Ẇ * d, zero(Ẇ), zero(Ẇ), Ẇ / 86_400)
 end
 ```
 """
@@ -267,10 +270,7 @@ body_axes_rotation(::AbstractOrientationModel, ::Integer, ::Real) =
 """
     orientation_parameters(model_or_body) -> NamedTuple
 
-The orientation parameters that can be estimated, by name.
-
-Defaults to the model's fields, so a model written as a plain struct needs no
-extra code. A model with nothing to estimate returns an empty `NamedTuple`.
+Return the orientation parameters that can be estimated, by name.
 
 # Arguments
 - `model_or_body` — an [`AbstractOrientationModel`](@ref), or a body, in which
@@ -281,14 +281,13 @@ A `NamedTuple` of parameter names and their current values. Units follow the
 model's documented convention.
 
 # Notes
-Defaults to the model's fields, so a model written as a plain struct needs no
-extra code for this to work. A model with nothing to estimate, such as the shipped
-polynomials or a SPICE frame, returns an empty `NamedTuple`, which is the honest
-answer rather than an omission.
+Defaults to the model's fields, so a model written as a plain struct needs no extra code. A model
+with fields that are not parameters should override this. A model with no estimable parameters,
+such as an included polynomial model or a SPICE frame, returns an empty `NamedTuple`.
 
-Whatever manages an estimation reads the names here and writes back through
-[`set_orientation_parameters!`](@ref). This package does not track which of
-them are being solved for.
+Estimation code reads the names here and writes back through
+[`set_orientation_parameters!`](@ref). This package does not track which of them are being solved
+for.
 
 # Example
 ```jldoctest
@@ -314,8 +313,7 @@ end
 """
     set_orientation_parameters(model, nt::NamedTuple) -> model
 
-A copy of `model` with the named parameters replaced. Names not given keep
-their current values.
+Return a new model with the named parameters replaced. Names not given keep their current values.
 
 # Arguments
 - `model` — the model to copy.
@@ -326,15 +324,8 @@ their current values.
 A new model of the same kind, with those parameters replaced.
 
 # Notes
-Returns a new model rather than mutating one, so a value carrying derivative
-information can change the model's numeric type without invalidating anything
-holding the old model.
-
-A model whose fields are all one numeric type, which is the usual way to write
-one, cannot be rebuilt from a mixture, and an estimated value arrives on its own
-while the others stay as they were. The numeric fields are widened to their
-common type when that happens, so writing a single solved-for value works on
-the model most people write.
+Numeric fields are promoted to a common type when needed to rebuild the model, so writing one
+estimated value works on a model whose fields share one numeric type.
 
 To write onto a body rather than a model, use
 [`set_orientation_parameters!`](@ref).
@@ -393,7 +384,7 @@ end
 """
     IAU2015()
 
-The orientation of the IAU working group's 2015 report for the Sun, the planets
+The orientation of the IAU working group's 2015 report for the Sun, the planets other than Earth,
 and Pluto: pole direction and prime meridian as polynomials in time, with the
 periodic terms where the report gives them (Archinal et al., 2018).
 
@@ -409,10 +400,9 @@ None. The coefficients are the published ones and are not settable.
 Differentiable in time, so a trajectory's derivatives pass through body-fixed
 axes for these bodies.
 
-Covers NAIF IDs 10, 199, 299, 499, 599, 699, 799, 899 and 999. Earth and the
-Moon are deliberately absent: neither is described by a pole and a prime
-meridian, and both have their own models, [`IAU2006`](@ref) or [`FK5`](@ref)
-for Earth and [`LunarPA`](@ref) or [`LunarME`](@ref) for the Moon.
+Covers NAIF IDs 10, 199, 299, 499, 599, 699, 799, 899 and 999. Earth and the Moon have separate
+models: [`IAU2006`](@ref) or [`FK5`](@ref) for Earth and [`LunarPA`](@ref) or [`LunarME`](@ref) for
+the Moon.
 
 # Example
 ```jldoctest
@@ -438,9 +428,8 @@ end
 """
     IAU1991()
 
-The orientation of the IAU working group's 1991 report (Davies et al., 1992).
-Implemented for Mars, the body whose gravity fields of that era are defined in
-it; other bodies raise.
+The orientation of the IAU working group's 1991 report (Davies et al., 1992). Implemented for Mars
+only. Other NAIF IDs raise an `ArgumentError`.
 
 For Mars the pole and prime meridian are linear in time:
 
@@ -452,8 +441,7 @@ values NAIF's PCK of the 1991 report carries (`preliminary_pck00004.tpc`).
 # Notes
 Not the default for any body. Use it where data are defined in these axes, such
 as the JGM85F01 Mars gravity field. [`IAU2015`](@ref)'s Mars prime meridian is
-0.236° from this one at J2000, about 14 km on the surface, mostly because later
-reports moved the longitude origin onto the crater Airy-0.
+0.236° from this one at J2000, about 14 km on the surface.
 
 Differentiable in time.
 
@@ -496,7 +484,7 @@ supplies periodic and libration terms without duplicating its coefficients.
 
 # Fields
 - `frame::String` — the SPICE frame name, such as `"IAU_MARS"` or `"MOON_PA_DE421"`.
-  The kernels defining it must already be loaded; a text PCK defines the
+  The kernels defining it must be loaded before the rotation is evaluated; a text PCK defines the
   `IAU_<BODY>` frames. Prefer a versioned name to an alias such as `"MOON_PA"`,
   which means whatever the last frame kernel loaded says it means.
 
@@ -516,8 +504,7 @@ cs = CoordinateSystem(mars, CelestialBodyFixed())
 interface, so derivative information cannot pass through it. A body whose
 orientation is being estimated, or a trajectory whose gradient runs through
 body-fixed axes, needs a model written in Julia; see
-[`pole_axes_rotation`](@ref). This model has no parameters to estimate, because
-nothing it returns can be solved for.
+[`pole_axes_rotation`](@ref). This model exposes no estimable orientation parameters.
 """
 struct SpiceOrientation <: AbstractOrientationModel
     frame::String
@@ -543,16 +530,16 @@ end
 """
     LunarPA()
 
-The Moon's principal axes from JPL's DE440 ephemeris, including physical
-libration. The default orientation of the Moon, and the kind of axes lunar
-gravity fields are defined in, though usually from an earlier ephemeris.
+The Moon's principal axes from JPL's DE440 ephemeris, including physical libration. This is the
+Moon's default orientation model. Lunar gravity fields are defined in axes of this kind, though
+usually from an earlier ephemeris, so a field may require a different frame.
 
 # Notes
 Read from SPICE by the versioned frame name `MOON_PA_DE440`, not the alias
 `MOON_PA`. Frame kernels all define `MOON_PA`, and whichever is loaded last
 decides what it means; the versioned name means the same frame whatever else is
 loaded. The kernels, `moon_pa_de440_200625.bpc` and `moon_de440_250416.tf`, are
-loaded at startup.
+loaded with the other default kernels.
 
 For a frame from another ephemeris, such as the DE421 principal axes some older
 fields use, load its kernels and use [`SpiceOrientation`](@ref) with its
@@ -579,11 +566,18 @@ coordinates, as defined against DE440.
 # Notes
 Read from SPICE by the versioned frame name `MOON_ME_DE440_ME421`, a fixed
 rotation from the DE440 principal axes that aligns with the DE421 mean-Earth
-frame. That is the frame the alias `MOON_ME` names in the DE440 frame kernel. It
-differs from [`LunarPA`](@ref) by about 875 m on the surface.
+frame. That is the frame the alias `MOON_ME` names in the DE440 frame kernel. It is rotated from
+[`LunarPA`](@ref) by about 104 arcseconds, which is up to about 875 m on the surface.
 
 **Not differentiable**, like every model read from SPICE; see
 [`SpiceOrientation`](@ref).
+
+# Example
+```julia
+using AstroEpochs, AstroUniverse
+
+size(body_axes_rotation(LunarME(), 301, Time(2458849.5, TDB(), JD())))   # (6, 6)
+```
 """
 struct LunarME <: AbstractOrientationModel end
 
@@ -647,12 +641,7 @@ const _IAU_POLYNOMIAL_BODIES = (10, 199, 299, 499, 599, 699, 799, 899, 999)
 """
     set_orientation!(body, model)
 
-Set how `body` is oriented in space.
-
-```julia
-set_orientation!(mars,  SpiceOrientation("IAU_MARS"))
-set_orientation!(bennu, MySpinModel(85.46, -60.36, 89.6, 2011.145))
-```
+Set the orientation model of a body, by its NAIF ID, for the current Julia session.
 
 # Arguments
 - `body` — a body, or a NAIF ID.
@@ -662,13 +651,15 @@ set_orientation!(bennu, MySpinModel(85.46, -60.36, 89.6, 2011.145))
 The model, so a registration can be written inline.
 
 # Notes
-Replaces whatever the body used before, including the shipped default. The
-setting is keyed on the body's NAIF ID, so every reference to that body sees it.
-Orientation is a property of the body rather than of one variable holding it.
+Replaces whatever the body used before, including the built-in default. Every reference to that
+body sees the new model.
 
-Setting an orientation is what makes body-fixed axes available for a body
-Epicycle does not ship a model for. Until one is set, asking for those axes
-raises and says so.
+An included model is checked against the body, and a mismatch raises an `ArgumentError`. A custom
+model is accepted without being evaluated, and a SPICE frame is checked when the rotation is
+evaluated.
+
+A body with no included model has no body-fixed axes until a model is set, and asking for them
+raises an error.
 
 Earth's orientation is the frame theory, so for Earth this is
 [`set_frame_theory!`](@ref) under another name: `set_orientation!(earth, FK5())`
@@ -678,13 +669,13 @@ pole-and-meridian model in its place would silently replace the ITRF chain.
 
 # Example
 ```julia
-bennu = CelestialBody("Bennu", 4.892e-9, 0.2825, 0.0, 2101955)
-set_orientation!(bennu, MySpinModel(85.46, -60.36, 89.6, 2011.145))
+using AstroUniverse
 
-cs = CoordinateSystem(bennu, CelestialBodyFixed())   # now works
-
-set_orientation!(earth, FK5())                       # GMAT's Earth, everywhere
+set_orientation!(moon, LunarME())      # the Moon's mean-Earth axes
+set_orientation!(earth, FK5())         # select the FK5 Earth frame theory
 ```
+
+For a custom model, see [`AbstractOrientationModel`](@ref).
 """
 function set_orientation!(body, model::AbstractOrientationModel)
     n = _naifid(body)
@@ -722,12 +713,15 @@ _orients_what(::AbstractOrientationModel) = "it is the Earth's"
 """
     orientation_model(body) -> AbstractOrientationModel
 
+Return the orientation model set on a body, or its built-in default. Throws an `ArgumentError` if
+the body has neither.
+
 # Arguments
 - `body` — a body, or a NAIF ID.
 
 # Returns
 The body's [`AbstractOrientationModel`](@ref) — what was set with
-[`set_orientation!`](@ref), or the shipped default for a body that has one.
+[`set_orientation!`](@ref), or the built-in default for a body that has one.
 
 # Notes
 The defaults:
@@ -738,8 +732,7 @@ The defaults:
   should be mean-Earth.
 - The Sun, the other planets and Pluto: [`IAU2015`](@ref).
 
-Any other body raises until a model is registered. Use
-[`has_orientation_model`](@ref) to ask without raising.
+Use [`has_orientation_model`](@ref) to ask without raising an error.
 
 # Example
 ```jldoctest
@@ -773,17 +766,17 @@ end
 """
     has_orientation_model(body) -> Bool
 
-Whether `body` can be used with body-fixed axes.
+Return whether a body has an orientation model set or a built-in default.
 
 # Arguments
 - `body` — a body, or a NAIF ID.
 
 # Returns
-`true` if a model is set or a shipped default applies, `false` otherwise.
+`true` if a model is set or a built-in default applies, `false` otherwise.
 
 # Notes
-The question [`orientation_model`](@ref) answers by raising. `true` for Earth,
-the Moon, the Sun, the planets and Pluto, which all have defaults.
+This checks that a model is available. It does not evaluate the model, check that SPICE kernels are
+loaded, or check coverage at an epoch. Use [`orientation_model`](@ref) to retrieve the model.
 
 # Example
 ```jldoctest
@@ -812,11 +805,7 @@ orientation_parameters(body::CelestialBody) = orientation_parameters(orientation
 """
     set_orientation_parameters!(body, nt::NamedTuple)
 
-Write orientation parameters of `body` — the estimated values.
-
-```julia
-set_orientation_parameters!(bennu, (; pole_ra = 85.51, pole_dec = -60.30))
-```
+Update the named parameters of a body's orientation model.
 
 # Arguments
 - `body` — a body, or a NAIF ID.
@@ -827,16 +816,23 @@ set_orientation_parameters!(bennu, (; pole_ra = 85.51, pole_dec = -60.30))
 The updated model.
 
 # Notes
-**Mutates the body's registered orientation** — every reference to that body
-sees the new values afterwards. This is how whatever manages an estimation
-writes a solution back; this package does not track which parameters are being
-solved for.
+Every reference to the body sees the new values afterward. Estimation code writes a solution back
+this way, and this package does not track which parameters are being solved for.
 
 Raises if the body has no orientation model, or if a name is not one of its
 parameters.
 
 # Example
 ```julia
+using AstroUniverse
+
+struct PoleModel <: AbstractOrientationModel
+    pole_ra::Float64     # deg
+end
+
+bennu = CelestialBody("Bennu", 4.892e-9, 0.2825, 0.0, 2101955)
+set_orientation!(bennu, PoleModel(85.46))
+
 orientation_parameters(bennu)                          # what can be written
 set_orientation_parameters!(bennu, (; pole_ra = 85.51))
 ```

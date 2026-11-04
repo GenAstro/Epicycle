@@ -1,14 +1,6 @@
 # AstroUniverse
 
-## Epicycle Overview
-
-Epicycle is an application and package ecosystem for space mission design and navigation. It contains packages that handle astrodynamics models and algorithms that integrate seamlessly to allow users to setup and solve hard problems, fast.
-
-## AstroUniverse Overview
-
-The AstroUniverse module provides models for celestial bodies, their physical properties, and related utilities for astrodynamics applications. It includes predefined celestial body objects with standard gravitational parameters and other physical constants commonly used in orbital mechanics.
-
-AstroUniverse uses SPICE.jl for ephemeris modelling. The module automatically downloads and manages SPICE kernels (NASA's ephemeris data) to provide accurate celestial body positions and orientations using Scratch.jl.
+AstroUniverse provides celestial-body definitions and physical constants, SPICE ephemerides, body orientation models, and Earth orientation data. It ships with the Sun, Moon, planets, and Pluto, and supports additional bodies through `CelestialBody`.
 
 ## Installation
 
@@ -17,21 +9,6 @@ using Pkg
 Pkg.add("AstroUniverse")
 ```
 
-The first call that needs an ephemeris downloads about 111 MB of SPICE kernels, most of it the
-DE440 ephemeris, and needs a network connection. `using AstroUniverse` itself never reaches the
-network, and later sessions use the stored copy and work offline.
+## Usage
 
-## Documentation
-
-Full documentation is available at: [AstroUniverse Documentation](https://genastro.github.io/Epicycle/AstroUniverse/dev/)
-
-## Contributing
-
-The terms for contributions are in [LICENSE.md](LICENSE.md).
-
-## License
-
-AstroUniverse is open source under the [MIT License](LICENSE.md).
-
-## Notes
-Claude Sonnet and ChatGPT are used in the development of Epicycle.
+Full documentation is available on the AstroUniverse documentation site.

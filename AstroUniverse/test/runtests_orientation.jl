@@ -88,6 +88,22 @@ end
         end
     end
 
+    @testset "Earth, the Moon and unknown bodies are refused" begin
+        # This model has no Earth or Moon branch. Each error names what to use instead, or the ID
+        # it could not find.
+        t = Time(_JD_OR, TDB(), JD())
+        message(n) = try
+            iau2015_orientation(n, t); ""
+        catch err
+            err isa ArgumentError ? err.msg : rethrow()
+        end
+        @test occursin("IAU 2006/2010", message(399))
+        @test occursin("LunarPA()", message(301))
+        @test occursin("NAIF ID 2000001", message(2000001))
+        @test_throws ArgumentError iau2015_orientation(earth, t)
+        @test_throws ArgumentError iau2015_orientation(moon, t)
+    end
+
     @testset "it has nothing to estimate, which is the honest answer" begin
         # Its coefficients are fixed. Solving for a pole means registering a
         # model that carries the pole as a parameter.

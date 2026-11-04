@@ -17,7 +17,8 @@ recommendations, plus their time derivatives.
 
 # Notes
 - All angles in radians; rates in rad/s.
-- The IAU 2015 formulas use TDB Julian date; callers supply that.
+- The formulas are evaluated in TDB. [`iau2015_orientation`](@ref) takes an AstroEpochs `Time` and
+  converts it.
 - Reference: Archinal et al., "Report of the IAU Working Group on Cartographic
   Coordinates and Rotational Elements: 2015" (Cel. Mech. Dyn. Astron. 130:22, 2018).
 
@@ -343,11 +344,11 @@ function _iau2015_orientation(n::Integer, jd::Real)
     elseif n == 299; return _iau2015_orientation_venus(jd)
     elseif n == 399
         throw(ArgumentError(
-            "Earth rotation is not covered by the IAU 2015 planet-rotation format. " *
+            "This IAU 2015 model does not cover Earth. " *
             "Use IAU 2006/2010 (with EOP) or FK5 (with EOP) Earth-frame edges in AstroFrames."))
     elseif n == 301
         throw(ArgumentError(
-            "Moon rotation is not covered by the IAU 2015 planet-rotation format. " *
+            "This IAU 2015 model does not cover the Moon. " *
             "Use LunarPA() or LunarME(), which read the DE440 lunar frames from SPICE."))
     elseif n == 499; return _iau2015_orientation_mars(jd)
     elseif n == 599; return _iau2015_orientation_jupiter(jd)

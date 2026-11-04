@@ -44,10 +44,9 @@ using SatelliteToolboxTransformations: EopIau1980, EopIau2000A, read_iers_eop
 """
     AbstractFrameTheory
 
-Supertype for the Earth precession-nutation theory in force.
+Supertype for Earth precession-nutation models.
 
-The theory names the *model*, not the data product: which EOP series is
-required follows from it and is not something a caller selects.
+The theory names the model, and the model determines which EOP series it uses.
 
 See also: [`FK5`](@ref), [`IAU2006`](@ref), [`frame_theory`](@ref).
 
@@ -77,8 +76,7 @@ _orients(::AbstractFrameTheory, naifid) = naifid == 399
 """
     FK5()
 
-IAU-76 precession with IAU-80 nutation, the classical system, and the one heritage
-tools and GMAT use. Uses the IERS IAU-1980 EOP series.
+The classical IAU-76 precession and IAU-80 nutation model. Uses the IERS IAU 1980 EOP series.
 
 # Example
 ```jldoctest
@@ -93,8 +91,8 @@ struct FK5 <: AbstractFrameTheory end
 """
     IAU2006()
 
-IAU-2006/2010 precession-nutation, CIO-based, which is the modern standard. Uses
-the IERS IAU-2000A EOP series.
+IAU 2006 precession with IAU 2000A nutation, using the chain based on the Celestial Intermediate
+Origin. This is the default. Uses the IERS IAU 2000A EOP series.
 
 # Example
 ```jldoctest
@@ -129,12 +127,10 @@ export EopValues, AbstractEopCorrection, eop_correction, eop_corrections, set_eo
 """
     frame_theory() -> AbstractFrameTheory
 
-Earth precession-nutation theory in force for this session. Defaults to
-[`IAU2006`](@ref).
+Return the active Earth precession-nutation theory. The default is [`IAU2006`](@ref).
 
-This selects the default chain when a transform's endpoints do not name a
-branch. It does not restrict which EOP data is available, since both series can
-be loaded at once (see [`eop`](@ref)).
+This selects the default chain when a transform's endpoints do not name a branch. It does not
+restrict which EOP data is available, since both series can be loaded at once (see [`eop`](@ref)).
 
 # Returns
 The active [`AbstractFrameTheory`](@ref).
@@ -154,9 +150,8 @@ frame_theory() = _frame_theory[]
 
 Set the Earth precession-nutation theory for this session.
 
-Changing it changes computed results, because the two theories are different
-physical models. A result that has to be reproducible is recorded with the theory
-that produced it.
+Changing it changes computed results, because the two theories are different physical models.
+Record the selected theory with your results so the calculation can be reproduced.
 
 The theory is Earth's orientation model, so `set_orientation!(earth, theory)`
 is the same call. It governs Earth frames, the default EOP series, and Earth
@@ -186,11 +181,10 @@ end
 
 EOP table for `theory`, or for the active theory if none is given.
 
-Each theory's table occupies its own slot and fills on first use, so both can
-be live simultaneously and asking for one never fetches the other. The table is
-read from the cached IERS file, which is downloaded when it is missing or a week
-old. Each series has more than one source, IERS first and then the US Naval
-Observatory; when none can be reached a cached copy is used, with a warning
+Each theory has a separate table that loads on first use and stays in memory for the session, so
+asking for one never fetches the other. The table is read from the cached IERS file, which is
+downloaded when it is missing or a week old. Each series has more than one source, IERS first and
+then the US Naval Observatory. When none can be reached a cached copy is used, with a warning
 giving its age.
 
 Thread-safe.
@@ -216,14 +210,14 @@ eop() = eop(frame_theory())
 """
     set_eop!(table) -> table
 
-Install a pre-built EOP table (`EopIau1980` or `EopIau2000A`).
+Install an EOP table, an `EopIau1980` or `EopIau2000A`, for the current Julia session.
 
-The table's type selects its slot, so installing one never disturbs the other.
-Bypasses disk and network entirely.
+The table's type determines which series is replaced, and the other is unchanged. Installing a
+table does not read files or use the network.
 
-A reproducible run is one whose numbers do not move between sessions: a
-Monte-Carlo, a regression, a delivered analysis. Install both tables up front for
-one, which is the only way to guarantee that no evaluation reaches the network.
+For repeatable EOP results, install saved tables or load local files with [`eop_load`](@ref) before
+evaluating transformations, for every series your calculation uses. SPICE kernels are managed
+separately and must also be in the cache for a run with no network.
 
 # Returns
 The installed table.
@@ -253,15 +247,17 @@ end
 """
     eop_load(path::AbstractString; theory = frame_theory(), bulletin = :A) -> table
 
-Parse an IERS EOP file from `path` for `theory` and install it in that
-theory's slot. Does not touch the network.
+Read a local IERS EOP file and install its table for `theory`. Does not use the network.
+
+The file gets the format and finite-value checks a download gets. It does not have to reach today,
+so a historical file loads.
 
 A finals file carries two sets of values on each line: the rapid values of IERS
 Bulletin A, and for past dates the final values of Bulletin B. `bulletin = :A`
 reads the rapid values throughout. `bulletin = :B` reads the final polar motion,
 UT1−UTC and celestial pole offsets wherever Bulletin B has them and the rapid
-values after, which is what a reconstruction of past data should use. Bulletin B
-has no length of day, so LOD and the uncertainties are Bulletin A's either way.
+values after. Bulletin B has no length of day, so LOD and the uncertainties are
+Bulletin A's either way.
 
 # Arguments
 - `path`: an IERS finals file, either the CSV the IERS data centre publishes
@@ -278,8 +274,7 @@ The parsed and installed EOP table.
 
 # Notes
 A table's columns do not end together. Past its polar motion and UT1−UTC, the end values are
-held with a warning. LOD and the celestial pole offsets end earlier and are held without one,
-since they move a position far less.
+held with a warning. LOD and the celestial pole offsets can end earlier and are held without one.
 
 # Example
 ```julia
@@ -356,10 +351,9 @@ end
 Download the latest EOP series for `theory` now, bypassing the freshness check,
 and install it in that theory's slot.
 
-The sources are tried in order, IERS first and then the US Naval Observatory.
-Unlike the refresh `eop` makes when the cache is a week old, this throws when
-no source supplies usable data, because a caller who asks for a refresh wants to
-know it did not happen. The cached copy is left as it was.
+The sources are tried in order, IERS first and then the US Naval Observatory. Unlike the refresh
+`eop` makes when the cache is a week old, this throws an error if all sources fail. The existing
+cached file is preserved.
 
 # Returns
 The downloaded and installed EOP table.
@@ -394,7 +388,7 @@ interpolation, or offsets estimated in a fit.
 
 A subtype implements
 
-    eop_correction(model, jd_utc, jd_tt) -> (x, y, ut1_utc, lod)
+    eop_correction(model, jd_utc, jd_tt) -> (x = ..., y = ..., ut1_utc = ..., lod = ...)
 
 returning a `NamedTuple` with those four names: what to add to polar motion `x`
 and `y` in arcseconds, to UT1−UTC in seconds and to the length of day in
@@ -429,6 +423,22 @@ abstract type AbstractEopCorrection end
 
 What `model` adds to the daily EOP table at an epoch; see
 [`AbstractEopCorrection`](@ref) for the contract a model implements.
+
+# Returns
+A `NamedTuple` with the names `x`, `y`, `ut1_utc` and `lod`.
+
+# Example
+```jldoctest
+using AstroUniverse
+
+struct NoShift <: AbstractEopCorrection end
+AstroUniverse.eop_correction(::NoShift, jd_utc, jd_tt) = (x = 0.0, y = 0.0, ut1_utc = 0.0, lod = 0.0)
+
+eop_correction(NoShift(), 2460000.5, 2460000.5008).x
+
+# output
+0.0
+```
 """
 function eop_correction end
 
@@ -439,6 +449,9 @@ const _eop_corrections = Ref{Vector{AbstractEopCorrection}}(AbstractEopCorrectio
 
 The corrections added to the daily EOP table in this session, in the order they
 are applied. Empty by default, so Earth orientation is the table alone.
+
+# Returns
+The installed vector of corrections.
 
 # Example
 ```jldoctest
@@ -459,16 +472,18 @@ Install the corrections added to the daily EOP table for this session, replacing
 any installed before. An empty vector removes them all.
 
 The corrections change every Earth-fixed result: frame transformations, ground
-station states and the orientation of Earth gravity. A result that has to be
-reproducible is recorded with the corrections that produced it.
+station states and the orientation of Earth gravity. Record the installed corrections with your
+results so the calculation can be reproduced.
 
 # Returns
 The installed vector.
 
 # Example
 ```julia
-set_eop_corrections!([OceanTideEop(), LibrationEop()])   # models from EpicycleEnterprise
-set_eop_corrections!([])                                 # the table alone
+using EpicycleEnterprise                 # provides IersSubdaily
+
+set_eop_corrections!([IersSubdaily()])
+set_eop_corrections!([])                 # the table alone
 ```
 """
 function set_eop_corrections!(models::AbstractVector)
