@@ -14,3 +14,11 @@ article img[src$="Ex_EarthViewWithTrajectory.png"]  { max-width: 63%; }
 article img[src$="Ex_HohmannTransfer.png"]          { max-width: 63%; }
 article img[src$="Ex_SafetyEllipseTransfer.png"]    { max-width: 63%; }
 article img[src$="Ex_GravityAssistMGA.avif"]        { max-width: 63%; }
+
+/* Videos: a markdown image whose source is an .mp4 renders as a <video>; centre it the same way. */
+article video {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 90%;
+}

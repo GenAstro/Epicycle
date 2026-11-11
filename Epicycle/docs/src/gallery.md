@@ -153,6 +153,18 @@ A low-thrust global search to Saturn delivers 2736 kg. It is set up as the Jupit
 
 ![Low-thrust Saturn best transfers](assets/gallery/GlobalSearch_LowThrust_Saturn_Best.png)
 
+# Lunar High Thrust DRO Transfer Global Search
+
+Epicycle's global search designs transfers from a low Earth parking orbit to a distant retrograde orbit (DRO) around the Moon, starting from nothing but the mission's constraints. We gave it a January 2027 launch window, a DRO 70,000 km from the Moon, up to two lunar flybys and 120 days to get there, with the Earth, Moon and Sun from DE440. Between flybys the spacecraft can swing out on phasing loops of two weeks to two months, and the route names spell out the trip: LEO-M-41d-DRO leaves the parking orbit, flies past the Moon, spends 41 days on a loop and then drops into the DRO. The search turned up 2,091 real transfers across 25 routes, and LEO-M-41d-DRO is the cheapest, at 138 m/s after injection and 48 days. The direct route gets there in 11 days but costs 252 m/s. The figure shows both in the Earth-Moon rotating frame and in inertial axes fixed at departure, with an arrow at each burn.
+
+![Lunar DRO best impulsive transfers](assets/gallery/GlobalSearch_Lunar_DRO_Best.png)
+
+# Lunar Low Thrust DRO Transfer Global Search
+
+Epicycle designs low-thrust transfers from a low Earth parking orbit to a distant retrograde orbit (DRO) 70,000 km from the Moon, with the Earth, Moon and Sun from DE440. The launch vehicle performs the injection, and maneuvers are modeled using piecewise-constant-thrust electric propulsion. The spacecraft has a mass of 1000 kg after injection and an Isp of 2500 s. The engine size is left open, so the optimizer trades propellant against the mass of the power system, at 25 kg per kW. The starting points come from Epicycle's high-thrust global search for the same mission, and each is solved again with a zero-order-hold transcription. The route names spell out the trip: LEO-M-55d-M-14d-DRO leaves the parking orbit, flies past the Moon, spends 55 days on a loop, flies past the Moon again, spends 14 days on a second loop and then settles into the DRO. That route is the best solution the search found, with a 46 mN engine on 1.0 kW, and it burns only 7.3 kg of propellant, thrusting for 45 of its 74 days. LEO-M-41d-M-DRO arrives ten days sooner for 8.1 kg with a 62 mN engine. The figure shows both in the Earth-Moon rotating frame and in inertial axes fixed at departure. The thrust arcs are orange, and the arrows along them show the thrust direction, scaled by throttle.
+
+![Low-thrust lunar DRO transfers](assets/gallery/GlobalSearch_LowThrust_Lunar_DRO_Best.png)
+
 # Halo Orbit Manifolds
 
 A Sun-Earth L2 halo orbit with an out-of-plane amplitude of about 200,000 km, started from JPL's three-body periodic orbit catalog, with its stable manifold in the circular restricted three-body problem. The red trajectories are the transfers from near Earth with the lowest perigee.
@@ -188,6 +200,12 @@ A view of Earth and an orbit.
 This is `Ex_HohmannTransfer.jl` open in VS Code with the solver report in the terminal.
 
 ![Epicycle in VS Code](assets/gallery/Ex_IDE_View.png)
+
+# Prototype Graphics
+
+Epicycle's graphics are moving from Makie.jl to a new framework that renders with WebGL in a VS Code panel. This prototype replays the targeting of a lunar transfer. The transfer burn is adjusted to hit a target in the Moon's B-plane, a B·T of 15,000 km and a B·R of 4,000 km, and the targeter gets there in four iterations. A second targeter then sizes the lunar orbit insertion burn to leave the spacecraft in a circular orbit. The left view is centered on the Earth, the middle view is centered on the Moon and draws the B-plane in 3D, and the chart on the right plots each iteration against the target, with an inset that zooms in as the misses shrink.
+
+![Lunar transfer B-plane targeting](assets/gallery/LunarTransferIterationsAndBPlane.mp4)
 
 # Future Work
 
