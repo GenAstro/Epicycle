@@ -94,7 +94,7 @@ include("kep_to_modkep.jl")
 Cartesian position and velocity state representation.
 
 # Units
-- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- Distance is in km and time is in s, as gravitational parameter `μ` is in km³/s².
 
 # Fields
 - `position::SVector{3,T}`: Position vector [x, y, z]
@@ -193,7 +193,7 @@ end
 Keplerian orbital elements representation using classical osculating elements.
 
 # Units
-- Distance/time units must be consistent with the gravitational parameter `μ` used in conversions.
+- Distance is in km and time is in s, as gravitational parameter `μ` is in km³/s².
 - All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
@@ -244,7 +244,7 @@ end
 Spherical coordinates state with right ascension and declination components.
 
 # Units
-- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- Distance is in km and time is in s, as gravitational parameter `μ` is in km³/s².
 - All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
@@ -287,7 +287,7 @@ end
 Spherical coordinates with azimuth and flight path angle velocity representation.
 
 # Units
-- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- Distance is in km and time is in s, as gravitational parameter `μ` is in km³/s².
 - All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
@@ -332,7 +332,7 @@ end
 Modified equinoctial elements representation.
 
 # Units
-- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- Distance is in km and time is in s, as gravitational parameter `μ` is in km³/s².
 - All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
@@ -374,7 +374,7 @@ end
 Outgoing asymptote parameters for hyperbolic trajectories.
 
 # Units
-- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- Distance is in km and time is in s, as gravitational parameter `μ` is in km³/s².
 - All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
@@ -419,7 +419,7 @@ end
 Incoming asymptote parameters for hyperbolic trajectories.
 
 # Units
-- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- Distance is in km and time is in s, as gravitational parameter `μ` is in km³/s².
 - All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
@@ -464,7 +464,7 @@ end
 Modified Keplerian orbital elements using periapsis and apoapsis radii instead of semi-major axis and eccentricity.
 
 # Units
-- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- Distance is in km and time is in s, as gravitational parameter `μ` is in km³/s².
 - All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
@@ -515,7 +515,7 @@ end
 Equinoctial orbital elements representation.
 
 # Units
-- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- Distance is in km and time is in s, as gravitational parameter `μ` is in km³/s².
 - All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
@@ -557,7 +557,7 @@ end
 Alternate equinoctial elements representation.
 
 # Units
-- Distance and time units must be consistent with the gravitational parameter `μ` used in the simulation.
+- Distance is in km and time is in s, as gravitational parameter `μ` is in km³/s².
 - All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
@@ -600,7 +600,7 @@ end
 Brouwer-Lyddane mean orbital elements with secular, long-period, and short-period zonal (J2–J5) effects.
 
 # Units
-- Distance units must be consistent with the gravitational parameter `μ` used in conversions. The mean-element theory is Earth-only, so distances are in km and `μ` is Earth's.
+- Distance is in km and time is in s, as gravitational parameter `μ` is in km³/s².
 - All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
@@ -645,7 +645,7 @@ end
 Brouwer mean orbital elements with only the first-order J2 short-period oscillation removed (long-period and secular terms retained).
 
 # Units
-- Distance units must be consistent with the gravitational parameter `μ` used in conversions. The mean-element theory is Earth-only, so distances are in km and `μ` is Earth's.
+- Distance is in km and time is in s, as gravitational parameter `μ` is in km³/s².
 - All angular quantities are in **radians**.
 
 # Fields (all `::T` where `T<:Real`)
@@ -683,10 +683,22 @@ struct BrouwerMeanShortState{T<:Real} <: AbstractOrbitState
     ma::T
 end
 
-# Every state prints the same way: its name, then one element per line, labels padded so the
-# values line up, and angles in degrees with the unit in the label.
+# Every state prints the same way: its name, then one element per line, labels with units and
+# padded so the values line up.
 _element_labels(state::AbstractOrbitState) = string.(fieldnames(typeof(state)))
 _element_labels(::CartesianState) = ("x", "y", "z", "vx", "vy", "vz")
+
+_distance_elements(::AbstractOrbitState) = ()
+_distance_elements(::Union{CartesianState}) = (1, 2, 3)
+_distance_elements(::Union{KeplerianState}) = (1,)
+_distance_elements(::Union{ModifiedKeplerianState}) = (1, 2)
+_distance_elements(::Union{SphericalRADECState, SphericalAZIFPAState, EquinoctialState, 
+                        ModifiedEquinoctialState, AlternateEquinoctialState, OutGoingAsymptoteState, 
+                        IncomingAsymptoteState, BrouwerMeanLongState, BrouwerMeanShortState}) = (1,)
+
+_velocity_elements(::AbstractOrbitState) = ()
+_velocity_elements(::Union{CartesianState}) = (4, 5, 6)
+_velocity_elements(::Union{SphericalRADECState, SphericalAZIFPAState}) = (4,)
 
 _angle_elements(::AbstractOrbitState) = ()
 _angle_elements(::Union{KeplerianState, ModifiedKeplerianState, IncomingAsymptoteState,
@@ -694,9 +706,21 @@ _angle_elements(::Union{KeplerianState, ModifiedKeplerianState, IncomingAsymptot
 _angle_elements(::Union{SphericalRADECState, SphericalAZIFPAState}) = (2, 3, 5, 6)
 _angle_elements(::Union{EquinoctialState, AlternateEquinoctialState, ModifiedEquinoctialState}) = (6,)
 
+_specific_energy_elements(::AbstractOrbitState) = ()
+_specific_energy_elements(::Union{OutGoingAsymptoteState, IncomingAsymptoteState}) = (2,)
+
 function show(io::IO, state::AbstractOrbitState)
+    distances = _distance_elements(state)
+    velocities = _velocity_elements(state)
     angles = _angle_elements(state)
-    labels = [i in angles ? "$label (deg)" : label for (i, label) in enumerate(_element_labels(state))]
+    specific_energies = _specific_energy_elements(state)
+    labels = [
+        i in distances ? "$label (km)" :
+        i in velocities ? "$label (km/s)" :
+        i in angles ? "$label (deg)" : 
+        i in specific_energies ? "$label (km³/s²)" :
+        label 
+        for (i, label) in enumerate(_element_labels(state))]
     width = maximum(length, labels)
     println(io, nameof(typeof(state)), ":")
     for (i, x) in enumerate(to_vector(state))
@@ -833,8 +857,8 @@ state_type_to_tag
 """
     to_vector(state) -> Vector
 
-The six numbers of a state, in its representation's order. Distances and speeds are in the units
-of μ, and angles in radians.
+The six numbers of a state, in its representation's order. Distances are in km and speeds are in 
+km/s (as μ is in km³/s²), and angles in radians.
 
 | Representation | Order |
 |---|---|
