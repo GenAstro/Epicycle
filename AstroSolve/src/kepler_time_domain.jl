@@ -37,6 +37,17 @@ struct KeplerPropagationResult{T<:Real}
     converged::Bool
 end
 
+# Stumpff functions c_n(y) = Σ (-y)^k / (2k + n)! for |y| below STUMPFF_SERIES_LIMIT, where the
+# closed forms lose digits by cancellation and reach 0/0 at y = 0. Seven terms reach machine
+# precision at the limit; above it the closed forms lose under two digits.
+const STUMPFF_SERIES_LIMIT = 0.1
+
+stumpff_series(y) = (evalpoly(-y, (1/2, 1/24, 1/720, 1/40320, 1/3628800, 1/479001600, 1/87178291200)),
+                     evalpoly(-y, (1/6, 1/120, 1/5040, 1/362880, 1/39916800, 1/6227020800, 1/1307674368000)))
+
+stumpff_series_45(y) = (evalpoly(-y, (1/24, 1/720, 1/40320, 1/3628800, 1/479001600, 1/87178291200, 1/20922789888000)),
+                        evalpoly(-y, (1/120, 1/5040, 1/362880, 1/39916800, 1/6227020800, 1/1307674368000, 1/355687428096000)))
+
 """
     kepler_propagate_time_domain(state0, mu, dt; need_stm=true, need_time_partials=true,
                                  alphatol=1e-12, Xtol=1e-12,
@@ -58,7 +69,8 @@ universal-variable Kepler solver following the EMTG `KeplerPropagatorTimeDomain`
 
 # Notes
 Position, velocity, `mu`, and `dt` must use consistent units. The state is
-returned in the same frame as `state0`. Throws an `ArgumentError` when `state0`
+returned in the same frame as `state0`. A zero `dt` returns `state0`, the identity
+STM and `[v; -mu r / |r|³]`. Throws an `ArgumentError` when `state0`
 does not contain six elements, `mu` is not positive, or the initial radius is zero.
 
 # Returns
@@ -98,6 +110,30 @@ function kepler_propagate_time_domain(
         "the initial position must have non-zero magnitude, since the orbit is undefined at " *
         "the centre; got |r| = $(r0)"))
 
+    # Zero step. The result is written to first order in dt, which is exact at dt = 0 and gives
+    # an AD dual at zero its correct partials; the solve below cannot, since its convergence test
+    # sees only the value, which is already converged at X = 0. ForwardDiff.value is the value
+    # of a dual and the identity on a plain number.
+    if ForwardDiff.value(dt) == 0
+        n2 = T(mu) / (r0 * r0 * r0)
+        acc = -n2 .* r0vec
+        dtT = T(dt)
+        xf = [r0vec .+ dtT .* v0vec; v0vec .+ dtT .* acc]
+        stm = nothing
+        dstate_dt = nothing
+        if need_stm
+            grad = n2 .* (3 .* (r0vec * r0vec') ./ (r0 * r0) - I)       # gravity gradient ∂a/∂r
+            stm = Matrix{T}(I, 6, 6)
+            stm[1:3, 4:6] .+= dtT .* Matrix{T}(I, 3, 3)
+            stm[4:6, 1:3] .+= dtT .* grad
+        end
+        if need_time_partials
+            jerk = n2 .* (3 * dot(r0vec, v0vec) / (r0 * r0) .* r0vec .- v0vec)
+            dstate_dt = [v0vec .+ dtT .* acc; acc .+ dtT .* jerk]
+        end
+        return KeplerPropagationResult(xf, stm, dstate_dt, one(T), dtT, -n2 * dtT, one(T), 0, true)
+    end
+
     sqmu = sqrt(T(mu))
     alpha = 2 / r0 - v0 * v0 / T(mu)
     sigma0 = dot(r0vec, v0vec) / sqmu
@@ -133,9 +169,13 @@ function kepler_propagate_time_domain(
 
         if alpha > alphatol
             y = alpha * X * X
-            sqrt_y = sqrt(y)
-            C = (1.0 - cos(sqrt_y)) / y
-            S = (sqrt_y - sin(sqrt_y)) / sqrt(y * y * y)
+            if y < STUMPFF_SERIES_LIMIT
+                C, S = stumpff_series(y)
+            else
+                sqrt_y = sqrt(y)
+                C = (1.0 - cos(sqrt_y)) / y
+                S = (sqrt_y - sin(sqrt_y)) / sqrt(y * y * y)
+            end
             U1 = X * (1.0 - y * S)
             U2 = X * X * C
             U3 = X * X * X * S
@@ -151,10 +191,19 @@ function kepler_propagate_time_domain(
                     break
                 end
             end
-            U0 = cosh(sqmalphaX)
-            U1 = sinh(sqmalphaX) / sqmalpha
-            U2 = (1.0 - U0) / alpha
-            U3 = (X - U1) / alpha
+            y = alpha * X * X
+            if -y < STUMPFF_SERIES_LIMIT
+                C, S = stumpff_series(y)
+                U1 = X * (1.0 - y * S)
+                U2 = X * X * C
+                U3 = X * X * X * S
+                U0 = 1.0 - alpha * U2
+            else
+                U0 = cosh(sqmalphaX)
+                U1 = sinh(sqmalphaX) / sqmalpha
+                U2 = (1.0 - U0) / alpha
+                U3 = (X - U1) / alpha
+            end
         else  # parabola: Taylor limits of Stumpff functions as α→0
             U0 = 1.0
             U1 = X
@@ -208,6 +257,11 @@ function kepler_propagate_time_domain(
         if abs(alpha) < alphatol
             U4 = X * X * X * X / T(24)
             U5 = X * X * X * X * X / T(120)
+        elseif abs(alpha * X * X) < STUMPFF_SERIES_LIMIT
+            # Short arc: the closed forms below subtract nearly equal terms and divide by alpha
+            c4, c5 = stumpff_series_45(alpha * X * X)
+            U4 = X * X * X * X * c4
+            U5 = X * X * X * X * X * c5
         else
             a = one(T) / alpha
             U4 = a * (X * X / T(2) - U2)
