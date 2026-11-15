@@ -1,14 +1,28 @@
 # Epicycle: A Framework for Space Mission Design and Navigation
 
 ```@raw html
-<div style="float: right; width: 190px; max-width: 40%; margin: 0.2em 0 1em 1.5em; text-align: center;">
-  <a href="assets/EpicycleProductBrochure.pdf" target="_blank" rel="noopener">
-    <img src="assets/EpicycleProductBrochureCover.png" alt="Cover of the Epicycle R2026 Beta product brochure"
-         style="width: 100%; border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);">
-  </a>
+<div style="float: right; width: 320px; max-width: 45%; margin: 0.2em 0 1em 1.5em; text-align: center;">
+  <div style="display: flex; gap: 10px;">
+    <a href="assets/EpicycleProductBrochure.pdf" target="_blank" rel="noopener" style="flex: 1;">
+      <img src="assets/EpicycleProductBrochureCover.png" alt="Cover of the Epicycle R2026 Beta product brochure"
+           style="width: 100%; max-width: 100%; border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);">
+    </a>
+    <a href="assets/EpicycleODBrochure.pdf" target="_blank" rel="noopener" style="flex: 1;">
+      <img src="assets/EpicycleODBrochureCover.png" alt="Cover of the Epicycle precision orbit determination brochure"
+           style="width: 100%; max-width: 100%; border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);">
+    </a>
+  </div>
   <a href="assets/EpicycleProductBrochure.pdf" target="_blank" rel="noopener"
      style="display: block; margin-top: 0.7em; padding: 0.55em 0.8em; border-radius: 6px; background: linear-gradient(135deg, #1a73e8, #4fa3ff); color: #ffffff; font-weight: 600; text-decoration: none; box-shadow: 0 2px 8px rgba(26, 115, 232, 0.45);">
     Product brochure (PDF)
+  </a>
+  <a href="assets/EpicycleODBrochure.pdf" target="_blank" rel="noopener"
+     style="display: block; margin-top: 0.5em; padding: 0.55em 0.8em; border-radius: 6px; background: linear-gradient(135deg, #1a73e8, #4fa3ff); color: #ffffff; font-weight: 600; text-decoration: none; box-shadow: 0 2px 8px rgba(26, 115, 232, 0.45);">
+    Orbit determination brochure (PDF)
+  </a>
+  <a href="gallery/"
+     style="display: block; margin-top: 0.5em; padding: 0.55em 0.8em; border-radius: 6px; background: linear-gradient(135deg, #b0400b, #f57c00); color: #ffffff; font-weight: 600; text-decoration: none; box-shadow: 0 2px 8px rgba(176, 64, 11, 0.45);">
+    Gallery
   </a>
   <a href="verification/"
      style="display: block; margin-top: 0.5em; padding: 0.55em 0.8em; border-radius: 6px; background: linear-gradient(135deg, #0b8043, #34a853); color: #ffffff; font-weight: 600; text-decoration: none; box-shadow: 0 2px 8px rgba(11, 128, 67, 0.45);">
@@ -23,6 +37,38 @@ The ecosystem consists of twelve specialized packages organized in architectural
 
 ```@raw html
 <div style="clear: both;"></div>
+```
+
+## Gallery
+
+The [Gallery](gallery.md) shows Epicycle on hard, real problems: precision orbit determination
+for LAGEOS, LRO, MESSENGER and Juno, global trajectory search that finds the flyby sequences Cassini
+and Europa Clipper flew without an initial guess, halo orbits and their manifolds, and low-thrust
+transfers.
+
+```@raw html
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin: 1em 0 1.5em;">
+  <a href="gallery/" style="text-decoration: none; text-align: center;">
+    <img src="assets/gallery/thumbs/PrecisionOD.png" alt="Residuals and RMS for the LAGEOS, LRO, MESSENGER and Juno orbit determination cases"
+         style="width: 100%; max-width: 100%; aspect-ratio: 4 / 3; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
+    <span style="display: block; margin-top: 0.4em; font-weight: 600;">Precision OD, four missions</span>
+  </a>
+  <a href="gallery/#Prototype-Graphics" style="text-decoration: none; text-align: center;">
+    <img src="assets/gallery/thumbs/LunarTransferBPlane.png" alt="A lunar transfer arriving at the Moon, targeted in the B-plane, with lunar orbit insertion"
+         style="width: 100%; max-width: 100%; aspect-ratio: 4 / 3; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
+    <span style="display: block; margin-top: 0.4em; font-weight: 600;">Lunar transfer, B-plane targeting</span>
+  </a>
+  <a href="gallery/#Halo-Orbit-Manifolds" style="text-decoration: none; text-align: center;">
+    <img src="assets/gallery/thumbs/HaloManifolds.png" alt="A halo orbit and its stable manifold"
+         style="width: 100%; max-width: 100%; aspect-ratio: 4 / 3; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
+    <span style="display: block; margin-top: 0.4em; font-weight: 600;">Halo orbit manifolds</span>
+  </a>
+  <a href="gallery/#Low-Thrust-Global-Search-to-Jupiter" style="text-decoration: none; text-align: center;">
+    <img src="assets/gallery/thumbs/GlobalSearch_LowThrust_Jupiter_Best.png" alt="Best low-thrust transfers to Jupiter"
+         style="width: 100%; max-width: 100%; aspect-ratio: 4 / 3; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
+    <span style="display: block; margin-top: 0.4em; font-weight: 600;">Low thrust to Jupiter</span>
+  </a>
+</div>
 ```
 
 ## Installation
@@ -203,8 +249,9 @@ integration runs on macOS, Linux, and Windows, with package-level line coverage 
 Numerical results are compared with trusted tools and published solutions. Astrodynamics and
 mission analysis calculations are tested against NASA's General Mission Analysis Tool (GMAT), time
 conversions against Astropy, and optimal-control results against NASA's Collocation Stand-Alone
-Library and Toolkit (CSALT) and OpenMDAO's Dymos. The [Verification](verification.md) page gives the test
-cases and the agreement measured, package by package.
+Library and Toolkit (CSALT) and OpenMDAO's Dymos. The [Accuracy](verification.md) page gives the test
+cases and the agreement measured, package by package, and the [Performance](benchmarks.md) page
+compares run times with GMAT and Orekit.
 
 Orbit determination, variational propagation, and the new browser-based graphics system are alpha
 capabilities. They are tested and available for evaluation, but need further development and

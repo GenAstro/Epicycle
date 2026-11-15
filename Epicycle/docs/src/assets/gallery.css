@@ -8,9 +8,8 @@ article img {
     max-width: 90%;
 }
 
-/* Four that render larger than they need to. The selector matches the end of the src, so it
+/* Three that render larger than they need to. The selector matches the end of the src, so it
    holds whatever path prefix Documenter gives the page. */
-article img[src$="Ex_EarthViewWithTrajectory.png"]  { max-width: 63%; }
 article img[src$="Ex_HohmannTransfer.png"]          { max-width: 63%; }
 article img[src$="Ex_SafetyEllipseTransfer.png"]    { max-width: 63%; }
 article img[src$="Ex_GravityAssistMGA.avif"]        { max-width: 63%; }

@@ -1,6 +1,6 @@
-# Benchmarks
+# Performance
 
-Epicycle's propagator is optimized for performance. This page compares it with GMAT R2026A and
+This page compares Epicycle's propagation performance with GMAT R2026A and
 Orekit 13.1 on one day of low Earth orbit under a full force model, in two ways. The first runs each
 tool with matched integration methods and tolerances and measures each run's error from that
 tool's own high-accuracy reference. The second runs all three with the same fixed step, set up as a
@@ -8,7 +8,7 @@ user of each tool would set it.
 
 The results describe this case on one machine. Each tool makes its own design choices, in its
 defaults, features and conventions, and timings in other cases will differ. Comparisons of
-individual force models are on the [Verification](@ref verification-astroprop) page.
+individual force models are on the [Accuracy](@ref verification-astroprop) page.
 
 ## Benchmark case
 
@@ -66,13 +66,11 @@ The reference runs differ by the following amounts after one day.
 | Epicycle and Orekit | 0.6 mm | 0.7 µm/s |
 | Epicycle and GMAT | 11.0 cm | 99.5 µm/s |
 
-Epicycle and Orekit agree to 0.6 mm with all forces enabled. In comparisons that add the forces
-one at a time, their position difference is at most 0.7 mm.
-
-The 11.0 cm difference from GMAT comes from a difference in Earth orientation conventions:
-Epicycle applies the IERS celestial-pole offsets to the Earth's axes, and GMAT's Earth-fixed frame
-does not. Over one day with the 70×70 gravity field, that moves the orbit by about 11 cm. An earlier
-run with Epicycle using GMAT's convention agreed with GMAT to 2.3 cm.
+The 11.0 cm difference from GMAT is the Earth orientation convention described on the
+[Accuracy](@ref verification-astroprop) page: Epicycle applies the IERS celestial-pole offsets to
+the Earth's axes, and GMAT's Earth-fixed frame does not. An earlier run with Epicycle using GMAT's
+convention agreed with GMAT to 2.3 cm. The Accuracy page also compares the force models one at a
+time.
 
 ## Variable-step runs
 

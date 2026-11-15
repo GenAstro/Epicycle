@@ -1,4 +1,4 @@
-# Verification
+# Accuracy
 
 Epicycle's numerical models are verified against established software, published standards and
 mathematical definitions. AstroEpochs matches Astropy

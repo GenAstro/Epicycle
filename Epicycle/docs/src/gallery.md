@@ -2,6 +2,12 @@
 
 This gallery shows Epicycle applied to real-world, hard problems. The examples include precision OD applied to Earth, lunar, and interplanetary trajectories, global trajectory optimization without a priori knowledge of the solution, dynamical systems theory generating periodic orbits and stable and unstable manifolds, and hybrid optimal control employing collocation and shooting methods in a single problem configuration. Some entries come from the example scripts in `Epicycle/examples/`; the rest are work in development. Precision OD and global optimization are work in progress to be included in an upcoming production release.
 
+# Prototype Graphics
+
+Epicycle's graphics are moving from Makie.jl to a new framework that renders with WebGL in a VS Code panel. This prototype replays the targeting of a lunar transfer. The transfer burn is adjusted to hit a target in the Moon's B-plane, a B·T of 15,000 km and a B·R of 4,000 km, and the targeter gets there in four iterations. A second targeter then sizes the lunar orbit insertion burn to leave the spacecraft in a circular orbit. The left view is centered on the Earth, the middle view is centered on the Moon and draws the B-plane in 3D, and the chart on the right plots each iteration against the target, with an inset that zooms in as the misses shrink.
+
+![Lunar transfer B-plane targeting](assets/gallery/LunarTransferIterationsAndBPlane.mp4)
+
 # LRO Precision OD
 
 An LRO OD solution agrees with the LOLA science team's orbit to meters. The solution processes two days of LRO S-band Doppler and range from three NASA ground network stations. The fit uses the GRGM900C lunar field to degree 150 with lunar solid tides raised by the Earth and Sun, Earth, Sun and Jupiter point masses, cannonball solar radiation pressure, relativity, the Saastamoinen troposphere with reported weather, and the JPL global ionosphere maps. It estimates 17 parameters: the state, the reflectivity, an along-track acceleration, and Doppler, range and range time-tag biases for each station. The same data are also fit with the epoch-state square-root information filter and smoother, which adds Gauss-Markov accelerations on each axis, each held for six hours: 27 more parameters. Epicycle's solution differs from the LOLA team's GEODYN reconstruction by 0.3 m radial, 4.4 m along-track and 2.8 m cross-track RMS with the batch estimator, and by 0.4 m, 4.4 m and 2.6 m with the filter and smoother. The Flight Dynamics Facility's daily solution differs from GEODYN by 3.9 m, 127 m and 70 m.
@@ -29,92 +35,6 @@ A Juno OD solution estimates small forces as events. The solution processes a mo
 A LAGEOS OD solution agrees with DGFI and the ILRS as closely as they agree with each other (millimeters radial, centimeters along-track and cross-track). The solution processes a week of LAGEOS-1 SLR data from twenty-one ILRS stations. The fit uses sub-daily Earth orientation, solid-tide, pole-tide and ocean-loading station displacements, the Mendes-Pavlis troposphere, a 60 × 60 field with solid and ocean tides, cannonball solar radiation pressure, and relativity. It estimates 46 parameters: the state, the reflectivity, 18 empirical accelerations and a range bias for every station. Epicycle's solution differs from DGFI's by 4.3 mm radial, 1.3 cm along-track and 3.3 cm cross-track RMS, and from the ILRS combined solution by 4.8 mm, 2.6 cm and 1.7 cm; the two published orbits differ from each other by 3.7 mm, 2.0 cm and 3.3 cm.
 
 ![LAGEOS range residuals](assets/gallery/LAGEOS_Residuals.png)
-
-# Propagation Accuracy and Speed
-
-Epicycle's propagator is compared with GMAT R2026A and Orekit 13.1 on one day of low Earth orbit with a full force model: EGM96 70 × 70 gravity with solid tides, the Sun and Moon from DE440, drag, solar radiation pressure with Earth's shadow, and relativity. Each tool's high-accuracy reference run is compared with the others' to measure how well the force models agree, and each timed run is compared with its own tool's reference to measure its integration error.
-
-| Reference runs after one day | Position difference | Velocity difference |
-|:---|---:|---:|
-| Epicycle and Orekit | 0.6 mm | 0.7 µm/s |
-| Epicycle and GMAT | 11.0 cm | 99.5 µm/s |
-
-The difference from GMAT comes from a convention for Earth's axes: Epicycle applies the IERS celestial-pole offsets and GMAT's Earth-fixed frame does not. With GMAT's convention the two agree to 2.3 cm.
-
-| Fastest setting reaching a few millimeters | Setting | Position error | Time |
-|:---|:---|---:|---:|
-| Epicycle | Verner 7, 1e-11 | 0.2 mm | 0.25 s |
-| GMAT | RungeKutta89, 1e-9 | 3.1 mm | 0.49 s |
-| Orekit | Dormand-Prince 8(5,3), 1e-8 m | 8.0 mm | 1.20 s |
-
-With matched methods and tolerances Epicycle's runs are 2.0 to 3.1 times shorter, and with the same 10 s fixed step about 2.2 times shorter. The full comparison, with the method and machine, is on the [Benchmarks](benchmarks.md) page, and the force models compared one at a time over five orbits are on the [Verification](verification.md) page.
-
-# Time, Frames and States
-
-Precision orbit determination depends on time scales, Earth orientation and coordinate frames being correct to well below the measurement noise. The OD solutions above worked on their first run because these models were verified first, each against a reference implementation.
-
-| What | Checked against | Agreement |
-|:---|:---|:---|
-| Time scales and formats, 1,790 epochs in six scales | Astropy 8.0.1 (ERFA, the IAU's SOFA) | Bit identical |
-| Earth frames, IAU 2006/2000A and FK5 chains | pyerfa (ERFA, the IAU's SOFA) | Under 2.5 µas |
-| Body-fixed axes, the Sun and nine planets | SPICE `sxform` with `pck00011` | Under 10 µas |
-| Lunar frames | SPICE `sxform` with the DE440 lunar kernels | Under 0.03 µas |
-
-The details, with every known difference from each reference, are on the [Verification](verification.md) page.
-
-# GEO Transfer
-
-A bi-elliptic transfer from a low inclined orbit to geosynchronous orbit with three impulsive burns: transfer orbit insertion, a mid-course correction at an 85,000 km apogee that removes the inclination, and orbit insertion at 42,166 km. The burns and five coast segments form one event sequence, a directed acyclic graph, and IPOPT solves for the burn components that meet the apogee, inclination and final semi-major axis constraints.
-
-![GEO transfer](assets/gallery/Ex_GeoTransfer.png)
-
-# Safety Ellipse Transfer
-
-A transfer from a 200 m passive safety ellipse to a 50 m inspection ellipse about a chief at ISS altitude, in Clohessy-Wiltshire dynamics with a per-axis acceleration limit. The arrival is a manifold rather than a point: any phase on the target ellipse is acceptable. The minimum-energy solution is computed with Legendre-Gauss-Lobatto collocation, 15 intervals of 5 nodes, solved with IPOPT. The arrows are the thrust direction.
-
-![Safety ellipse transfer](assets/gallery/Ex_SafetyEllipseTransfer.png)
-
-# Low-Thrust Orbit Raising
-
-Bryson's orbit raising problem: a constant-thrust spacecraft steers to reach the largest circular orbit in a fixed time. Hermite-Simpson collocation with 40 steps and analytic partials, solved with IPOPT from a tangential-thrust initial guess, reaches a final radius of 1.523, matching the CSALT reference.
-
-![Low thrust orbit raising](assets/gallery/Ex_LowThrustOrbitRaising.png)
-
-# Hybrid Transcription
-
-Bryson's orbit raising problem split into three phases, each with a different transcription: zero-order-hold multiple shooting, Hermite-Simpson collocation and Legendre-Gauss-Lobatto collocation. Links enforce state and time continuity at the phase boundaries, and one IPOPT problem solves the three together, reaching the 1.523 final radius of the single-phase solution.
-
-![Hybrid transcription](assets/gallery/Ex_LowThrustHybridTranscription.png)
-
-# Goddard Rocket
-
-The Goddard rocket problem: maximize the peak altitude of a vertical rocket with altitude-dependent drag. The solution has three phases with free switch times: full thrust, a singular arc held by Betts's singular-arc path constraint, and a coast. Each phase is Hermite-Simpson collocation, and IPOPT solves them together with continuity links.
-
-![Goddard rocket](assets/gallery/Ex_GoddardRocket.png)
-
-# Linear Tangent Steering
-
-The linear tangent steering problem: a vehicle with constant acceleration steers to reach a given altitude and horizontal velocity, with zero vertical velocity, in minimum time. Hermite-Simpson collocation with 60 steps and a free final time gives 0.5546 s, matching the analytic linear tangent law and Bryson and Ho.
-
-![Linear tangent steering](assets/gallery/Ex_LinearTangentSteering.png)
-
-# Obstacle Avoidance
-
-A constant-speed vehicle steers by heading between two points while avoiding two circular keep-out zones. The cost is fixed by the speed, so the clearance path constraints, enforced at every mesh point, decide the route. Solved with Hermite-Simpson collocation and IPOPT.
-
-![Obstacle avoidance](assets/gallery/Ex_ObstacleAvoidance.png)
-
-# Lyapunov Orbit Transfer
-
-A transfer from an L1 to an L2 Lyapunov orbit of equal energy in the Earth-Moon circular restricted three-body problem, both orbits from JPL's periodic orbit catalog. The cost is the integrated squared control with a free transfer time; it approaches zero because a ballistic heteroclinic connection exists between the two orbits. Solved with Hermite-Simpson collocation and IPOPT.
-
-![Lyapunov transfer](assets/gallery/Ex_LypunovTransfer.png)
-
-# Gravity Assist
-
-An Earth-Earth-Venus trajectory, with circular coplanar planet orbits, that maximizes the mass delivered into a Venus parking orbit, with a launch vehicle mass model, a C3 limit and a minimum flyby altitude. Each leg is a patched-conic arc with one deep-space maneuver, and IPOPT solves for the epochs, v∞ and maneuvers. The solution delivers 91.6 kg after 512 days.
-
-![Gravity assist](assets/gallery/Ex_GravityAssistMGA.avif)
 
 # Cassini Global Search
 
@@ -177,6 +97,92 @@ The Sun-Earth L2 northern halo family, solved using continuation with Bifurcatio
 
 ![Halo orbit family](assets/gallery/HaloOrbitFamily.png)
 
+# Propagation Accuracy and Speed
+
+Epicycle's propagator is compared with GMAT R2026A and Orekit 13.1 on one day of low Earth orbit with a full force model: EGM96 70 × 70 gravity with solid tides, the Sun and Moon from DE440, drag, solar radiation pressure with Earth's shadow, and relativity. Each tool's high-accuracy reference run is compared with the others' to measure how well the force models agree, and each timed run is compared with its own tool's reference to measure its integration error.
+
+| Reference runs after one day | Position difference | Velocity difference |
+|:---|---:|---:|
+| Epicycle and Orekit | 0.6 mm | 0.7 µm/s |
+| Epicycle and GMAT | 11.0 cm | 99.5 µm/s |
+
+The difference from GMAT comes from a convention for Earth's axes: Epicycle applies the IERS celestial-pole offsets and GMAT's Earth-fixed frame does not. With GMAT's convention the two agree to 2.3 cm.
+
+| Fastest setting reaching a few millimeters | Setting | Position error | Time |
+|:---|:---|---:|---:|
+| Epicycle | Verner 7, 1e-11 | 0.2 mm | 0.25 s |
+| GMAT | RungeKutta89, 1e-9 | 3.1 mm | 0.49 s |
+| Orekit | Dormand-Prince 8(5,3), 1e-8 m | 8.0 mm | 1.20 s |
+
+With matched methods and tolerances Epicycle's runs are 2.0 to 3.1 times shorter, and with the same 10 s fixed step about 2.2 times shorter. The full comparison, with the method and machine, is on the [Performance](benchmarks.md) page, and the force models compared one at a time over five orbits are on the [Accuracy](verification.md) page.
+
+# Time, Frames and States
+
+Precision orbit determination depends on time scales, Earth orientation and coordinate frames being correct to well below the measurement noise. The OD solutions above worked on their first run because these models were verified first, each against a reference implementation.
+
+| What | Checked against | Agreement |
+|:---|:---|:---|
+| Time scales and formats, 1,790 epochs in six scales | Astropy 8.0.1 (ERFA, the IAU's SOFA) | Bit identical |
+| Earth frames, IAU 2006/2000A and FK5 chains | pyerfa (ERFA, the IAU's SOFA) | Under 2.5 µas |
+| Body-fixed axes, the Sun and nine planets | SPICE `sxform` with `pck00011` | Under 10 µas |
+| Lunar frames | SPICE `sxform` with the DE440 lunar kernels | Under 0.03 µas |
+
+The details, with every known difference from each reference, are on the [Accuracy](verification.md) page.
+
+# GEO Transfer
+
+A bi-elliptic transfer from a low inclined orbit to geosynchronous orbit with three impulsive burns: transfer orbit insertion, a mid-course correction at an 85,000 km apogee that removes the inclination, and orbit insertion at 42,166 km. The burns and five coast segments form one event sequence, a directed acyclic graph, and IPOPT solves for the burn components that meet the apogee, inclination and final semi-major axis constraints.
+
+![GEO transfer](assets/gallery/Ex_GeoTransfer.png)
+
+# Safety Ellipse Transfer
+
+A transfer from a 200 m passive safety ellipse to a 50 m inspection ellipse about a chief at ISS altitude, in Clohessy-Wiltshire dynamics with a per-axis acceleration limit. The arrival is a manifold rather than a point: any phase on the target ellipse is acceptable. The minimum-energy solution is computed with Legendre-Gauss-Lobatto collocation, 15 intervals of 5 nodes, solved with IPOPT. The arrows are the thrust direction.
+
+![Safety ellipse transfer](assets/gallery/Ex_SafetyEllipseTransfer.png)
+
+# Low-Thrust Orbit Raising
+
+Bryson's orbit raising problem: a constant-thrust spacecraft steers to reach the largest circular orbit in a fixed time. Hermite-Simpson collocation with 40 steps and analytic partials, solved with IPOPT from a tangential-thrust initial guess, reaches a final radius of 1.523, matching the CSALT reference.
+
+![Low thrust orbit raising](assets/gallery/Ex_LowThrustOrbitRaising.png)
+
+# Hybrid Transcription
+
+Bryson's orbit raising problem split into three phases, each with a different transcription: zero-order-hold multiple shooting, Hermite-Simpson collocation and Legendre-Gauss-Lobatto collocation. Links enforce state and time continuity at the phase boundaries, and one IPOPT problem solves the three together, reaching the 1.523 final radius of the single-phase solution.
+
+![Hybrid transcription](assets/gallery/Ex_LowThrustHybridTranscription.png)
+
+# Goddard Rocket
+
+The Goddard rocket problem: maximize the peak altitude of a vertical rocket with altitude-dependent drag. The solution has three phases with free switch times: full thrust, a singular arc held by Betts's singular-arc path constraint, and a coast. Each phase is Hermite-Simpson collocation, and IPOPT solves them together with continuity links.
+
+![Goddard rocket](assets/gallery/Ex_GoddardRocket.png)
+
+# Linear Tangent Steering
+
+The linear tangent steering problem: a vehicle with constant acceleration steers to reach a given altitude and horizontal velocity, with zero vertical velocity, in minimum time. Hermite-Simpson collocation with 60 steps and a free final time gives 0.5546 s, matching the analytic linear tangent law and Bryson and Ho.
+
+![Linear tangent steering](assets/gallery/Ex_LinearTangentSteering.png)
+
+# Obstacle Avoidance
+
+A constant-speed vehicle steers by heading between two points while avoiding two circular keep-out zones. The cost is fixed by the speed, so the clearance path constraints, enforced at every mesh point, decide the route. Solved with Hermite-Simpson collocation and IPOPT.
+
+![Obstacle avoidance](assets/gallery/Ex_ObstacleAvoidance.png)
+
+# Lyapunov Orbit Transfer
+
+A transfer from an L1 to an L2 Lyapunov orbit of equal energy in the Earth-Moon circular restricted three-body problem, both orbits from JPL's periodic orbit catalog. The cost is the integrated squared control with a free transfer time; it approaches zero because a ballistic heteroclinic connection exists between the two orbits. Solved with Hermite-Simpson collocation and IPOPT.
+
+![Lyapunov transfer](assets/gallery/Ex_LypunovTransfer.png)
+
+# Gravity Assist
+
+An Earth-Earth-Venus trajectory, with circular coplanar planet orbits, that maximizes the mass delivered into a Venus parking orbit, with a launch vehicle mass model, a C3 limit and a minimum flyby altitude. Each leg is a patched-conic arc with one deep-space maneuver, and IPOPT solves for the epochs, v∞ and maneuvers. The solution delivers 91.6 kg after 512 days.
+
+![Gravity assist](assets/gallery/Ex_GravityAssistMGA.avif)
+
 # Stepped Kalman Filter
 
 Stepping the filter one observation at a time, with the postfit residuals and the formal sigma recorded at each update.
@@ -189,23 +195,11 @@ A gallery of supported data visualization styles.
 
 ![Plot examples](assets/gallery/Ex_PlotExamples.png)
 
-# A Trajectory on the Globe
-
-A view of Earth and an orbit.
-
-![Earth view with trajectory](assets/gallery/Ex_EarthViewWithTrajectory.png)
-
 # Working in the Editor
 
 This is `Ex_HohmannTransfer.jl` open in VS Code with the solver report in the terminal.
 
 ![Epicycle in VS Code](assets/gallery/Ex_IDE_View.png)
-
-# Prototype Graphics
-
-Epicycle's graphics are moving from Makie.jl to a new framework that renders with WebGL in a VS Code panel. This prototype replays the targeting of a lunar transfer. The transfer burn is adjusted to hit a target in the Moon's B-plane, a B·T of 15,000 km and a B·R of 4,000 km, and the targeter gets there in four iterations. A second targeter then sizes the lunar orbit insertion burn to leave the spacecraft in a circular orbit. The left view is centered on the Earth, the middle view is centered on the Moon and draws the B-plane in 3D, and the chart on the right plots each iteration against the target, with an inset that zooms in as the misses shrink.
-
-![Lunar transfer B-plane targeting](assets/gallery/LunarTransferIterationsAndBPlane.mp4)
 
 # Future Work
 

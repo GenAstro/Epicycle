@@ -71,12 +71,12 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Verification" => "verification.md",
-        "Benchmarks" => "benchmarks.md",
+        "Gallery" => "gallery.md",
         "Getting Started" => "getting_started.md",
         "Packages" => "packages.md",
-        "Gallery" => "gallery.md",
         "Examples" => EXAMPLE_NAV,
+        "Verification" => ["Accuracy" => "verification.md",
+                           "Performance" => "benchmarks.md"],
     ],
     # Each package's doctests run in its own build, with its own DocTestSetup. The
     # umbrella lists every module so it can attribute their docstrings to its pages, and

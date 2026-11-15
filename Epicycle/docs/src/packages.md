@@ -2,54 +2,59 @@
 
 The Epicycle ecosystem is a set of packages organized in architectural layers. Each package provides focused functionality while maintaining clean interfaces for composition into mission analysis workflows.
 
-## Foundation Packages
+| Layer | Packages |
+|:------|:---------|
+| Foundation: core abstractions and fundamental representations that underpin all mission analysis capabilities | [EpicycleBase](#EpicycleBase), [AstroRoutines](#AstroRoutines), [AstroStates](#AstroStates), [AstroEpochs](#AstroEpochs) |
+| Physical models: environmental and spacecraft modeling capabilities for realistic mission simulation | [AstroUniverse](#AstroUniverse), [AstroFrames](#AstroFrames), [AstroModels](#AstroModels) |
+| Mission design and navigation: high-level capabilities for trajectory design, optimization, and orbit determination | [AstroManeuvers](#AstroManeuvers), [AstroCallbacks](#AstroCallbacks), [AstroProp](#AstroProp), [AstroSolve](#AstroSolve) |
+| Visualization and reporting: output for results produced by the packages above | [EpicycleIO](#EpicycleIO) |
 
-Core abstractions and fundamental representations that underpin all mission analysis capabilities.
+Each package has its own documentation, linked from its section below.
 
-### [EpicycleBase](https://genastro.github.io/Epicycle/EpicycleBase/dev/)
+## [EpicycleBase](https://genastro.github.io/Epicycle/EpicycleBase/dev/)
+
 Core abstractions, type hierarchy, and fundamental constants. Provides the foundational types and interfaces used throughout the ecosystem.
 
-### [AstroRoutines](https://genastro.github.io/Epicycle/AstroRoutines/dev/)
-Low-level routines for classical astrodynamics. Covers the anomaly conversions of an elliptic orbit and the circular restricted three-body problem in the rotating frame, and depends on nothing outside the Julia standard library, so it can be used without the rest of Epicycle.
+## [AstroRoutines](https://genastro.github.io/Epicycle/AstroRoutines/dev/)
 
-### [AstroStates](https://genastro.github.io/Epicycle/AstroStates/dev/)
-Spacecraft state representations and coordinate transformations. Handles Cartesian, Keplerian, and Modified Equinoctial element representations with conversion capabilities.
+Low-level routines for classical astrodynamics.
 
-### [AstroEpochs](https://genastro.github.io/Epicycle/AstroEpochs/dev/)
-Time systems, epoch handling, and temporal conversions. Provides rigorous time standards including UTC, TAI, TT, and TDB with high-precision conversions.
+## [AstroStates](https://genastro.github.io/Epicycle/AstroStates/dev/)
 
-## Physical Models
+Spacecraft state representations such as Cartesian, Keplerian, Modified Equinoctial and many others.
 
-Environmental and spacecraft modeling capabilities for realistic mission simulation.
+## [AstroEpochs](https://genastro.github.io/Epicycle/AstroEpochs/dev/)
 
-### [AstroUniverse](https://genastro.github.io/Epicycle/AstroUniverse/dev/)
-Celestial body models, ephemeris data, and gravitational parameters. Includes planetary data, gravitational constants, and ephemeris interfaces.
+Time systems, epoch handling, and temporal conversions including UTC, TAI, TT, TDB and others with sub-nanosecond precision.
 
-### [AstroFrames](https://genastro.github.io/Epicycle/AstroFrames/dev/)
-Reference frames and coordinate system transformations. Handles inertial and rotating frames with precise transformation matrices.
+## [AstroUniverse](https://genastro.github.io/Epicycle/AstroUniverse/dev/)
 
-### [AstroModels](https://genastro.github.io/Epicycle/AstroModels/dev/)
-Spacecraft and physical models for environmental interactions. Includes drag, solar radiation pressure, and other perturbation models.
+Celestial body models, ephemeris data, and gravitational parameters.
 
-## Mission Design and Navigation
+## [AstroFrames](https://genastro.github.io/Epicycle/AstroFrames/dev/)
 
-High-level capabilities for trajectory design, optimization, and orbit determination.
+Reference frames and coordinate frame transformations.
 
-### [AstroManeuvers](https://genastro.github.io/Epicycle/AstroManeuvers/dev/)
-Maneuver models and algorithms for trajectory modification. Provides impulsive and finite-burn maneuver representations.
+## [AstroModels](https://genastro.github.io/Epicycle/AstroModels/dev/)
 
-### [AstroCallbacks](https://genastro.github.io/Epicycle/AstroCallbacks/dev/)
-Mission analysis utilities for constraints, objectives, and events. Includes stopping conditions, cost functions, and constraint definitions.
+Physical models such as Spacecraft and GroundStations.
 
-### [AstroProp](https://genastro.github.io/Epicycle/AstroProp/dev/)
-Numerical integration and trajectory propagation methods. High-order Runge-Kutta integrators with adaptive stepping and event detection.
+## [AstroManeuvers](https://genastro.github.io/Epicycle/AstroManeuvers/dev/)
 
-### [AstroSolve](https://genastro.github.io/Epicycle/AstroSolve/dev/)
-Targeting, optimal control, and orbit estimation. Solves for maneuvers, states, epochs, and other adjustable quantities along a propagated trajectory, transcribes low-thrust and continuous-control problems for a nonlinear programming solver, and estimates a spacecraft state and other properties from measurement data.
+Maneuver models.
 
-## Visualization and Reporting
+## [AstroCallbacks](https://genastro.github.io/Epicycle/AstroCallbacks/dev/)
 
-Output for results produced by the packages above.
+Utilities and interfaces to define quantities for constraints, objectives, events, and solve-fors.
 
-### [EpicycleIO](https://genastro.github.io/Epicycle/EpicycleIO/dev/)
-Plotting, reporting, and three-dimensional trajectory visualization. Plots are drawn by Plotly.js and trajectories by Cesium, both in a browser page served from the local machine, and the page updates while a script is still running.
+## [AstroProp](https://genastro.github.io/Epicycle/AstroProp/dev/)
+
+Numerical integration and trajectory propagation methods.
+
+## [AstroSolve](https://genastro.github.io/Epicycle/AstroSolve/dev/)
+
+Targeting, optimal control, and orbit estimation algorithms.
+
+## [EpicycleIO](https://genastro.github.io/Epicycle/EpicycleIO/dev/)
+
+Plotting, reporting, and 3D graphics.

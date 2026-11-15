@@ -29,6 +29,31 @@ files, not here.
 
 The brochure's first page, rendered at 368 by 476 pixels, used as the link image on the index.
 
+## EpicycleODBrochure.pdf
+
+The three-page precision orbit determination brochure, linked from the documentation index. Built
+from the HTML pages in `od_runs/carousel` (outside the repository) and copied here unchanged.
+Replace it under the same name so links already sent keep working.
+
+## EpicycleODBrochureCover.png
+
+The OD brochure's first page, rendered at 368 by 476 pixels with pdftoppm, used as the link image
+on the index.
+
 ## gallery
 
 Epicycle's own output: each image is what an example script in `Epicycle/examples/` draws.
+
+## gallery/thumbs
+
+Thumbnails for the gallery strip on the index: one panel cropped from the gallery image of the
+same name and downscaled to 600 by 450 pixels, two to three times their displayed width so they
+stay sharp on high-density screens. Regenerate them if the source image changes.
+
+`LunarTransferBPlane.png` is not cropped from a gallery image: it is the Moon-centered pane of
+the frame at 18.4 s of `LunarTransferIterationsAndBPlane.mp4` (GenAstro Graphics/Videos), cropped
+to 4:3 and scaled to 600 by 450.
+
+`PrecisionOD.png` is the four mission tiles (LAGEOS, LRO, MESSENGER, Juno) from page 1 of
+`EpicycleODBrochure.pdf`, rendered at 400 dpi, laid out 2 × 2 on a dark background and scaled to
+600 by 450. Rebuild it if the brochure changes.
